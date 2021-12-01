@@ -36,15 +36,49 @@ impl fmt::Display for SeedError {
     }
 }
 
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub struct Seed {
 }
 
-pub fn make_seed(phrase: &Vec<String>) -> Result<Box<Seed>, SeedError> {
-    panic!("it's broken");
+pub fn generate_random_seed() -> Box<Seed> {
+    return Box::new(Seed { });
+}
+
+
+pub fn recover_seed(phrase: &Vec<String>) -> Result<Box<Seed>, SeedError> {
+    if phrase.len() != 12 {
+        Err(SeedError::InvalidWordVector)
+    } else {
+        panic!("not implemented");
+    }
 }
 
 impl Seed {
     pub fn get_phrase(&self) -> Vec<String> {
-        panic!("not going to do this");
+        vec!("not implemented".to_string(), "yet".to_string())
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    
+    #[test]
+    fn can_generate_seed_for_phrase() {
+        let seed = generate_random_seed();
+        assert_eq!(seed.get_phrase().len(), 12);
+    }
+
+    #[test]
+    fn can_recover_seed_from_phrase() {
+        let seed = generate_random_seed();
+        let phrase = seed.get_phrase();
+        let recovered_seed_maybe = recover_seed(&phrase);
+        match recovered_seed_maybe {
+            Ok(recovered_seed) => assert_eq!(seed, recovered_seed),
+            Err(error) => panic!(error)
+        }
     }
 }

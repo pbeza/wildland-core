@@ -18,8 +18,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-use crate::identity::{Seed, SeedError, make_seed};
-use std::boxed::Box;
+use crate::identity::{Seed, SeedError, generate_random_seed, recover_seed};
 
 #[cxx::bridge]
 mod identity {
@@ -27,8 +26,10 @@ mod identity {
     extern "Rust" {
         type Seed;
         type SeedError;
-        
+
+        fn generate_random_seed() -> Box<Seed>;
+        fn recover_seed(phrase: &Vec<String>) -> Result<Box<Seed>>;
+
         fn get_phrase(self: &Seed) -> Vec<String>;
-        fn make_seed(phrase: &Vec<String>) -> Result<Box<Seed>>;
     }
 }
