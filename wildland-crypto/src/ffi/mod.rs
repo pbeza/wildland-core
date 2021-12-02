@@ -18,18 +18,18 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-use crate::identity::{Seed, SeedError, generate_random_seed, recover_seed};
+use crate::identity::{Identity, IdentityError, generate_random_identity, recover_from_phrase};
 
-#[cxx::bridge]
+#[cxx::bridge(namespace="cargo::common")]
 mod identity {
     
     extern "Rust" {
-        type Seed;
-        type SeedError;
+        type Identity;
+        type IdentityError;
 
-        fn generate_random_seed() -> Box<Seed>;
-        fn recover_seed(phrase: &Vec<String>) -> Result<Box<Seed>>;
+        fn generate_random_identity() -> Box<Identity>;
+        fn recover_from_phrase(phrase: &Vec<String>) -> Result<Box<Identity>>;
 
-        fn get_phrase(self: &Seed) -> Vec<String>;
+        fn get_seed_phrase(self: &Identity) -> Vec<String>;
     }
 }
