@@ -19,3 +19,4 @@
 
 pub mod identity;
 pub mod ffi;
+pub mod error;
