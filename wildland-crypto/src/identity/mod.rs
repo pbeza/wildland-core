@@ -20,6 +20,9 @@
 use crate::error::{CargoError, CargoErrorRepresentable};
 use std::fmt;
 
+use bip32::{Mnemonic, XPrv};
+use rand_core::OsRng;
+
 #[derive(Copy,Clone,PartialEq,Debug)]
 pub enum IdentityError {
     InvalidWordVector = 1,
@@ -39,12 +42,16 @@ impl CargoErrorRepresentable for IdentityError {
     }
 }
 
-#[derive(Copy,Clone,Debug,PartialEq)]
+#[derive(Debug,PartialEq)]
 pub struct Identity {
+    xprv: XPrv
 }
 
 pub fn from_random_seed() -> Box<Identity> {
-    todo!();
+    let mnemonic = Mnemonic::random(&mut OsRng, Default::default());
+    let seed = mnemonic.to_seed("");
+    let root_xprv = XPrv::new(&seed).unwrap();
+    Box::new(Identity {xprv: root_xprv})
 }
 
 
@@ -94,7 +101,7 @@ impl KeyPair {
 mod tests {
 
     use super::*;
-    
+
     #[test]
     fn can_generate_seed_for_phrase() {
         let user = generate_random_identity();
