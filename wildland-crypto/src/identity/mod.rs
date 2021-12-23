@@ -43,12 +43,12 @@ impl CargoErrorRepresentable for IdentityError {
 pub struct Identity {
 }
 
-pub fn generate_random_identity() -> Box<Identity> {
+pub fn from_random_seed() -> Box<Identity> {
     todo!();
 }
 
 
-pub fn recover_from_phrase(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> {
+pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> {
     if phrase.len() != 12 {
         Err(IdentityError::InvalidWordVector.into())
     } else {
@@ -57,8 +57,35 @@ pub fn recover_from_phrase(phrase: &Vec<String>) -> Result<Box<Identity>, CargoE
 }
 
 impl Identity {
-    pub fn get_seed_phrase(&self) -> Vec<String> {
+    pub fn mnemonic(&self) -> Vec<String> {
         vec!("not implemented".to_string(), "yet".to_string())
+    }
+
+    pub fn signing_key(&self, index: u64) -> Box<KeyPair> {
+        todo!();
+    }
+
+    pub fn encryption_key(&self, index: u64) -> Box<KeyPair> {
+        todo!();
+    }
+
+    pub fn single_use_encryption_key(&self, index: u64) -> Box<KeyPair> {
+        todo!();
+    }
+}
+
+pub struct KeyPair {
+    pubkey: Vec<u8>,
+    seckey: Vec<u8>
+}
+
+impl KeyPair {
+    pub fn pubkey_str(&self) -> &String {
+        todo!()
+    }
+
+    pub fn seckey_str(&self) -> &String {
+        todo!()
     }
 }
 

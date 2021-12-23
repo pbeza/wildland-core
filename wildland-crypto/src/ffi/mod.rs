@@ -18,7 +18,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-use crate::identity::{Identity, IdentityError, generate_random_identity, recover_from_phrase};
+use crate::identity::{Identity, IdentityError, KeyPair, from_random_seed,
+                      from_mnemonic};
 
 #[cxx::bridge(namespace="cargo::common")]
 mod identity {
@@ -26,10 +27,15 @@ mod identity {
     extern "Rust" {
         type Identity;
         type IdentityError;
+        type KeyPair;
 
-        fn generate_random_identity() -> Box<Identity>;
-        fn recover_from_phrase(phrase: &Vec<String>) -> Result<Box<Identity>>;
+        fn from_random_seed() -> Box<Identity>;
+        fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>>;
 
-        fn get_seed_phrase(self: &Identity) -> Vec<String>;
+        fn mnemonic(self: &Identity) -> Vec<String>;
+
+        fn signing_key(self: &Identity, index: u64) -> Box<KeyPair>;
+        fn encryption_key(self: &Identity, index: u64) -> Box<KeyPair>;
+        fn single_use_encryption_key(self: &Identity, index: u64) -> Box<KeyPair>;
     }
 }
