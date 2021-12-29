@@ -20,8 +20,7 @@
 use crate::error::{CargoError, CargoErrorRepresentable};
 use std::fmt;
 
-use bip32::{Mnemonic, XPrv};
-use rand_core::OsRng;
+use bip39::{Mnemonic,};
 
 #[derive(Copy,Clone,PartialEq,Debug)]
 pub enum IdentityError {
@@ -44,14 +43,21 @@ impl CargoErrorRepresentable for IdentityError {
 
 #[derive(Debug,PartialEq)]
 pub struct Identity {
-    xprv: XPrv
 }
 
 pub fn from_random_seed() -> Box<Identity> {
-    let mnemonic = Mnemonic::random(&mut OsRng, Default::default());
-    let seed = mnemonic.to_seed("");
-    let root_xprv = XPrv::new(&seed).unwrap();
-    Box::new(Identity {xprv: root_xprv})
+    // rust-bip39
+    let mnemonic = Mnemonic::generate(12).unwrap();
+    let seed = mnemonic.to_seed_normalized("");
+
+    // ed25519-bip32
+    // here we need "chain code", which satisfies following:
+    // 1. deterministic
+    // 2. looks like good randomness
+    // 3. public
+    // let root_xprv = XPrv::new(&seed).unwrap();
+    // Box::new(Identity {xprv: root_xprv})
+    Box::new(Identity {})
 }
 
 
