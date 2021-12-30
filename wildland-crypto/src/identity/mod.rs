@@ -74,28 +74,29 @@ pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> 
         Err(_error) => Err(IdentityError::InvalidWordVector.into()),
         Ok(mnemonic) => {
             let seed = mnemonic.to_seed_normalized(passphrase);
-            // Seed is randomness of high quality (hard to guess).
-            // But we only have 64 bytes of it, and we need extra 32 bytes
-            // for BIP32's "chain code", which should satisfy following requirements:
+            // Seed here is randomness of high quality (it is hard to guess).
+            // But we only have 64 bytes of it, and we need extra 32 bytes for
+            // BIP32's "chain code", which should satisfy following requirements:
             // 1. be deterministic
             // 2. look like good randomness
             // 3. be public, since it will be used as a part of both XPrv and XPub!
             // To achieve this, we use key derivation function (KDF).
             // A very standard variant of that is HKDF.
-
-
-            let initial_key_material = seed;
-            let info = hex!("57696c646c616e64"); // b'Wildland'.hex()
-            let hk = Hkdf::<Sha256>::new(None, &initial_key_material);
-            let mut okm = [0u8; 96];
-            hk.expand(&info, &mut okm).expect("Should return 96 bytes of randomness");
+            let mut output_key_material = [0u8; 96];
+            extend_seed(seed, &mut output_key_material);
 
             // Now we can use this randomness as bip32-ed25519 extended private key
-
-            let root_xprv = XPrv::normalize_bytes_ed25519(okm);
+            let root_xprv = XPrv::normalize_bytes_ed25519(output_key_material);
             Ok(Box::new(Identity {xprv: root_xprv}))
         }
     }
+}
+
+fn extend_seed(seed: [u8; 64], target: &mut [u8; 96]) {
+    let initial_key_material = seed;
+    let info = hex!("57696c646c616e64"); // b'Wildland'.hex()
+    let hk = Hkdf::<Sha256>::new(None, &initial_key_material);
+    hk.expand(&info, target).expect("Should return 96 bytes of randomness");
 }
 
 impl Identity {
