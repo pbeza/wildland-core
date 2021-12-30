@@ -106,7 +106,11 @@ fn extend_seed(seed: [u8; 64], target: &mut [u8; 96]) {
 
 impl Identity {
     pub fn mnemonic(&self) -> Vec<String> {
-        vec!("not implemented".to_string(), "yet".to_string())
+        let mut result: Vec<String> = vec!["".to_string(); 12];
+        for (i, word) in self.words.iter().enumerate() {
+            result[i] = word.to_string();
+        }
+        result
     }
 
     pub fn signing_key(&self, index: u64) -> Box<KeyPair> {
@@ -146,23 +150,44 @@ mod tests {
     #[test]
     fn can_generate_seed_for_phrase() {
         let user = from_random_seed();
-        assert_eq!(user.get_seed_phrase().len(), 12);
+        assert_eq!(user.mnemonic().len(), 12);
     }
 
-    // #[test]
-    // fn can_recover_seed_from_phrase() {
-    //     let identity = from_random_seed();
-    //     let phrase = identity.get_seed_phrase();
-    //     let recovered_identity_maybe = recover_from_phrase(&phrase);
-    //     match recovered_identity_maybe {
-    //         Ok(recovered_identity) => assert_eq!(identity, recovered_identity),
-    //         Err(error) => panic!(error)
-    //     }
-    // }
+    #[test]
+    fn expanding_the_seed() {
+        // vectors constructed using 'hkdf' python package
+        let ikm = hex!("
+            0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b
+            0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b
+            0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b
+            0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b
+        ");
+        let mut output_key_material = [0u8; 96];
+        extend_seed(ikm, &mut output_key_material);
+        let (secret_key, chain_code) = output_key_material.split_at(64);
+        let expected_secret = hex!("
+            540d175899e60c3fae2e80592a19ef98
+            3b26186b5b4be4bbb9cf590ab401d689
+            7e293e76ac281196ec04b7bc68d2e8a0
+            36ef6b6171f6fcde3836fdaacbd1a661
+        ");
+        assert_eq!(secret_key, expected_secret);
+        let expected_chain_code = hex!("
+            d4d1716dc1a50023fc97267109d4e4e7
+            b1ff0ba00e5404d7127b48bfd4900e79
+        ");
+        assert_eq!(chain_code, expected_chain_code);
+    }
 
     #[test]
-    fn can_recover_seed_and_expand_id() {
-        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".split();
-        assert_eq!(2 + 2, 4);
+    fn can_recover_seed() {
+        let mnemonic_string = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let mnemonic_vec: Vec<String> =
+            mnemonic_string
+            .split(" ")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
+        let user = from_mnemonic(&mnemonic_vec).unwrap();
+        assert_eq!(user.mnemonic().len(), 12);
     }
 }
