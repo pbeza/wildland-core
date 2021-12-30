@@ -15,33 +15,11 @@ serde_repr = "0.1"
 rand_core = { version = "0.6", features = ["std"] }
 rand = "0.8.4"
 
-# NOPE
-# bip32 = "0.2.2"
-# supports bip32, it's support for bip39 is limited to 24 words mnemonics only
-# seed is 64 bytes long, derivation is strict bip32, no ed25519
-# 96 bytes long BIP32 extended key
-
 bip39 = { version = "1.0.1", features = ["rand"]}
-
-# supports 12 words long mnemonics; seed is 64 bytes long
-# hash seed into 96 bytes of output (sha1024 and discard last 32 bytes?)
-
-# Q: is bip39 crate compatible with ed25519-bip32 crate?
-# A: very likely!
-# Q: determine how chain_code is generated in ed25519-bip32 crate
-# A: in general chain code is: deterministic, from seed, random, and public
-#    bip32 uses hmacsha512 with domain separator
-
-ed25519-bip32 = "0.4.0"
-# built on top of cryptoxide;
-# 64 bytes long secret key
-# 96 bytes long BIP32 extended key
-# to get 96 bytes of randomness from 64 byte seed output of bip0039, we use HKDF
-
-# requires std...
-# bip0039 = "0.10.1"
-
 hkdf = "0.12.0"
+ed25519-bip32 = "0.4.0"
+hex-literal = "0.3.4"
+sha2 = "0.10.0"
 
 [build-dependencies]
 cxx-build = "1.0"

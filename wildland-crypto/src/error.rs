@@ -24,7 +24,7 @@ use serde::ser::{Serialize,Serializer,SerializeStruct};
 use std::collections::HashMap;
 use std::fmt;
 
-
+#[derive(std::fmt::Debug)]
 pub struct CargoError {
     error_type: &'static str,
     error_code: String,

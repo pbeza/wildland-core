@@ -20,7 +20,12 @@
 use crate::error::{CargoError, CargoErrorRepresentable};
 use std::fmt;
 
-use bip39::{Mnemonic,};
+use bip39::{Mnemonic,Language,};
+use hkdf::Hkdf;
+use ed25519_bip32::{XPrv};
+
+use sha2::Sha256;
+use hex_literal::hex;
 
 #[derive(Copy,Clone,PartialEq,Debug)]
 pub enum IdentityError {
@@ -43,29 +48,53 @@ impl CargoErrorRepresentable for IdentityError {
 
 #[derive(Debug,PartialEq)]
 pub struct Identity {
+    xprv: XPrv
 }
 
 pub fn from_random_seed() -> Box<Identity> {
     // rust-bip39
     let mnemonic = Mnemonic::generate(12).unwrap();
-    let seed = mnemonic.to_seed_normalized("");
-
-    // ed25519-bip32
-    // here we need "chain code", which satisfies following:
-    // 1. deterministic
-    // 2. looks like good randomness
-    // 3. public
-    // let root_xprv = XPrv::new(&seed).unwrap();
-    // Box::new(Identity {xprv: root_xprv})
-    Box::new(Identity {})
+    let mut vec: Vec<String> = Vec::new();
+    for word in mnemonic.word_iter() {
+        vec.push(word.to_string());
+    }
+    from_mnemonic(&vec).unwrap()
 }
 
 
 pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> {
     if phrase.len() != 12 {
-        Err(IdentityError::InvalidWordVector.into())
-    } else {
-        panic!("not implemented");
+        return Err(IdentityError::InvalidWordVector.into())
+    }
+    // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
+    // We don't need them here.
+    let passphrase = "";
+    let mnemonic_string: String = phrase.join(" ");
+    match Mnemonic::parse_in_normalized(Language::English, &mnemonic_string) {
+        Err(_error) => Err(IdentityError::InvalidWordVector.into()),
+        Ok(mnemonic) => {
+            let seed = mnemonic.to_seed_normalized(passphrase);
+            // Seed is randomness of high quality (hard to guess).
+            // But we only have 64 bytes of it, and we need extra 32 bytes
+            // for BIP32's "chain code", which should satisfy following requirements:
+            // 1. be deterministic
+            // 2. look like good randomness
+            // 3. be public, since it will be used as a part of both XPrv and XPub!
+            // To achieve this, we use key derivation function (KDF).
+            // A very standard variant of that is HKDF.
+
+
+            let initial_key_material = seed;
+            let info = hex!("57696c646c616e64"); // b'Wildland'.hex()
+            let hk = Hkdf::<Sha256>::new(None, &initial_key_material);
+            let mut okm = [0u8; 96];
+            hk.expand(&info, &mut okm).expect("Should return 96 bytes of randomness");
+
+            // Now we can use this randomness as bip32-ed25519 extended private key
+
+            let root_xprv = XPrv::normalize_bytes_ed25519(okm);
+            Ok(Box::new(Identity {xprv: root_xprv}))
+        }
     }
 }
 
