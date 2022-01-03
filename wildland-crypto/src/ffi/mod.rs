@@ -34,7 +34,7 @@ mod identity {
 
         fn mnemonic(self: &Identity) -> Vec<String>;
 
-        fn signing_key(self: &Identity, index: u64) -> Box<KeyPair>;
+        fn signing_key(self: &Identity) -> Box<KeyPair>;
         fn encryption_key(self: &Identity, index: u64) -> Box<KeyPair>;
         fn single_use_encryption_key(self: &Identity, index: u64) -> Box<KeyPair>;
     }

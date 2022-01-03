@@ -22,10 +22,12 @@ use std::fmt;
 
 use bip39::{Mnemonic,Language,};
 use hkdf::Hkdf;
-use ed25519_bip32::{XPrv};
+use ed25519_bip32::{XPrv, DerivationScheme};
 
 use sha2::Sha256;
 use hex_literal::hex;
+
+use hex::{encode};
 
 #[derive(Copy,Clone,PartialEq,Debug)]
 pub enum IdentityError {
@@ -113,18 +115,45 @@ impl Identity {
         result
     }
 
-    pub fn signing_key(&self, index: u64) -> Box<KeyPair> {
-        todo!();
+    pub fn signing_key(&self) -> Box<KeyPair> {
+        self.derive(&signing_key_path())
     }
 
     pub fn encryption_key(&self, index: u64) -> Box<KeyPair> {
-        todo!();
+        self.derive(&encryption_key_path(index))
     }
 
     pub fn single_use_encryption_key(&self, index: u64) -> Box<KeyPair> {
-        todo!();
+        self.derive(&single_use_encryption_key_path(index))
+    }
+
+    fn derive(&self, path: &str) -> Box<KeyPair> {
+        let mut secret: XPrv = self.xprv.clone();
+        let mut tokens: Vec<&str> = path.split("/").collect();
+        if tokens[1] != "m" {
+            panic!("Derivation path must start with m");
+        }
+        tokens.reverse(); tokens.pop(); tokens.pop(); tokens.reverse();
+        for derivation_index in tokens {
+            let di: u32 = derivation_index.parse().unwrap();
+            secret = (&secret).derive(DerivationScheme::V2, di);
+        }
+        let public: Vec<u8> = secret.as_ref()[0..32].to_vec();
+        Box::new(KeyPair {pubkey: public, seckey: secret.as_ref()[..64].to_vec()} )
     }
 }
+
+fn signing_key_path() -> String {
+    // "master/WILDLAND/purpose/index"
+    "/m/787878/0/0".to_string()
+}
+fn encryption_key_path(index: u64) -> String {
+    format!("/m/787878/1/{}", index)
+}
+fn single_use_encryption_key_path(index: u64) -> String {
+    format!("/m/787878/2/{}", index)
+}
+
 
 pub struct KeyPair {
     pubkey: Vec<u8>,
@@ -132,20 +161,45 @@ pub struct KeyPair {
 }
 
 impl KeyPair {
-    pub fn pubkey_str(&self) -> &String {
-        todo!()
+    pub fn pubkey_str(&self) -> String {
+        encode(self.pubkey.as_slice())
     }
 
-    pub fn seckey_str(&self) -> &String {
-        todo!()
+    pub fn seckey_str(&self) -> String {
+        encode(self.seckey.as_slice())
     }
 }
-
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
+
+    fn user() -> Box<Identity> {
+        let mnemonic_string = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        let mnemonic_vec: Vec<String> =
+            mnemonic_string
+            .split(" ")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
+        from_mnemonic(&mnemonic_vec).unwrap()
+    }
+
+    #[test]
+    fn can_generate_distinct_keypairs() {
+        let user = user();
+        let skey: Box<KeyPair> = user.signing_key();
+        println!("signing key: {}", skey.seckey_str());
+        let e0key: Box<KeyPair> = user.encryption_key(0);
+        println!("encryp0 key: {}", e0key.seckey_str());
+        let e1key: Box<KeyPair> = user.encryption_key(1);
+        println!("encryp1 key: {}", e1key.seckey_str());
+        assert!(skey.seckey_str() != e0key.seckey_str());
+        assert!(e0key.seckey_str() != e1key.seckey_str());
+
+        assert_eq!(skey.seckey_str().len(), 128);
+        assert_eq!(skey.pubkey_str().len(), 64);
+    }
 
     #[test]
     fn can_generate_seed_for_phrase() {
