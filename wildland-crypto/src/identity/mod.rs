@@ -29,6 +29,10 @@ use hex_literal::hex;
 
 use hex::{encode};
 
+// for signing and signature verification
+use cryptoxide::ed25519;
+use cryptoxide::ed25519::SIGNATURE_LENGTH;
+
 #[derive(Copy,Clone,PartialEq,Debug)]
 pub enum IdentityError {
     InvalidWordVector = 1,
@@ -128,30 +132,36 @@ impl Identity {
     }
 
     fn derive(&self, path: &str) -> Box<KeyPair> {
-        let mut secret: XPrv = self.xprv.clone();
         let mut tokens: Vec<&str> = path.split("/").collect();
         if tokens[1] != "m" {
             panic!("Derivation path must start with m");
         }
         tokens.reverse(); tokens.pop(); tokens.pop(); tokens.reverse();
+
+        let mut secret_xprv: XPrv = self.xprv.clone();
         for derivation_index in tokens {
             let di: u32 = derivation_index.parse().unwrap();
-            secret = (&secret).derive(DerivationScheme::V2, di);
+            secret_xprv = (&secret_xprv).derive(DerivationScheme::V2, di);
         }
-        let public: Vec<u8> = secret.as_ref()[0..32].to_vec();
-        Box::new(KeyPair {pubkey: public, seckey: secret.as_ref()[..64].to_vec()} )
+
+        // drop last 32 bytes of chain-code from xprv to get secret key
+        let secret: Vec<u8> = secret_xprv.as_ref()[..64].to_vec();
+        // drop chain-code AND last 32 bytes of secret key to get public key
+        let public: Vec<u8> = secret_xprv.as_ref()[0..32].to_vec();
+        Box::new(KeyPair {pubkey: public, seckey: secret} )
     }
 }
 
 fn signing_key_path() -> String {
-    // "master/WILDLAND/purpose/index"
-    "/m/787878/0/0".to_string()
+    // "master/WLD/purpose/index"
+    // "574c44" == b'WLD'.hex()
+    "/m/574c44/0/0".to_string()
 }
 fn encryption_key_path(index: u64) -> String {
-    format!("/m/787878/1/{}", index)
+    format!("/m/574c44/1/{}", index)
 }
 fn single_use_encryption_key_path(index: u64) -> String {
-    format!("/m/787878/2/{}", index)
+    format!("/m/574c44/2/{}", index)
 }
 
 
@@ -168,12 +178,22 @@ impl KeyPair {
     pub fn seckey_str(&self) -> String {
         encode(self.seckey.as_slice())
     }
+
+    pub fn sign(&self, message: &[u8]) -> [u8; SIGNATURE_LENGTH] {
+        ed25519::signature_extended(message, &self.seckey)
+    }
+
+    pub fn verify(&self, message: &[u8], signature: [u8; SIGNATURE_LENGTH]) -> bool {
+        ed25519::verify(message, &self.pubkey, &signature)
+    }
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
+
+    const MSG: &'static [u8] = b"Hello World";
 
     fn user() -> Box<Identity> {
         let mnemonic_string = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -183,6 +203,13 @@ mod tests {
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
         from_mnemonic(&mnemonic_vec).unwrap()
+    }
+
+    #[test]
+    fn can_sign_and_check_signatures_with_derived_keypair() {
+        let user = user();
+        let skey: Box<KeyPair> = user.signing_key();
+        skey.sign()
     }
 
     #[test]
