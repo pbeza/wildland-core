@@ -184,14 +184,6 @@ impl KeyPair {
     pub fn seckey_str(&self) -> String {
         encode(self.seckey.as_slice())
     }
-
-    pub fn sign(&self, message: &[u8]) -> [u8; SIGNATURE_LENGTH] {
-        ed25519::signature_extended(message, &self.seckey)
-    }
-
-    pub fn verify(&self, message: &[u8], signature: [u8; SIGNATURE_LENGTH]) -> bool {
-        ed25519::verify(message, &self.pubkey, &signature)
-    }
 }
 
 #[cfg(test)]
@@ -210,12 +202,20 @@ mod tests {
         from_mnemonic(&mnemonic_vec).unwrap()
     }
 
+    fn sign(message: &[u8], seckey: &[u8]) -> [u8; SIGNATURE_LENGTH] {
+        ed25519::signature_extended(message, seckey)
+    }
+
+    fn verify(message: &[u8], pubkey: &[u8], signature: [u8; SIGNATURE_LENGTH]) -> bool {
+        ed25519::verify(message, pubkey, &signature)
+    }
+
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
         let skey: Box<KeyPair> = user.signing_key();
-        let signature = skey.sign(MSG);
-        let is_valid = skey.verify(MSG, signature);
+        let signature = sign(MSG, &skey.seckey);
+        let is_valid = verify(MSG, &skey.pubkey, signature);
         assert!(is_valid)
     }
 
