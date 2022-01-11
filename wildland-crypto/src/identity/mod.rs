@@ -17,23 +17,22 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::error::{CargoError, CargoErrorRepresentable};
 use std::fmt;
 
-use bip39::{Mnemonic,Language,};
-use hkdf::Hkdf;
-use ed25519_bip32::{XPrv, DerivationScheme};
-
-use sha2::Sha256;
-use hex_literal::hex;
-
-use hex::{encode};
-
+use bip39::{Language, Mnemonic};
+use cryptoxide::curve25519::ge_scalarmult_base;
 // for signing and signature verification
 use cryptoxide::ed25519;
-use cryptoxide::ed25519::SIGNATURE_LENGTH;
+use cryptoxide::ed25519::{SIGNATURE_LENGTH, to_public};
+use ed25519_bip32::{DerivationScheme, XPrv};
+use hex::encode;
+use hex_literal::hex;
+use hkdf::Hkdf;
+use sha2::Sha256;
 
-#[derive(Copy,Clone,PartialEq,Debug)]
+use crate::error::{CargoError, CargoErrorRepresentable};
+
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum IdentityError {
     InvalidWordVector = 1,
 }
@@ -52,10 +51,10 @@ impl CargoErrorRepresentable for IdentityError {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Identity {
     xprv: XPrv,
-    words: [String; 12]
+    words: [String; 12],
 }
 
 pub fn from_random_seed() -> Box<Identity> {
@@ -71,7 +70,7 @@ pub fn from_random_seed() -> Box<Identity> {
 
 pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> {
     if phrase.len() != 12 {
-        return Err(IdentityError::InvalidWordVector.into())
+        return Err(IdentityError::InvalidWordVector.into());
     }
     // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
     // We don't need them here.
@@ -98,7 +97,7 @@ pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> 
             for (i, word) in phrase.iter().enumerate() {
                 words[i] = word.to_string();
             }
-            Ok(Box::new(Identity {xprv: root_xprv, words: words}))
+            Ok(Box::new(Identity { xprv: root_xprv, words: words }))
         }
     }
 }
@@ -136,19 +135,24 @@ impl Identity {
         if tokens[1] != "m" {
             panic!("Derivation path must start with m");
         }
-        tokens.reverse(); tokens.pop(); tokens.pop(); tokens.reverse();
+        tokens.reverse();
+        tokens.pop();
+        tokens.pop();
+        tokens.reverse();
 
         let mut secret_xprv: XPrv = self.xprv.clone();
         for derivation_index in tokens {
-            let di: u32 = derivation_index.parse().unwrap();
+            let di: u32 = u32::from_str_radix(derivation_index, 32).unwrap();
             secret_xprv = (&secret_xprv).derive(DerivationScheme::V2, di);
         }
 
         // drop last 32 bytes of chain-code from xprv to get secret key
         let secret: Vec<u8> = secret_xprv.as_ref()[..64].to_vec();
         // drop chain-code AND last 32 bytes of secret key to get public key
-        let public: Vec<u8> = secret_xprv.as_ref()[0..32].to_vec();
-        Box::new(KeyPair {pubkey: public, seckey: secret} )
+        let public = ge_scalarmult_base(&secret_xprv.as_ref()[0..32])
+            .to_bytes()
+            .to_vec();
+        Box::new(KeyPair { pubkey: public, seckey: secret })
     }
 }
 
@@ -157,9 +161,11 @@ fn signing_key_path() -> String {
     // "574c44" == b'WLD'.hex()
     "/m/574c44/0/0".to_string()
 }
+
 fn encryption_key_path(index: u64) -> String {
     format!("/m/574c44/1/{}", index)
 }
+
 fn single_use_encryption_key_path(index: u64) -> String {
     format!("/m/574c44/2/{}", index)
 }
@@ -167,7 +173,7 @@ fn single_use_encryption_key_path(index: u64) -> String {
 
 pub struct KeyPair {
     pubkey: Vec<u8>,
-    seckey: Vec<u8>
+    seckey: Vec<u8>,
 }
 
 impl KeyPair {
@@ -190,7 +196,6 @@ impl KeyPair {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     const MSG: &'static [u8] = b"Hello World";
@@ -199,9 +204,9 @@ mod tests {
         let mnemonic_string = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let mnemonic_vec: Vec<String> =
             mnemonic_string
-            .split(" ")
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
+                .split(" ")
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
         from_mnemonic(&mnemonic_vec).unwrap()
     }
 
@@ -209,7 +214,9 @@ mod tests {
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
         let skey: Box<KeyPair> = user.signing_key();
-        skey.sign()
+        let signature = skey.sign(MSG);
+        let is_valid = skey.verify(MSG, signature);
+        assert!(is_valid)
     }
 
     #[test]
@@ -221,8 +228,8 @@ mod tests {
         println!("encryp0 key: {}", e0key.seckey_str());
         let e1key: Box<KeyPair> = user.encryption_key(1);
         println!("encryp1 key: {}", e1key.seckey_str());
-        assert!(skey.seckey_str() != e0key.seckey_str());
-        assert!(e0key.seckey_str() != e1key.seckey_str());
+        assert_ne!(skey.seckey_str(), e0key.seckey_str());
+        assert_ne!(e0key.seckey_str(), e1key.seckey_str());
 
         assert_eq!(skey.seckey_str().len(), 128);
         assert_eq!(skey.pubkey_str().len(), 64);
@@ -265,9 +272,9 @@ mod tests {
         let mnemonic_string = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let mnemonic_vec: Vec<String> =
             mnemonic_string
-            .split(" ")
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
+                .split(" ")
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
         let user = from_mnemonic(&mnemonic_vec).unwrap();
         assert_eq!(user.mnemonic().len(), 12);
     }
