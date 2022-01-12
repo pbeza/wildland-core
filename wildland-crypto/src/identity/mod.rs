@@ -141,7 +141,7 @@ impl Identity {
 
         let mut secret_xprv: XPrv = self.xprv.clone();
         for derivation_index in tokens {
-            let di: u32 = u32::from_str_radix(derivation_index, 32).unwrap();
+            let di: u32 = u32::from_str_radix(derivation_index, 16).unwrap();
             secret_xprv = (&secret_xprv).derive(DerivationScheme::V2, di);
         }
 
