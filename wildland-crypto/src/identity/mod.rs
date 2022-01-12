@@ -25,13 +25,14 @@ use cryptoxide::ed25519::to_public;
 use ed25519_bip32::{DerivationScheme, XPrv};
 use hex::encode;
 use hkdf::Hkdf;
-use sha2::Sha256;
+use sha2::{Sha256, Digest};
 
 use crate::error::{CargoError, CargoErrorRepresentable};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum IdentityError {
     InvalidWordVector = 1,
+    EntropyTooLow = 2,
 }
 
 impl fmt::Display for IdentityError {
@@ -52,6 +53,22 @@ impl CargoErrorRepresentable for IdentityError {
 pub struct Identity {
     xprv: XPrv,
     words: [String; 12],
+}
+
+pub fn from_entropy(entropy: &Vec<u8>) -> Result<Box<Identity>, CargoError> {
+    // assume high quality entropy of arbitrary length (>= 32 bytes)
+    if (entropy.len() * 8) < 128 {
+        return Err(IdentityError::EntropyTooLow.into());
+    }
+    let mut hasher = Sha256::new();
+    hasher.update(entropy);
+    let hashed_entropy = hasher.finalize();
+    let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16]).unwrap();
+    let mut vec: Vec<String> = Vec::new();
+    for word in mnemonic.word_iter() {
+        vec.push(word.to_string());
+    }
+    from_mnemonic(&vec)
 }
 
 pub fn from_random_seed() -> Box<Identity> {
@@ -241,6 +258,27 @@ mod tests {
     fn can_generate_seed_for_phrase() {
         let user = from_random_seed();
         assert_eq!(user.mnemonic().len(), 12);
+    }
+
+    #[test]
+    fn can_generate_from_entropy() {
+        let entropy = hex!("
+            65426aa1176159d1929caea10514cddd
+            d11235741001f125922f258a58716b58
+            da63e3060fe461fe37e4ed201d76b132
+            e35830929b0f4764e577d3da09ecb6d2
+            12
+        ");
+        let user = from_entropy(&entropy.to_vec()).ok().unwrap();
+        println!("mnemonic: {}", user.mnemonic().join(" "));
+    }
+
+    #[test]
+    fn will_crash_on_low_entropy_source() {
+        let entropy = hex!("
+            65426aa1176159d1929caea10514
+        ");
+        assert_eq!(true, from_entropy(&entropy.to_vec()).is_err());
     }
 
     #[test]

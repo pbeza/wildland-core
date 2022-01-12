@@ -19,7 +19,7 @@
 
 
 use crate::identity::{Identity, IdentityError, KeyPair, from_random_seed,
-                      from_mnemonic};
+                      from_mnemonic, from_entropy};
 
 #[cxx::bridge(namespace="cargo::common")]
 mod identity {
@@ -29,6 +29,7 @@ mod identity {
         type IdentityError;
         type KeyPair;
 
+        fn from_entropy(entropy: &Vec<u8>) -> Result<Box<Identity>>;
         fn from_random_seed() -> Box<Identity>;
         fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>>;
 
