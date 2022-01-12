@@ -25,12 +25,14 @@ hkdf = "0.12.0"
 # ed25519-bip32 is used to generate the tree of keypairs used by WL
 ed25519-bip32 = "0.4.0"
 
-# cryptoxide is used to test signing and signature verification
+# cryptoxide is used to derive ed25519 public keys
 cryptoxide = "0.3" 
 
-hex-literal = "0.3.4"
 sha2 = "0.10.0"
 hex = "0.4.3"
+
+[dev-dependencies]
+hex-literal = "0.3.4"
 
 [build-dependencies]
 cxx-build = "1.0"
