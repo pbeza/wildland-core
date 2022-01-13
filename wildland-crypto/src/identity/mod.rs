@@ -25,7 +25,9 @@ use cryptoxide::ed25519::to_public;
 use ed25519_bip32::{DerivationScheme, XPrv};
 use hex::encode;
 use hkdf::Hkdf;
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
+use sodiumoxide::crypto::sign::ed25519::SecretKey;
+use sodiumoxide::crypto::sign::to_curve25519_sk;
 
 use crate::error::{CargoError, CargoErrorRepresentable};
 
@@ -135,18 +137,49 @@ impl Identity {
     }
 
     pub fn signing_key(&self) -> Box<KeyPair> {
-        self.derive(&signing_key_path())
+        self.derive_signing_key(&signing_key_path())
     }
 
     pub fn encryption_key(&self, index: u64) -> Box<KeyPair> {
-        self.derive(&encryption_key_path(index))
+        self.derive_encryption_key(&encryption_key_path(index))
     }
 
     pub fn single_use_encryption_key(&self, index: u64) -> Box<KeyPair> {
-        self.derive(&single_use_encryption_key_path(index))
+        self.derive_encryption_key(&single_use_encryption_key_path(index))
     }
 
-    fn derive(&self, path: &str) -> Box<KeyPair> {
+    fn derive_signing_key(&self, path: &str) -> Box<KeyPair> {
+        let private_key = self.derive_private_key_from_path(path);
+
+        // drop the chain-code from xprv to get secret key
+        let secret: Vec<u8> = private_key.as_ref()[..64].to_vec();
+        // drop the chain-code from xprv and generate public key from the secret key
+        let public = to_public(&private_key.as_ref()[0..64]).to_vec();
+
+        Box::new(KeyPair {
+            pubkey: public,
+            seckey: secret,
+        })
+    }
+
+    fn derive_encryption_key(&self, path: &str) -> Box<KeyPair> {
+        let private_key = self.derive_private_key_from_path(path);
+
+        // drop the chain-code from xprv to get secret key
+        let ed25519_sk = SecretKey::from_slice(&private_key.as_ref()[..64]).unwrap();
+
+        // In order to use a secret key for encryption/decryption it must be converted from 64-bytes long
+        // ed25519 key to 32-bytes long curve25519 key
+        let curve25519_sk = to_curve25519_sk(&ed25519_sk).unwrap();
+        let curve25519_pk = curve25519_sk.public_key();
+
+        Box::new(KeyPair {
+            seckey: curve25519_sk.as_ref().to_vec(),
+            pubkey: curve25519_pk.as_ref().to_vec(),
+        })
+    }
+
+    fn derive_private_key_from_path(&self, path: &str) -> XPrv {
         let mut tokens: Vec<&str> = path.split("/").collect();
         if tokens[1] != "m" {
             panic!("Derivation path must start with m");
@@ -161,15 +194,7 @@ impl Identity {
             let di: u32 = u32::from_str_radix(derivation_index, 16).unwrap();
             secret_xprv = (&secret_xprv).derive(DerivationScheme::V2, di);
         }
-
-        // drop the chain-code from xprv to get secret key
-        let secret: Vec<u8> = secret_xprv.as_ref()[..64].to_vec();
-        // drop the chain-code from xprv and generate public key from the secret key
-        let public = to_public(&secret_xprv.as_ref()[0..64]).to_vec();
-        Box::new(KeyPair {
-            pubkey: public,
-            seckey: secret,
-        })
+        secret_xprv
     }
 }
 
@@ -203,12 +228,16 @@ impl KeyPair {
 }
 
 #[cfg(test)]
-
 mod tests {
-    use super::*;
+    use std::convert::TryFrom;
+
     use cryptoxide::ed25519;
     use cryptoxide::ed25519::SIGNATURE_LENGTH;
     use hex_literal::hex;
+    use salsa20::XNonce;
+    use crypto_box::aead::Aead;
+
+    use super::*;
 
     const MSG: &'static [u8] = b"Hello World";
 
@@ -229,6 +258,27 @@ mod tests {
         ed25519::verify(message, pubkey, &signature)
     }
 
+    fn generate_nonce() -> XNonce {
+        let mut rng = crypto_box::rand_core::OsRng;
+        crypto_box::generate_nonce(&mut rng)
+    }
+
+    fn encrypt(message: &[u8], nonce: &XNonce, secret_key: [u8; 32], public_key: [u8; 32]) -> Vec<u8> {
+        let salsa_box = crypto_box::Box::new(
+            &crypto_box::PublicKey::from(public_key),
+            &crypto_box::SecretKey::from(secret_key));
+
+        salsa_box.encrypt(nonce, message).unwrap()
+    }
+
+    fn decrypt(ciphertext: &[u8], nonce: &XNonce, secret_key: [u8; 32], public_key: [u8; 32]) -> Vec<u8> {
+        let salsa_box = crypto_box::Box::new(
+            &crypto_box::PublicKey::from(public_key),
+            &crypto_box::SecretKey::from(secret_key));
+
+        salsa_box.decrypt(nonce, ciphertext).unwrap()
+    }
+
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
@@ -236,6 +286,28 @@ mod tests {
         let signature = sign(MSG, &skey.seckey);
         let is_valid = verify(MSG, &skey.pubkey, signature);
         assert!(is_valid)
+    }
+
+    #[test]
+    fn can_encrypt_and_decrypt_message_with_encryption_key() {
+        let user = user();
+        let alice_keypair: Box<KeyPair> = user.encryption_key(0);
+        let bob_keypair: Box<KeyPair> = user.encryption_key(1);
+        let message = b"Kill all humans";
+        let nonce = generate_nonce();
+
+        let ciphertext = encrypt(
+            message,
+            &nonce,
+            <[u8; 32]>::try_from(alice_keypair.seckey.as_slice()).unwrap(),
+            <[u8; 32]>::try_from(bob_keypair.pubkey.as_slice()).unwrap());
+        let decryted_message = decrypt(
+            ciphertext.as_slice(),
+            &nonce,
+            <[u8; 32]>::try_from(bob_keypair.seckey.as_slice()).unwrap(),
+            <[u8; 32]>::try_from(alice_keypair.pubkey.as_slice()).unwrap(),
+        );
+        assert_eq!(message, decryted_message.as_slice())
     }
 
     #[test]
