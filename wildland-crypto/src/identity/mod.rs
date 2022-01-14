@@ -271,12 +271,12 @@ mod tests {
         salsa_box.encrypt(nonce, message).unwrap()
     }
 
-    fn decrypt(ciphertext: &[u8], nonce: &XNonce, secret_key: [u8; 32], public_key: [u8; 32]) -> Vec<u8> {
+    fn decrypt(ciphertext: &[u8], nonce: &XNonce, secret_key: [u8; 32], public_key: [u8; 32]) -> crypto_box::aead::Result<Vec<u8>> {
         let salsa_box = crypto_box::Box::new(
             &crypto_box::PublicKey::from(public_key),
             &crypto_box::SecretKey::from(secret_key));
 
-        salsa_box.decrypt(nonce, ciphertext).unwrap()
+        salsa_box.decrypt(nonce, ciphertext)
     }
 
     #[test]
@@ -301,13 +301,81 @@ mod tests {
             &nonce,
             <[u8; 32]>::try_from(alice_keypair.seckey.as_slice()).unwrap(),
             <[u8; 32]>::try_from(bob_keypair.pubkey.as_slice()).unwrap());
-        let decryted_message = decrypt(
+        let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
             <[u8; 32]>::try_from(bob_keypair.seckey.as_slice()).unwrap(),
             <[u8; 32]>::try_from(alice_keypair.pubkey.as_slice()).unwrap(),
         );
-        assert_eq!(message, decryted_message.as_slice())
+        assert_eq!(message, result.unwrap().as_slice())
+    }
+
+    #[test]
+    fn can_encrypt_and_decrypt_message_with_single_use_encryption_key() {
+        let user = user();
+        let alice_keypair: Box<KeyPair> = user.single_use_encryption_key(0);
+        let bob_keypair: Box<KeyPair> = user.single_use_encryption_key(1);
+        let message = b"Kill all humans";
+        let nonce = generate_nonce();
+
+        let ciphertext = encrypt(
+            message,
+            &nonce,
+            <[u8; 32]>::try_from(alice_keypair.seckey.as_slice()).unwrap(),
+            <[u8; 32]>::try_from(bob_keypair.pubkey.as_slice()).unwrap());
+        let result = decrypt(
+            ciphertext.as_slice(),
+            &nonce,
+            <[u8; 32]>::try_from(bob_keypair.seckey.as_slice()).unwrap(),
+            <[u8; 32]>::try_from(alice_keypair.pubkey.as_slice()).unwrap(),
+        );
+        assert_eq!(message, result.unwrap().as_slice())
+    }
+
+    #[test]
+    fn cannot_decrypt_message_when_invalid_encryption_key_is_used() {
+        let user = user();
+        let alice_keypair: Box<KeyPair> = user.encryption_key(0);
+        let bob_keypair: Box<KeyPair> = user.encryption_key(1);
+        let charlie_keypair: Box<KeyPair> = user.encryption_key(2);
+        let message = b"Kill all humans";
+        let nonce = generate_nonce();
+
+        let ciphertext = encrypt(
+            message,
+            &nonce,
+            <[u8; 32]>::try_from(alice_keypair.seckey.as_slice()).unwrap(),
+            <[u8; 32]>::try_from(bob_keypair.pubkey.as_slice()).unwrap());
+        let result = decrypt(
+            ciphertext.as_slice(),
+            &nonce,
+            <[u8; 32]>::try_from(charlie_keypair.seckey.as_slice()).unwrap(),
+            <[u8; 32]>::try_from(alice_keypair.pubkey.as_slice()).unwrap(),
+        );
+        assert!(result.is_err())
+    }
+
+    #[test]
+    fn cannot_decrypt_message_when_invalid_single_use_encryption_key_is_used() {
+        let user = user();
+        let alice_keypair: Box<KeyPair> = user.single_use_encryption_key(0);
+        let bob_keypair: Box<KeyPair> = user.single_use_encryption_key(1);
+        let charlie_keypair: Box<KeyPair> = user.single_use_encryption_key(2);
+        let message = b"Kill all humans";
+        let nonce = generate_nonce();
+
+        let ciphertext = encrypt(
+            message,
+            &nonce,
+            <[u8; 32]>::try_from(alice_keypair.seckey.as_slice()).unwrap(),
+            <[u8; 32]>::try_from(bob_keypair.pubkey.as_slice()).unwrap());
+        let result = decrypt(
+            ciphertext.as_slice(),
+            &nonce,
+            <[u8; 32]>::try_from(charlie_keypair.seckey.as_slice()).unwrap(),
+            <[u8; 32]>::try_from(alice_keypair.pubkey.as_slice()).unwrap(),
+        );
+        assert!(result.is_err())
     }
 
     #[test]
