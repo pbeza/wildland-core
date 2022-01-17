@@ -3,6 +3,7 @@
 //
 // Copyright © 2021 Golem Foundation,
 // 	    	     Lukasz Kujawski <leon@wildland.io>
+// 	    	     Pawel Peregud <pepesza@wildland.io>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,12 +19,14 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+use bip39::Mnemonic;
 use cryptoxide::ed25519::to_public;
 use ed25519_bip32::{DerivationScheme, XPrv};
 use sodiumoxide::crypto::sign::ed25519::SecretKey;
 use sodiumoxide::crypto::sign::to_curve25519_sk;
 
 use crate::identity::KeyPair;
+use crate::identity::seed::extend_seed;
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
@@ -47,6 +50,35 @@ pub struct Identity {
 
 
 impl Identity {
+
+    pub fn from_mnemonic(mnemonic: Mnemonic) -> Identity {
+        // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
+        // We don't need them here.
+        let passphrase = "";
+        let seed = mnemonic.to_seed_normalized(passphrase);
+        // Seed here is randomness of high quality (it is hard to guess).
+        // But we only have 64 bytes of it, and we need extra 32 bytes for
+        // BIP32's "chain code", which should satisfy following requirements:
+        // 1. be deterministic
+        // 2. look like good randomness
+        // 3. be public, since it will be used as a part of both XPrv and XPub!
+        // To achieve this, we use key derivation function (KDF).
+        // A very standard variant of that is HKDF.
+        let mut output_key_material = [0u8; 96];
+        extend_seed(seed, &mut output_key_material);
+
+        // Now we can use this randomness as bip32-ed25519 extended private key
+        let root_xprv = XPrv::normalize_bytes_ed25519(output_key_material);
+        let mut words: [String; 12] = Default::default();
+        for (i, word) in mnemonic.word_iter().enumerate() {
+            words[i] = word.to_string();
+        }
+        Identity {
+            xprv: root_xprv,
+            words,
+        }
+    }
+
     pub fn mnemonic(&self) -> Vec<String> {
         let mut result: Vec<String> = vec!["".to_string(); 12];
         for (i, word) in self.words.iter().enumerate() {
@@ -99,7 +131,7 @@ impl Identity {
     }
 
     fn derive_private_key_from_path(&self, path: &str) -> XPrv {
-        let mut tokens: Vec<&str> = path.split("/").collect();
+        let tokens: Vec<&str> = path.split("/").collect();
         if tokens[1] != "m" {
             panic!("Derivation path must start with m");
         }
@@ -116,7 +148,7 @@ impl Identity {
 #[cfg(test)]
 mod tests {
     use std::convert::TryFrom;
-    use std::sync::Once;
+    use std::str::FromStr;
 
     use crypto_box::aead::Aead;
     use cryptoxide::ed25519;
@@ -127,23 +159,10 @@ mod tests {
 
     const MSG: &'static [u8] = b"Hello World";
     const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    const ROOT_XPRV: [u8; 96] = [
-        24, 97, 125, 255, 78, 254, 242, 4, 80, 221, 94, 175, 192, 96, 253, 133, 250, 172, 202,
-        19, 217, 90, 206, 59, 218, 11, 227, 46, 70, 148, 252, 215, 161, 178, 196, 120, 102, 114,
-        194, 12, 205, 218, 138, 151, 244, 166, 214, 35, 131, 140, 194, 70, 236, 205, 123, 72, 70,
-        215, 44, 36, 182, 15, 25, 158, 117, 161, 211, 29, 125, 195, 12, 236, 138, 155, 206, 3,
-        16, 11, 54, 143, 209, 223, 7, 250, 9, 252, 142, 87, 79, 214, 211, 69, 2, 147, 159, 63
-    ];
 
     fn user() -> Box<Identity> {
-        let words: [String; 12] = <[String; 12]>::try_from(MNEMONIC.split(" ")
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>()).unwrap();
-
-        Box::new(Identity {
-            xprv: XPrv::normalize_bytes_ed25519(ROOT_XPRV),
-            words,
-        })
+        let mnemonic = Mnemonic::from_str(MNEMONIC).unwrap();
+        Box::new(Identity::from_mnemonic(mnemonic))
     }
 
     fn sign(message: &[u8], seckey: &[u8]) -> [u8; SIGNATURE_LENGTH] {

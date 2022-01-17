@@ -30,7 +30,7 @@ mod identity {
         type KeyPair;
 
         fn from_entropy(entropy: &Vec<u8>) -> Result<Box<Identity>>;
-        fn from_random_seed() -> Box<Identity>;
+        fn from_random_seed() -> Result<Box<Identity>>;
         fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>>;
 
         fn mnemonic(self: &Identity) -> Vec<String>;
