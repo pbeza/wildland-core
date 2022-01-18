@@ -95,9 +95,11 @@ mod tests {
 
     use super::*;
 
+    const TEST_MNEMONIC_6: &str = "abandon abandon abandon abandon abandon about";
     const TEST_MNEMONIC_12: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     const TEST_MNEMONIC_24: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about
     abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    const TEST_MNEMONIC_ITALIAN: &str = "abaco abaco abaco abaco abaco abaco abaco abaco abaco abaco abaco abbaglio";
 
     // expected extended root private key bytes generated from TEST_MNEMONIC_12
     const ROOT_XPRV: [u8; 96] = [
@@ -150,6 +152,24 @@ mod tests {
     #[test]
     fn should_fail_on_too_long_mnemonic() {
         let mnemonic_vec: Vec<String> = TEST_MNEMONIC_24.split(" ")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
+
+        assert!(from_mnemonic(&mnemonic_vec).is_err());
+    }
+
+    #[test]
+    fn should_fail_on_too_short_mnemonic() {
+        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_6.split(" ")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
+
+        assert!(from_mnemonic(&mnemonic_vec).is_err());
+    }
+
+    #[test]
+    fn should_fail_on_not_english_mnemonic() {
+        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_ITALIAN.split(" ")
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
 
