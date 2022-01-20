@@ -22,8 +22,6 @@
 use bip39::Mnemonic;
 use cryptoxide::ed25519::to_public;
 use ed25519_bip32::{DerivationScheme, XPrv};
-use sodiumoxide::crypto::sign::ed25519::SecretKey;
-use sodiumoxide::crypto::sign::to_curve25519_sk;
 
 use crate::identity::KeyPair;
 use crate::identity::seed::extend_seed;
@@ -114,18 +112,19 @@ impl Identity {
     }
 
     fn derive_encryption_key(&self, path: &str) -> Box<KeyPair> {
-        let private_key = self.derive_private_key_from_path(path);
+        let private_key: XPrv = self.derive_private_key_from_path(path);
 
-        // drop the chain-code from xprv to get secret key
-        let ed25519_sk = SecretKey::from_slice(&private_key.as_ref()[..64]).unwrap();
-
-        // In order to use a secret key for encryption/decryption it must be converted from 64-bytes long
-        // ed25519 key to 32-bytes long curve25519 key
-        let curve25519_sk = to_curve25519_sk(&ed25519_sk).unwrap();
+        // Drop the chain-code from xprv - it is no longer needed. This leaves 64 bytes.
+        // Encryption in libsodium works on 32 byte keys, while what we have is 64 bytes.
+        // Curve25519 keys are created from random bytes. Here we just trim.
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&private_key.as_ref()[..32]);
+        // As for the key clamping - it is handled by crypto_box::SecretKey
+        let curve25519_sk = &crypto_box::SecretKey::from(bytes);
         let curve25519_pk = curve25519_sk.public_key();
 
         Box::new(KeyPair {
-            seckey: curve25519_sk.as_ref().to_vec(),
+            seckey: curve25519_sk.as_bytes().to_vec(),
             pubkey: curve25519_pk.as_ref().to_vec(),
         })
     }
