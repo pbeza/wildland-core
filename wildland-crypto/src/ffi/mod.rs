@@ -38,5 +38,8 @@ mod identity {
         fn signing_key(self: &Identity) -> Box<KeyPair>;
         fn encryption_key(self: &Identity, index: u64) -> Box<KeyPair>;
         fn single_use_encryption_key(self: &Identity, index: u64) -> Box<KeyPair>;
+
+        fn pubkey_str(self: &KeyPair) -> String;
+        fn seckey_str(self: &KeyPair) -> String;
     }
 }
