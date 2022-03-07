@@ -41,5 +41,8 @@ mod identity {
 
         fn pubkey_str(self: &KeyPair) -> String;
         fn seckey_str(self: &KeyPair) -> String;
+
+	fn pubkey_bytes(self: &KeyPair) -> &Vec<u8>;
+	fn seckey_bytes(self: &KeyPair) -> &Vec<u8>;
     }
 }

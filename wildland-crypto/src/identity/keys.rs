@@ -34,4 +34,12 @@ impl KeyPair {
     pub fn seckey_str(&self) -> String {
         encode(self.seckey.as_slice())
     }
+
+    pub fn pubkey_bytes(&self) -> &Vec<u8> {
+	return &self.pubkey;
+    }
+
+    pub fn seckey_bytes(&self) -> &Vec<u8> {
+	return &self.seckey;
+    }
 }
