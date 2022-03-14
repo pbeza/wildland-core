@@ -206,8 +206,11 @@ mod tests {
         let skey: Box<KeyPair> = user.signing_key();
         let signature = sign(MSG, &skey.packed());
         let pubkey = &skey.pubkey_array();
-        let is_valid = verify(MSG, pubkey, signature);
-        assert!(is_valid)
+        assert!(verify(MSG, pubkey, signature));
+        let mut broken_signature: [u8; 64] = [0; 64];
+        broken_signature.copy_from_slice(&signature);
+        broken_signature[0] = !signature[0];
+        assert!(!verify(MSG, pubkey, broken_signature));
     }
 
     #[test]
