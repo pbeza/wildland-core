@@ -46,9 +46,8 @@ impl KeyPair {
 
     pub fn packed(&self) -> [u8; 64] {
         let mut bytes: [u8; 64] = [0; 64];
-        bytes[..32].copy_from_slice(&self.pubkey[..32]);
-        bytes.copy_within(0..32, 32);
         bytes[..32].copy_from_slice(&self.seckey[..32]);
+        bytes[32..64].copy_from_slice(&self.pubkey[..32]);
         bytes
     }
 
