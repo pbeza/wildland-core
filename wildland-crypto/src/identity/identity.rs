@@ -26,6 +26,8 @@ use ed25519_bip32::{DerivationScheme, XPrv};
 use crate::identity::KeyPair;
 use crate::identity::seed::extend_seed;
 
+use std::convert::TryFrom;
+
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
     // "574c44" == b'WLD'.hex()
@@ -101,17 +103,14 @@ impl Identity {
         let private_key = self.derive_private_key_from_path(path);
 
         // drop both the chain-code from xprv and last 32 bytes
-        let secret: Vec<u8> = private_key.as_ref()[..32].to_vec();
+        let secret: [u8; 32] = <[u8; 32]>::try_from(&private_key.as_ref()[..32]).unwrap();
 
         // drop the chain-code from xprv and generate public key from the secret key
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(&private_key.as_ref()[..32]);
-        let (_private, public) = keypair(&bytes);
-        let public_vec = public.to_vec();
+        let (_, public) = keypair(&secret);
 
         Box::new(KeyPair {
-            pubkey: public_vec,
-            seckey: secret,
+            pubkey: public.to_vec(),
+            seckey: secret.to_vec(),
         })
     }
 
