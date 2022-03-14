@@ -20,7 +20,7 @@
 
 
 use bip39::Mnemonic;
-use cryptoxide::ed25519::to_public;
+use cryptoxide::ed25519::{keypair};
 use ed25519_bip32::{DerivationScheme, XPrv};
 
 use crate::identity::KeyPair;
@@ -100,13 +100,17 @@ impl Identity {
     fn derive_signing_key(&self, path: &str) -> Box<KeyPair> {
         let private_key = self.derive_private_key_from_path(path);
 
-        // drop the chain-code from xprv to get secret key
-        let secret: Vec<u8> = private_key.as_ref()[..64].to_vec();
+        // drop both the chain-code from xprv and last 32 bytes
+        let secret: Vec<u8> = private_key.as_ref()[..32].to_vec();
+
         // drop the chain-code from xprv and generate public key from the secret key
-        let public = to_public(&private_key.as_ref()[0..64]).to_vec();
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&private_key.as_ref()[..32]);
+        let (_private, public) = keypair(&bytes);
+        let public_vec = public.to_vec();
 
         Box::new(KeyPair {
-            pubkey: public,
+            pubkey: public_vec,
             seckey: secret,
         })
     }
@@ -164,11 +168,11 @@ mod tests {
         Box::new(Identity::from_mnemonic(mnemonic))
     }
 
-    fn sign(message: &[u8], seckey: &[u8]) -> [u8; SIGNATURE_LENGTH] {
-        ed25519::signature_extended(message, seckey)
+    fn sign(message: &[u8], keypair: &[u8; 64]) -> [u8; SIGNATURE_LENGTH] {
+        ed25519::signature(message, keypair)
     }
 
-    fn verify(message: &[u8], pubkey: &[u8], signature: [u8; SIGNATURE_LENGTH]) -> bool {
+    fn verify(message: &[u8], pubkey: &[u8; 32], signature: [u8; SIGNATURE_LENGTH]) -> bool {
         ed25519::verify(message, pubkey, &signature)
     }
 
@@ -201,8 +205,9 @@ mod tests {
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
         let skey: Box<KeyPair> = user.signing_key();
-        let signature = sign(MSG, &skey.seckey);
-        let is_valid = verify(MSG, &skey.pubkey, signature);
+        let signature = sign(MSG, &skey.packed());
+        let pubkey = &skey.pubkey_array();
+        let is_valid = verify(MSG, pubkey, signature);
         assert!(is_valid)
     }
 
@@ -313,15 +318,16 @@ mod tests {
     fn can_generate_distinct_keypairs() {
         let user = user();
         let skey: Box<KeyPair> = user.signing_key();
-        println!("signing key: {}", skey.seckey_str());
+        println!("signing key, sec {}", skey.seckey_str());
+        println!("signing key, pub {}", skey.pubkey_str());
         let e0key: Box<KeyPair> = user.encryption_key(0);
-        println!("encryp0 key: {}", e0key.seckey_str());
+        println!("encryp0 key, sec: {}", e0key.seckey_str());
+        println!("encryp0 key, pub: {}", e0key.pubkey_str());
         let e1key: Box<KeyPair> = user.encryption_key(1);
-        println!("encryp1 key: {}", e1key.seckey_str());
         assert_ne!(skey.seckey_str(), e0key.seckey_str());
         assert_ne!(e0key.seckey_str(), e1key.seckey_str());
 
-        assert_eq!(skey.seckey_str().len(), 128);
+        assert_eq!(skey.seckey_str().len(), 64);
         assert_eq!(skey.pubkey_str().len(), 64);
     }
 }

@@ -26,7 +26,7 @@ hkdf = "0.12.0"
 ed25519-bip32 = "0.4.0"
 
 # used to derive ed25519 public keys and to generate curve25519 keypairs
-cryptoxide = "0.3"
+cryptoxide = "0.4.2"
 crypto_box = "0.7.0"
 
 sha2 = "0.10.0"

@@ -20,6 +20,7 @@
 
 
 use hex::encode;
+use std::convert::TryFrom;
 
 pub struct KeyPair {
     pub pubkey: Vec<u8>,
@@ -36,10 +37,22 @@ impl KeyPair {
     }
 
     pub fn pubkey_bytes(&self) -> &Vec<u8> {
-	return &self.pubkey;
+	      return &self.pubkey;
     }
 
     pub fn seckey_bytes(&self) -> &Vec<u8> {
-	return &self.seckey;
+	      return &self.seckey;
+    }
+
+    pub fn packed(&self) -> [u8; 64] {
+        let mut bytes: [u8; 64] = [0; 64];
+        bytes[..32].copy_from_slice(&self.pubkey[..32]);
+        bytes.copy_within(0..32, 32);
+        bytes[..32].copy_from_slice(&self.seckey[..32]);
+        bytes
+    }
+
+    pub fn pubkey_array(&self) -> [u8; 32] {
+        <[u8; 32]>::try_from(self.pubkey.as_slice()).unwrap()
     }
 }
