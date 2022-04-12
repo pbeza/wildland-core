@@ -1,0 +1,12 @@
+[package]
+name = "wildland-admin-manager"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-only"
+description = "Wildland Admin Manager"
+publish = ["wl-dev"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wildland-corex = { version = "0.1.0", path = "../wildland-corex" }

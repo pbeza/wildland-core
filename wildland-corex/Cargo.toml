@@ -1,0 +1,15 @@
+[package]
+name = "wildland-corex"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-only"
+repository = "https://gitlab.com/wildland/corex/wildland-corex"
+description = "A Wildland Core library"
+publish = ["wl-dev"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wildland-wallet = { version = "0.1.0", path = "../wildland-wallet" }
+wildland-catlib = { version = "0.1.0", path = "../wildland-catlib" }
+wildland-dfs = { version = "0.1.0", path = "../wildland-dfs" }

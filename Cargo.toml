@@ -1,0 +1,10 @@
+[workspace]
+
+members = [
+    "wildland-admin-manager",
+    "wildland-catlib",
+    "wildland-cli",
+    "wildland-corex",
+    "wildland-dfs",
+    "wildland-wallet",
+]
