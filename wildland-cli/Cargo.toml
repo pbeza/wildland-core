@@ -1,10 +1,13 @@
 [package]
 name = "wildland-corex-cli"
 version = "0.1.0"
+authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
-repository = "https://gitlab.com/wildland/corex-cli"
-description = "A Wildland command-line interface."
+repository = "https://gitlab.com/wildland/corex/wildland-core"
+homepage = "https://wildland.io/"
+description = "Wildland command-line interface (CLI)"
+keywords = ["storage", "command-line-utilities"]
 publish = ["wl-dev"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
