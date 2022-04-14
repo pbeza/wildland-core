@@ -2,6 +2,7 @@
 
 members = [
     "wildland-admin-manager",
+    "wildland-admin-manager-python",
     "wildland-catlib",
     "wildland-cli",
     "wildland-corex",
