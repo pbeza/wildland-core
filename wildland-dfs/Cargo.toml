@@ -1,9 +1,13 @@
 [package]
 name = "wildland-dfs"
 version = "0.1.0"
+authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
+repository = "https://gitlab.com/wildland/corex/wildland-core"
+homepage = "https://wildland.io/"
 description = "A Wildland file system handler"
+keywords = ["storage"]
 publish = ["wl-dev"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
