@@ -220,7 +220,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "wildland-corex-cli"
+name = "wildland-dfs"
+version = "0.1.0"
+
+[[package]]
+name = "wildland-rust-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
@@ -228,10 +232,6 @@ dependencies = [
  "wildland-corex",
  "yansi",
 ]
-
-[[package]]
-name = "wildland-dfs"
-version = "0.1.0"
 
 [[package]]
 name = "wildland-wallet"

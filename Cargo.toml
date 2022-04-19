@@ -3,7 +3,7 @@
 members = [
     "wildland-admin-manager",
     "wildland-catlib",
-    "wildland-cli",
+    "wildland-rust-cli",
     "wildland-corex",
     "wildland-dfs",
     "wildland-wallet",
