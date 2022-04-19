@@ -1,0 +1,17 @@
+[package]
+name = "wildland-cli-python-bindings"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-only"
+description = "Wildland Python bindings"
+publish = ["wl-dev"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "wildland_cli_python_bindings"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.16.3", features = ["extension-module"] }
+wildland-corex = { version = "0.1.0", path = "../wildland-corex", registry = "wl-dev" }
+wildland-admin-manager = { version = "0.1.0", path = "../wildland-admin-manager", registry = "wl-dev" }
