@@ -7,4 +7,5 @@ members = [
     "wildland-corex",
     "wildland-dfs",
     "wildland-wallet",
+    "wildland-wasm",
 ]
