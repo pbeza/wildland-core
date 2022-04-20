@@ -1,0 +1,18 @@
+[package]
+name = "wildland-admin-manager-python"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-only"
+repository = "https://gitlab.com/wildland/corex-cli"
+description = "Wildland Admin Manager bindings for Python"
+publish = ["wl-dev"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "wildland_admin_manager_python"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.16.3", features = ["extension-module"] }
+wildland-admin-manager = { version = "0.1.0", path = "../wildland-admin-manager" }
