@@ -109,8 +109,8 @@ impl Identity {
         let (_, public) = keypair(&secret);
 
         KeyPair {
-            pubkey: public.to_vec(),
-            seckey: secret.to_vec(),
+            pubkey: public,
+            seckey: secret,
         }
     }
 
@@ -127,8 +127,8 @@ impl Identity {
         let curve25519_pk = curve25519_sk.public_key();
 
         KeyPair {
-            seckey: curve25519_sk.as_bytes().to_vec(),
-            pubkey: curve25519_pk.as_ref().to_vec(),
+            seckey: *curve25519_sk.as_bytes(),
+            pubkey: *curve25519_pk.as_bytes(),
         }
     }
 
@@ -149,7 +149,6 @@ impl Identity {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryFrom;
     use std::str::FromStr;
 
     use crypto_box::aead::Aead;
@@ -196,16 +195,12 @@ mod tests {
         salsa_box.decrypt(nonce, ciphertext)
     }
 
-    fn convert(key: Vec<u8>) -> [u8; 32] {
-        <[u8; 32]>::try_from(key.as_slice()).unwrap()
-    }
-
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
         let skey: KeyPair = user.signing_key();
         let signature = sign(MSG, &skey.packed());
-        let pubkey = &skey.pubkey_array();
+        let pubkey = &skey.pubkey;
         assert!(verify(MSG, pubkey, signature));
         let mut broken_signature: [u8; 64] = [0; 64];
         broken_signature.copy_from_slice(&signature);
@@ -222,13 +217,13 @@ mod tests {
 
         let ciphertext = encrypt(
             &nonce,
-            convert(alice_keypair.seckey),
-            convert(bob_keypair.pubkey));
+            alice_keypair.seckey,
+            bob_keypair.pubkey);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
-            convert(bob_keypair.seckey),
-            convert(alice_keypair.pubkey));
+            bob_keypair.seckey,
+            alice_keypair.pubkey);
 
         assert_eq!(MSG, result.unwrap().as_slice())
     }
@@ -242,13 +237,13 @@ mod tests {
 
         let ciphertext = encrypt(
             &nonce,
-            convert(alice_keypair.seckey),
-            convert(bob_keypair.pubkey));
+            alice_keypair.seckey,
+            bob_keypair.pubkey);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
-            convert(bob_keypair.seckey),
-            convert(alice_keypair.pubkey));
+            bob_keypair.seckey,
+            alice_keypair.pubkey);
 
         assert_eq!(MSG, result.unwrap().as_slice())
     }
@@ -263,13 +258,13 @@ mod tests {
 
         let ciphertext = encrypt(
             &nonce,
-            convert(alice_keypair.seckey),
-            convert(bob_keypair.pubkey));
+            alice_keypair.seckey,
+            bob_keypair.pubkey);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
-            convert(charlie_keypair.seckey),
-            convert(alice_keypair.pubkey));
+            charlie_keypair.seckey,
+            alice_keypair.pubkey);
 
         assert!(result.is_err())
     }
@@ -284,13 +279,13 @@ mod tests {
 
         let ciphertext = encrypt(
             &nonce,
-            convert(alice_keypair.seckey),
-            convert(bob_keypair.pubkey));
+            alice_keypair.seckey,
+            bob_keypair.pubkey);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
-            convert(charlie_keypair.seckey),
-            convert(alice_keypair.pubkey));
+            charlie_keypair.seckey,
+            alice_keypair.pubkey);
 
         assert!(result.is_err())
     }
@@ -305,13 +300,13 @@ mod tests {
 
         let ciphertext = encrypt(
             &nonce1,
-            convert(alice_keypair.seckey),
-            convert(bob_keypair.pubkey));
+            alice_keypair.seckey,
+            bob_keypair.pubkey);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce2,
-            convert(bob_keypair.seckey),
-            convert(alice_keypair.pubkey));
+            bob_keypair.seckey,
+            alice_keypair.pubkey);
 
         assert!(result.is_err())
     }
