@@ -18,5 +18,4 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod identity;
-pub mod ffi;
 pub mod error;
