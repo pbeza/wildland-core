@@ -87,19 +87,19 @@ impl Identity {
         result
     }
 
-    pub fn signing_key(&self) -> Box<KeyPair> {
+    pub fn signing_key(&self) -> KeyPair {
         self.derive_signing_key(&signing_key_path())
     }
 
-    pub fn encryption_key(&self, index: u64) -> Box<KeyPair> {
+    pub fn encryption_key(&self, index: u64) -> KeyPair {
         self.derive_encryption_key(&encryption_key_path(index))
     }
 
-    pub fn single_use_encryption_key(&self, index: u64) -> Box<KeyPair> {
+    pub fn single_use_encryption_key(&self, index: u64) -> KeyPair {
         self.derive_encryption_key(&single_use_encryption_key_path(index))
     }
 
-    fn derive_signing_key(&self, path: &str) -> Box<KeyPair> {
+    fn derive_signing_key(&self, path: &str) -> KeyPair {
         let private_key = self.derive_private_key_from_path(path);
 
         // drop both the chain-code from xprv and last 32 bytes
@@ -108,13 +108,13 @@ impl Identity {
         // drop the chain-code from xprv and generate public key from the secret key
         let (_, public) = keypair(&secret);
 
-        Box::new(KeyPair {
+        KeyPair {
             pubkey: public.to_vec(),
             seckey: secret.to_vec(),
-        })
+        }
     }
 
-    fn derive_encryption_key(&self, path: &str) -> Box<KeyPair> {
+    fn derive_encryption_key(&self, path: &str) -> KeyPair {
         let private_key: XPrv = self.derive_private_key_from_path(path);
 
         // Drop the chain-code from xprv - it is no longer needed. This leaves 64 bytes.
@@ -126,10 +126,10 @@ impl Identity {
         let curve25519_sk = &crypto_box::SecretKey::from(bytes);
         let curve25519_pk = curve25519_sk.public_key();
 
-        Box::new(KeyPair {
+        KeyPair {
             seckey: curve25519_sk.as_bytes().to_vec(),
             pubkey: curve25519_pk.as_ref().to_vec(),
-        })
+        }
     }
 
     fn derive_private_key_from_path(&self, path: &str) -> XPrv {
@@ -162,9 +162,9 @@ mod tests {
     const MSG: &'static [u8] = b"Hello World";
     const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
-    fn user() -> Box<Identity> {
+    fn user() -> Identity {
         let mnemonic = Mnemonic::from_str(MNEMONIC).unwrap();
-        Box::new(Identity::from_mnemonic(mnemonic))
+        Identity::from_mnemonic(mnemonic)
     }
 
     fn sign(message: &[u8], keypair: &[u8; 64]) -> [u8; SIGNATURE_LENGTH] {
@@ -203,7 +203,7 @@ mod tests {
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
-        let skey: Box<KeyPair> = user.signing_key();
+        let skey: KeyPair = user.signing_key();
         let signature = sign(MSG, &skey.packed());
         let pubkey = &skey.pubkey_array();
         assert!(verify(MSG, pubkey, signature));
@@ -216,8 +216,8 @@ mod tests {
     #[test]
     fn can_encrypt_and_decrypt_message_with_encryption_key() {
         let user = user();
-        let alice_keypair: Box<KeyPair> = user.encryption_key(0);
-        let bob_keypair: Box<KeyPair> = user.encryption_key(1);
+        let alice_keypair: KeyPair = user.encryption_key(0);
+        let bob_keypair: KeyPair = user.encryption_key(1);
         let nonce = generate_nonce();
 
         let ciphertext = encrypt(
@@ -236,8 +236,8 @@ mod tests {
     #[test]
     fn can_encrypt_and_decrypt_message_with_single_use_encryption_key() {
         let user = user();
-        let alice_keypair: Box<KeyPair> = user.single_use_encryption_key(0);
-        let bob_keypair: Box<KeyPair> = user.single_use_encryption_key(1);
+        let alice_keypair: KeyPair = user.single_use_encryption_key(0);
+        let bob_keypair: KeyPair = user.single_use_encryption_key(1);
         let nonce = generate_nonce();
 
         let ciphertext = encrypt(
@@ -256,9 +256,9 @@ mod tests {
     #[test]
     fn cannot_decrypt_message_when_invalid_encryption_key_is_used() {
         let user = user();
-        let alice_keypair: Box<KeyPair> = user.encryption_key(0);
-        let bob_keypair: Box<KeyPair> = user.encryption_key(1);
-        let charlie_keypair: Box<KeyPair> = user.encryption_key(2);
+        let alice_keypair: KeyPair = user.encryption_key(0);
+        let bob_keypair: KeyPair = user.encryption_key(1);
+        let charlie_keypair: KeyPair = user.encryption_key(2);
         let nonce = generate_nonce();
 
         let ciphertext = encrypt(
@@ -277,9 +277,9 @@ mod tests {
     #[test]
     fn cannot_decrypt_message_when_invalid_single_use_encryption_key_is_used() {
         let user = user();
-        let alice_keypair: Box<KeyPair> = user.single_use_encryption_key(0);
-        let bob_keypair: Box<KeyPair> = user.single_use_encryption_key(1);
-        let charlie_keypair: Box<KeyPair> = user.single_use_encryption_key(2);
+        let alice_keypair: KeyPair = user.single_use_encryption_key(0);
+        let bob_keypair: KeyPair = user.single_use_encryption_key(1);
+        let charlie_keypair: KeyPair = user.single_use_encryption_key(2);
         let nonce = generate_nonce();
 
         let ciphertext = encrypt(
@@ -298,8 +298,8 @@ mod tests {
     #[test]
     fn cannot_decrypt_message_with_different_nonce() {
         let user = user();
-        let alice_keypair: Box<KeyPair> = user.single_use_encryption_key(0);
-        let bob_keypair: Box<KeyPair> = user.single_use_encryption_key(1);
+        let alice_keypair: KeyPair = user.single_use_encryption_key(0);
+        let bob_keypair: KeyPair = user.single_use_encryption_key(1);
         let nonce1 = generate_nonce();
         let nonce2 = generate_nonce();
 
@@ -319,13 +319,13 @@ mod tests {
     #[test]
     fn can_generate_distinct_keypairs() {
         let user = user();
-        let skey: Box<KeyPair> = user.signing_key();
+        let skey: KeyPair = user.signing_key();
         println!("signing key, sec {}", skey.seckey_str());
         println!("signing key, pub {}", skey.pubkey_str());
-        let e0key: Box<KeyPair> = user.encryption_key(0);
+        let e0key: KeyPair = user.encryption_key(0);
         println!("encryp0 key, sec: {}", e0key.seckey_str());
         println!("encryp0 key, pub: {}", e0key.pubkey_str());
-        let e1key: Box<KeyPair> = user.encryption_key(1);
+        let e1key: KeyPair = user.encryption_key(1);
         assert_ne!(skey.seckey_str(), e0key.seckey_str());
         assert_ne!(e0key.seckey_str(), e1key.seckey_str());
 
