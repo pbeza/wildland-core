@@ -28,8 +28,8 @@ use crate::error::{CargoError, CargoErrorRepresentable};
 pub use crate::identity::identity::Identity;
 pub use crate::identity::keys::KeyPair;
 
-mod keys;
-mod identity;
+pub mod keys;
+pub mod identity;
 mod seed;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
