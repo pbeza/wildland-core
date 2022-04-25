@@ -5,7 +5,7 @@ edition = "2021"
 publish = ["wl-dev"]
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["rlib"]
 
 [dependencies]
 serde = "1.0"
