@@ -52,6 +52,9 @@ impl CargoErrorRepresentable for IdentityError {
     }
 }
 
+/// Deterministically derive Wildland identity from Ethereum
+/// signature (or any random bits). Assumes high quality entropy
+/// and does not perform any checks.
 pub fn from_entropy(entropy: &Vec<u8>) -> Result<Box<Identity>, CargoError> {
     // assume high quality entropy of arbitrary length (>= 32 bytes)
     if (entropy.len() * 8) < 128 {
@@ -68,6 +71,8 @@ pub fn from_entropy(entropy: &Vec<u8>) -> Result<Box<Identity>, CargoError> {
     from_mnemonic(&vec)
 }
 
+/// Create a new, random Wildland identity.
+/// Will return new identity each time it is called.
 pub fn from_random_seed() -> Result<Box<Identity>, CargoError> {
     let mnemonic = Mnemonic::generate(12).unwrap();
     let mut vec: Vec<String> = Vec::new();
@@ -77,6 +82,7 @@ pub fn from_random_seed() -> Result<Box<Identity>, CargoError> {
     from_mnemonic(&vec)
 }
 
+/// Derive Wildland identity from mnemonic (12 dictionary words).
 pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> {
     if phrase.len() != 12 {
         return Err(IdentityError::InvalidWordVector.into());
