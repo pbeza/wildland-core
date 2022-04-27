@@ -42,6 +42,12 @@ fn single_use_encryption_key_path(index: u64) -> String {
     format!("/m/574c44/2/{}", index)
 }
 
+/// This structure represents Wildland cryptographic identity.
+///
+/// It uses BIP39 and BIP32 processes to derive keypairs of three purposes:
+/// - signing (not rotated, used to sign "user manifest")
+/// - encryption (used by other people to encrypt secrets to the user, rotated)
+/// - single-use-encryption - to transfer secrets in public
 #[derive(Debug, PartialEq)]
 pub struct Identity {
     pub xprv: XPrv,
@@ -51,6 +57,10 @@ pub struct Identity {
 
 impl Identity {
 
+    /// Derive identity from Mnemonic.
+    ///
+    /// Derived identity is bound to Wildland project - same 12 words will
+    /// produce different seed (number) in other project.
     pub fn from_mnemonic(mnemonic: Mnemonic) -> Identity {
         // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
         // We don't need them here.
@@ -79,6 +89,7 @@ impl Identity {
         }
     }
 
+    /// Retrieve mnemonic from identity. Useful during onboarding process.
     pub fn mnemonic(&self) -> Vec<String> {
         let mut result: Vec<String> = vec!["".to_string(); 12];
         for (i, word) in self.words.iter().enumerate() {
@@ -87,14 +98,27 @@ impl Identity {
         result
     }
 
+    /// Derive the key that can be used to sign user manifest.
+    /// Pubkey represents user to the world.
     pub fn signing_key(&self) -> KeyPair {
         self.derive_signing_key(&signing_key_path())
     }
 
+    /// Derive current encryption key, used to encrypt secrets to the user.
+    /// This keypair should be rotated whenever any of user's devices
+    /// is compromised / stolen / lost.
+    /// Current encryption pubkey should be accessible to anyone
+    /// willing to communicate with the user.
     pub fn encryption_key(&self, index: u64) -> KeyPair {
         self.derive_encryption_key(&encryption_key_path(index))
     }
 
+    /// Deterministically derive single-use encryption key. Send it to
+    /// the seller of storage, so it can use it to encrypt your storage
+    /// credentials.
+    /// By bumping index, one can create multiple keys to be used
+    /// with different on-chain identities, making linking the purchaces
+    /// harder.
     pub fn single_use_encryption_key(&self, index: u64) -> KeyPair {
         self.derive_encryption_key(&single_use_encryption_key_path(index))
     }

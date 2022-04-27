@@ -20,6 +20,11 @@
 
 use hex::encode;
 
+/// KeyPair type.
+///
+/// Represents a keypair derived from seed. Can be used to sign or to encrypt,
+/// depending on the way it was derived.
+/// TODO: prevent keypair misuse with rust types!!
 pub struct KeyPair {
     pub seckey: [u8; 32],
     pub pubkey: [u8; 32],
