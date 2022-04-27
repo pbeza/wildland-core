@@ -23,4 +23,4 @@ wildland-corex = { version = "0.1.0", path = "../wildland-corex", registry = "wl
 
 ### Publishing to the registry
 
-This registry does not have a web frontend, nor it allows creating the token automatically. For access credentials ask michal@wildland.io
+This registry does not have a web frontend. In order to get the publish token, use the following endpoint: [https://crates.wildland.dev/me](https://crates.wildland.dev/me)
