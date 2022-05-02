@@ -200,18 +200,18 @@ mod tests {
         crypto_box::generate_nonce(&mut rng)
     }
 
-    fn encrypt(nonce: &XNonce, secret_key: [u8; 32], public_key: [u8; 32]) -> Vec<u8> {
+    fn encrypt(nonce: &XNonce, alice_keypair: &dyn EncryptionKeyPair, bob_keypair: &dyn EncryptionKeyPair) -> Vec<u8> {
         let salsa_box = crypto_box::Box::new(
-            &crypto_box::PublicKey::from(public_key),
-            &crypto_box::SecretKey::from(secret_key));
+            &crypto_box::PublicKey::from(alice_keypair.pubkey()),
+            &crypto_box::SecretKey::from(bob_keypair.seckey()));
 
         salsa_box.encrypt(nonce, MSG).unwrap()
     }
 
-    fn decrypt(ciphertext: &[u8], nonce: &XNonce, secret_key: [u8; 32], public_key: [u8; 32]) -> crypto_box::aead::Result<Vec<u8>> {
+    fn decrypt(ciphertext: &[u8], nonce: &XNonce, alice_keypair: &dyn EncryptionKeyPair, bob_keypair: &dyn EncryptionKeyPair) -> crypto_box::aead::Result<Vec<u8>> {
         let salsa_box = crypto_box::Box::new(
-            &crypto_box::PublicKey::from(public_key),
-            &crypto_box::SecretKey::from(secret_key));
+            &crypto_box::PublicKey::from(bob_keypair.pubkey()),
+            &crypto_box::SecretKey::from(alice_keypair.seckey()));
 
         salsa_box.decrypt(nonce, ciphertext)
     }
@@ -237,13 +237,13 @@ mod tests {
 
         let ciphertext = encrypt(
             &nonce,
-            alice_keypair.seckey(),
-            bob_keypair.pubkey());
+            &alice_keypair,
+            &bob_keypair);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
-            bob_keypair.seckey(),
-            alice_keypair.pubkey());
+            &alice_keypair,
+            &bob_keypair);
 
         assert_eq!(MSG, result.unwrap().as_slice())
     }
@@ -257,13 +257,13 @@ mod tests {
 
         let ciphertext = encrypt(
             &nonce,
-            alice_keypair.seckey(),
-            bob_keypair.pubkey());
+            &alice_keypair,
+            &bob_keypair);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
-            bob_keypair.seckey(),
-            alice_keypair.pubkey());
+            &bob_keypair,
+            &alice_keypair);
 
         assert_eq!(MSG, result.unwrap().as_slice())
     }
@@ -278,13 +278,13 @@ mod tests {
 
         let ciphertext = encrypt(
             &nonce,
-            alice_keypair.seckey(),
-            bob_keypair.pubkey());
+            &alice_keypair,
+            &bob_keypair);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
-            charlie_keypair.seckey(),
-            alice_keypair.pubkey());
+            &charlie_keypair,
+            &alice_keypair);
 
         assert!(result.is_err())
     }
@@ -299,13 +299,13 @@ mod tests {
 
         let ciphertext = encrypt(
             &nonce,
-            alice_keypair.seckey(),
-            bob_keypair.pubkey());
+            &alice_keypair,
+            &bob_keypair);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
-            charlie_keypair.seckey(),
-            alice_keypair.pubkey());
+            &charlie_keypair,
+            &alice_keypair);
 
         assert!(result.is_err())
     }
@@ -320,13 +320,13 @@ mod tests {
 
         let ciphertext = encrypt(
             &nonce1,
-            alice_keypair.seckey(),
-            bob_keypair.pubkey());
+            &alice_keypair,
+            &bob_keypair);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce2,
-            bob_keypair.seckey(),
-            alice_keypair.pubkey());
+            &bob_keypair,
+            &alice_keypair);
 
         assert!(result.is_err())
     }
