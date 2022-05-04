@@ -1,0 +1,36 @@
+[package]
+name = "wildland-crypto"
+version = "0.1.0"
+edition = "2021"
+publish = ["wl-dev"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+serde = "1.0"
+serde_json = "1.0"
+serde_repr = "0.1"
+rand_core = { version = "0.6", features = ["std"] }
+rand = "0.8.4"
+
+# bip39 is used to handle mnemonics
+bip39 = { version = "1.0.1", features = ["rand"]}
+
+# hkdf is used to bridge 64 -> 96 bytes of randomness
+# (gap between bip39 output and ed25519-bip32 input)
+hkdf = "0.12.0"
+
+# ed25519-bip32 is used to generate the tree of keypairs used by WL
+ed25519-bip32 = "0.4.0"
+
+# used to derive ed25519 public keys and to generate curve25519 keypairs
+cryptoxide = "0.4.2"
+crypto_box = "0.7.0"
+
+sha2 = "0.10.0"
+hex = "0.4.3"
+
+[dev-dependencies]
+hex-literal = "0.3.4"
+salsa20 = "0.9.0"

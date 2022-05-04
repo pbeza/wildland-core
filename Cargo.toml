@@ -5,6 +5,7 @@ members = [
     "wildland-catlib",
     "wildland-rust-cli",
     "wildland-corex",
+    "wildland-crypto",
     "wildland-dfs",
     "wildland-wallet",
 ]
