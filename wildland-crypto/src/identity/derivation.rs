@@ -154,8 +154,8 @@ impl Identity {
     }
 
     fn derive_private_key_from_path(&self, path: &str) -> XPrv {
-        let tokens: Vec<&str> = path.split("/").collect();
-        if (tokens[0] != "") || (tokens[1] != "m") {
+        let tokens: Vec<&str> = path.split('/').collect();
+        if !tokens[0].is_empty() || (tokens[1] != "m") {
             panic!("Derivation path must start with '/m/'");
         }
 

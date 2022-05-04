@@ -55,6 +55,7 @@ impl CargoErrorRepresentable for IdentityError {
 /// Deterministically derive Wildland identity from Ethereum
 /// signature (or any random bits). Assumes high quality entropy
 /// and does not perform any checks.
+#[allow(clippy::ptr_arg)]
 pub fn from_entropy(entropy: &Vec<u8>) -> Result<Box<Identity>, CargoError> {
     // assume high quality entropy of arbitrary length (>= 32 bytes)
     if (entropy.len() * 8) < 128 {
@@ -83,6 +84,7 @@ pub fn from_random_seed() -> Result<Box<Identity>, CargoError> {
 }
 
 /// Derive Wildland identity from mnemonic (12 dictionary words).
+#[allow(clippy::ptr_arg)]
 pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> {
     if phrase.len() != 12 {
         return Err(IdentityError::InvalidWordVector.into());
