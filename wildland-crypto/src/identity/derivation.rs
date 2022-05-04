@@ -25,6 +25,7 @@ use ed25519_bip32::{DerivationScheme, XPrv};
 use crate::identity::seed::extend_seed;
 use crate::identity::KeyPair;
 
+use crate::identity::keys::{EncryptionKeyPair, SigningKeyPair};
 use std::convert::TryFrom;
 
 fn signing_key_path() -> String {
@@ -97,7 +98,7 @@ impl Identity {
 
     /// Derive the key that can be used to sign user manifest.
     /// Pubkey represents user to the world.
-    pub fn signing_key(&self) -> KeyPair {
+    pub fn signing_key(&self) -> impl SigningKeyPair {
         self.derive_signing_key(&signing_key_path())
     }
 
@@ -106,7 +107,7 @@ impl Identity {
     /// is compromised / stolen / lost.
     /// Current encryption pubkey should be accessible to anyone
     /// willing to communicate with the user.
-    pub fn encryption_key(&self, index: u64) -> KeyPair {
+    pub fn encryption_key(&self, index: u64) -> impl EncryptionKeyPair {
         self.derive_encryption_key(&encryption_key_path(index))
     }
 
@@ -116,26 +117,23 @@ impl Identity {
     /// By bumping index, one can create multiple keys to be used
     /// with different on-chain identities, making linking the purchaces
     /// harder.
-    pub fn single_use_encryption_key(&self, index: u64) -> KeyPair {
+    pub fn single_use_encryption_key(&self, index: u64) -> impl EncryptionKeyPair {
         self.derive_encryption_key(&single_use_encryption_key_path(index))
     }
 
-    fn derive_signing_key(&self, path: &str) -> KeyPair {
+    fn derive_signing_key(&self, path: &str) -> impl SigningKeyPair {
         let private_key = self.derive_private_key_from_path(path);
 
         // drop both the chain-code from xprv and last 32 bytes
-        let secret: [u8; 32] = <[u8; 32]>::try_from(&private_key.as_ref()[..32]).unwrap();
+        let seckey: [u8; 32] = <[u8; 32]>::try_from(&private_key.as_ref()[..32]).unwrap();
 
         // drop the chain-code from xprv and generate public key from the secret key
-        let (_, public) = keypair(&secret);
+        let (_, pubkey) = keypair(&seckey);
 
-        KeyPair {
-            pubkey: public,
-            seckey: secret,
-        }
+        KeyPair::new(seckey, pubkey)
     }
 
-    fn derive_encryption_key(&self, path: &str) -> KeyPair {
+    fn derive_encryption_key(&self, path: &str) -> impl EncryptionKeyPair {
         let private_key: XPrv = self.derive_private_key_from_path(path);
 
         // Drop the chain-code from xprv - it is no longer needed. This leaves 64 bytes.
@@ -147,10 +145,7 @@ impl Identity {
         let curve25519_sk = &crypto_box::SecretKey::from(bytes);
         let curve25519_pk = curve25519_sk.public_key();
 
-        KeyPair {
-            seckey: *curve25519_sk.as_bytes(),
-            pubkey: *curve25519_pk.as_bytes(),
-        }
+        KeyPair::new(*curve25519_sk.as_bytes(), *curve25519_pk.as_bytes())
     }
 
     fn derive_private_key_from_path(&self, path: &str) -> XPrv {
@@ -177,6 +172,8 @@ mod tests {
     use cryptoxide::ed25519::SIGNATURE_LENGTH;
     use salsa20::XNonce;
 
+    use hex::encode;
+
     use super::*;
 
     const MSG: &'static [u8] = b"Hello World";
@@ -187,12 +184,16 @@ mod tests {
         Identity::from_mnemonic(mnemonic)
     }
 
-    fn sign(message: &[u8], keypair: &[u8; 64]) -> [u8; SIGNATURE_LENGTH] {
-        ed25519::signature(message, keypair)
+    fn sign(message: &[u8], keypair: &dyn SigningKeyPair) -> [u8; SIGNATURE_LENGTH] {
+        ed25519::signature(message, &keypair.packed())
     }
 
-    fn verify(message: &[u8], pubkey: &[u8; 32], signature: [u8; SIGNATURE_LENGTH]) -> bool {
-        ed25519::verify(message, pubkey, &signature)
+    fn verify(
+        message: &[u8],
+        keypair: &dyn SigningKeyPair,
+        signature: [u8; SIGNATURE_LENGTH],
+    ) -> bool {
+        ed25519::verify(message, &keypair.pubkey(), &signature)
     }
 
     fn generate_nonce() -> XNonce {
@@ -200,10 +201,14 @@ mod tests {
         crypto_box::generate_nonce(&mut rng)
     }
 
-    fn encrypt(nonce: &XNonce, secret_key: [u8; 32], public_key: [u8; 32]) -> Vec<u8> {
+    fn encrypt(
+        nonce: &XNonce,
+        alice_keypair: &dyn EncryptionKeyPair,
+        bob_keypair: &dyn EncryptionKeyPair,
+    ) -> Vec<u8> {
         let salsa_box = crypto_box::Box::new(
-            &crypto_box::PublicKey::from(public_key),
-            &crypto_box::SecretKey::from(secret_key),
+            &crypto_box::PublicKey::from(alice_keypair.pubkey()),
+            &crypto_box::SecretKey::from(bob_keypair.seckey()),
         );
 
         salsa_box.encrypt(nonce, MSG).unwrap()
@@ -212,12 +217,12 @@ mod tests {
     fn decrypt(
         ciphertext: &[u8],
         nonce: &XNonce,
-        secret_key: [u8; 32],
-        public_key: [u8; 32],
+        alice_keypair: &dyn EncryptionKeyPair,
+        bob_keypair: &dyn EncryptionKeyPair,
     ) -> crypto_box::aead::Result<Vec<u8>> {
         let salsa_box = crypto_box::Box::new(
-            &crypto_box::PublicKey::from(public_key),
-            &crypto_box::SecretKey::from(secret_key),
+            &crypto_box::PublicKey::from(bob_keypair.pubkey()),
+            &crypto_box::SecretKey::from(alice_keypair.seckey()),
         );
 
         salsa_box.decrypt(nonce, ciphertext)
@@ -226,30 +231,24 @@ mod tests {
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
-        let skey: KeyPair = user.signing_key();
-        let signature = sign(MSG, &skey.packed());
-        let pubkey = &skey.pubkey;
-        assert!(verify(MSG, pubkey, signature));
+        let skey = user.signing_key();
+        let signature = sign(MSG, &skey);
+        assert!(verify(MSG, &skey, signature));
         let mut broken_signature: [u8; 64] = [0; 64];
         broken_signature.copy_from_slice(&signature);
         broken_signature[0] = !signature[0];
-        assert!(!verify(MSG, pubkey, broken_signature));
+        assert!(!verify(MSG, &skey, broken_signature));
     }
 
     #[test]
     fn can_encrypt_and_decrypt_message_with_encryption_key() {
         let user = user();
-        let alice_keypair: KeyPair = user.encryption_key(0);
-        let bob_keypair: KeyPair = user.encryption_key(1);
+        let alice_keypair = user.encryption_key(0);
+        let bob_keypair = user.encryption_key(1);
         let nonce = generate_nonce();
 
-        let ciphertext = encrypt(&nonce, alice_keypair.seckey, bob_keypair.pubkey);
-        let result = decrypt(
-            ciphertext.as_slice(),
-            &nonce,
-            bob_keypair.seckey,
-            alice_keypair.pubkey,
-        );
+        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
+        let result = decrypt(ciphertext.as_slice(), &nonce, &alice_keypair, &bob_keypair);
 
         assert_eq!(MSG, result.unwrap().as_slice())
     }
@@ -257,17 +256,12 @@ mod tests {
     #[test]
     fn can_encrypt_and_decrypt_message_with_single_use_encryption_key() {
         let user = user();
-        let alice_keypair: KeyPair = user.single_use_encryption_key(0);
-        let bob_keypair: KeyPair = user.single_use_encryption_key(1);
+        let alice_keypair = user.single_use_encryption_key(0);
+        let bob_keypair = user.single_use_encryption_key(1);
         let nonce = generate_nonce();
 
-        let ciphertext = encrypt(&nonce, alice_keypair.seckey, bob_keypair.pubkey);
-        let result = decrypt(
-            ciphertext.as_slice(),
-            &nonce,
-            bob_keypair.seckey,
-            alice_keypair.pubkey,
-        );
+        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
+        let result = decrypt(ciphertext.as_slice(), &nonce, &bob_keypair, &alice_keypair);
 
         assert_eq!(MSG, result.unwrap().as_slice())
     }
@@ -275,17 +269,17 @@ mod tests {
     #[test]
     fn cannot_decrypt_message_when_invalid_encryption_key_is_used() {
         let user = user();
-        let alice_keypair: KeyPair = user.encryption_key(0);
-        let bob_keypair: KeyPair = user.encryption_key(1);
-        let charlie_keypair: KeyPair = user.encryption_key(2);
+        let alice_keypair = user.encryption_key(0);
+        let bob_keypair = user.encryption_key(1);
+        let charlie_keypair = user.encryption_key(2);
         let nonce = generate_nonce();
 
-        let ciphertext = encrypt(&nonce, alice_keypair.seckey, bob_keypair.pubkey);
+        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
-            charlie_keypair.seckey,
-            alice_keypair.pubkey,
+            &charlie_keypair,
+            &alice_keypair,
         );
 
         assert!(result.is_err())
@@ -294,17 +288,17 @@ mod tests {
     #[test]
     fn cannot_decrypt_message_when_invalid_single_use_encryption_key_is_used() {
         let user = user();
-        let alice_keypair: KeyPair = user.single_use_encryption_key(0);
-        let bob_keypair: KeyPair = user.single_use_encryption_key(1);
-        let charlie_keypair: KeyPair = user.single_use_encryption_key(2);
+        let alice_keypair = user.single_use_encryption_key(0);
+        let bob_keypair = user.single_use_encryption_key(1);
+        let charlie_keypair = user.single_use_encryption_key(2);
         let nonce = generate_nonce();
 
-        let ciphertext = encrypt(&nonce, alice_keypair.seckey, bob_keypair.pubkey);
+        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
         let result = decrypt(
             ciphertext.as_slice(),
             &nonce,
-            charlie_keypair.seckey,
-            alice_keypair.pubkey,
+            &charlie_keypair,
+            &alice_keypair,
         );
 
         assert!(result.is_err())
@@ -313,18 +307,13 @@ mod tests {
     #[test]
     fn cannot_decrypt_message_with_different_nonce() {
         let user = user();
-        let alice_keypair: KeyPair = user.single_use_encryption_key(0);
-        let bob_keypair: KeyPair = user.single_use_encryption_key(1);
+        let alice_keypair = user.single_use_encryption_key(0);
+        let bob_keypair = user.single_use_encryption_key(1);
         let nonce1 = generate_nonce();
         let nonce2 = generate_nonce();
 
-        let ciphertext = encrypt(&nonce1, alice_keypair.seckey, bob_keypair.pubkey);
-        let result = decrypt(
-            ciphertext.as_slice(),
-            &nonce2,
-            bob_keypair.seckey,
-            alice_keypair.pubkey,
-        );
+        let ciphertext = encrypt(&nonce1, &alice_keypair, &bob_keypair);
+        let result = decrypt(ciphertext.as_slice(), &nonce2, &bob_keypair, &alice_keypair);
 
         assert!(result.is_err())
     }
@@ -332,17 +321,17 @@ mod tests {
     #[test]
     fn can_generate_distinct_keypairs() {
         let user = user();
-        let skey: KeyPair = user.signing_key();
-        println!("signing key, sec {}", skey.seckey_str());
-        println!("signing key, pub {}", skey.pubkey_str());
-        let e0key: KeyPair = user.encryption_key(0);
-        println!("encryp0 key, sec: {}", e0key.seckey_str());
-        println!("encryp0 key, pub: {}", e0key.pubkey_str());
-        let e1key: KeyPair = user.encryption_key(1);
-        assert_ne!(skey.seckey_str(), e0key.seckey_str());
-        assert_ne!(e0key.seckey_str(), e1key.seckey_str());
+        let skey = user.signing_key();
+        println!("signing key, sec {}", encode(skey.seckey()));
+        println!("signing key, pub {}", encode(skey.pubkey()));
+        let e0key = user.encryption_key(0);
+        println!("encryp0 key, sec: {}", encode(e0key.seckey()));
+        println!("encryp0 key, pub: {}", encode(e0key.pubkey()));
+        let e1key = user.encryption_key(1);
+        assert_ne!(skey.seckey(), e0key.seckey());
+        assert_ne!(e0key.seckey(), e1key.seckey());
 
-        assert_eq!(skey.seckey_str().len(), 64);
-        assert_eq!(skey.pubkey_str().len(), 64);
+        assert_eq!(encode(skey.seckey()).len(), 64);
+        assert_eq!(encode(skey.pubkey()).len(), 64);
     }
 }
