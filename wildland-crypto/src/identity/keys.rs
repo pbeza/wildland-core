@@ -33,7 +33,6 @@ pub trait EncryptionKeyPair {
 ///
 /// Represents a keypair derived from seed. Can be used to sign or to encrypt,
 /// depending on the way it was derived.
-/// TODO: prevent keypair misuse with rust types!!
 pub struct KeyPair {
     seckey: [u8; 32],
     pubkey: [u8; 32],
