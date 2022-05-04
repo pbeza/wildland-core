@@ -40,11 +40,11 @@ impl KeyPair {
     }
 
     pub fn pubkey_bytes(&self) -> Vec<u8> {
-	      self.pubkey.to_vec()
+        self.pubkey.to_vec()
     }
 
     pub fn seckey_bytes(&self) -> Vec<u8> {
-	      self.seckey.to_vec()
+        self.seckey.to_vec()
     }
 
     pub fn packed(&self) -> [u8; 64] {

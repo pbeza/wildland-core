@@ -29,7 +29,6 @@ pub fn extend_seed(seed: [u8; 64], target: &mut [u8; 96]) {
         .expect("Should return 96 bytes of randomness");
 }
 
-
 #[cfg(test)]
 mod tests {
     use hex_literal::hex;
