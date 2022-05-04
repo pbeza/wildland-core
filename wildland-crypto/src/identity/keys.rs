@@ -29,7 +29,6 @@ pub trait EncryptionKeyPair {
     fn seckey(&self) -> [u8; 32];
 }
 
-
 /// KeyPair type.
 ///
 /// Represents a keypair derived from seed. Can be used to sign or to encrypt,
@@ -42,10 +41,7 @@ pub struct KeyPair {
 
 impl KeyPair {
     pub fn new(seckey: [u8; 32], pubkey: [u8; 32]) -> Self {
-        Self {
-            seckey,
-            pubkey,
-        }
+        Self { seckey, pubkey }
     }
 }
 
