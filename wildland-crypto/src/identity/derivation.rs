@@ -18,13 +18,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 use bip39::Mnemonic;
-use cryptoxide::ed25519::{keypair};
+use cryptoxide::ed25519::keypair;
 use ed25519_bip32::{DerivationScheme, XPrv};
 
-use crate::identity::KeyPair;
 use crate::identity::seed::extend_seed;
+use crate::identity::KeyPair;
 
 use std::convert::TryFrom;
 use crate::identity::keys::{EncryptionKeyPair, SigningKeyPair};
@@ -55,9 +54,7 @@ pub struct Identity {
     pub words: [String; 12],
 }
 
-
 impl Identity {
-
     /// Derive identity from Mnemonic.
     ///
     /// Derived identity is bound to Wildland project - same 12 words will
@@ -152,8 +149,8 @@ impl Identity {
     }
 
     fn derive_private_key_from_path(&self, path: &str) -> XPrv {
-        let tokens: Vec<&str> = path.split("/").collect();
-        if (tokens[0] != "") || (tokens[1] != "m") {
+        let tokens: Vec<&str> = path.split('/').collect();
+        if !tokens[0].is_empty() || (tokens[1] != "m") {
             panic!("Derivation path must start with '/m/'");
         }
 

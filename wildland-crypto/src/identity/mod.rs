@@ -25,11 +25,11 @@ use bip39::{Language, Mnemonic};
 use sha2::{Digest, Sha256};
 
 use crate::error::{CargoError, CargoErrorRepresentable};
-pub use crate::identity::identity::Identity;
+pub use crate::identity::derivation::Identity;
 pub use crate::identity::keys::KeyPair;
 
+pub mod derivation;
 pub mod keys;
-pub mod identity;
 mod seed;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -55,6 +55,7 @@ impl CargoErrorRepresentable for IdentityError {
 /// Deterministically derive Wildland identity from Ethereum
 /// signature (or any random bits). Assumes high quality entropy
 /// and does not perform any checks.
+#[allow(clippy::ptr_arg)]
 pub fn from_entropy(entropy: &Vec<u8>) -> Result<Box<Identity>, CargoError> {
     // assume high quality entropy of arbitrary length (>= 32 bytes)
     if (entropy.len() * 8) < 128 {
@@ -83,6 +84,7 @@ pub fn from_random_seed() -> Result<Box<Identity>, CargoError> {
 }
 
 /// Derive Wildland identity from mnemonic (12 dictionary words).
+#[allow(clippy::ptr_arg)]
 pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> {
     if phrase.len() != 12 {
         return Err(IdentityError::InvalidWordVector.into());
@@ -90,9 +92,9 @@ pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> 
     let mnemonic_string: String = phrase.join(" ");
     match Mnemonic::parse_in_normalized(Language::English, &mnemonic_string) {
         Err(_error) => Err(IdentityError::InvalidWordVector.into()),
-        Ok(mnemonic) => Ok(Box::new(Identity::from_mnemonic(mnemonic) ))
-        }
+        Ok(mnemonic) => Ok(Box::new(Identity::from_mnemonic(mnemonic))),
     }
+}
 
 #[cfg(test)]
 mod tests {
@@ -105,15 +107,16 @@ mod tests {
     const TEST_MNEMONIC_12: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     const TEST_MNEMONIC_24: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about
     abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    const TEST_MNEMONIC_ITALIAN: &str = "abaco abaco abaco abaco abaco abaco abaco abaco abaco abaco abaco abbaglio";
+    const TEST_MNEMONIC_ITALIAN: &str =
+        "abaco abaco abaco abaco abaco abaco abaco abaco abaco abaco abaco abbaglio";
 
     // expected extended root private key bytes generated from TEST_MNEMONIC_12
     const ROOT_XPRV: [u8; 96] = [
-        24, 97, 125, 255, 78, 254, 242, 4, 80, 221, 94, 175, 192, 96, 253, 133, 250, 172, 202,
-        19, 217, 90, 206, 59, 218, 11, 227, 46, 70, 148, 252, 215, 161, 178, 196, 120, 102, 114,
-        194, 12, 205, 218, 138, 151, 244, 166, 214, 35, 131, 140, 194, 70, 236, 205, 123, 72, 70,
-        215, 44, 36, 182, 15, 25, 158, 117, 161, 211, 29, 125, 195, 12, 236, 138, 155, 206, 3,
-        16, 11, 54, 143, 209, 223, 7, 250, 9, 252, 142, 87, 79, 214, 211, 69, 2, 147, 159, 63
+        24, 97, 125, 255, 78, 254, 242, 4, 80, 221, 94, 175, 192, 96, 253, 133, 250, 172, 202, 19,
+        217, 90, 206, 59, 218, 11, 227, 46, 70, 148, 252, 215, 161, 178, 196, 120, 102, 114, 194,
+        12, 205, 218, 138, 151, 244, 166, 214, 35, 131, 140, 194, 70, 236, 205, 123, 72, 70, 215,
+        44, 36, 182, 15, 25, 158, 117, 161, 211, 29, 125, 195, 12, 236, 138, 155, 206, 3, 16, 11,
+        54, 143, 209, 223, 7, 250, 9, 252, 142, 87, 79, 214, 211, 69, 2, 147, 159, 63,
     ];
 
     #[test]
@@ -124,30 +127,39 @@ mod tests {
 
     #[test]
     fn can_generate_from_entropy() {
-        let entropy = hex!("
+        let entropy = hex!(
+            "
             65426aa1176159d1929caea10514cddd
             d11235741001f125922f258a58716b58
             da63e3060fe461fe37e4ed201d76b132
             e35830929b0f4764e577d3da09ecb6d2
             12
-        ");
+        "
+        );
         let user = from_entropy(&entropy.to_vec()).ok().unwrap();
-        assert_eq!(vec!("expect", "cruel", "stadium", "sand", "couch", "garden", "nothing",
-                        "wool", "grocery", "shop", "noise", "voice"),
-                   user.mnemonic());
+        assert_eq!(
+            vec!(
+                "expect", "cruel", "stadium", "sand", "couch", "garden", "nothing", "wool",
+                "grocery", "shop", "noise", "voice"
+            ),
+            user.mnemonic()
+        );
     }
 
     #[test]
     fn will_crash_on_low_entropy_source() {
-        let entropy = hex!("
+        let entropy = hex!(
+            "
             65426aa1176159d1929caea10514
-        ");
+        "
+        );
         assert!(from_entropy(&entropy.to_vec()).is_err());
     }
 
     #[test]
     fn can_generate_from_mnemonic() {
-        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_12.split(" ")
+        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_12
+            .split(" ")
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
         let user = from_mnemonic(&mnemonic_vec).ok().unwrap();
@@ -157,7 +169,8 @@ mod tests {
 
     #[test]
     fn should_fail_on_too_long_mnemonic() {
-        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_24.split(" ")
+        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_24
+            .split(" ")
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
 
@@ -166,7 +179,8 @@ mod tests {
 
     #[test]
     fn should_fail_on_too_short_mnemonic() {
-        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_6.split(" ")
+        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_6
+            .split(" ")
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
 
@@ -175,7 +189,8 @@ mod tests {
 
     #[test]
     fn should_fail_on_not_english_mnemonic() {
-        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_ITALIAN.split(" ")
+        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_ITALIAN
+            .split(" ")
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
 
@@ -184,7 +199,8 @@ mod tests {
 
     #[test]
     fn can_recover_seed() {
-        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_12.split(" ")
+        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_12
+            .split(" ")
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
         let user = from_mnemonic(&mnemonic_vec).unwrap();

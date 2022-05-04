@@ -751,7 +751,7 @@ version = "0.1.0"
 
 [[package]]
 name = "wildland-corex"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "wildland-catlib",
  "wildland-dfs",
