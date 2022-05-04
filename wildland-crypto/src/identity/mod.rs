@@ -25,10 +25,10 @@ use bip39::{Language, Mnemonic};
 use sha2::{Digest, Sha256};
 
 use crate::error::{CargoError, CargoErrorRepresentable};
-pub use crate::identity::identity::Identity;
+pub use crate::identity::derivation::Identity;
 pub use crate::identity::keys::KeyPair;
 
-pub mod identity;
+pub mod derivation;
 pub mod keys;
 mod seed;
 
