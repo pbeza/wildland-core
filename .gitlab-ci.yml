@@ -1,0 +1,37 @@
+image: rust:latest
+
+stages:
+  - test
+
+variables:
+  # In order to publish changes, the runner needs
+  # to be logged in to `wl-dev` registry.
+  # Create a new token for the CI pipeline and
+  # add `cargo login $TOKEN` as a pre-step.
+  CARGO_REGISTRIES_WL_DEV_INDEX: https://crates.wildland.dev/git/index
+
+# `cargo build` is not needed for now, since we
+# don't use Wildlnad Core CLI for integration
+# tests yet.
+test:
+  stage: test
+  script:
+    - cargo test --verbose
+
+lint:
+  stage: test
+  script:
+    - rustup component add clippy
+    - cargo clippy -- -D warnings
+
+format:
+  stage: test
+  script:
+    - rustup component add rustfmt
+    - cargo fmt -- --check
+
+audit:
+  stage: test
+  script:
+    - cargo install cargo-audit
+    - cargo audit
