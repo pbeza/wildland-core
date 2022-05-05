@@ -1,11 +1,13 @@
 [workspace]
 
 members = [
+    "common",
     "wildland-admin-manager",
     "wildland-catlib",
     "wildland-rust-cli",
     "wildland-corex",
     "wildland-crypto",
+    "wildland-storage-controller-client",
     "wildland-dfs",
     "wildland-wallet",
 ]

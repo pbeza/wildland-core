@@ -1,0 +1,14 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cryptoxide = "0.4.2"
+hex = "0.4.3"
+thiserror = "1.0.30"
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1.0.79" }
+
