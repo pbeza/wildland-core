@@ -14,3 +14,6 @@ publish = ["wl-dev"]
 
 [dependencies]
 wildland-corex = { version = "0.1.2", path = "../wildland-corex", registry = "wl-dev" }
+
+[package.metadata.workspaces]
+independent = true
