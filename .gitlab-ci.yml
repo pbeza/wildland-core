@@ -1,4 +1,4 @@
-image: rust:latest
+image: registry.gitlab.com/wildland/corex/wildland-core/builder:latest
 
 stages:
   - test
@@ -53,6 +53,7 @@ publish:
   only:
     - main
   script:
-    - cargo install cargo-release
-    - EXCLUDES=$(diff <(cargo workspaces list) <(cargo workspaces changed) | grep '< ' | sed 's/< //' | xargs -I@ echo -n "--exclude @ ")
+    # Seriously those diff and grep exit codes...
+    - EXCLUDES=$((diff <(cargo workspaces list) <(cargo workspaces changed) || true) | (grep '< ' || true) | sed 's/< //' | xargs -I@ echo -n "--exclude @ ")
+    - echo $EXCLUDES
     - cargo release --workspace --no-verify --no-confirm --execute $EXCLUDES release
