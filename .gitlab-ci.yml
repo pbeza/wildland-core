@@ -1,50 +1,50 @@
 image: registry.gitlab.com/wildland/corex/wildland-core/builder:latest
 
 stages:
-  # - test
-  # - build
+  - test
+  - build
   - deploy
 
-# test:
-#   stage: test
-#   except:
-#     - tags
-#   script:
-#     - cargo test --verbose
+test:
+  stage: test
+  except:
+    - tags
+  script:
+    - cargo test --verbose
 
-# lint:
-#   stage: test
-#   except:
-#     - tags
-#   script:
-#     - rustup component add clippy
-#     - cargo clippy -- -D warnings
+lint:
+  stage: test
+  except:
+    - tags
+  script:
+    - rustup component add clippy
+    - cargo clippy -- -D warnings
 
-# format:
-#   stage: test
-#   except:
-#     - tags
-#   script:
-#     - rustup component add rustfmt
-#     - cargo fmt -- --check
+format:
+  stage: test
+  except:
+    - tags
+  script:
+    - rustup component add rustfmt
+    - cargo fmt -- --check
 
-# audit:
-#   stage: test
-#   except:
-#     - tags
-#   script:
-#     - cargo install cargo-audit
-#     - cargo audit
+audit:
+  stage: test
+  except:
+    - tags
+  script:
+    - cargo install cargo-audit
+    - cargo audit
 
-# build:
-#   stage: build
-#   except:
-#     - tags
-#   only:
-#     - main
-#     - merge_requests
-#   script:
-#     - cargo build
+build:
+  stage: build
+  except:
+    - tags
+  only:
+    - main
+    - merge_requests
+  script:
+    - cargo build
 
 publish:
   stage: deploy
@@ -59,11 +59,9 @@ publish:
     - git remote set-url origin "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"
     - git pull "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git" $CI_COMMIT_BRANCH --rebase --autostash
     - git checkout -b $CI_COMMIT_BRANCH origin/$CI_COMMIT_BRANCH
+    - git reset --hard origin/$CI_COMMIT_BRANCH
     # Seriously those diff and grep exit codes...
     - EXCLUDES=$((diff <(cargo workspaces list) <(cargo workspaces changed) || true) | (grep '< ' || true) | sed 's/< //' | xargs -I@ echo -n "--exclude @ ")
     - echo $EXCLUDES
     # Specifying registry is required (bug: https://github.com/crate-ci/cargo-release/issues/429)
-    - git reset --hard origin/$CI_COMMIT_BRANCH
-    - git status
-    - git ls-files
     - RUST_LOG=debug cargo release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release
