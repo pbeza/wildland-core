@@ -9,4 +9,4 @@ if [[ $(git diff --stat) != '' ]]; then
   exit 1
 fi
 
-cargo workspaces version --no-git-tag --no-git-push --amend --allow-branch '*'
+cargo workspaces version --no-git-tag --no-git-push --allow-branch '*'
