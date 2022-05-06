@@ -747,11 +747,11 @@ dependencies = [
 
 [[package]]
 name = "wildland-catlib"
-version = "0.2.3"
+version = "0.3.0"
 
 [[package]]
 name = "wildland-corex"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "wildland-catlib",
  "wildland-dfs",
