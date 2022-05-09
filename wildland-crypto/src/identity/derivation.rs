@@ -168,10 +168,9 @@ mod tests {
     use std::str::FromStr;
 
     use crypto_box::aead::Aead;
-    use cryptoxide::ed25519;
-    use cryptoxide::ed25519::SIGNATURE_LENGTH;
     use salsa20::XNonce;
 
+    use crate::signature::{sign, verify};
     use hex::encode;
 
     use super::*;
@@ -182,18 +181,6 @@ mod tests {
     fn user() -> Identity {
         let mnemonic = Mnemonic::from_str(MNEMONIC).unwrap();
         Identity::from_mnemonic(mnemonic)
-    }
-
-    fn sign(message: &[u8], keypair: &dyn SigningKeyPair) -> [u8; SIGNATURE_LENGTH] {
-        ed25519::signature(message, &keypair.packed())
-    }
-
-    fn verify(
-        message: &[u8],
-        keypair: &dyn SigningKeyPair,
-        signature: [u8; SIGNATURE_LENGTH],
-    ) -> bool {
-        ed25519::verify(message, &keypair.pubkey(), &signature)
     }
 
     fn generate_nonce() -> XNonce {
