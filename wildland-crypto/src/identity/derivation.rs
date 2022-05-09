@@ -170,7 +170,6 @@ mod tests {
     use crypto_box::aead::Aead;
     use salsa20::XNonce;
 
-    use crate::signature::{sign, verify};
     use hex::encode;
 
     use super::*;
@@ -219,12 +218,17 @@ mod tests {
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
         let skey = user.signing_key();
-        let signature = sign(MSG, &skey);
-        assert!(verify(MSG, &skey, signature));
-        let mut broken_signature: [u8; 64] = [0; 64];
-        broken_signature.copy_from_slice(&signature);
-        broken_signature[0] = !signature[0];
-        assert!(!verify(MSG, &skey, broken_signature));
+        let signature = skey.sign(MSG);
+        assert!(skey.verify(MSG, &signature));
+    }
+
+    #[test]
+    fn cannot_verify_signature_for_other_message() {
+        let user = user();
+        let skey = user.signing_key();
+        let signature = skey.sign(MSG);
+
+        assert!(!skey.verify("invalid message".as_ref(), &signature));
     }
 
     #[test]

@@ -18,6 +18,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use cryptoxide::ed25519;
+use cryptoxide::ed25519::SIGNATURE_LENGTH;
 use crate::identity::error::CryptoError;
 use crate::identity::error::CryptoError::CannotCreateKeyPairError;
 use hex::FromHex;
@@ -25,8 +27,9 @@ use hex::FromHex;
 pub trait SigningKeyPair {
     fn pubkey(&self) -> [u8; 32];
     fn seckey(&self) -> [u8; 32];
-    fn packed(&self) -> [u8; 64];
-}
+    fn sign(&self, message: &[u8]) -> [u8; SIGNATURE_LENGTH];
+    fn verify(&self, message: &[u8], signature: &[u8; SIGNATURE_LENGTH]) -> bool;
+    }
 
 pub trait EncryptionKeyPair {
     fn pubkey(&self) -> [u8; 32];
@@ -55,6 +58,14 @@ impl KeyPair {
 
         Ok(Self { pubkey, seckey })
     }
+
+    fn packed(&self) -> [u8; 64] {
+        let mut bytes: [u8; 64] = [0; 64];
+        bytes[..32].copy_from_slice(&self.seckey[..32]);
+        bytes[32..64].copy_from_slice(&self.pubkey[..32]);
+        bytes
+    }
+
 }
 
 impl SigningKeyPair for KeyPair {
@@ -66,11 +77,15 @@ impl SigningKeyPair for KeyPair {
         self.seckey
     }
 
-    fn packed(&self) -> [u8; 64] {
-        let mut bytes: [u8; 64] = [0; 64];
-        bytes[..32].copy_from_slice(&self.seckey[..32]);
-        bytes[32..64].copy_from_slice(&self.pubkey[..32]);
-        bytes
+    fn sign(&self, message: &[u8]) -> [u8; SIGNATURE_LENGTH] {
+        ed25519::signature(message, &self.packed())
+    }
+
+    fn verify(
+        &self, message: &[u8],
+        signature: &[u8; SIGNATURE_LENGTH],
+    ) -> bool {
+        ed25519::verify(message, &self.pubkey, signature)
     }
 }
 
@@ -86,8 +101,43 @@ impl EncryptionKeyPair for KeyPair {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::{PUBLIC_KEY, SECRET_KEY};
+    use serde::{Serialize, Deserialize};
+    use serde_json::Value;
+    use crate::constants::test_utilities::{PUBLIC_KEY, SECRET_KEY, TIMESTAMP};
     use crate::identity::KeyPair;
+    use crate::identity::keys::SigningKeyPair;
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct TestStruct {
+        #[serde(rename(serialize = "credentialID"))]
+        pub credential_id: String,
+        pub timestamp: String,
+    }
+
+    #[test]
+    fn should_sign_custom_struct() {
+        // given
+        let keypair = KeyPair::from_str(PUBLIC_KEY, SECRET_KEY).unwrap();
+        let request = TestStruct {
+            credential_id: PUBLIC_KEY.into(),
+            timestamp: TIMESTAMP.into(),
+        };
+        let message = serde_json::to_vec(&request).unwrap();
+
+        // when
+        let signature = &keypair.sign(&message);
+        let expected_json_str = r#"
+        {
+            "credentialID":"1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f",
+            "timestamp":"1648541699814"
+        }
+        "#;
+        let expected_json: Value = serde_json::from_str(expected_json_str).unwrap();
+        let expected_message = serde_json::to_vec(&expected_json).unwrap();
+
+        // then
+        assert!(&keypair.verify(&expected_message, signature));
+    }
 
     #[test]
     fn should_create_keypair_when_keys_have_proper_length() {
