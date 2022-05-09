@@ -1,7 +1,4 @@
-# Wildland CLI
+# Wildland storage controller client
 
-Wildland Command Line Interface.
-
-```sh
-cargo run -- --version
-```
+This crate contains HTTP client to [wildland-storage-controller](https://gitlab.com/wildland/wildland-storage-controller) repository.
+ 
