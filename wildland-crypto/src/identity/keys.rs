@@ -18,9 +18,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use hex::FromHex;
 use crate::identity::error::CryptoError;
 use crate::identity::error::CryptoError::CannotCreateKeyPairError;
+use hex::FromHex;
 
 pub trait SigningKeyPair {
     fn pubkey(&self) -> [u8; 32];
@@ -48,16 +48,14 @@ impl KeyPair {
     }
 
     pub fn from_str<'a>(public_key: &'a str, secret_key: &'a str) -> Result<Self, CryptoError> {
-        let pubkey = <[u8; 32]>::from_hex(public_key).map_err(|_| CannotCreateKeyPairError(public_key.into()))?;
-        let seckey: [u8; 32] = <[u8; 32]>::from_hex(secret_key).map_err(|_| CannotCreateKeyPairError(secret_key.into()))?;
+        let pubkey = <[u8; 32]>::from_hex(public_key)
+            .map_err(|_| CannotCreateKeyPairError(public_key.into()))?;
+        let seckey: [u8; 32] = <[u8; 32]>::from_hex(secret_key)
+            .map_err(|_| CannotCreateKeyPairError(secret_key.into()))?;
 
-        Ok(Self {
-            pubkey,
-            seckey,
-        })
+        Ok(Self { pubkey, seckey })
     }
 }
-
 
 impl SigningKeyPair for KeyPair {
     fn pubkey(&self) -> [u8; 32] {
@@ -85,7 +83,6 @@ impl EncryptionKeyPair for KeyPair {
         self.seckey
     }
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -1,7 +1,6 @@
+use crate::constants::WILDLAND_SIGNATURE_HEADER;
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
-use crate::constants::WILDLAND_SIGNATURE_HEADER;
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateCredentialsReq {

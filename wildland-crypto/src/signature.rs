@@ -1,8 +1,7 @@
+use crate::identity::keys::SigningKeyPair;
 use cryptoxide::ed25519;
 use cryptoxide::ed25519::SIGNATURE_LENGTH;
 use hex::ToHex;
-use crate::identity::keys::SigningKeyPair;
-
 
 pub fn sign(message: &[u8], keypair: &dyn SigningKeyPair) -> [u8; SIGNATURE_LENGTH] {
     ed25519::signature(message, &keypair.packed())
@@ -22,9 +21,9 @@ pub fn encode_signature(signature: [u8; SIGNATURE_LENGTH]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::identity::KeyPair;
     use serde::{Deserialize, Serialize};
     use serde_json::Value;
-    use crate::identity::KeyPair;
 
     use super::*;
 
@@ -61,10 +60,6 @@ mod tests {
         let expected_message = serde_json::to_vec(&expected_json).unwrap();
 
         // then
-        assert!(verify(
-            &expected_message,
-            &keypair,
-            signature,
-        ));
+        assert!(verify(&expected_message, &keypair, signature,));
     }
 }

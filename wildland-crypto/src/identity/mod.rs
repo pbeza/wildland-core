@@ -29,9 +29,9 @@ pub use crate::identity::derivation::Identity;
 pub use crate::identity::keys::KeyPair;
 
 pub mod derivation;
+pub mod error;
 pub mod keys;
 mod seed;
-pub mod error;
 
 // TODO move these errors to identity/error.rs - WAP-86
 #[derive(Copy, Clone, PartialEq, Debug)]

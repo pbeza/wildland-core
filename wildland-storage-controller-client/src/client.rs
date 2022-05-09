@@ -50,7 +50,9 @@ impl StorageControllerClient {
         }
     }
 
-    pub async fn create_storage(&self) -> Result<CreateCredentialsRes, StorageControllerClientError> {
+    pub async fn create_storage(
+        &self,
+    ) -> Result<CreateCredentialsRes, StorageControllerClientError> {
         let response = self.sc_storage_client.create_storage().await?;
         let response_json = handle(response).await?.json().await?;
         Ok(response_json)
