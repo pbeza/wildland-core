@@ -26,3 +26,6 @@ dotenv = "0.15.0"
 tokio = { version = "1.17.0", features = ["macros", "rt-multi-thread"] }
 mockito = "0.31.0"
 http = "0.2.6"
+
+[package.metadata.workspaces]
+independent = true
