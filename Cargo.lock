@@ -1602,18 +1602,18 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager"
-version = "0.1.2"
+version = "0.1.5"
 dependencies = [
  "wildland-corex",
 ]
 
 [[package]]
 name = "wildland-catlib"
-version = "0.1.0"
+version = "0.3.0"
 
 [[package]]
 name = "wildland-corex"
-version = "0.1.2"
+version = "0.1.5"
 dependencies = [
  "wildland-catlib",
  "wildland-dfs",
@@ -1647,7 +1647,7 @@ version = "0.1.0"
 
 [[package]]
 name = "wildland-rust-cli"
-version = "0.1.0"
+version = "0.1.3"
 dependencies = [
  "clap",
  "wildland-admin-manager",

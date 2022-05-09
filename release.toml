@@ -1,0 +1,4 @@
+allow-branch = ['*']
+tag = true
+consolidate-commits = true
+pre-release-commit-message = "Cargo crates version bump"

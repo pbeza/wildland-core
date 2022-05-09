@@ -1,37 +1,67 @@
-image: rust:latest
+image: registry.gitlab.com/wildland/corex/wildland-core/builder:latest
 
 stages:
   - test
+  - build
+  - deploy
 
-variables:
-  # In order to publish changes, the runner needs
-  # to be logged in to `wl-dev` registry.
-  # Create a new token for the CI pipeline and
-  # add `cargo login $TOKEN` as a pre-step.
-  CARGO_REGISTRIES_WL_DEV_INDEX: https://crates.wildland.dev/git/index
-
-# `cargo build` is not needed for now, since we
-# don't use Wildlnad Core CLI for integration
-# tests yet.
 test:
   stage: test
+  except:
+    - tags
   script:
     - cargo test --verbose
 
 lint:
   stage: test
+  except:
+    - tags
   script:
     - rustup component add clippy
     - cargo clippy -- -D warnings
 
 format:
   stage: test
+  except:
+    - tags
   script:
     - rustup component add rustfmt
     - cargo fmt -- --check
 
 audit:
   stage: test
+  except:
+    - tags
   script:
     - cargo install cargo-audit
     - cargo audit
+
+build:
+  stage: build
+  except:
+    - tags
+  only:
+    - main
+    - merge_requests
+  script:
+    - cargo build
+
+publish:
+  stage: deploy
+  except:
+    - tags
+  only:
+    - main
+  before_script:
+    - git config --global user.name "Wildland Housekeeper"
+    - git config --global user.email "$HOUSEKEEPER_EMAIL"
+  script:
+    - git remote set-url origin "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"
+    - git pull "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git" $CI_COMMIT_BRANCH --rebase --autostash
+    - git checkout -b $CI_COMMIT_BRANCH origin/$CI_COMMIT_BRANCH
+    - git reset --hard origin/$CI_COMMIT_BRANCH
+    # Seriously those diff and grep exit codes...
+    - EXCLUDES=$((diff <(cargo workspaces list) <(cargo workspaces changed) || true) | (grep '< ' || true) | sed 's/< //' | xargs -I@ echo -n "--exclude @ ")
+    - echo $EXCLUDES
+    # Specifying registry is required (bug: https://github.com/crate-ci/cargo-release/issues/429)
+    - RUST_LOG=debug cargo release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release
