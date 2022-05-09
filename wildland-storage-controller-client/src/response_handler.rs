@@ -23,11 +23,11 @@ pub(crate) async fn handle(response: Response) -> Result<Response, StorageContro
 
 #[cfg(test)]
 mod tests {
+    use crate::constants::test_utilities::SC_RESPONSE;
     use http::response::Builder;
     use reqwest::Response;
 
     use crate::response_handler::handle;
-    use crate::test_utilities::SC_RESPONSE;
 
     #[tokio::test]
     async fn should_return_response_when_status_is_200() {

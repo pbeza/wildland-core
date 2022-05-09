@@ -38,10 +38,12 @@ impl SCCredentialsClient {
 
 #[cfg(test)]
 mod tests {
+    use crate::constants::test_utilities::{
+        CREDENTIALS_ID, CREDENTIALS_SECRET, SIGNATURE, TIMESTAMP,
+    };
     use mockito::{mock, server_url};
     use serde_json::json;
 
-    use crate::test_utilities::{CREDENTIALS_ID, CREDENTIALS_SECRET, SIGNATURE, TIMESTAMP};
     use crate::CreateCredentialsRes;
 
     use super::*;
