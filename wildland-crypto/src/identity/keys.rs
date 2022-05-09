@@ -18,6 +18,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use hex::FromHex;
+use crate::identity::error::CryptoError;
+use crate::identity::error::CryptoError::CannotCreateKeyPairError;
+
 pub trait SigningKeyPair {
     fn pubkey(&self) -> [u8; 32];
     fn seckey(&self) -> [u8; 32];
@@ -39,10 +43,21 @@ pub struct KeyPair {
 }
 
 impl KeyPair {
-    pub fn new(seckey: [u8; 32], pubkey: [u8; 32]) -> Self {
+    pub fn from_bytes(seckey: [u8; 32], pubkey: [u8; 32]) -> Self {
         Self { seckey, pubkey }
     }
+
+    pub fn from_str<'a>(public_key: &'a str, secret_key: &'a str) -> Result<Self, CryptoError> {
+        let pubkey = <[u8; 32]>::from_hex(public_key).map_err(|_| CannotCreateKeyPairError(public_key.into()))?;
+        let seckey: [u8; 32] = <[u8; 32]>::from_hex(secret_key).map_err(|_| CannotCreateKeyPairError(secret_key.into()))?;
+
+        Ok(Self {
+            pubkey,
+            seckey,
+        })
+    }
 }
+
 
 impl SigningKeyPair for KeyPair {
     fn pubkey(&self) -> [u8; 32] {
@@ -68,5 +83,65 @@ impl EncryptionKeyPair for KeyPair {
 
     fn seckey(&self) -> [u8; 32] {
         self.seckey
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use crate::identity::KeyPair;
+
+    pub const PUBLIC_KEY: &str = "1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f";
+    pub const SECRET_KEY: &str = "e02cdfa23ad7d94508108ad41410e556c5b0737e9c264d4a2304a7a45894fc57";
+
+    #[test]
+    fn should_create_keypair_when_keys_have_proper_length() {
+        // when
+        let keypair = KeyPair::from_str(PUBLIC_KEY, SECRET_KEY);
+
+        // then
+        assert!(keypair.is_ok());
+    }
+
+    #[test]
+    fn should_not_create_keypair_when_pub_key_is_too_short() {
+        // when
+        let keypair = KeyPair::from_str("", SECRET_KEY);
+
+        // then
+        assert!(keypair.is_err());
+    }
+
+    #[test]
+    fn should_not_create_keypair_when_pub_key_is_too_long() {
+        // when
+        let keypair = KeyPair::from_str(
+            "1234567890123456789012345678901234567890123456789012345678901234567890",
+            SECRET_KEY,
+        );
+
+        // then
+        assert!(keypair.is_err());
+    }
+
+    #[test]
+    fn should_not_create_keypair_when_sec_key_is_too_short() {
+        // when
+        let keypair = KeyPair::from_str(PUBLIC_KEY, "");
+
+        // then
+        assert!(keypair.is_err());
+    }
+
+    #[test]
+    fn should_not_create_keypair_when_sec_key_is_too_long() {
+        // when
+        let keypair = KeyPair::from_str(
+            PUBLIC_KEY,
+            "1234567890123456789012345678901234567890123456789012345678901234567890",
+        );
+
+        // then
+        assert!(keypair.is_err());
     }
 }

@@ -1,12 +1,12 @@
 use reqwest::Client;
 use serde::Serialize;
-use common::crypto::keys::KeyPair;
 
-use common::crypto::signature::{encode_signature, sign};
+use wildland_crypto::identity::KeyPair;
+use wildland_crypto::signature::{encode_signature, sign};
 
 use crate::credentials::{CreateCredentialsReq, SCCredentialsClient};
-use crate::error::CorexSCClientError;
-use crate::error::CorexSCClientError::CannotSerializeRequestError;
+use crate::error::StorageControllerClientError;
+use crate::error::StorageControllerClientError::CannotSerializeRequestError;
 use crate::metrics::{RequestMetricsReq, RequestMetricsRes, SCMetricsClient};
 use crate::response_handler::handle;
 use crate::signature::{SCSignatureClient, SignatureRequestReq, SignatureRequestRes};
@@ -50,7 +50,7 @@ impl StorageControllerClient {
         }
     }
 
-    pub async fn create_storage(&self) -> Result<CreateCredentialsRes, CorexSCClientError> {
+    pub async fn create_storage(&self) -> Result<CreateCredentialsRes, StorageControllerClientError> {
         let response = self.sc_storage_client.create_storage().await?;
         let response_json = handle(response).await?.json().await?;
         Ok(response_json)
@@ -59,7 +59,7 @@ impl StorageControllerClient {
     pub async fn create_credentials(
         &self,
         request: CreateCredentialsReq,
-    ) -> Result<CreateCredentialsRes, CorexSCClientError> {
+    ) -> Result<CreateCredentialsRes, StorageControllerClientError> {
         let signature = self.sign_request(&request)?;
         let response = self
             .sc_credentials_client
@@ -72,7 +72,7 @@ impl StorageControllerClient {
     pub async fn request_signature(
         &self,
         request: SignatureRequestReq,
-    ) -> Result<SignatureRequestRes, CorexSCClientError> {
+    ) -> Result<SignatureRequestRes, StorageControllerClientError> {
         let signature = self.sign_request(&request)?;
         let response = self
             .sc_signature_client
@@ -85,7 +85,7 @@ impl StorageControllerClient {
     pub async fn request_metrics(
         &self,
         request: RequestMetricsReq,
-    ) -> Result<RequestMetricsRes, CorexSCClientError> {
+    ) -> Result<RequestMetricsRes, StorageControllerClientError> {
         let signature = self.sign_request(&request)?;
         let response = self
             .sc_metrics_client
@@ -108,15 +108,14 @@ impl StorageControllerClient {
         &self.credential_secret
     }
 
-    fn sign_request<T>(&self, request: &T) -> Result<String, CorexSCClientError>
+    fn sign_request<T>(&self, request: &T) -> Result<String, StorageControllerClientError>
     where
         T: Serialize,
     {
         let message =
             serde_json::to_vec(request).map_err(|source| CannotSerializeRequestError { source })?;
-        let packed_keypair = KeyPair::new(self.get_credential_id(), self.get_credential_secret())
-            .map(|keypair| keypair.packed())?;
-        let signature = sign(&message, &packed_keypair);
+        let keypair = KeyPair::from_str(self.get_credential_id(), self.get_credential_secret())?;
+        let signature = sign(&message, &keypair);
         Ok(encode_signature(signature))
     }
 }

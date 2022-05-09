@@ -1,9 +1,9 @@
-use crate::error::CorexSCClientError;
+use crate::error::StorageControllerClientError;
 use reqwest::{Response, StatusCode};
 
-use crate::error::CorexSCClientError::HttpError;
+use crate::error::StorageControllerClientError::HttpError;
 
-pub(crate) async fn handle(response: Response) -> Result<Response, CorexSCClientError> {
+pub(crate) async fn handle(response: Response) -> Result<Response, StorageControllerClientError> {
     match response.status() {
         StatusCode::OK => Ok(response),
         StatusCode::CREATED => Ok(response),

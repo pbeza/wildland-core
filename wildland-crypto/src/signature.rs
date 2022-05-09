@@ -1,9 +1,19 @@
 use cryptoxide::ed25519;
 use cryptoxide::ed25519::SIGNATURE_LENGTH;
 use hex::ToHex;
+use crate::identity::keys::SigningKeyPair;
 
-pub fn sign(message: &[u8], keypair: &[u8; 64]) -> [u8; SIGNATURE_LENGTH] {
-    ed25519::signature(message, keypair)
+
+pub fn sign(message: &[u8], keypair: &dyn SigningKeyPair) -> [u8; SIGNATURE_LENGTH] {
+    ed25519::signature(message, &keypair.packed())
+}
+
+pub fn verify(
+    message: &[u8],
+    keypair: &dyn SigningKeyPair,
+    signature: [u8; SIGNATURE_LENGTH],
+) -> bool {
+    ed25519::verify(message, &keypair.pubkey(), &signature)
 }
 
 pub fn encode_signature(signature: [u8; SIGNATURE_LENGTH]) -> String {
@@ -12,12 +22,15 @@ pub fn encode_signature(signature: [u8; SIGNATURE_LENGTH]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::crypto::keys::KeyPair;
-    use crate::utils::constants::{PUBLIC_KEY, SECRET_KEY, TIMESTAMP};
     use serde::{Deserialize, Serialize};
     use serde_json::Value;
+    use crate::identity::KeyPair;
 
     use super::*;
+
+    pub const PUBLIC_KEY: &str = "1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f";
+    pub const SECRET_KEY: &str = "e02cdfa23ad7d94508108ad41410e556c5b0737e9c264d4a2304a7a45894fc57";
+    pub const TIMESTAMP: &str = "1648541699814";
 
     #[derive(Debug, Serialize, Deserialize)]
     struct TestStruct {
@@ -26,14 +39,10 @@ mod tests {
         pub timestamp: String,
     }
 
-    fn verify(message: &[u8], pubkey: &[u8; 32], signature: [u8; SIGNATURE_LENGTH]) -> bool {
-        ed25519::verify(message, pubkey, &signature)
-    }
-
     #[test]
     fn should_sign_custom_struct() {
         // given
-        let keypair = KeyPair::new(PUBLIC_KEY, SECRET_KEY).unwrap();
+        let keypair = KeyPair::from_str(PUBLIC_KEY, SECRET_KEY).unwrap();
         let request = TestStruct {
             credential_id: PUBLIC_KEY.into(),
             timestamp: TIMESTAMP.into(),
@@ -41,7 +50,7 @@ mod tests {
         let message = serde_json::to_vec(&request).unwrap();
 
         // when
-        let signature = sign(&message, &keypair.packed());
+        let signature = sign(&message, &keypair);
         let expected_json_str = r#"
         {
             "credentialID":"1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f",
@@ -54,7 +63,7 @@ mod tests {
         // then
         assert!(verify(
             &expected_message,
-            &keypair.pubkey_array(),
+            &keypair,
             signature,
         ));
     }

@@ -130,7 +130,7 @@ impl Identity {
         // drop the chain-code from xprv and generate public key from the secret key
         let (_, pubkey) = keypair(&seckey);
 
-        KeyPair::new(seckey, pubkey)
+        KeyPair::from_bytes(seckey, pubkey)
     }
 
     fn derive_encryption_key(&self, path: &str) -> impl EncryptionKeyPair {
@@ -145,7 +145,7 @@ impl Identity {
         let curve25519_sk = &crypto_box::SecretKey::from(bytes);
         let curve25519_pk = curve25519_sk.public_key();
 
-        KeyPair::new(*curve25519_sk.as_bytes(), *curve25519_pk.as_bytes())
+        KeyPair::from_bytes(*curve25519_sk.as_bytes(), *curve25519_pk.as_bytes())
     }
 
     fn derive_private_key_from_path(&self, path: &str) -> XPrv {

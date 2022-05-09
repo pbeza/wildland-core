@@ -1,7 +1,6 @@
 [workspace]
 
 members = [
-    "common",
     "wildland-admin-manager",
     "wildland-catlib",
     "wildland-rust-cli",

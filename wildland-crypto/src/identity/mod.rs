@@ -31,7 +31,9 @@ pub use crate::identity::keys::KeyPair;
 pub mod derivation;
 pub mod keys;
 mod seed;
+pub mod error;
 
+// TODO move these errors to identity/error.rs - WAP-86
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum IdentityError {
     InvalidWordVector = 1,
