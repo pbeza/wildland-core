@@ -167,10 +167,8 @@ impl Identity {
 mod tests {
     use std::str::FromStr;
 
-    use crypto_box::aead::Aead;
-    use salsa20::XNonce;
-
     use hex::encode;
+    use crate::common::generate_random_nonce;
 
     use super::*;
 
@@ -180,38 +178,6 @@ mod tests {
     fn user() -> Identity {
         let mnemonic = Mnemonic::from_str(MNEMONIC).unwrap();
         Identity::from_mnemonic(mnemonic)
-    }
-
-    fn generate_nonce() -> XNonce {
-        let mut rng = crypto_box::rand_core::OsRng;
-        crypto_box::generate_nonce(&mut rng)
-    }
-
-    fn encrypt(
-        nonce: &XNonce,
-        alice_keypair: &dyn EncryptionKeyPair,
-        bob_keypair: &dyn EncryptionKeyPair,
-    ) -> Vec<u8> {
-        let salsa_box = crypto_box::Box::new(
-            &crypto_box::PublicKey::from(alice_keypair.pubkey()),
-            &crypto_box::SecretKey::from(bob_keypair.seckey()),
-        );
-
-        salsa_box.encrypt(nonce, MSG).unwrap()
-    }
-
-    fn decrypt(
-        ciphertext: &[u8],
-        nonce: &XNonce,
-        alice_keypair: &dyn EncryptionKeyPair,
-        bob_keypair: &dyn EncryptionKeyPair,
-    ) -> crypto_box::aead::Result<Vec<u8>> {
-        let salsa_box = crypto_box::Box::new(
-            &crypto_box::PublicKey::from(bob_keypair.pubkey()),
-            &crypto_box::SecretKey::from(alice_keypair.seckey()),
-        );
-
-        salsa_box.decrypt(nonce, ciphertext)
     }
 
     #[test]
@@ -236,10 +202,10 @@ mod tests {
         let user = user();
         let alice_keypair = user.encryption_key(0);
         let bob_keypair = user.encryption_key(1);
-        let nonce = generate_nonce();
+        let nonce = generate_random_nonce();
 
-        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
-        let result = decrypt(ciphertext.as_slice(), &nonce, &alice_keypair, &bob_keypair);
+        let ciphertext = alice_keypair.encrypt(MSG, &nonce,  &bob_keypair.pubkey()).unwrap();
+        let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert_eq!(MSG, result.unwrap().as_slice())
     }
@@ -249,10 +215,10 @@ mod tests {
         let user = user();
         let alice_keypair = user.single_use_encryption_key(0);
         let bob_keypair = user.single_use_encryption_key(1);
-        let nonce = generate_nonce();
+        let nonce = generate_random_nonce();
 
-        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
-        let result = decrypt(ciphertext.as_slice(), &nonce, &bob_keypair, &alice_keypair);
+        let ciphertext = alice_keypair.encrypt(MSG, &nonce,  &bob_keypair.pubkey()).unwrap();
+        let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert_eq!(MSG, result.unwrap().as_slice())
     }
@@ -263,15 +229,10 @@ mod tests {
         let alice_keypair = user.encryption_key(0);
         let bob_keypair = user.encryption_key(1);
         let charlie_keypair = user.encryption_key(2);
-        let nonce = generate_nonce();
+        let nonce = generate_random_nonce();
 
-        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
-        let result = decrypt(
-            ciphertext.as_slice(),
-            &nonce,
-            &charlie_keypair,
-            &alice_keypair,
-        );
+        let ciphertext = alice_keypair.encrypt(MSG, &nonce,  &bob_keypair.pubkey()).unwrap();
+        let result = charlie_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert!(result.is_err())
     }
@@ -282,15 +243,10 @@ mod tests {
         let alice_keypair = user.single_use_encryption_key(0);
         let bob_keypair = user.single_use_encryption_key(1);
         let charlie_keypair = user.single_use_encryption_key(2);
-        let nonce = generate_nonce();
+        let nonce = generate_random_nonce();
 
-        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
-        let result = decrypt(
-            ciphertext.as_slice(),
-            &nonce,
-            &charlie_keypair,
-            &alice_keypair,
-        );
+        let ciphertext = alice_keypair.encrypt(MSG, &nonce,  &bob_keypair.pubkey()).unwrap();
+        let result = charlie_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert!(result.is_err())
     }
@@ -300,11 +256,11 @@ mod tests {
         let user = user();
         let alice_keypair = user.single_use_encryption_key(0);
         let bob_keypair = user.single_use_encryption_key(1);
-        let nonce1 = generate_nonce();
-        let nonce2 = generate_nonce();
+        let nonce1 = generate_random_nonce();
+        let nonce2 = generate_random_nonce();
 
-        let ciphertext = encrypt(&nonce1, &alice_keypair, &bob_keypair);
-        let result = decrypt(ciphertext.as_slice(), &nonce2, &bob_keypair, &alice_keypair);
+        let ciphertext = alice_keypair.encrypt(MSG, &nonce1,  &bob_keypair.pubkey()).unwrap();
+        let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce2, &bob_keypair.pubkey());
 
         assert!(result.is_err())
     }
@@ -313,16 +269,16 @@ mod tests {
     fn can_generate_distinct_keypairs() {
         let user = user();
         let skey = user.signing_key();
-        println!("signing key, sec {}", encode(skey.seckey()));
-        println!("signing key, pub {}", encode(skey.pubkey()));
+        println!("signing key, sec {}", encode(skey.seckey_as_bytes()));
+        println!("signing key, pub {}", encode(skey.pubkey_as_bytes()));
         let e0key = user.encryption_key(0);
-        println!("encryp0 key, sec: {}", encode(e0key.seckey()));
-        println!("encryp0 key, pub: {}", encode(e0key.pubkey()));
+        println!("encryp0 key, sec: {}", encode(e0key.seckey().as_bytes()));
+        println!("encryp0 key, pub: {}", encode(e0key.pubkey().as_bytes()));
         let e1key = user.encryption_key(1);
-        assert_ne!(skey.seckey(), e0key.seckey());
-        assert_ne!(e0key.seckey(), e1key.seckey());
+        assert_ne!(skey.seckey_as_bytes(), *e0key.seckey().as_bytes());
+        assert_ne!(e0key.seckey().as_bytes(), e1key.seckey().as_bytes());
 
-        assert_eq!(encode(skey.seckey()).len(), 64);
-        assert_eq!(encode(skey.pubkey()).len(), 64);
+        assert_eq!(encode(skey.seckey_as_bytes()).len(), 64);
+        assert_eq!(encode(skey.pubkey_as_bytes()).len(), 64);
     }
 }
