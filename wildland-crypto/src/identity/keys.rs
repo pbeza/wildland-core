@@ -64,11 +64,21 @@ pub struct KeyPair {
 }
 
 impl KeyPair {
-    pub fn from_bytes(seckey: [u8; 32], pubkey: [u8; 32]) -> Self {
+    pub fn signing_keypair_from_str<'a>(
+        public_key: &'a str,
+        secret_key: &'a str,
+    ) -> Result<impl SigningKeyPair, CryptoError> {
+        KeyPair::from_str(public_key, secret_key)
+    }
+
+    pub(crate) fn from_bytes(seckey: [u8; 32], pubkey: [u8; 32]) -> Self {
         Self { seckey, pubkey }
     }
 
-    pub fn from_str<'a>(public_key: &'a str, secret_key: &'a str) -> Result<Self, CryptoError> {
+    pub(crate) fn from_str<'a>(
+        public_key: &'a str,
+        secret_key: &'a str,
+    ) -> Result<Self, CryptoError> {
         let pubkey = <[u8; 32]>::from_hex(public_key)
             .map_err(|_| CannotCreateKeyPairError(public_key.into()))?;
         let seckey: [u8; 32] = <[u8; 32]>::from_hex(secret_key)
