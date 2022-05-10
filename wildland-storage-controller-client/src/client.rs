@@ -117,8 +117,10 @@ impl StorageControllerClient {
     {
         let message =
             serde_json::to_vec(request).map_err(|source| CannotSerializeRequestError { source })?;
-        let keypair =
-            KeyPair::signing_keypair_from_str(self.get_credential_id(), self.get_credential_secret())?;
+        let keypair = KeyPair::signing_keypair_from_str(
+            self.get_credential_id(),
+            self.get_credential_secret(),
+        )?;
         let signature = keypair.sign(&message);
         Ok(encode_signature(signature))
     }
