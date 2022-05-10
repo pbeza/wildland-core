@@ -22,7 +22,7 @@
 //! This crate provides tools to derive keypairs (for signing and encryption)
 //! from 12 seed words or Ethereum signature.
 
-mod constants;
+mod common;
 pub mod error;
 pub mod identity;
-mod common;
+pub mod signature;

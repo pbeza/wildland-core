@@ -18,12 +18,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::identity::error::CryptoError;
+use crate::identity::error::CryptoError::{
+    CannotCreateKeyPairError, CannotDecryptMessageError, CannotEncryptMessageError,
+};
 use crypto_box::aead::Aead;
 use crypto_box::{PublicKey, SecretKey};
 use cryptoxide::ed25519;
 use cryptoxide::ed25519::SIGNATURE_LENGTH;
-use crate::identity::error::CryptoError;
-use crate::identity::error::CryptoError::{CannotCreateKeyPairError, CannotDecryptMessageError, CannotEncryptMessageError};
 use hex::{encode, FromHex};
 use salsa20::XNonce;
 
@@ -32,7 +34,7 @@ pub trait SigningKeyPair {
     fn seckey_as_bytes(&self) -> [u8; 32];
     fn sign(&self, message: &[u8]) -> [u8; SIGNATURE_LENGTH];
     fn verify(&self, message: &[u8], signature: &[u8; SIGNATURE_LENGTH]) -> bool;
-    }
+}
 
 pub trait EncryptionKeyPair {
     fn pubkey(&self) -> PublicKey;
@@ -81,7 +83,6 @@ impl KeyPair {
         bytes[32..64].copy_from_slice(&self.pubkey[..32]);
         bytes
     }
-
 }
 
 impl SigningKeyPair for KeyPair {
@@ -97,10 +98,7 @@ impl SigningKeyPair for KeyPair {
         ed25519::signature(message, &self.packed())
     }
 
-    fn verify(
-        &self, message: &[u8],
-        signature: &[u8; SIGNATURE_LENGTH],
-    ) -> bool {
+    fn verify(&self, message: &[u8], signature: &[u8; SIGNATURE_LENGTH]) -> bool {
         ed25519::verify(message, &self.pubkey, signature)
     }
 }
@@ -120,12 +118,11 @@ impl EncryptionKeyPair for KeyPair {
         nonce: &XNonce,
         recipient_pubkey: &PublicKey,
     ) -> Result<Vec<u8>, CryptoError> {
-        let salsa_box = crypto_box::Box::new(
-            recipient_pubkey,
-            &self.seckey(),
-        );
+        let salsa_box = crypto_box::Box::new(recipient_pubkey, &self.seckey());
 
-        salsa_box.encrypt(nonce, message).map_err(|_| CannotEncryptMessageError(encode(message.to_vec())))
+        salsa_box
+            .encrypt(nonce, message)
+            .map_err(|_| CannotEncryptMessageError(encode(message)))
     }
 
     fn decrypt(
@@ -134,23 +131,25 @@ impl EncryptionKeyPair for KeyPair {
         nonce: &XNonce,
         sender_pubkey: &PublicKey,
     ) -> Result<Vec<u8>, CryptoError> {
-        let salsa_box = crypto_box::Box::new(
-            sender_pubkey,
-            &self.seckey(),
-        );
+        let salsa_box = crypto_box::Box::new(sender_pubkey, &self.seckey());
 
-        salsa_box.decrypt(nonce, ciphertext).map_err(|_| CannotDecryptMessageError(encode(ciphertext.to_vec())))
+        salsa_box
+            .decrypt(nonce, ciphertext)
+            .map_err(|_| CannotDecryptMessageError(encode(ciphertext)))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use serde::{Serialize, Deserialize};
-    use serde_json::Value;
-    use crate::common::generate_random_nonce;
-    use crate::constants::test_utilities::{ENCRYPTION_PUBLIC_KEY_1, ENCRYPTION_PUBLIC_KEY_2, ENCRYPTION_SECRET_KEY_1, ENCRYPTION_SECRET_KEY_2, SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY, TIMESTAMP};
-    use crate::identity::KeyPair;
+    use crate::common::test_utilities::{
+        generate_random_nonce, ENCRYPTION_PUBLIC_KEY_1, ENCRYPTION_PUBLIC_KEY_2,
+        ENCRYPTION_SECRET_KEY_1, ENCRYPTION_SECRET_KEY_2, SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY,
+        TIMESTAMP,
+    };
     use crate::identity::keys::{EncryptionKeyPair, SigningKeyPair};
+    use crate::identity::KeyPair;
+    use serde::{Deserialize, Serialize};
+    use serde_json::Value;
 
     #[derive(Debug, Serialize, Deserialize)]
     struct TestStruct {
@@ -175,14 +174,17 @@ mod tests {
 
     #[test]
     fn can_encrypt_custom_struct() {
-
-        let alice_keypair = KeyPair::from_str(ENCRYPTION_PUBLIC_KEY_1, ENCRYPTION_SECRET_KEY_1).unwrap();
-        let bob_keypair = KeyPair::from_str(ENCRYPTION_PUBLIC_KEY_2, ENCRYPTION_SECRET_KEY_2).unwrap();
+        let alice_keypair =
+            KeyPair::from_str(ENCRYPTION_PUBLIC_KEY_1, ENCRYPTION_SECRET_KEY_1).unwrap();
+        let bob_keypair =
+            KeyPair::from_str(ENCRYPTION_PUBLIC_KEY_2, ENCRYPTION_SECRET_KEY_2).unwrap();
         let nonce = generate_random_nonce();
         let message_to_encrypt = generate_message();
         let expected_message = get_expected_message();
 
-        let ciphertext = alice_keypair.encrypt(message_to_encrypt.as_ref(), &nonce, &bob_keypair.pubkey()).unwrap();
+        let ciphertext = alice_keypair
+            .encrypt(message_to_encrypt.as_ref(), &nonce, &bob_keypair.pubkey())
+            .unwrap();
         let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert_eq!(expected_message, result.unwrap().as_slice())

@@ -167,8 +167,8 @@ impl Identity {
 mod tests {
     use std::str::FromStr;
 
+    use crate::common::test_utilities::generate_random_nonce;
     use hex::encode;
-    use crate::common::generate_random_nonce;
 
     use super::*;
 
@@ -204,7 +204,9 @@ mod tests {
         let bob_keypair = user.encryption_key(1);
         let nonce = generate_random_nonce();
 
-        let ciphertext = alice_keypair.encrypt(MSG, &nonce,  &bob_keypair.pubkey()).unwrap();
+        let ciphertext = alice_keypair
+            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
+            .unwrap();
         let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert_eq!(MSG, result.unwrap().as_slice())
@@ -217,7 +219,9 @@ mod tests {
         let bob_keypair = user.single_use_encryption_key(1);
         let nonce = generate_random_nonce();
 
-        let ciphertext = alice_keypair.encrypt(MSG, &nonce,  &bob_keypair.pubkey()).unwrap();
+        let ciphertext = alice_keypair
+            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
+            .unwrap();
         let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert_eq!(MSG, result.unwrap().as_slice())
@@ -231,8 +235,11 @@ mod tests {
         let charlie_keypair = user.encryption_key(2);
         let nonce = generate_random_nonce();
 
-        let ciphertext = alice_keypair.encrypt(MSG, &nonce,  &bob_keypair.pubkey()).unwrap();
-        let result = charlie_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
+        let ciphertext = alice_keypair
+            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
+            .unwrap();
+        let result =
+            charlie_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert!(result.is_err())
     }
@@ -245,8 +252,11 @@ mod tests {
         let charlie_keypair = user.single_use_encryption_key(2);
         let nonce = generate_random_nonce();
 
-        let ciphertext = alice_keypair.encrypt(MSG, &nonce,  &bob_keypair.pubkey()).unwrap();
-        let result = charlie_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
+        let ciphertext = alice_keypair
+            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
+            .unwrap();
+        let result =
+            charlie_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert!(result.is_err())
     }
@@ -259,7 +269,9 @@ mod tests {
         let nonce1 = generate_random_nonce();
         let nonce2 = generate_random_nonce();
 
-        let ciphertext = alice_keypair.encrypt(MSG, &nonce1,  &bob_keypair.pubkey()).unwrap();
+        let ciphertext = alice_keypair
+            .encrypt(MSG, &nonce1, &bob_keypair.pubkey())
+            .unwrap();
         let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce2, &bob_keypair.pubkey());
 
         assert!(result.is_err())
