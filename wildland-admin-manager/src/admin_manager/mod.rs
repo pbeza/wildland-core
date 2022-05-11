@@ -2,7 +2,7 @@ use crate::api;
 use bip39::{Language, Mnemonic};
 
 #[derive(Default, Clone)]
-struct SeedPhrase(Vec<String>);
+pub struct SeedPhrase(Vec<String>);
 
 impl api::SeedPhrase for SeedPhrase {
     fn set_words(&mut self, words: Vec<String>) {
