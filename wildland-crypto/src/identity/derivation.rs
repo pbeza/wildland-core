@@ -48,7 +48,7 @@ fn single_use_encryption_key_path(index: u64) -> String {
 /// - signing (not rotated, used to sign "user manifest")
 /// - encryption (used by other people to encrypt secrets to the user, rotated)
 /// - single-use-encryption - to transfer secrets in public
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Identity {
     pub xprv: XPrv,
     pub words: [String; 12],
@@ -59,7 +59,7 @@ impl Identity {
     ///
     /// Derived identity is bound to Wildland project - same 12 words will
     /// produce different seed (number) in other project.
-    pub fn from_mnemonic(mnemonic: Mnemonic) -> Identity {
+    pub fn from_mnemonic(mnemonic: Mnemonic) -> Self {
         // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
         // We don't need them here.
         let passphrase = "";

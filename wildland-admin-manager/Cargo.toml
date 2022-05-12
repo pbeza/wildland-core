@@ -14,6 +14,7 @@ publish = ["wl-dev"]
 
 [dependencies]
 wildland-corex = { version = "0.1.3-alpha.0", path = "../wildland-corex", registry = "wl-dev" }
+wildland-crypto = { version = "0.1.0", path = "../wildland-crypto", registry = "wl-dev" }
 bip39 = { version = "1.0.1", features = ["rand"] }
 
 [package.metadata.workspaces]

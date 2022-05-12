@@ -4,4 +4,4 @@ mod seed_phrase;
 
 pub use admin_manager::AdminManager;
 pub use identity::{Identity, IdentityType};
-pub use seed_phrase::SeedPhrase;
+pub use seed_phrase::SeedPhraseWords;

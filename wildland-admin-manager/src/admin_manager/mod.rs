@@ -1,43 +1,67 @@
 mod identity;
 mod seed_phrase;
 
+use crate::api::{self, SeedPhraseWords};
 pub use identity::Identity;
 pub use seed_phrase::SeedPhrase;
-
-use crate::api;
-use bip39::{Language, Mnemonic};
+use wildland_crypto::identity as crypto_identity;
 
 #[derive(Default)]
-pub struct AdminManager<S: api::SeedPhrase> {
-    seed_phrase: S,
+pub struct AdminManager<I: api::Identity> {
+    identity: I,
 }
 
-impl api::AdminManager<SeedPhrase, Identity> for AdminManager<SeedPhrase> {
-    fn generate_seed_phrase(&mut self) -> SeedPhrase {
-        // TODO call crypto crate
-        self.seed_phrase.0 = Mnemonic::generate_in(Language::English, 12)
-            .unwrap()
-            .word_iter()
-            .map(|s| s.into())
-            .collect();
-        self.seed_phrase.clone()
-    }
-
-    fn create_master_identity_from_seed_phrase(seed: SeedPhrase) -> Identity {
-        // TODO
-        Identity::new_master_identity("hardcoded name".into(), vec![], vec![])
+impl AdminManager<Identity> {
+    fn create_identity(
+        &mut self,
+        identity_type: api::IdentityType,
+        name: String,
+        inner_identity: crypto_identity::Identity,
+    ) -> Identity {
+        let identity = Identity::new(identity_type, name, inner_identity);
+        self.identity = identity.clone();
+        identity
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::AdminManager;
-    use crate::api::{AdminManager as AdminManagerApi, SeedPhrase};
+impl api::AdminManager<Identity> for AdminManager<Identity> {
+    fn create_master_identity_from_seed_phrase(
+        &mut self,
+        name: String,
+        seed: SeedPhraseWords,
+    ) -> Identity {
+        self.create_identity(
+            api::IdentityType::Master,
+            name,
+            SeedPhrase::from(seed).into(),
+        )
+    }
 
-    #[test]
-    fn test_seed_phrase_len() {
-        let mut admin_manager = AdminManager::default();
-        let seed_phrase = admin_manager.generate_seed_phrase();
-        assert_eq!(seed_phrase.get_words().len(), 12);
+    fn create_master_identity(&mut self, name: String) -> Identity {
+        self.create_identity(
+            api::IdentityType::Master,
+            name,
+            *crypto_identity::from_random_seed().unwrap(),
+        )
+    }
+
+    fn create_device_identity_from_seed_phrase(&mut self, name: String) -> Identity {
+        self.create_identity(
+            api::IdentityType::Device,
+            name,
+            *crypto_identity::from_random_seed().unwrap(),
+        )
+    }
+
+    fn create_device_identity(&mut self, name: String, seed: SeedPhraseWords) -> Identity {
+        self.create_identity(
+            api::IdentityType::Master,
+            name,
+            SeedPhrase::from(seed).into(),
+        )
+    }
+
+    fn get_identity(&self) -> Identity {
+        self.identity.clone()
     }
 }
