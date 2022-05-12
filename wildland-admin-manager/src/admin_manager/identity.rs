@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::api::{self, IdentityType};
 use wildland_crypto::identity as crypto_identity;
 
@@ -6,6 +8,29 @@ pub struct Identity {
     identity_type: api::IdentityType,
     name: String,
     inner_identity: crypto_identity::Identity,
+}
+
+impl Display for Identity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "
+Name: {}
+Type: {:?}
+Private key: {}
+Seed phrase: {}
+",
+            self.name,
+            self.identity_type,
+            self.inner_identity.xprv,
+            self.inner_identity
+                .words
+                .clone()
+                .into_iter()
+                .intersperse(" ".to_string())
+                .collect::<String>()
+        )
+    }
 }
 
 impl Identity {

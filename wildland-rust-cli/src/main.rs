@@ -63,7 +63,7 @@ struct CliArgs {
 
 fn main() {
     let cli = CliArgs::parse();
-    // TODO use logger
+
     if cli.version {
         print_version();
     } else {
@@ -73,7 +73,7 @@ fn main() {
                 identity_action: IdentitySubCommand::Generate,
             } => {
                 let identity = admin_manager.create_master_identity("name".into());
-                println!("{identity:?}")
+                println!("{identity}")
             }
             SubCommand::Identity {
                 identity_action: IdentitySubCommand::Restore { seed_phrase },
@@ -82,11 +82,14 @@ fn main() {
                     .split(" ")
                     .map(|elem| elem.to_string())
                     .collect();
-                let identity = admin_manager.create_master_identity_from_seed_phrase(
-                    "name".into(),
-                    seed.try_into().unwrap(), // TODO handle err
-                );
-                println!("{identity:?}")
+                match seed.try_into() {
+                    Ok(seed) => {
+                        let identity = admin_manager
+                            .create_master_identity_from_seed_phrase("name".into(), seed);
+                        println!("{identity}")
+                    }
+                    Err(e) => println!("Could not parse seed phrase: {e:?}"),
+                }
             }
         }
     }
