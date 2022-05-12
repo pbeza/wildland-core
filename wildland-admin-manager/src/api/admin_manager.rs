@@ -18,5 +18,5 @@ pub trait AdminManager<I: Identity> {
     /// Creates a device identity based on the generated seed phrase
     fn create_device_identity(&mut self, name: String, seed: SeedPhraseWords) -> I;
 
-    fn get_identity(&self) -> I;
+    fn get_identity(&self) -> Option<I>;
 }

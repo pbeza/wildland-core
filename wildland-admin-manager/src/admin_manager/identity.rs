@@ -1,7 +1,7 @@
 use crate::api::{self, IdentityType};
 use wildland_crypto::identity as crypto_identity;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Identity {
     identity_type: api::IdentityType,
     name: String,

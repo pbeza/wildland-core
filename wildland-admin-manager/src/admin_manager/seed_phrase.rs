@@ -22,8 +22,7 @@ impl From<SeedPhrase> for crypto_identity::Identity {
                     .intersperse(" ".into())
                     .collect::<String>(),
             )
-            .unwrap(),
-            // TODO err
+            .unwrap(), // TODO handle err
         )
     }
 }

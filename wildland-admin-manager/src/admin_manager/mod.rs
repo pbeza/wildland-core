@@ -6,9 +6,8 @@ pub use identity::Identity;
 pub use seed_phrase::SeedPhrase;
 use wildland_crypto::identity as crypto_identity;
 
-#[derive(Default)]
 pub struct AdminManager<I: api::Identity> {
-    identity: I,
+    identity: Option<I>,
 }
 
 impl AdminManager<Identity> {
@@ -19,8 +18,16 @@ impl AdminManager<Identity> {
         inner_identity: crypto_identity::Identity,
     ) -> Identity {
         let identity = Identity::new(identity_type, name, inner_identity);
-        self.identity = identity.clone();
+        self.identity = Some(identity.clone());
         identity
+    }
+}
+
+impl Default for AdminManager<Identity> {
+    fn default() -> Self {
+        Self {
+            identity: Default::default(),
+        }
     }
 }
 
@@ -41,7 +48,7 @@ impl api::AdminManager<Identity> for AdminManager<Identity> {
         self.create_identity(
             api::IdentityType::Master,
             name,
-            *crypto_identity::from_random_seed().unwrap(),
+            *crypto_identity::from_random_seed().unwrap(), // TODO handle err
         )
     }
 
@@ -49,7 +56,7 @@ impl api::AdminManager<Identity> for AdminManager<Identity> {
         self.create_identity(
             api::IdentityType::Device,
             name,
-            *crypto_identity::from_random_seed().unwrap(),
+            *crypto_identity::from_random_seed().unwrap(), // TODO handle err
         )
     }
 
@@ -61,7 +68,7 @@ impl api::AdminManager<Identity> for AdminManager<Identity> {
         )
     }
 
-    fn get_identity(&self) -> Identity {
+    fn get_identity(&self) -> Option<Identity> {
         self.identity.clone()
     }
 }
