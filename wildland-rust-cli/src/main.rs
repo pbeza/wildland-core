@@ -26,7 +26,7 @@ fn main() {
                 identity_action: IdentitySubCommand::Restore { seed_phrase },
             } => {
                 let seed: Vec<String> = seed_phrase
-                    .split(" ")
+                    .split(' ')
                     .map(|elem| elem.to_string())
                     .collect();
                 match seed.try_into() {

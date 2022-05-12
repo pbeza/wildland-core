@@ -15,14 +15,7 @@ impl From<api::SeedPhraseWords> for SeedPhrase {
 impl From<SeedPhrase> for crypto_identity::Identity {
     fn from(words: SeedPhrase) -> Self {
         crypto_identity::Identity::from_mnemonic(
-            Mnemonic::from_str(
-                &words
-                    .0
-                    .into_iter()
-                    .intersperse(" ".into())
-                    .collect::<String>(),
-            )
-            .unwrap(), // TODO handle err
+            Mnemonic::from_str(&words.0.join(" ")).unwrap(), // TODO handle err
         )
     }
 }

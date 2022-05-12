@@ -1,5 +1,3 @@
-#![feature(iter_intersperse)]
-
 pub mod admin_manager;
 pub mod api;
 

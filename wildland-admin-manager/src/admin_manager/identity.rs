@@ -23,12 +23,7 @@ Seed phrase: {}
             self.name,
             self.identity_type,
             self.inner_identity.xprv,
-            self.inner_identity
-                .words
-                .clone()
-                .into_iter()
-                .intersperse(" ".to_string())
-                .collect::<String>()
+            self.inner_identity.words.join(" ")
         )
     }
 }
