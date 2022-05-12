@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use clap::StructOpt;
 use cli_args::{CliArgs, IdentitySubCommand, SubCommand};
 use wildland_admin_manager::{
@@ -8,7 +9,7 @@ use wildland_admin_manager::{
 mod cli_args;
 mod version;
 
-fn main() {
+fn main() -> Result<()> {
     let cli = CliArgs::parse();
 
     if cli.version {
@@ -19,25 +20,26 @@ fn main() {
             SubCommand::Identity {
                 identity_action: IdentitySubCommand::Generate,
             } => {
-                let identity = admin_manager.create_master_identity("name".into());
+                let seed_phrase = AdminManager::create_seed_phrase()?;
+                let identity = admin_manager
+                    .create_master_identity_from_seed_phrase("name".into(), seed_phrase)?;
                 println!("{identity}")
             }
             SubCommand::Identity {
                 identity_action: IdentitySubCommand::Restore { seed_phrase },
             } => {
-                let seed: Vec<String> = seed_phrase
+                let seed = seed_phrase
                     .split(' ')
                     .map(|elem| elem.to_string())
-                    .collect();
-                match seed.try_into() {
-                    Ok(seed) => {
-                        let identity = admin_manager
-                            .create_master_identity_from_seed_phrase("name".into(), seed);
-                        println!("{identity}")
-                    }
-                    Err(e) => println!("Could not parse seed phrase: {e:?}"),
-                }
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .map_err(|e| anyhow!("Could not parse seed phrase {e:?}"))?;
+                let identity =
+                    admin_manager.create_master_identity_from_seed_phrase("name".into(), seed)?;
+                println!("{identity}")
             }
         }
     }
+
+    Ok(())
 }

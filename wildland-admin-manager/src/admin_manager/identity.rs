@@ -48,11 +48,11 @@ impl api::Identity for Identity {
     }
 
     fn get_pubkey(&self) -> Vec<u8> {
-        todo!()
+        todo!() // TODO
     }
 
     fn get_fingerprint(&self) -> Vec<u8> {
-        todo!()
+        todo!() // TODO
     }
 
     fn get_identity_type(&self) -> api::IdentityType {

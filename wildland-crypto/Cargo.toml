@@ -13,9 +13,11 @@ serde_json = "1.0"
 serde_repr = "0.1"
 rand_core = { version = "0.6", features = ["std"] }
 rand = "0.8.4"
+thiserror = "1.0.31"
+anyhow = "1.0.57"
 
 # bip39 is used to handle mnemonics
-bip39 = { version = "1.0.1", features = ["rand"]}
+bip39 = { version = "1.0.1", features = ["rand"] }
 
 # hkdf is used to bridge 64 -> 96 bytes of randomness
 # (gap between bip39 output and ed25519-bip32 input)

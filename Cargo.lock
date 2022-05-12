@@ -12,6 +12,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.57"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08f9b8508dccb7687a1d6c4ce66b2b0ecef467c94667de27d8d7fe1f8d2a9cdc"
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -696,6 +702,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1141d4d61095b28419e22cb0bbf02755f5e54e0526f97f1e3d1d160e60885fb"
 
 [[package]]
+name = "thiserror"
+version = "1.0.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd829fe32373d27f76265620b5309d0340cb8550f523c1dda251d6298069069a"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0396bc89e626244658bef819e22d0cc459e795a5ebe878e6ec336d1674a8d79a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "typenum"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -742,6 +768,7 @@ checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
 name = "wildland-admin-manager"
 version = "0.2.1"
 dependencies = [
+ "anyhow",
  "bip39",
  "wildland-corex",
  "wildland-crypto",
@@ -764,6 +791,7 @@ dependencies = [
 name = "wildland-crypto"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bip39",
  "crypto_box",
  "cryptoxide",
@@ -778,6 +806,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "sha2",
+ "thiserror",
 ]
 
 [[package]]
@@ -788,6 +817,7 @@ version = "0.1.0"
 name = "wildland-rust-cli"
 version = "0.2.0"
 dependencies = [
+ "anyhow",
  "clap",
  "wildland-admin-manager",
  "wildland-corex",

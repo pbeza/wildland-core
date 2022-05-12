@@ -23,6 +23,7 @@ use std::fmt;
 
 use bip39::{Language, Mnemonic};
 use sha2::{Digest, Sha256};
+use thiserror::Error;
 
 use crate::error::{CargoError, CargoErrorRepresentable};
 pub use crate::identity::derivation::Identity;
@@ -32,7 +33,9 @@ pub mod derivation;
 pub mod keys;
 mod seed;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+type SeedPhrase = [String; 12];
+
+#[derive(Copy, Clone, PartialEq, Debug, Error)]
 pub enum IdentityError {
     InvalidWordVector = 1,
     EntropyTooLow = 2,
@@ -81,6 +84,17 @@ pub fn from_random_seed() -> Result<Box<Identity>, CargoError> {
         vec.push(word.to_string());
     }
     from_mnemonic(&vec)
+}
+
+/// Create a new random seed phrase
+pub fn generate_random_seed_phrase() -> anyhow::Result<SeedPhrase> {
+    let mnemonic = Mnemonic::generate(12).unwrap();
+    mnemonic
+        .word_iter()
+        .map(|word| word.to_owned())
+        .collect::<Vec<String>>()
+        .try_into()
+        .map_err(|_| IdentityError::InvalidWordVector.into())
 }
 
 /// Derive Wildland identity from mnemonic (12 dictionary words).

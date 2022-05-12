@@ -1,4 +1,5 @@
 use crate::api;
+use anyhow::anyhow;
 use bip39::Mnemonic;
 use std::str::FromStr;
 use wildland_crypto::identity as crypto_identity;
@@ -12,10 +13,12 @@ impl From<api::SeedPhraseWords> for SeedPhrase {
     }
 }
 
-impl From<SeedPhrase> for crypto_identity::Identity {
-    fn from(words: SeedPhrase) -> Self {
-        crypto_identity::Identity::from_mnemonic(
-            Mnemonic::from_str(&words.0.join(" ")).unwrap(), // TODO handle err
-        )
+impl TryFrom<SeedPhrase> for crypto_identity::Identity {
+    type Error = anyhow::Error;
+
+    fn try_from(words: SeedPhrase) -> Result<Self, Self::Error> {
+        Ok(crypto_identity::Identity::from_mnemonic(
+            Mnemonic::from_str(&words.0.join(" ")).map_err(|e| anyhow!(e))?,
+        ))
     }
 }

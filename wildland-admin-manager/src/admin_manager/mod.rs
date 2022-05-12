@@ -2,31 +2,19 @@ mod identity;
 mod seed_phrase;
 
 use crate::api::{self, SeedPhraseWords};
+use anyhow::Result;
 pub use identity::Identity;
 pub use seed_phrase::SeedPhrase;
 use wildland_crypto::identity as crypto_identity;
 
 pub struct AdminManager<I: api::Identity> {
-    identity: Option<I>,
-}
-
-impl AdminManager<Identity> {
-    fn create_identity(
-        &mut self,
-        identity_type: api::IdentityType,
-        name: String,
-        inner_identity: crypto_identity::Identity,
-    ) -> Identity {
-        let identity = Identity::new(identity_type, name, inner_identity);
-        self.identity = Some(identity.clone());
-        identity
-    }
+    master_identity: Option<I>,
 }
 
 impl Default for AdminManager<Identity> {
     fn default() -> Self {
         Self {
-            identity: Default::default(),
+            master_identity: Default::default(),
         }
     }
 }
@@ -36,39 +24,35 @@ impl api::AdminManager<Identity> for AdminManager<Identity> {
         &mut self,
         name: String,
         seed: SeedPhraseWords,
-    ) -> Identity {
-        self.create_identity(
+    ) -> Result<Identity> {
+        let identity = Identity::new(
             api::IdentityType::Master,
             name,
-            SeedPhrase::from(seed).into(),
-        )
+            SeedPhrase::try_from(seed)?.try_into()?,
+        );
+        self.master_identity = Some(identity.clone()); // TODO Can user have multiple master identities? If not should it be overwritten?
+        Ok(identity)
     }
 
-    fn create_master_identity(&mut self, name: String) -> Identity {
-        self.create_identity(
-            api::IdentityType::Master,
-            name,
-            *crypto_identity::from_random_seed().unwrap(), // TODO handle err
-        )
-    }
-
-    fn create_device_identity_from_seed_phrase(&mut self, name: String) -> Identity {
-        self.create_identity(
+    fn create_device_identity_from_seed_phrase(
+        &mut self,
+        name: String,
+        seed: SeedPhraseWords,
+    ) -> Result<Identity> {
+        let identity = Identity::new(
             api::IdentityType::Device,
             name,
-            *crypto_identity::from_random_seed().unwrap(), // TODO handle err
-        )
+            SeedPhrase::try_from(seed)?.try_into()?,
+        );
+        // TODO add
+        Ok(identity)
     }
 
-    fn create_device_identity(&mut self, name: String, seed: SeedPhraseWords) -> Identity {
-        self.create_identity(
-            api::IdentityType::Master,
-            name,
-            SeedPhrase::from(seed).into(),
-        )
+    fn create_seed_phrase() -> Result<SeedPhraseWords> {
+        crypto_identity::generate_random_seed_phrase()
     }
 
-    fn get_identity(&self) -> Option<Identity> {
-        self.identity.clone()
+    fn get_master_identity(&self) -> Option<Identity> {
+        self.master_identity.clone()
     }
 }
