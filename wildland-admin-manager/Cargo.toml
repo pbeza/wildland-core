@@ -1,6 +1,6 @@
 [package]
 name = "wildland-admin-manager"
-version = "0.1.5"
+version = "0.2.1"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -14,6 +14,7 @@ publish = ["wl-dev"]
 
 [dependencies]
 wildland-corex = { version = "0.1.3-alpha.0", path = "../wildland-corex", registry = "wl-dev" }
+bip39 = { version = "1.0.1", features = ["rand"] }
 
 [package.metadata.workspaces]
 independent = true
