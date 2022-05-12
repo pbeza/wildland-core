@@ -6,15 +6,17 @@ use wildland_crypto::identity::KeyPair;
 use wildland_crypto::signature::encode_signature;
 
 use crate::credentials::{CreateCredentialsReq, SCCredentialsClient};
-use crate::error::StorageControllerClientError;
-use crate::error::StorageControllerClientError::CannotSerializeRequestError;
 use crate::metrics::{RequestMetricsReq, RequestMetricsRes, SCMetricsClient};
 use crate::response_handler::handle;
 use crate::signature::{SCSignatureClient, SignatureRequestReq, SignatureRequestRes};
 use crate::storage::SCStorageClient;
 use crate::CreateCredentialsRes;
+use crate::error::StorageControllerClientError;
 
-pub struct Credentials(pub String, pub String);
+pub struct Credentials {
+    pub id: String,
+    pub secret: String,
+}
 
 #[derive(Clone, Default)]
 pub struct StorageControllerClient {
@@ -99,8 +101,8 @@ impl StorageControllerClient {
     }
 
     pub fn set_credentials(&mut self, credentials: Credentials) {
-        self.credential_id = credentials.0;
-        self.credential_secret = credentials.1;
+        self.credential_id = credentials.id;
+        self.credential_secret = credentials.secret;
     }
 
     pub fn get_credential_id(&self) -> &str {
@@ -116,7 +118,7 @@ impl StorageControllerClient {
         T: Serialize,
     {
         let message =
-            serde_json::to_vec(request).map_err(|source| CannotSerializeRequestError { source })?;
+            serde_json::to_vec(request).map_err(|source| StorageControllerClientError::CannotSerializeRequestError { source })?;
         let keypair = KeyPair::signing_keypair_from_str(
             self.get_credential_id(),
             self.get_credential_secret(),

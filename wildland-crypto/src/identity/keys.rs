@@ -24,8 +24,7 @@ use crate::identity::error::CryptoError::{
 };
 use crypto_box::aead::Aead;
 use crypto_box::{PublicKey, SecretKey};
-use cryptoxide::ed25519;
-use cryptoxide::ed25519::SIGNATURE_LENGTH;
+use cryptoxide::ed25519::{signature, SIGNATURE_LENGTH, verify};
 use hex::{encode, FromHex};
 use salsa20::XNonce;
 
@@ -64,9 +63,9 @@ pub struct KeyPair {
 }
 
 impl KeyPair {
-    pub fn signing_keypair_from_str<'a>(
-        public_key: &'a str,
-        secret_key: &'a str,
+    pub fn signing_keypair_from_str(
+        public_key: &str,
+        secret_key: &str,
     ) -> Result<impl SigningKeyPair, CryptoError> {
         KeyPair::from_str(public_key, secret_key)
     }
@@ -75,9 +74,9 @@ impl KeyPair {
         Self { seckey, pubkey }
     }
 
-    pub(crate) fn from_str<'a>(
-        public_key: &'a str,
-        secret_key: &'a str,
+    pub(crate) fn from_str(
+        public_key: &str,
+        secret_key: &str,
     ) -> Result<Self, CryptoError> {
         let pubkey = <[u8; 32]>::from_hex(public_key)
             .map_err(|_| CannotCreateKeyPairError(public_key.into()))?;
@@ -105,11 +104,11 @@ impl SigningKeyPair for KeyPair {
     }
 
     fn sign(&self, message: &[u8]) -> [u8; SIGNATURE_LENGTH] {
-        ed25519::signature(message, &self.packed())
+        signature(message, &self.packed())
     }
 
     fn verify(&self, message: &[u8], signature: &[u8; SIGNATURE_LENGTH]) -> bool {
-        ed25519::verify(message, &self.pubkey, signature)
+        verify(message, &self.pubkey, signature)
     }
 }
 
