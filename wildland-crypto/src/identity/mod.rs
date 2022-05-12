@@ -25,8 +25,7 @@ use bip39::{Language, Mnemonic};
 use sha2::{Digest, Sha256};
 
 use crate::error::{CargoError, CargoErrorRepresentable};
-pub use crate::identity::derivation::Identity;
-pub use crate::identity::keys::KeyPair;
+pub use crate::identity::{derivation::Identity, keys::KeyPair};
 
 pub mod derivation;
 pub mod keys;
@@ -56,7 +55,7 @@ impl CargoErrorRepresentable for IdentityError {
 /// signature (or any random bits). Assumes high quality entropy
 /// and does not perform any checks.
 #[allow(clippy::ptr_arg)]
-pub fn from_entropy(entropy: &Vec<u8>) -> Result<Box<Identity>, CargoError> {
+pub fn from_entropy(entropy: &Vec<u8>) -> Result<Identity, CargoError> {
     // assume high quality entropy of arbitrary length (>= 32 bytes)
     if (entropy.len() * 8) < 128 {
         return Err(IdentityError::EntropyTooLow.into());
@@ -65,35 +64,34 @@ pub fn from_entropy(entropy: &Vec<u8>) -> Result<Box<Identity>, CargoError> {
     hasher.update(entropy);
     let hashed_entropy = hasher.finalize();
     let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16]).unwrap();
-    let mut vec: Vec<String> = Vec::new();
-    for word in mnemonic.word_iter() {
-        vec.push(word.to_string());
-    }
-    from_mnemonic(&vec)
+    let words = mnemonic
+        .word_iter()
+        .map(|word| word.to_owned())
+        .collect::<Vec<_>>();
+    from_mnemonic(&words)
 }
 
 /// Create a new, random Wildland identity.
 /// Will return new identity each time it is called.
-pub fn from_random_seed() -> Result<Box<Identity>, CargoError> {
+pub fn from_random_seed() -> Result<Identity, CargoError> {
     let mnemonic = Mnemonic::generate(12).unwrap();
-    let mut vec: Vec<String> = Vec::new();
-    for word in mnemonic.word_iter() {
-        vec.push(word.to_string());
-    }
-    from_mnemonic(&vec)
+    let words = mnemonic
+        .word_iter()
+        .map(|word| word.to_owned())
+        .collect::<Vec<_>>();
+    from_mnemonic(&words)
 }
 
 /// Derive Wildland identity from mnemonic (12 dictionary words).
 #[allow(clippy::ptr_arg)]
-pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> {
+pub fn from_mnemonic(phrase: &[String]) -> Result<Identity, CargoError> {
     if phrase.len() != 12 {
         return Err(IdentityError::InvalidWordVector.into());
     }
     let mnemonic_string: String = phrase.join(" ");
-    match Mnemonic::parse_in_normalized(Language::English, &mnemonic_string) {
-        Err(_error) => Err(IdentityError::InvalidWordVector.into()),
-        Ok(mnemonic) => Ok(Box::new(Identity::from_mnemonic(mnemonic))),
-    }
+    Mnemonic::parse_in_normalized(Language::English, &mnemonic_string)
+        .map_err(|_error| IdentityError::InvalidWordVector.into())
+        .map(|mnemonic| Identity::from_mnemonic(mnemonic))
 }
 
 #[cfg(test)]
