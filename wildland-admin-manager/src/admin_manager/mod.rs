@@ -8,6 +8,8 @@ pub use seed_phrase::SeedPhrase;
 use wildland_crypto::identity as crypto_identity;
 
 pub struct AdminManager<I: api::Identity> {
+    // TODO do we want to store more than one master identity
+    // TODO do we want to keep mappings between a master identity and a set of device identities
     master_identity: Option<I>,
 }
 
@@ -44,7 +46,7 @@ impl api::AdminManager<Identity> for AdminManager<Identity> {
             name,
             SeedPhrase::try_from(seed)?.try_into()?,
         );
-        // TODO add
+        // TODO keep it somehow?
         Ok(identity)
     }
 
