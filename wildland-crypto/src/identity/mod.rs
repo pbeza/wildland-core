@@ -166,7 +166,7 @@ mod tests {
             .collect::<Vec<String>>();
         let user = from_mnemonic(&mnemonic_vec).ok().unwrap();
 
-        assert_eq!(user.xprv, XPrv::normalize_bytes_ed25519(ROOT_XPRV))
+        assert_eq!(user.get_xprv(), &XPrv::normalize_bytes_ed25519(ROOT_XPRV))
     }
 
     #[test]

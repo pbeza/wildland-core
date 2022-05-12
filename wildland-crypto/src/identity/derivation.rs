@@ -50,11 +50,16 @@ fn single_use_encryption_key_path(index: u64) -> String {
 /// - single-use-encryption - to transfer secrets in public
 #[derive(Debug, PartialEq)]
 pub struct Identity {
-    pub xprv: XPrv,
-    pub words: [String; 12],
+    xprv: XPrv,
+    words: [String; 12],
 }
 
 impl Identity {
+
+    pub fn get_xprv(&self) -> &XPrv {
+        &self.xprv
+    }
+
     /// Derive identity from Mnemonic.
     ///
     /// Derived identity is bound to Wildland project - same 12 words will
