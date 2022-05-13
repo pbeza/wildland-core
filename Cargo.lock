@@ -1638,7 +1638,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-storage-controller-client"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "dotenv",
  "http",
