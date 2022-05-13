@@ -28,9 +28,11 @@ use crate::error::{CargoError, CargoErrorRepresentable};
 pub use crate::identity::{derivation::Identity, keys::KeyPair};
 
 pub mod derivation;
+pub mod error;
 pub mod keys;
 mod seed;
 
+// TODO move these errors to identity/error.rs - WAP-86
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum IdentityError {
     InvalidWordVector = 1,
@@ -91,7 +93,7 @@ pub fn from_mnemonic(phrase: &[String]) -> Result<Identity, CargoError> {
     let mnemonic_string: String = phrase.join(" ");
     Mnemonic::parse_in_normalized(Language::English, &mnemonic_string)
         .map_err(|_error| IdentityError::InvalidWordVector.into())
-        .map(|mnemonic| Identity::from_mnemonic(mnemonic))
+        .map(Identity::from_mnemonic)
 }
 
 #[cfg(test)]
@@ -162,7 +164,7 @@ mod tests {
             .collect::<Vec<String>>();
         let user = from_mnemonic(&mnemonic_vec).ok().unwrap();
 
-        assert_eq!(user.xprv, XPrv::normalize_bytes_ed25519(ROOT_XPRV))
+        assert_eq!(user.get_xprv(), &XPrv::normalize_bytes_ed25519(ROOT_XPRV))
     }
 
     #[test]
