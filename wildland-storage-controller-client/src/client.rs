@@ -1,17 +1,19 @@
 use reqwest::Client;
 use serde::Serialize;
 
-use wildland_crypto::identity::keys::SigningKeyPair;
-use wildland_crypto::identity::KeyPair;
-use wildland_crypto::signature::encode_signature;
+use wildland_crypto::{
+    identity::{keys::SigningKeyPair, KeyPair},
+    signature::encode_signature,
+};
 
-use crate::credentials::{CreateCredentialsReq, SCCredentialsClient};
-use crate::metrics::{RequestMetricsReq, RequestMetricsRes, SCMetricsClient};
-use crate::response_handler::handle;
-use crate::signature::{SCSignatureClient, SignatureRequestReq, SignatureRequestRes};
-use crate::storage::SCStorageClient;
-use crate::CreateCredentialsRes;
-use crate::error::StorageControllerClientError;
+use crate::{
+    credentials::{CreateCredentialsReq, CreateCredentialsRes, SCCredentialsClient},
+    error::StorageControllerClientError,
+    metrics::{RequestMetricsReq, RequestMetricsRes, SCMetricsClient},
+    response_handler::handle,
+    signature::{SCSignatureClient, SignatureRequestReq, SignatureRequestRes},
+    storage::{CreateStorageRes, SCStorageClient},
+};
 
 pub struct Credentials {
     pub id: String,
@@ -53,9 +55,7 @@ impl StorageControllerClient {
         }
     }
 
-    pub async fn create_storage(
-        &self,
-    ) -> Result<CreateCredentialsRes, StorageControllerClientError> {
+    pub async fn create_storage(&self) -> Result<CreateStorageRes, StorageControllerClientError> {
         let response = self.sc_storage_client.create_storage().await?;
         let response_json = handle(response).await?.json().await?;
         Ok(response_json)
@@ -117,8 +117,9 @@ impl StorageControllerClient {
     where
         T: Serialize,
     {
-        let message =
-            serde_json::to_vec(request).map_err(|source| StorageControllerClientError::CannotSerializeRequestError { source })?;
+        let message = serde_json::to_vec(request).map_err(|source| {
+            StorageControllerClientError::CannotSerializeRequestError { source }
+        })?;
         let keypair = KeyPair::signing_keypair_from_str(
             self.get_credential_id(),
             self.get_credential_secret(),

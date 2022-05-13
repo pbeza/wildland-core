@@ -55,7 +55,6 @@ pub struct Identity {
 }
 
 impl Identity {
-
     pub fn get_xprv(&self) -> &XPrv {
         &self.xprv
     }

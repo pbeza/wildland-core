@@ -1,4 +1,15 @@
 use reqwest::{Client, Error, Response};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateStorageRes {
+    #[serde(rename(deserialize = "id"))]
+    pub storage_id: String,
+    #[serde(rename(deserialize = "credentialID"))]
+    pub credentials_id: String,
+    #[serde(rename(deserialize = "credentialSecret"))]
+    pub credentials_secret: String,
+}
 
 #[derive(Clone, Default)]
 pub(crate) struct SCStorageClient {
@@ -15,11 +26,9 @@ impl SCStorageClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::{CREDENTIALS_ID, CREDENTIALS_SECRET};
+    use crate::constants::test_utilities::{CREDENTIALS_ID, CREDENTIALS_SECRET, STORAGE_ID};
     use mockito::{mock, server_url};
     use serde_json::json;
-
-    use crate::CreateCredentialsRes;
 
     use super::*;
 
@@ -35,6 +44,7 @@ mod tests {
         let m = mock("POST", "/storage/create")
             .with_body(
                 json!({
+                    "id" : STORAGE_ID,
                     "credentialID" : CREDENTIALS_ID,
                     "credentialSecret" : CREDENTIALS_SECRET
                 })
@@ -46,11 +56,12 @@ mod tests {
             .create_storage()
             .await
             .unwrap()
-            .json::<CreateCredentialsRes>()
+            .json::<CreateStorageRes>()
             .await
             .unwrap();
 
         m.assert();
+        assert_eq!(response.storage_id, STORAGE_ID);
         assert_eq!(response.credentials_id, CREDENTIALS_ID);
         assert_eq!(response.credentials_secret, CREDENTIALS_SECRET);
     }

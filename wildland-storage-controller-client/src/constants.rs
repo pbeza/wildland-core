@@ -2,6 +2,7 @@ pub const WILDLAND_SIGNATURE_HEADER: &str = "X-Wildland-Signature";
 
 #[cfg(test)]
 pub mod test_utilities {
+    pub static STORAGE_ID: &str = "29ad32f3-e951-4567-a68f-1bef0c564fac";
     pub static CREDENTIALS_ID: &str =
         "000e402c4b4f6638024a39180a3787ae090102e90c6a0ee1302c87fb0ac6e0e9";
     pub static CREDENTIALS_SECRET: &str =

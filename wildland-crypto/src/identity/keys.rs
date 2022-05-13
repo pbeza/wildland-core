@@ -18,13 +18,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::identity::error::CryptoError;
 use crate::identity::error::CryptoError::{
-    CannotCreateKeyPairError, CannotDecryptMessageError, CannotEncryptMessageError,
+    self, CannotCreateKeyPairError, CannotDecryptMessageError, CannotEncryptMessageError,
 };
-use crypto_box::aead::Aead;
-use crypto_box::{PublicKey, SecretKey};
-use cryptoxide::ed25519::{signature, SIGNATURE_LENGTH, verify};
+use crypto_box::{aead::Aead, PublicKey, SecretKey};
+use cryptoxide::ed25519::{signature, verify, SIGNATURE_LENGTH};
 use hex::{encode, FromHex};
 use salsa20::XNonce;
 
@@ -74,10 +72,7 @@ impl KeyPair {
         Self { seckey, pubkey }
     }
 
-    pub(crate) fn from_str(
-        public_key: &str,
-        secret_key: &str,
-    ) -> Result<Self, CryptoError> {
+    pub(crate) fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
         let pubkey = <[u8; 32]>::from_hex(public_key)
             .map_err(|_| CannotCreateKeyPairError(public_key.into()))?;
         let seckey: [u8; 32] = <[u8; 32]>::from_hex(secret_key)

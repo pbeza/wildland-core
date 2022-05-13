@@ -14,6 +14,14 @@ pub struct CreateCredentialsReq {
     pub path: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateCredentialsRes {
+    #[serde(rename(deserialize = "credentialID"))]
+    pub credentials_id: String,
+    #[serde(rename(deserialize = "credentialSecret"))]
+    pub credentials_secret: String,
+}
+
 #[derive(Clone, Default)]
 pub(crate) struct SCCredentialsClient {
     pub(crate) base_url: String,
@@ -43,8 +51,6 @@ mod tests {
     };
     use mockito::{mock, server_url};
     use serde_json::json;
-
-    use crate::CreateCredentialsRes;
 
     use super::*;
 
