@@ -1,50 +1,48 @@
-use clap::{AppSettings, Parser};
-use yansi::Paint;
+use anyhow::{anyhow, Result};
+use clap::StructOpt;
+use cli_args::{CliArgs, IdentitySubCommand, SubCommand};
+use wildland_admin_manager::{
+    admin_manager::{AdminManager, Identity},
+    api::{AdminManager as ApiAdminManager, SEED_PHRASE_LEN},
+};
 
-fn get_version() -> &'static str {
-    env!("CARGO_PKG_VERSION")
-}
+mod cli_args;
+mod version;
 
-fn print_version() {
-    println!(
-        "[{}] Wildland CLI version {}",
-        Paint::green("+").bold(),
-        get_version()
-    );
-    println!(
-        "[{}] Admin Manager version {}",
-        Paint::green("+").bold(),
-        wildland_admin_manager::get_version(),
-    );
-
-    println!("[{}] Core library version:", Paint::blue("+").bold());
-    wildland_corex::get_version_verbose()
-        .iter()
-        .for_each(|(name, version)| {
-            println!(
-                "[{}] * {} version {}",
-                Paint::blue("+").bold(),
-                name,
-                version
-            )
-        });
-}
-
-#[derive(Parser)]
-#[clap(
-    about,
-    arg_required_else_help = true,
-    global_setting(AppSettings::NoAutoVersion)
-)]
-struct CliArgs {
-    #[clap(long, short = 'V')]
-    version: bool,
-}
-
-fn main() {
+fn main() -> Result<()> {
     let cli = CliArgs::parse();
 
     if cli.version {
-        print_version();
+        version::print_version();
+    } else {
+        let mut admin_manager = AdminManager::<Identity>::default();
+        match cli.sub_command_action {
+            SubCommand::Identity {
+                identity_action: IdentitySubCommand::Generate,
+            } => {
+                let seed_phrase = AdminManager::create_seed_phrase()?;
+                let identity = admin_manager
+                    .create_master_identity_from_seed_phrase("name".into(), seed_phrase)?;
+                println!("{identity}")
+            }
+            SubCommand::Identity {
+                identity_action: IdentitySubCommand::Restore { seed_phrase },
+            } => {
+                let seed = seed_phrase
+                    .split(' ')
+                    .map(|elem| elem.to_string())
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .map_err(|e: Vec<String>| {
+                        let phrase = e.join(" ");
+                        anyhow!("Could not parse seed phrase {phrase:?} - expecting {SEED_PHRASE_LEN} words")
+                    })?;
+                let identity =
+                    admin_manager.create_master_identity_from_seed_phrase("name".into(), seed)?;
+                println!("{identity}")
+            }
+        }
     }
+
+    Ok(())
 }

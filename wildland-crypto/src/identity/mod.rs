@@ -23,6 +23,7 @@ use std::fmt;
 
 use bip39::{Language, Mnemonic};
 use sha2::{Digest, Sha256};
+use thiserror::Error;
 
 use crate::error::{CargoError, CargoErrorRepresentable};
 pub use crate::identity::{derivation::Identity, keys::KeyPair};
@@ -32,8 +33,11 @@ pub mod error;
 pub mod keys;
 mod seed;
 
+pub const SEED_PHRASE_LEN: usize = 12;
+type SeedPhrase = [String; SEED_PHRASE_LEN];
+
 // TODO move these errors to identity/error.rs - WAP-86
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Error)]
 pub enum IdentityError {
     InvalidWordVector = 1,
     EntropyTooLow = 2,
@@ -76,7 +80,7 @@ pub fn from_entropy(entropy: &Vec<u8>) -> Result<Identity, CargoError> {
 /// Create a new, random Wildland identity.
 /// Will return new identity each time it is called.
 pub fn from_random_seed() -> Result<Identity, CargoError> {
-    let mnemonic = Mnemonic::generate(12).unwrap();
+    let mnemonic = Mnemonic::generate(SEED_PHRASE_LEN).unwrap();
     let words = mnemonic
         .word_iter()
         .map(|word| word.to_owned())
@@ -84,10 +88,21 @@ pub fn from_random_seed() -> Result<Identity, CargoError> {
     from_mnemonic(&words)
 }
 
+/// Create a new random seed phrase
+pub fn generate_random_seed_phrase() -> anyhow::Result<SeedPhrase> {
+    let mnemonic = Mnemonic::generate(SEED_PHRASE_LEN)?;
+    mnemonic
+        .word_iter()
+        .map(|word| word.to_owned())
+        .collect::<Vec<String>>()
+        .try_into()
+        .map_err(|_| IdentityError::InvalidWordVector.into())
+}
+
 /// Derive Wildland identity from mnemonic (12 dictionary words).
 #[allow(clippy::ptr_arg)]
 pub fn from_mnemonic(phrase: &[String]) -> Result<Identity, CargoError> {
-    if phrase.len() != 12 {
+    if phrase.len() != SEED_PHRASE_LEN {
         return Err(IdentityError::InvalidWordVector.into());
     }
     let mnemonic_string: String = phrase.join(" ");
@@ -122,7 +137,7 @@ mod tests {
     #[test]
     fn can_generate_seed_for_phrase() {
         let user = from_random_seed().unwrap();
-        assert_eq!(user.mnemonic().len(), 12);
+        assert_eq!(user.mnemonic().len(), SEED_PHRASE_LEN);
     }
 
     #[test]

@@ -1,44 +1,60 @@
-use crate::api;
-use bip39::{Language, Mnemonic};
+mod identity;
+mod seed_phrase;
 
-#[derive(Default, Clone)]
-pub struct SeedPhrase(Vec<String>);
+use crate::api::{self, SeedPhraseWords};
+use anyhow::Result;
+pub use identity::Identity;
+pub use seed_phrase::SeedPhrase;
+use wildland_crypto::identity as crypto_identity;
 
-impl api::SeedPhrase for SeedPhrase {
-    fn set_words(&mut self, words: Vec<String>) {
-        self.0 = words
-    }
-
-    fn get_words(&self) -> Vec<String> {
-        self.0.clone()
-    }
+pub struct AdminManager<I: api::Identity> {
+    // TODO do we want to store more than one master identity
+    // TODO do we want to keep mappings between a master identity and a set of device identities
+    master_identity: Option<I>,
 }
 
-#[derive(Default)]
-pub struct AdminManager<S: api::SeedPhrase> {
-    seed_phrase: S,
-}
-
-impl api::AdminManager<SeedPhrase> for AdminManager<SeedPhrase> {
-    fn generate_seed_phrase(&mut self) -> SeedPhrase {
-        self.seed_phrase.0 = Mnemonic::generate_in(Language::English, 12)
-            .unwrap()
-            .word_iter()
-            .map(|s| s.into())
-            .collect();
-        self.seed_phrase.clone()
+impl Default for AdminManager<Identity> {
+    fn default() -> Self {
+        Self {
+            master_identity: Default::default(),
+        }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::AdminManager;
-    use crate::api::{AdminManager as AdminManagerApi, SeedPhrase};
+impl api::AdminManager<Identity> for AdminManager<Identity> {
+    fn create_master_identity_from_seed_phrase(
+        &mut self,
+        name: String,
+        seed: SeedPhraseWords,
+    ) -> Result<Identity> {
+        let identity = Identity::new(
+            api::IdentityType::Master,
+            name,
+            SeedPhrase::try_from(seed)?.try_into()?,
+        );
+        self.master_identity = Some(identity.clone()); // TODO Can user have multiple master identities? If not should it be overwritten?
+        Ok(identity)
+    }
 
-    #[test]
-    fn test_seed_phrase_len() {
-        let mut admin_manager = AdminManager::default();
-        let seed_phrase = admin_manager.generate_seed_phrase();
-        assert_eq!(seed_phrase.get_words().len(), 12);
+    fn create_device_identity_from_seed_phrase(
+        &mut self,
+        name: String,
+        seed: SeedPhraseWords,
+    ) -> Result<Identity> {
+        let identity = Identity::new(
+            api::IdentityType::Device,
+            name,
+            SeedPhrase::try_from(seed)?.try_into()?,
+        );
+        // TODO keep it somehow?
+        Ok(identity)
+    }
+
+    fn create_seed_phrase() -> Result<SeedPhraseWords> {
+        crypto_identity::generate_random_seed_phrase()
+    }
+
+    fn get_master_identity(&self) -> Option<Identity> {
+        self.master_identity.clone()
     }
 }
