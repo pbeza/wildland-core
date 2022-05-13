@@ -88,7 +88,7 @@ pub fn from_random_seed() -> Result<Box<Identity>, CargoError> {
 
 /// Create a new random seed phrase
 pub fn generate_random_seed_phrase() -> anyhow::Result<SeedPhrase> {
-    let mnemonic = Mnemonic::generate(12).unwrap();
+    let mnemonic = Mnemonic::generate(12)?;
     mnemonic
         .word_iter()
         .map(|word| word.to_owned())

@@ -33,7 +33,10 @@ fn main() -> Result<()> {
                     .map(|elem| elem.to_string())
                     .collect::<Vec<_>>()
                     .try_into()
-                    .map_err(|e| anyhow!("Could not parse seed phrase {e:?}"))?;
+                    .map_err(|e: Vec<String>| {
+                        let phrase = e.join(" ");
+                        anyhow!("Could not parse seed phrase {phrase:?} - expecting 12 words")
+                    })?;
                 let identity =
                     admin_manager.create_master_identity_from_seed_phrase("name".into(), seed)?;
                 println!("{identity}")
