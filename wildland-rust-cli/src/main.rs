@@ -3,7 +3,7 @@ use clap::StructOpt;
 use cli_args::{CliArgs, IdentitySubCommand, SubCommand};
 use wildland_admin_manager::{
     admin_manager::{AdminManager, Identity},
-    api::AdminManager as ApiAdminManager,
+    api::{AdminManager as ApiAdminManager, SEED_PHRASE_LEN},
 };
 
 mod cli_args;
@@ -35,7 +35,7 @@ fn main() -> Result<()> {
                     .try_into()
                     .map_err(|e: Vec<String>| {
                         let phrase = e.join(" ");
-                        anyhow!("Could not parse seed phrase {phrase:?} - expecting 12 words")
+                        anyhow!("Could not parse seed phrase {phrase:?} - expecting {SEED_PHRASE_LEN} words")
                     })?;
                 let identity =
                     admin_manager.create_master_identity_from_seed_phrase("name".into(), seed)?;

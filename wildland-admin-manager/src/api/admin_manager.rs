@@ -20,7 +20,7 @@ pub trait AdminManager<I: Identity> {
         seed: SeedPhraseWords,
     ) -> Result<I>;
 
-    /// Creates a randomly generated seed phrase containing 12 words
+    /// Creates a randomly generated seed phrase
     fn create_seed_phrase() -> Result<SeedPhraseWords>;
 
     fn get_master_identity(&self) -> Option<I>;

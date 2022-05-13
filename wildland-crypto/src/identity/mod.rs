@@ -33,7 +33,8 @@ pub mod derivation;
 pub mod keys;
 mod seed;
 
-type SeedPhrase = [String; 12];
+pub const SEED_PHRASE_LEN: usize = 12;
+type SeedPhrase = [String; SEED_PHRASE_LEN];
 
 #[derive(Copy, Clone, PartialEq, Debug, Error)]
 pub enum IdentityError {
@@ -78,7 +79,7 @@ pub fn from_entropy(entropy: &Vec<u8>) -> Result<Box<Identity>, CargoError> {
 /// Create a new, random Wildland identity.
 /// Will return new identity each time it is called.
 pub fn from_random_seed() -> Result<Box<Identity>, CargoError> {
-    let mnemonic = Mnemonic::generate(12).unwrap();
+    let mnemonic = Mnemonic::generate(SEED_PHRASE_LEN).unwrap();
     let mut vec: Vec<String> = Vec::new();
     for word in mnemonic.word_iter() {
         vec.push(word.to_string());
@@ -88,7 +89,7 @@ pub fn from_random_seed() -> Result<Box<Identity>, CargoError> {
 
 /// Create a new random seed phrase
 pub fn generate_random_seed_phrase() -> anyhow::Result<SeedPhrase> {
-    let mnemonic = Mnemonic::generate(12)?;
+    let mnemonic = Mnemonic::generate(SEED_PHRASE_LEN)?;
     mnemonic
         .word_iter()
         .map(|word| word.to_owned())
@@ -100,7 +101,7 @@ pub fn generate_random_seed_phrase() -> anyhow::Result<SeedPhrase> {
 /// Derive Wildland identity from mnemonic (12 dictionary words).
 #[allow(clippy::ptr_arg)]
 pub fn from_mnemonic(phrase: &Vec<String>) -> Result<Box<Identity>, CargoError> {
-    if phrase.len() != 12 {
+    if phrase.len() != SEED_PHRASE_LEN {
         return Err(IdentityError::InvalidWordVector.into());
     }
     let mnemonic_string: String = phrase.join(" ");
@@ -136,7 +137,7 @@ mod tests {
     #[test]
     fn can_generate_seed_for_phrase() {
         let user = from_random_seed().unwrap();
-        assert_eq!(user.mnemonic().len(), 12);
+        assert_eq!(user.mnemonic().len(), SEED_PHRASE_LEN);
     }
 
     #[test]
