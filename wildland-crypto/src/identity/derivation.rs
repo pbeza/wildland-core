@@ -50,11 +50,15 @@ fn single_use_encryption_key_path(index: u64) -> String {
 /// - single-use-encryption - to transfer secrets in public
 #[derive(Debug, PartialEq)]
 pub struct Identity {
-    pub xprv: XPrv,
-    pub words: [String; 12],
+    xprv: XPrv,
+    words: [String; 12],
 }
 
 impl Identity {
+    pub fn get_xprv(&self) -> &XPrv {
+        &self.xprv
+    }
+
     /// Derive identity from Mnemonic.
     ///
     /// Derived identity is bound to Wildland project - same 12 words will
@@ -130,7 +134,7 @@ impl Identity {
         // drop the chain-code from xprv and generate public key from the secret key
         let (_, pubkey) = keypair(&seckey);
 
-        KeyPair::new(seckey, pubkey)
+        KeyPair::from_bytes(seckey, pubkey)
     }
 
     fn derive_encryption_key(&self, path: &str) -> impl EncryptionKeyPair {
@@ -145,7 +149,7 @@ impl Identity {
         let curve25519_sk = &crypto_box::SecretKey::from(bytes);
         let curve25519_pk = curve25519_sk.public_key();
 
-        KeyPair::new(*curve25519_sk.as_bytes(), *curve25519_pk.as_bytes())
+        KeyPair::from_bytes(*curve25519_sk.as_bytes(), *curve25519_pk.as_bytes())
     }
 
     fn derive_private_key_from_path(&self, path: &str) -> XPrv {
@@ -167,11 +171,7 @@ impl Identity {
 mod tests {
     use std::str::FromStr;
 
-    use crypto_box::aead::Aead;
-    use cryptoxide::ed25519;
-    use cryptoxide::ed25519::SIGNATURE_LENGTH;
-    use salsa20::XNonce;
-
+    use crate::common::test_utilities::generate_random_nonce;
     use hex::encode;
 
     use super::*;
@@ -184,60 +184,21 @@ mod tests {
         Identity::from_mnemonic(mnemonic)
     }
 
-    fn sign(message: &[u8], keypair: &dyn SigningKeyPair) -> [u8; SIGNATURE_LENGTH] {
-        ed25519::signature(message, &keypair.packed())
-    }
-
-    fn verify(
-        message: &[u8],
-        keypair: &dyn SigningKeyPair,
-        signature: [u8; SIGNATURE_LENGTH],
-    ) -> bool {
-        ed25519::verify(message, &keypair.pubkey(), &signature)
-    }
-
-    fn generate_nonce() -> XNonce {
-        let mut rng = crypto_box::rand_core::OsRng;
-        crypto_box::generate_nonce(&mut rng)
-    }
-
-    fn encrypt(
-        nonce: &XNonce,
-        alice_keypair: &dyn EncryptionKeyPair,
-        bob_keypair: &dyn EncryptionKeyPair,
-    ) -> Vec<u8> {
-        let salsa_box = crypto_box::Box::new(
-            &crypto_box::PublicKey::from(alice_keypair.pubkey()),
-            &crypto_box::SecretKey::from(bob_keypair.seckey()),
-        );
-
-        salsa_box.encrypt(nonce, MSG).unwrap()
-    }
-
-    fn decrypt(
-        ciphertext: &[u8],
-        nonce: &XNonce,
-        alice_keypair: &dyn EncryptionKeyPair,
-        bob_keypair: &dyn EncryptionKeyPair,
-    ) -> crypto_box::aead::Result<Vec<u8>> {
-        let salsa_box = crypto_box::Box::new(
-            &crypto_box::PublicKey::from(bob_keypair.pubkey()),
-            &crypto_box::SecretKey::from(alice_keypair.seckey()),
-        );
-
-        salsa_box.decrypt(nonce, ciphertext)
-    }
-
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
         let skey = user.signing_key();
-        let signature = sign(MSG, &skey);
-        assert!(verify(MSG, &skey, signature));
-        let mut broken_signature: [u8; 64] = [0; 64];
-        broken_signature.copy_from_slice(&signature);
-        broken_signature[0] = !signature[0];
-        assert!(!verify(MSG, &skey, broken_signature));
+        let signature = skey.sign(MSG);
+        assert!(skey.verify(MSG, &signature));
+    }
+
+    #[test]
+    fn cannot_verify_signature_for_other_message() {
+        let user = user();
+        let skey = user.signing_key();
+        let signature = skey.sign(MSG);
+
+        assert!(!skey.verify("invalid message".as_ref(), &signature));
     }
 
     #[test]
@@ -245,10 +206,12 @@ mod tests {
         let user = user();
         let alice_keypair = user.encryption_key(0);
         let bob_keypair = user.encryption_key(1);
-        let nonce = generate_nonce();
+        let nonce = generate_random_nonce();
 
-        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
-        let result = decrypt(ciphertext.as_slice(), &nonce, &alice_keypair, &bob_keypair);
+        let ciphertext = alice_keypair
+            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
+            .unwrap();
+        let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert_eq!(MSG, result.unwrap().as_slice())
     }
@@ -258,10 +221,12 @@ mod tests {
         let user = user();
         let alice_keypair = user.single_use_encryption_key(0);
         let bob_keypair = user.single_use_encryption_key(1);
-        let nonce = generate_nonce();
+        let nonce = generate_random_nonce();
 
-        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
-        let result = decrypt(ciphertext.as_slice(), &nonce, &bob_keypair, &alice_keypair);
+        let ciphertext = alice_keypair
+            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
+            .unwrap();
+        let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert_eq!(MSG, result.unwrap().as_slice())
     }
@@ -272,15 +237,13 @@ mod tests {
         let alice_keypair = user.encryption_key(0);
         let bob_keypair = user.encryption_key(1);
         let charlie_keypair = user.encryption_key(2);
-        let nonce = generate_nonce();
+        let nonce = generate_random_nonce();
 
-        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
-        let result = decrypt(
-            ciphertext.as_slice(),
-            &nonce,
-            &charlie_keypair,
-            &alice_keypair,
-        );
+        let ciphertext = alice_keypair
+            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
+            .unwrap();
+        let result =
+            charlie_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert!(result.is_err())
     }
@@ -291,15 +254,13 @@ mod tests {
         let alice_keypair = user.single_use_encryption_key(0);
         let bob_keypair = user.single_use_encryption_key(1);
         let charlie_keypair = user.single_use_encryption_key(2);
-        let nonce = generate_nonce();
+        let nonce = generate_random_nonce();
 
-        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
-        let result = decrypt(
-            ciphertext.as_slice(),
-            &nonce,
-            &charlie_keypair,
-            &alice_keypair,
-        );
+        let ciphertext = alice_keypair
+            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
+            .unwrap();
+        let result =
+            charlie_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
 
         assert!(result.is_err())
     }
@@ -309,11 +270,13 @@ mod tests {
         let user = user();
         let alice_keypair = user.single_use_encryption_key(0);
         let bob_keypair = user.single_use_encryption_key(1);
-        let nonce1 = generate_nonce();
-        let nonce2 = generate_nonce();
+        let nonce1 = generate_random_nonce();
+        let nonce2 = generate_random_nonce();
 
-        let ciphertext = encrypt(&nonce1, &alice_keypair, &bob_keypair);
-        let result = decrypt(ciphertext.as_slice(), &nonce2, &bob_keypair, &alice_keypair);
+        let ciphertext = alice_keypair
+            .encrypt(MSG, &nonce1, &bob_keypair.pubkey())
+            .unwrap();
+        let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce2, &bob_keypair.pubkey());
 
         assert!(result.is_err())
     }
@@ -322,16 +285,16 @@ mod tests {
     fn can_generate_distinct_keypairs() {
         let user = user();
         let skey = user.signing_key();
-        println!("signing key, sec {}", encode(skey.seckey()));
-        println!("signing key, pub {}", encode(skey.pubkey()));
+        println!("signing key, sec {}", encode(skey.seckey_as_bytes()));
+        println!("signing key, pub {}", encode(skey.pubkey_as_bytes()));
         let e0key = user.encryption_key(0);
-        println!("encryp0 key, sec: {}", encode(e0key.seckey()));
-        println!("encryp0 key, pub: {}", encode(e0key.pubkey()));
+        println!("encryp0 key, sec: {}", encode(e0key.seckey().as_bytes()));
+        println!("encryp0 key, pub: {}", encode(e0key.pubkey().as_bytes()));
         let e1key = user.encryption_key(1);
-        assert_ne!(skey.seckey(), e0key.seckey());
-        assert_ne!(e0key.seckey(), e1key.seckey());
+        assert_ne!(skey.seckey_as_bytes(), *e0key.seckey().as_bytes());
+        assert_ne!(e0key.seckey().as_bytes(), e1key.seckey().as_bytes());
 
-        assert_eq!(encode(skey.seckey()).len(), 64);
-        assert_eq!(encode(skey.pubkey()).len(), 64);
+        assert_eq!(encode(skey.seckey_as_bytes()).len(), 64);
+        assert_eq!(encode(skey.pubkey_as_bytes()).len(), 64);
     }
 }

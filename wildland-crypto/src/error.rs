@@ -24,6 +24,7 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::collections::HashMap;
 use std::fmt;
 
+// TODO remove this class - displaying errors is not responsibility of this lib - WAP-86
 #[derive(std::fmt::Debug)]
 pub struct CargoError {
     error_type: &'static str,
