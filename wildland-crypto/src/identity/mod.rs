@@ -93,7 +93,7 @@ pub fn from_mnemonic(phrase: &[String]) -> Result<Identity, CargoError> {
     let mnemonic_string: String = phrase.join(" ");
     Mnemonic::parse_in_normalized(Language::English, &mnemonic_string)
         .map_err(|_error| IdentityError::InvalidWordVector.into())
-        .map(|mnemonic| Identity::from_mnemonic(mnemonic))
+        .map(Identity::from_mnemonic)
 }
 
 #[cfg(test)]
