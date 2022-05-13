@@ -1,7 +1,13 @@
 [package]
 name = "wildland-crypto"
-version = "0.1.0"
+version = "0.3.0-sc-client"
+authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
+license = "GPL-3.0-only"
+repository = "https://gitlab.com/wildland/corex/wildland-core"
+homepage = "https://wildland.io/"
+description = "Wildland Crypto"
+keywords = ["crypto"]
 publish = ["wl-dev"]
 
 [lib]
@@ -30,13 +36,17 @@ ed25519-bip32 = "0.4.0"
 cryptoxide = "0.4.2"
 crypto_box = "0.7.0"
 
+# used to generate nonce
+salsa20 = "0.9.0"
+
 sha2 = "0.10.0"
 hex = "0.4.3"
 
 [dev-dependencies]
 hex = "0.4.3"
 hex-literal = "0.3.4"
-salsa20 = "0.9.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1.0.79" }
 
 [package.metadata.workspaces]
 independent = true

@@ -22,8 +22,8 @@ Seed phrase: {}
 ",
             self.name,
             self.identity_type,
-            self.inner_identity.xprv,
-            self.inner_identity.words.join(" ")
+            self.inner_identity.get_xprv(),
+            self.inner_identity.get_seed_phrase().join(" ")
         )
     }
 }
@@ -60,6 +60,6 @@ impl api::Identity for Identity {
     }
 
     fn get_seed_phrase(&self) -> api::SeedPhraseWords {
-        self.inner_identity.words.clone()
+        self.inner_identity.get_seed_phrase().clone()
     }
 }
