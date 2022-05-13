@@ -19,7 +19,7 @@ reqwest = { version = "0.11.10", features = ["json"] }
 log = "0.4"
 thiserror = "1.0.30"
 
-wildland-crypto = { version = "0.2.0-sc-client", path = "../wildland-crypto", registry = "wl-dev" }
+wildland-crypto = { version = "0.3.0-sc-client", path = "../wildland-crypto", registry = "wl-dev" }
 
 [dev-dependencies]
 dotenv = "0.15.0"
