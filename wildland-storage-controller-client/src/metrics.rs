@@ -76,12 +76,12 @@ mod tests {
                 json!({
                     "credentialID" : CREDENTIALS_ID,
                     "usageCred" : {
-                        "rx" : 433 as i64,
-                        "tx" : 523 as i64
+                        "rx" : 433_i64,
+                        "tx" : 523_i64
                     },
                     "usageStorage" : {
-                        "rx" : 433 as i64,
-                        "tx" : 523 as i64
+                        "rx" : 433_i64,
+                        "tx" : 523_i64
                     }
                 })
                 .to_string(),
