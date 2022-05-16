@@ -57,4 +57,14 @@ impl api::AdminManager<Identity> for AdminManager<Identity> {
     fn get_master_identity(&self) -> Option<Identity> {
         self.master_identity.clone()
     }
+
+    fn send_verification_code(&mut self, email: String) -> Result<()> {
+        // TODO
+        Ok(())
+    }
+
+    fn verify_email(&mut self, email: String, verification_code: String) -> Result<()> {
+        // TODO
+        Ok(())
+    }
 }
