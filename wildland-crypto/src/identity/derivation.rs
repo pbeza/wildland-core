@@ -192,7 +192,7 @@ mod tests {
 
     use super::*;
 
-    const MSG: &'static [u8] = b"Hello World";
+    const MSG: &[u8] = b"Hello World";
     const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
     fn user() -> Identity {

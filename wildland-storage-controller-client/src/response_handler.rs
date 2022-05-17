@@ -66,7 +66,7 @@ mod tests {
 
         // then
         assert!(result.is_err());
-        assert_eq!(result.map_err(|e| e.to_string()).unwrap_err(), SC_RESPONSE);
+        assert_eq!(result.unwrap_err(), SC_RESPONSE);
     }
 
     #[tokio::test]
@@ -76,7 +76,7 @@ mod tests {
 
         // then
         assert!(result.is_err());
-        assert_eq!(result.map_err(|e| e.to_string()).unwrap_err(), SC_RESPONSE);
+        assert_eq!(result.unwrap_err(), SC_RESPONSE);
     }
 
     fn response(status: u16) -> Response {

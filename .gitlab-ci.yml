@@ -18,7 +18,7 @@ lint:
     - tags
   script:
     - rustup component add clippy
-    - cargo clippy -- -D warnings
+    - cargo clippy --all-targets -- -D warnings
 
 format:
   stage: test
