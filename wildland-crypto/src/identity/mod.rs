@@ -159,7 +159,7 @@ mod tests {
     #[test]
     fn can_generate_from_mnemonic() {
         let mnemonic_vec: Vec<String> = TEST_MNEMONIC_12
-            .split(" ")
+            .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
         let user = from_mnemonic(&mnemonic_vec).ok().unwrap();
@@ -170,7 +170,7 @@ mod tests {
     #[test]
     fn should_fail_on_too_long_mnemonic() {
         let mnemonic_vec: Vec<String> = TEST_MNEMONIC_24
-            .split(" ")
+            .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
 
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn should_fail_on_too_short_mnemonic() {
         let mnemonic_vec: Vec<String> = TEST_MNEMONIC_6
-            .split(" ")
+            .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
 
@@ -190,7 +190,7 @@ mod tests {
     #[test]
     fn should_fail_on_not_english_mnemonic() {
         let mnemonic_vec: Vec<String> = TEST_MNEMONIC_ITALIAN
-            .split(" ")
+            .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
 
@@ -200,7 +200,7 @@ mod tests {
     #[test]
     fn can_recover_seed() {
         let mnemonic_vec: Vec<String> = TEST_MNEMONIC_12
-            .split(" ")
+            .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
         let user = from_mnemonic(&mnemonic_vec).unwrap();
