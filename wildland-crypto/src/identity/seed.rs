@@ -18,8 +18,28 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use bip39::Mnemonic;
 use hkdf::Hkdf;
 use sha2::Sha256;
+use wildland_admin_manager_api::{CryptoError, SeedPhraseWords, SEED_PHRASE_LEN};
+
+/// Create a new random seed phrase
+pub fn generate_random_seed_phrase() -> Result<SeedPhraseWords, CryptoError> {
+    let mnemonic = Mnemonic::generate(SEED_PHRASE_LEN)
+        .map_err(|e| CryptoError::SeedPhraseGenerationError(e.to_string()))?;
+    mnemonic
+        .word_iter()
+        .map(|word| word.to_owned())
+        .collect::<Vec<String>>()
+        .try_into()
+        .map_err(|e: Vec<_>| {
+            CryptoError::SeedPhraseGenerationError(format!(
+                "Invalid seed phrase length: {} - expected {}",
+                e.len(),
+                SEED_PHRASE_LEN
+            ))
+        })
+}
 
 pub fn extend_seed(seed: [u8; 64], target: &mut [u8; 96]) {
     let initial_key_material = seed;

@@ -1,7 +1,8 @@
-use super::{identity::Identity, SeedPhraseWords};
-use anyhow::Result;
+use super::{identity::Identity, AdminManagerResult, SeedPhraseWords};
 
-pub trait AdminManager<I: Identity> {
+pub trait AdminManager {
+    type Identity: Identity;
+
     /// Creates a master identity based on the provided seed phrase (whether it's a newly
     /// generated seed phrase or manually entered in the recovery flow. The keys (ie. public
     /// private keypair) are stored in the Wallet component.
@@ -9,7 +10,7 @@ pub trait AdminManager<I: Identity> {
         &mut self,
         name: String,
         seed: SeedPhraseWords,
-    ) -> Result<I>;
+    ) -> AdminManagerResult<Self::Identity>;
 
     /// Creates a device identity based on the provided seed phrase (whether it's a newly
     /// generated seed phrase or manually entered in the recovery flow. The keys (ie. public
@@ -18,17 +19,18 @@ pub trait AdminManager<I: Identity> {
         &mut self,
         name: String,
         seed: SeedPhraseWords,
-    ) -> Result<I>;
+    ) -> AdminManagerResult<Self::Identity>;
 
     /// Creates a randomly generated seed phrase
-    fn create_seed_phrase() -> Result<SeedPhraseWords>;
+    fn create_seed_phrase() -> AdminManagerResult<SeedPhraseWords>;
 
-    fn get_master_identity(&self) -> Option<I>;
+    fn get_master_identity(&self) -> Option<Self::Identity>;
 
     /// Sends a 6-digit verification code to provided email address.
     /// Invalidates previously sent codes.
-    fn send_verification_code(&mut self, email: String) -> Result<()>;
+    fn send_verification_code(&mut self, email: String) -> AdminManagerResult<()>;
 
-    /// Checks whether verification code entered by a user is the same as generated one
-    fn verify_email(&mut self, email: String, verification_code: String) -> Result<()>;
+    /// Checks whether verification code entered by a user is the same as generated one for a set email
+    /// Returns error when email is not set
+    fn verify_email(&mut self, verification_code: String) -> AdminManagerResult<()>;
 }

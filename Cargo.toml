@@ -2,8 +2,9 @@
 
 members = [
     "wildland-admin-manager",
+    "wildland-admin-manager-api",
     "wildland-catlib",
-    "wildland-rust-cli",
+    "wildland-cli",
     "wildland-corex",
     "wildland-crypto",
     "wildland-storage-controller-client",

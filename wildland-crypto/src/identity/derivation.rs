@@ -18,18 +18,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use bip39::Mnemonic;
-use cryptoxide::ed25519::keypair;
-use ed25519_bip32::{DerivationScheme, XPrv};
-
 use crate::identity::{
     keys::{EncryptionKeyPair, SigningKeyPair},
     seed::extend_seed,
     KeyPair,
 };
 
-use super::SeedPhrase;
-use std::convert::TryFrom;
+use bip39::Mnemonic;
+use cryptoxide::ed25519::keypair;
+use ed25519_bip32::{DerivationScheme, XPrv};
+use sha2::{Digest, Sha256};
+use std::{convert::TryFrom, str::FromStr};
+use wildland_admin_manager_api::{CryptoError, SeedPhraseWords, SEED_PHRASE_LEN};
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
@@ -54,23 +54,27 @@ fn single_use_encryption_key_path(index: u64) -> String {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Identity {
     xprv: XPrv,
-    words: SeedPhrase,
+    words: SeedPhraseWords,
 }
 
-impl Identity {
-    pub fn get_xprv(&self) -> &XPrv {
-        &self.xprv
-    }
+impl TryFrom<SeedPhraseWords> for Identity {
+    type Error = CryptoError;
 
-    pub fn get_seed_phrase(&self) -> &SeedPhrase {
-        &self.words
+    fn try_from(seed_phrase: SeedPhraseWords) -> Result<Self, Self::Error> {
+        let mnemonic = Mnemonic::from_str(&seed_phrase.join(" "))
+            .map_err(|e| CryptoError::IdentityGenerationError(e.to_string()))?;
+        Self::try_from(mnemonic)
     }
+}
+
+impl TryFrom<Mnemonic> for Identity {
+    type Error = CryptoError;
 
     /// Derive identity from Mnemonic.
     ///
     /// Derived identity is bound to Wildland project - same 12 words will
     /// produce different seed (number) in other project.
-    pub fn from_mnemonic(mnemonic: Mnemonic) -> Self {
+    fn try_from(mnemonic: Mnemonic) -> Result<Self, Self::Error> {
         // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
         // We don't need them here.
         let passphrase = "";
@@ -88,14 +92,48 @@ impl Identity {
 
         // Now we can use this randomness as bip32-ed25519 extended private key
         let root_xprv = XPrv::normalize_bytes_ed25519(output_key_material);
-        let mut words: [String; 12] = Default::default();
-        for (i, word) in mnemonic.word_iter().enumerate() {
-            words[i] = word.to_string();
-        }
-        Identity {
+
+        Ok(Identity {
             xprv: root_xprv,
-            words,
+            words: mnemonic
+                .word_iter()
+                .map(|word| word.to_owned())
+                .collect::<Vec<_>>()
+                .try_into()
+                .map_err(|e: Vec<_>| {
+                    CryptoError::IdentityGenerationError(format!(
+                        "Invalid seed phrase length: {} - expected {}",
+                        e.len(),
+                        SEED_PHRASE_LEN
+                    ))
+                })?,
+        })
+    }
+}
+
+impl Identity {
+    pub fn get_xprv(&self) -> &XPrv {
+        &self.xprv
+    }
+
+    pub fn get_seed_phrase(&self) -> &SeedPhraseWords {
+        &self.words
+    }
+
+    /// Deterministically derive Wildland identity from Ethereum
+    /// signature (or any random bits). Assumes high quality entropy
+    /// and does not perform any checks.
+    #[allow(clippy::ptr_arg)]
+    pub fn from_entropy(entropy: &Vec<u8>) -> Result<Self, CryptoError> {
+        // assume high quality entropy of arbitrary length (>= 32 bytes)
+        if (entropy.len() * 8) < 128 {
+            return Err(CryptoError::EntropyTooLow);
         }
+        let mut hasher = Sha256::new();
+        hasher.update(entropy);
+        let hashed_entropy = hasher.finalize();
+        let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16]).unwrap();
+        Self::try_from(mnemonic)
     }
 
     /// Retrieve mnemonic from identity. Useful during onboarding process.
@@ -179,16 +217,18 @@ mod tests {
     use std::str::FromStr;
 
     use crate::common::test_utilities::generate_random_nonce;
+    use ed25519_bip32::XPrv;
     use hex::encode;
+    use hex_literal::hex;
 
     use super::*;
 
-    const MSG: &'static [u8] = b"Hello World";
+    const MSG: &[u8] = b"Hello World";
     const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
     fn user() -> Identity {
         let mnemonic = Mnemonic::from_str(MNEMONIC).unwrap();
-        Identity::from_mnemonic(mnemonic)
+        Identity::try_from(mnemonic).unwrap()
     }
 
     #[test]
@@ -303,5 +343,86 @@ mod tests {
 
         assert_eq!(encode(skey.seckey_as_bytes()).len(), 64);
         assert_eq!(encode(skey.pubkey_as_bytes()).len(), 64);
+    }
+
+    const TEST_MNEMONIC_12: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    const TEST_MNEMONIC_ITALIAN: &str =
+        "abaco abaco abaco abaco abaco abaco abaco abaco abaco abaco abaco abbaglio";
+
+    // expected extended root private key bytes generated from TEST_MNEMONIC_12
+    const ROOT_XPRV: [u8; 96] = [
+        24, 97, 125, 255, 78, 254, 242, 4, 80, 221, 94, 175, 192, 96, 253, 133, 250, 172, 202, 19,
+        217, 90, 206, 59, 218, 11, 227, 46, 70, 148, 252, 215, 161, 178, 196, 120, 102, 114, 194,
+        12, 205, 218, 138, 151, 244, 166, 214, 35, 131, 140, 194, 70, 236, 205, 123, 72, 70, 215,
+        44, 36, 182, 15, 25, 158, 117, 161, 211, 29, 125, 195, 12, 236, 138, 155, 206, 3, 16, 11,
+        54, 143, 209, 223, 7, 250, 9, 252, 142, 87, 79, 214, 211, 69, 2, 147, 159, 63,
+    ];
+
+    #[test]
+    fn can_generate_from_entropy() {
+        let entropy = hex!(
+            "
+            65426aa1176159d1929caea10514cddd
+            d11235741001f125922f258a58716b58
+            da63e3060fe461fe37e4ed201d76b132
+            e35830929b0f4764e577d3da09ecb6d2
+            12
+        "
+        );
+        let user = Identity::from_entropy(&entropy.to_vec()).ok().unwrap();
+        assert_eq!(
+            vec!(
+                "expect", "cruel", "stadium", "sand", "couch", "garden", "nothing", "wool",
+                "grocery", "shop", "noise", "voice"
+            ),
+            user.mnemonic()
+        );
+    }
+
+    #[test]
+    fn will_crash_on_low_entropy_source() {
+        let entropy = hex!(
+            "
+            65426aa1176159d1929caea10514
+        "
+        );
+        assert!(Identity::from_entropy(&entropy.to_vec()).is_err());
+    }
+
+    #[test]
+    fn can_generate_from_mnemonic() {
+        let mnemonic_array: [String; 12] = TEST_MNEMONIC_12
+            .split(' ')
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+            .try_into()
+            .unwrap();
+        let user = Identity::try_from(mnemonic_array).unwrap();
+
+        assert_eq!(user.get_xprv(), &XPrv::normalize_bytes_ed25519(ROOT_XPRV))
+    }
+
+    #[test]
+    fn should_fail_on_not_english_mnemonic() {
+        let mnemonic_array: [String; 12] = TEST_MNEMONIC_ITALIAN
+            .split(' ')
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+            .try_into()
+            .unwrap();
+
+        assert!(Identity::try_from(mnemonic_array).is_err());
+    }
+
+    #[test]
+    fn can_recover_seed() {
+        let mnemonic_array: [String; 12] = TEST_MNEMONIC_12
+            .split(' ')
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+            .try_into()
+            .unwrap();
+        let user = Identity::try_from(mnemonic_array).unwrap();
+        assert_eq!(user.mnemonic().join(" "), TEST_MNEMONIC_12);
     }
 }

@@ -1,36 +1,44 @@
 mod identity;
-mod seed_phrase;
 
-use crate::api::{self, SeedPhraseWords};
-use anyhow::Result;
+use api::{AdminManagerError, CoreXError};
 pub use identity::Identity;
-pub use seed_phrase::SeedPhrase;
+use wildland_admin_manager_api as api;
 use wildland_crypto::identity as crypto_identity;
+
+pub enum Email {
+    Unverified(String),
+    Verified(String),
+}
 
 pub struct AdminManager<I: api::Identity> {
     // TODO do we want to store more than one master identity
     // TODO do we want to keep mappings between a master identity and a set of device identities
     master_identity: Option<I>,
+    email: Option<Email>,
 }
 
 impl Default for AdminManager<Identity> {
     fn default() -> Self {
         Self {
             master_identity: Default::default(),
+            email: Default::default(),
         }
     }
 }
 
-impl api::AdminManager<Identity> for AdminManager<Identity> {
+impl api::AdminManager for AdminManager<Identity> {
+    type Identity = Identity;
+
     fn create_master_identity_from_seed_phrase(
         &mut self,
         name: String,
-        seed: SeedPhraseWords,
-    ) -> Result<Identity> {
+        seed: api::SeedPhraseWords,
+    ) -> api::AdminManagerResult<Identity> {
         let identity = Identity::new(
             api::IdentityType::Master,
             name,
-            SeedPhrase::try_from(seed)?.try_into()?,
+            seed.try_into()
+                .map_err(|e| AdminManagerError::CoreX(CoreXError::Crypto(e)))?, // TODO delegate to corex ?
         );
         self.master_identity = Some(identity.clone()); // TODO Can user have multiple master identities? If not should it be overwritten?
         Ok(identity)
@@ -39,31 +47,33 @@ impl api::AdminManager<Identity> for AdminManager<Identity> {
     fn create_device_identity_from_seed_phrase(
         &mut self,
         name: String,
-        seed: SeedPhraseWords,
-    ) -> Result<Identity> {
+        seed: api::SeedPhraseWords,
+    ) -> api::AdminManagerResult<Identity> {
         let identity = Identity::new(
             api::IdentityType::Device,
             name,
-            SeedPhrase::try_from(seed)?.try_into()?,
+            seed.try_into()
+                .map_err(|e| AdminManagerError::CoreX(CoreXError::Crypto(e)))?, // TODO delegate to corex ?
         );
         // TODO keep it somehow?
         Ok(identity)
     }
 
-    fn create_seed_phrase() -> Result<SeedPhraseWords> {
+    fn create_seed_phrase() -> api::AdminManagerResult<api::SeedPhraseWords> {
         crypto_identity::generate_random_seed_phrase()
+            .map_err(|e| AdminManagerError::CoreX(CoreXError::Crypto(e))) // TODO delegate to corex ?
     }
 
     fn get_master_identity(&self) -> Option<Identity> {
         self.master_identity.clone()
     }
 
-    fn send_verification_code(&mut self, email: String) -> Result<()> {
+    fn send_verification_code(&mut self, email: String) -> api::AdminManagerResult<()> {
         // TODO
         Ok(())
     }
 
-    fn verify_email(&mut self, email: String, verification_code: String) -> Result<()> {
+    fn verify_email(&mut self, verification_code: String) -> api::AdminManagerResult<()> {
         // TODO
         Ok(())
     }
