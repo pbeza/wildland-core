@@ -20,7 +20,9 @@ impl Default for AdminManager<Identity> {
     }
 }
 
-impl api::AdminManager<Identity> for AdminManager<Identity> {
+impl api::AdminManager for AdminManager<Identity> {
+    type Identity = Identity;
+
     fn create_master_identity_from_seed_phrase(
         &mut self,
         name: String,

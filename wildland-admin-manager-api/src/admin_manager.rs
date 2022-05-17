@@ -1,6 +1,8 @@
 use super::{identity::Identity, AdminManagerResult, SeedPhraseWords};
 
-pub trait AdminManager<I: Identity> {
+pub trait AdminManager {
+    type Identity: Identity;
+
     /// Creates a master identity based on the provided seed phrase (whether it's a newly
     /// generated seed phrase or manually entered in the recovery flow. The keys (ie. public
     /// private keypair) are stored in the Wallet component.
@@ -8,7 +10,7 @@ pub trait AdminManager<I: Identity> {
         &mut self,
         name: String,
         seed: SeedPhraseWords,
-    ) -> AdminManagerResult<I>;
+    ) -> AdminManagerResult<Self::Identity>;
 
     /// Creates a device identity based on the provided seed phrase (whether it's a newly
     /// generated seed phrase or manually entered in the recovery flow. The keys (ie. public
@@ -17,10 +19,10 @@ pub trait AdminManager<I: Identity> {
         &mut self,
         name: String,
         seed: SeedPhraseWords,
-    ) -> AdminManagerResult<I>;
+    ) -> AdminManagerResult<Self::Identity>;
 
     /// Creates a randomly generated seed phrase
     fn create_seed_phrase() -> AdminManagerResult<SeedPhraseWords>;
 
-    fn get_master_identity(&self) -> Option<I>;
+    fn get_master_identity(&self) -> Option<Self::Identity>;
 }
