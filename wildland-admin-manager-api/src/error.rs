@@ -6,7 +6,12 @@ pub enum AdminManagerError {
     Wallet(WalletError),
     #[error("CoreX error: {0}")]
     CoreX(CoreXError),
-    // other errors originated in admin manager
+    #[error("Email candidate not set")]
+    EmailCandidateNotSet,
+    #[error("Email has been already verified")]
+    EmailAlreadyVerified,
+    #[error("Validation codes do not match")]
+    ValidationCodesDoNotMatch,
 }
 
 #[derive(Debug, Error)]
