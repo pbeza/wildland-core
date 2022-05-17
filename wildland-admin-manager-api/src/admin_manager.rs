@@ -1,5 +1,4 @@
-use super::{identity::Identity, SeedPhraseWords};
-use anyhow::Result;
+use super::{identity::Identity, AdminManagerResult, SeedPhraseWords};
 
 pub trait AdminManager<I: Identity> {
     /// Creates a master identity based on the provided seed phrase (whether it's a newly
@@ -9,7 +8,7 @@ pub trait AdminManager<I: Identity> {
         &mut self,
         name: String,
         seed: SeedPhraseWords,
-    ) -> Result<I>;
+    ) -> AdminManagerResult<I>;
 
     /// Creates a device identity based on the provided seed phrase (whether it's a newly
     /// generated seed phrase or manually entered in the recovery flow. The keys (ie. public
@@ -18,10 +17,10 @@ pub trait AdminManager<I: Identity> {
         &mut self,
         name: String,
         seed: SeedPhraseWords,
-    ) -> Result<I>;
+    ) -> AdminManagerResult<I>;
 
     /// Creates a randomly generated seed phrase
-    fn create_seed_phrase() -> Result<SeedPhraseWords>;
+    fn create_seed_phrase() -> AdminManagerResult<SeedPhraseWords>;
 
     fn get_master_identity(&self) -> Option<I>;
 }

@@ -1596,10 +1596,18 @@ dependencies = [
 name = "wildland-admin-manager"
 version = "0.2.1"
 dependencies = [
- "anyhow",
  "bip39",
+ "thiserror",
+ "wildland-admin-manager-api",
  "wildland-corex",
  "wildland-crypto",
+]
+
+[[package]]
+name = "wildland-admin-manager-api"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
 ]
 
 [[package]]
@@ -1619,7 +1627,6 @@ dependencies = [
 name = "wildland-crypto"
 version = "0.3.0-sc-client"
 dependencies = [
- "anyhow",
  "bip39",
  "crypto_box",
  "cryptoxide",
@@ -1635,6 +1642,7 @@ dependencies = [
  "serde_repr",
  "sha2",
  "thiserror",
+ "wildland-admin-manager-api",
 ]
 
 [[package]]
@@ -1648,6 +1656,7 @@ dependencies = [
  "anyhow",
  "clap",
  "wildland-admin-manager",
+ "wildland-admin-manager-api",
  "wildland-corex",
  "yansi",
 ]

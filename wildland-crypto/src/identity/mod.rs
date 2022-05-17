@@ -19,11 +19,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::fmt;
-
 use bip39::{Language, Mnemonic};
 use sha2::{Digest, Sha256};
+use std::fmt;
 use thiserror::Error;
+use wildland_admin_manager_api::CryptoError;
 
 use crate::error::{CargoError, CargoErrorRepresentable};
 pub use crate::identity::{derivation::Identity, keys::KeyPair};
@@ -89,14 +89,21 @@ pub fn from_random_seed() -> Result<Identity, CargoError> {
 }
 
 /// Create a new random seed phrase
-pub fn generate_random_seed_phrase() -> anyhow::Result<SeedPhrase> {
-    let mnemonic = Mnemonic::generate(SEED_PHRASE_LEN)?;
+pub fn generate_random_seed_phrase() -> Result<SeedPhrase, CryptoError> {
+    let mnemonic = Mnemonic::generate(SEED_PHRASE_LEN)
+        .map_err(|e| CryptoError::SeedPhraseGenerationError(e.to_string()))?;
     mnemonic
         .word_iter()
         .map(|word| word.to_owned())
         .collect::<Vec<String>>()
         .try_into()
-        .map_err(|_| IdentityError::InvalidWordVector.into())
+        .map_err(|e: Vec<_>| {
+            CryptoError::SeedPhraseGenerationError(format!(
+                "Invalid seed phrase length: {} - expected {}",
+                e.len(),
+                SEED_PHRASE_LEN
+            ))
+        })
 }
 
 /// Derive Wildland identity from mnemonic (12 dictionary words).

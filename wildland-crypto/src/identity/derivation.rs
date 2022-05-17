@@ -18,18 +18,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use bip39::Mnemonic;
-use cryptoxide::ed25519::keypair;
-use ed25519_bip32::{DerivationScheme, XPrv};
-
+use super::SeedPhrase;
 use crate::identity::{
     keys::{EncryptionKeyPair, SigningKeyPair},
     seed::extend_seed,
     KeyPair,
 };
-
-use super::SeedPhrase;
-use std::convert::TryFrom;
+use bip39::Mnemonic;
+use cryptoxide::ed25519::keypair;
+use ed25519_bip32::{DerivationScheme, XPrv};
+use std::{convert::TryFrom, str::FromStr};
+use wildland_admin_manager_api::{CryptoError, SeedPhraseWords};
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
@@ -55,6 +54,16 @@ fn single_use_encryption_key_path(index: u64) -> String {
 pub struct Identity {
     xprv: XPrv,
     words: SeedPhrase,
+}
+
+impl TryFrom<SeedPhraseWords> for Identity {
+    type Error = CryptoError;
+
+    fn try_from(seed_phrase: SeedPhrase) -> Result<Self, Self::Error> {
+        let mnemonic = Mnemonic::from_str(&seed_phrase.join(" "))
+            .map_err(|e| CryptoError::IdentityGenerationError(e.to_string()))?;
+        Ok(Self::from_mnemonic(mnemonic))
+    }
 }
 
 impl Identity {

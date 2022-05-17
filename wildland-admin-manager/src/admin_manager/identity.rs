@@ -1,6 +1,5 @@
 use std::fmt::Display;
-
-use crate::api::{self, IdentityType};
+use wildland_admin_manager_api as api;
 use wildland_crypto::identity as crypto_identity;
 
 #[derive(Clone, Debug)]
@@ -30,7 +29,7 @@ Seed phrase: {}
 
 impl Identity {
     pub fn new(
-        identity_type: IdentityType,
+        identity_type: api::IdentityType,
         name: String,
         inner_identity: crypto_identity::Identity,
     ) -> Self {
