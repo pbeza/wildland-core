@@ -2,7 +2,6 @@ mod identity;
 
 use api::{AdminManagerError, CoreXError};
 pub use identity::Identity;
-// pub use seed_phrase::SeedPhrase;
 use wildland_admin_manager_api as api;
 use wildland_crypto::identity as crypto_identity;
 
