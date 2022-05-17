@@ -18,15 +18,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::SeedPhrase;
+use super::SEED_PHRASE_LEN;
 use crate::identity::{
     keys::{EncryptionKeyPair, SigningKeyPair},
     seed::extend_seed,
     KeyPair,
 };
+
 use bip39::Mnemonic;
 use cryptoxide::ed25519::keypair;
 use ed25519_bip32::{DerivationScheme, XPrv};
+use sha2::{Digest, Sha256};
 use std::{convert::TryFrom, str::FromStr};
 use wildland_admin_manager_api::{CryptoError, SeedPhraseWords};
 
@@ -53,33 +55,27 @@ fn single_use_encryption_key_path(index: u64) -> String {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Identity {
     xprv: XPrv,
-    words: SeedPhrase,
+    words: SeedPhraseWords,
 }
 
 impl TryFrom<SeedPhraseWords> for Identity {
     type Error = CryptoError;
 
-    fn try_from(seed_phrase: SeedPhrase) -> Result<Self, Self::Error> {
+    fn try_from(seed_phrase: SeedPhraseWords) -> Result<Self, Self::Error> {
         let mnemonic = Mnemonic::from_str(&seed_phrase.join(" "))
             .map_err(|e| CryptoError::IdentityGenerationError(e.to_string()))?;
-        Ok(Self::from_mnemonic(mnemonic))
+        Self::try_from(mnemonic)
     }
 }
 
-impl Identity {
-    pub fn get_xprv(&self) -> &XPrv {
-        &self.xprv
-    }
-
-    pub fn get_seed_phrase(&self) -> &SeedPhrase {
-        &self.words
-    }
+impl TryFrom<Mnemonic> for Identity {
+    type Error = CryptoError;
 
     /// Derive identity from Mnemonic.
     ///
     /// Derived identity is bound to Wildland project - same 12 words will
     /// produce different seed (number) in other project.
-    pub fn from_mnemonic(mnemonic: Mnemonic) -> Self {
+    fn try_from(mnemonic: Mnemonic) -> Result<Self, Self::Error> {
         // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
         // We don't need them here.
         let passphrase = "";
@@ -97,14 +93,48 @@ impl Identity {
 
         // Now we can use this randomness as bip32-ed25519 extended private key
         let root_xprv = XPrv::normalize_bytes_ed25519(output_key_material);
-        let mut words: [String; 12] = Default::default();
-        for (i, word) in mnemonic.word_iter().enumerate() {
-            words[i] = word.to_string();
-        }
-        Identity {
+
+        Ok(Identity {
             xprv: root_xprv,
-            words,
+            words: mnemonic
+                .word_iter()
+                .map(|word| word.to_owned())
+                .collect::<Vec<_>>()
+                .try_into()
+                .map_err(|e: Vec<_>| {
+                    CryptoError::IdentityGenerationError(format!(
+                        "Invalid seed phrase length: {} - expected {}",
+                        e.len(),
+                        SEED_PHRASE_LEN
+                    ))
+                })?,
+        })
+    }
+}
+
+impl Identity {
+    pub fn get_xprv(&self) -> &XPrv {
+        &self.xprv
+    }
+
+    pub fn get_seed_phrase(&self) -> &SeedPhraseWords {
+        &self.words
+    }
+
+    /// Deterministically derive Wildland identity from Ethereum
+    /// signature (or any random bits). Assumes high quality entropy
+    /// and does not perform any checks.
+    #[allow(clippy::ptr_arg)]
+    pub fn from_entropy(entropy: &Vec<u8>) -> Result<Self, CryptoError> {
+        // assume high quality entropy of arbitrary length (>= 32 bytes)
+        if (entropy.len() * 8) < 128 {
+            return Err(CryptoError::EntropyTooLow);
         }
+        let mut hasher = Sha256::new();
+        hasher.update(entropy);
+        let hashed_entropy = hasher.finalize();
+        let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16]).unwrap();
+        Self::try_from(mnemonic)
     }
 
     /// Retrieve mnemonic from identity. Useful during onboarding process.
@@ -197,7 +227,7 @@ mod tests {
 
     fn user() -> Identity {
         let mnemonic = Mnemonic::from_str(MNEMONIC).unwrap();
-        Identity::from_mnemonic(mnemonic)
+        Identity::try_from(mnemonic).unwrap()
     }
 
     #[test]

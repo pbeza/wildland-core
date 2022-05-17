@@ -43,4 +43,6 @@ pub enum CryptoError {
     SeedPhraseGenerationError(String),
     #[error("Identity generation error: {0}")]
     IdentityGenerationError(String),
+    #[error("Too low entropy")]
+    EntropyTooLow,
 }

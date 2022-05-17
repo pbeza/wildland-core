@@ -19,77 +19,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use bip39::{Language, Mnemonic};
-use sha2::{Digest, Sha256};
-use std::fmt;
-use thiserror::Error;
-use wildland_admin_manager_api::CryptoError;
-
-use crate::error::{CargoError, CargoErrorRepresentable};
 pub use crate::identity::{derivation::Identity, keys::KeyPair};
+use bip39::Mnemonic;
+use wildland_admin_manager_api::{CryptoError, SeedPhraseWords, SEED_PHRASE_LEN};
 
 pub mod derivation;
 pub mod error;
 pub mod keys;
 mod seed;
 
-pub const SEED_PHRASE_LEN: usize = 12;
-type SeedPhrase = [String; SEED_PHRASE_LEN];
-
-// TODO move these errors to identity/error.rs - WAP-86
-#[derive(Copy, Clone, PartialEq, Debug, Error)]
-pub enum IdentityError {
-    InvalidWordVector = 1,
-    EntropyTooLow = 2,
-}
-
-impl fmt::Display for IdentityError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl CargoErrorRepresentable for IdentityError {
-    const CARGO_ERROR_TYPE: &'static str = "IdentityError";
-
-    fn error_code(&self) -> String {
-        self.to_string()
-    }
-}
-
-/// Deterministically derive Wildland identity from Ethereum
-/// signature (or any random bits). Assumes high quality entropy
-/// and does not perform any checks.
-#[allow(clippy::ptr_arg)]
-pub fn from_entropy(entropy: &Vec<u8>) -> Result<Identity, CargoError> {
-    // assume high quality entropy of arbitrary length (>= 32 bytes)
-    if (entropy.len() * 8) < 128 {
-        return Err(IdentityError::EntropyTooLow.into());
-    }
-    let mut hasher = Sha256::new();
-    hasher.update(entropy);
-    let hashed_entropy = hasher.finalize();
-    let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16]).unwrap();
-    let words = mnemonic
-        .word_iter()
-        .map(|word| word.to_owned())
-        .collect::<Vec<_>>();
-    from_mnemonic(&words)
-}
-
-/// Create a new, random Wildland identity.
-/// Will return new identity each time it is called.
-pub fn from_random_seed() -> Result<Identity, CargoError> {
-    let mnemonic = Mnemonic::generate(SEED_PHRASE_LEN).unwrap();
-    let words = mnemonic
-        .word_iter()
-        .map(|word| word.to_owned())
-        .collect::<Vec<_>>();
-    from_mnemonic(&words)
-}
-
 /// Create a new random seed phrase
-pub fn generate_random_seed_phrase() -> Result<SeedPhrase, CryptoError> {
+pub fn generate_random_seed_phrase() -> Result<SeedPhraseWords, CryptoError> {
     let mnemonic = Mnemonic::generate(SEED_PHRASE_LEN)
         .map_err(|e| CryptoError::SeedPhraseGenerationError(e.to_string()))?;
     mnemonic
@@ -106,18 +46,6 @@ pub fn generate_random_seed_phrase() -> Result<SeedPhrase, CryptoError> {
         })
 }
 
-/// Derive Wildland identity from mnemonic (12 dictionary words).
-#[allow(clippy::ptr_arg)]
-pub fn from_mnemonic(phrase: &[String]) -> Result<Identity, CargoError> {
-    if phrase.len() != SEED_PHRASE_LEN {
-        return Err(IdentityError::InvalidWordVector.into());
-    }
-    let mnemonic_string: String = phrase.join(" ");
-    Mnemonic::parse_in_normalized(Language::English, &mnemonic_string)
-        .map_err(|_error| IdentityError::InvalidWordVector.into())
-        .map(Identity::from_mnemonic)
-}
-
 #[cfg(test)]
 mod tests {
     use ed25519_bip32::XPrv;
@@ -125,10 +53,7 @@ mod tests {
 
     use super::*;
 
-    const TEST_MNEMONIC_6: &str = "abandon abandon abandon abandon abandon about";
     const TEST_MNEMONIC_12: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    const TEST_MNEMONIC_24: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about
-    abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     const TEST_MNEMONIC_ITALIAN: &str =
         "abaco abaco abaco abaco abaco abaco abaco abaco abaco abaco abaco abbaglio";
 
@@ -142,12 +67,6 @@ mod tests {
     ];
 
     #[test]
-    fn can_generate_seed_for_phrase() {
-        let user = from_random_seed().unwrap();
-        assert_eq!(user.mnemonic().len(), SEED_PHRASE_LEN);
-    }
-
-    #[test]
     fn can_generate_from_entropy() {
         let entropy = hex!(
             "
@@ -158,7 +77,7 @@ mod tests {
             12
         "
         );
-        let user = from_entropy(&entropy.to_vec()).ok().unwrap();
+        let user = Identity::from_entropy(&entropy.to_vec()).ok().unwrap();
         assert_eq!(
             vec!(
                 "expect", "cruel", "stadium", "sand", "couch", "garden", "nothing", "wool",
@@ -175,57 +94,43 @@ mod tests {
             65426aa1176159d1929caea10514
         "
         );
-        assert!(from_entropy(&entropy.to_vec()).is_err());
+        assert!(Identity::from_entropy(&entropy.to_vec()).is_err());
     }
 
     #[test]
     fn can_generate_from_mnemonic() {
-        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_12
+        let mnemonic_array: [String; 12] = TEST_MNEMONIC_12
             .split(' ')
             .map(|s| s.to_string())
-            .collect::<Vec<String>>();
-        let user = from_mnemonic(&mnemonic_vec).ok().unwrap();
+            .collect::<Vec<String>>()
+            .try_into()
+            .unwrap();
+        let user = Identity::try_from(mnemonic_array).unwrap();
 
         assert_eq!(user.get_xprv(), &XPrv::normalize_bytes_ed25519(ROOT_XPRV))
     }
 
     #[test]
-    fn should_fail_on_too_long_mnemonic() {
-        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_24
-            .split(' ')
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
-
-        assert!(from_mnemonic(&mnemonic_vec).is_err());
-    }
-
-    #[test]
-    fn should_fail_on_too_short_mnemonic() {
-        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_6
-            .split(' ')
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
-
-        assert!(from_mnemonic(&mnemonic_vec).is_err());
-    }
-
-    #[test]
     fn should_fail_on_not_english_mnemonic() {
-        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_ITALIAN
+        let mnemonic_array: [String; 12] = TEST_MNEMONIC_ITALIAN
             .split(' ')
             .map(|s| s.to_string())
-            .collect::<Vec<String>>();
+            .collect::<Vec<String>>()
+            .try_into()
+            .unwrap();
 
-        assert!(from_mnemonic(&mnemonic_vec).is_err());
+        assert!(Identity::try_from(mnemonic_array).is_err());
     }
 
     #[test]
     fn can_recover_seed() {
-        let mnemonic_vec: Vec<String> = TEST_MNEMONIC_12
+        let mnemonic_array: [String; 12] = TEST_MNEMONIC_12
             .split(' ')
             .map(|s| s.to_string())
-            .collect::<Vec<String>>();
-        let user = from_mnemonic(&mnemonic_vec).unwrap();
+            .collect::<Vec<String>>()
+            .try_into()
+            .unwrap();
+        let user = Identity::try_from(mnemonic_array).unwrap();
         assert_eq!(user.mnemonic().join(" "), TEST_MNEMONIC_12);
     }
 }
