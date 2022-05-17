@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum AdminManagerError {
     #[error("Wallet error: {0}")]
     Wallet(WalletError),
@@ -14,13 +14,13 @@ pub enum AdminManagerError {
     ValidationCodesDoNotMatch,
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum WalletError {
     #[error("TODO wallet errors")]
     Error1, // TODO
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum CoreXError {
     #[error("Catlib error: {0}")]
     Catlib(CatlibError),
@@ -30,19 +30,19 @@ pub enum CoreXError {
     Crypto(CryptoError),
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum CatlibError {
     #[error("TODO catlib errors")]
     SomeCatlibError1, // TODO
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum DfsError {
     #[error("TODO dfs errors")]
     SomeDfsError, // TODO
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum CryptoError {
     #[error("Seed phrase generation error: {0}")]
     SeedPhraseGenerationError(String),

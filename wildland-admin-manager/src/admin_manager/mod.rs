@@ -95,3 +95,41 @@ impl api::AdminManager for AdminManager<Identity> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::AdminManager;
+    use wildland_admin_manager_api::{AdminManager as AdminManagerApi, AdminManagerError};
+
+    #[test]
+    fn cannot_verify_email_when_not_set() {
+        let mut am = AdminManager::default();
+        assert_eq!(
+            am.verify_email("1232456".to_owned()).unwrap_err(),
+            AdminManagerError::EmailCandidateNotSet
+        );
+    }
+
+    #[test]
+    fn verification_fails_when_codes_do_not_match() {
+        let mut am = AdminManager::default();
+        am.send_verification_code("email@email.com".to_string())
+            .unwrap();
+        assert_eq!(
+            am.verify_email("1232455".to_owned()).unwrap_err(),
+            AdminManagerError::ValidationCodesDoNotMatch
+        );
+    }
+
+    #[test]
+    fn verification_fails_if_email_is_already_verified() {
+        let mut am = AdminManager::default();
+        am.send_verification_code("email@email.com".to_string())
+            .unwrap();
+        assert!(am.verify_email("1232456".to_owned()).is_ok());
+        assert_eq!(
+            am.verify_email("1232456".to_owned()).unwrap_err(),
+            AdminManagerError::EmailAlreadyVerified
+        );
+    }
+}
