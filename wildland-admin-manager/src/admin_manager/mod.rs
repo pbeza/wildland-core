@@ -6,7 +6,10 @@ use wildland_admin_manager_api as api;
 use wildland_crypto::identity as crypto_identity;
 
 pub enum Email {
-    Unverified(String, String),
+    Unverified {
+        email: String,
+        verification_code: String,
+    },
     Verified(String),
 }
 
@@ -70,18 +73,24 @@ impl api::AdminManager for AdminManager<Identity> {
         // TODO generate code
         let verification_code = "1232456".to_owned();
         // TODO actually send the code
-        self.email = Some(Email::Unverified(email, verification_code));
+        self.email = Some(Email::Unverified {
+            email,
+            verification_code,
+        });
         Ok(())
     }
 
-    fn verify_email(&mut self, verification_code: String) -> api::AdminManagerResult<()> {
+    fn verify_email(&mut self, input_verification_code: String) -> api::AdminManagerResult<()> {
         match self
             .email
             .as_ref()
             .ok_or(AdminManagerError::EmailCandidateNotSet)?
         {
-            Email::Unverified(email, stored_code) => {
-                if stored_code == &verification_code {
+            Email::Unverified {
+                email,
+                verification_code: stored_verification_code,
+            } => {
+                if stored_verification_code == &input_verification_code {
                     self.email = Some(Email::Verified(email.clone()));
                 } else {
                     return Err(AdminManagerError::ValidationCodesDoNotMatch);
