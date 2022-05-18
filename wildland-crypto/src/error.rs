@@ -20,56 +20,25 @@
 // Generic error wrapper for Rust errors that need to propagate into
 // the native bridge.
 
-use serde::ser::{Serialize, SerializeStruct, Serializer};
-use std::collections::HashMap;
-use std::fmt;
+use wildland_admin_manager_api::AdminManagerError;
 
-// TODO remove this class - displaying errors is not responsibility of this lib - WAP-86
-#[derive(std::fmt::Debug)]
-pub struct CargoError {
-    error_type: &'static str,
-    error_code: String,
-    other_info: Option<HashMap<String, String>>,
+#[derive(Debug)]
+pub enum CryptoError {
+    SeedPhraseGenerationError(String),
+    IdentityGenerationError(String),
+    EntropyTooLow,
 }
 
-pub trait CargoErrorRepresentable: Into<CargoError> {
-    const CARGO_ERROR_TYPE: &'static str;
-    fn error_code(&self) -> String;
-    fn other_info(&self) -> Option<HashMap<String, String>> {
-        None
-    }
-}
-
-impl<T> From<T> for CargoError
-where
-    T: CargoErrorRepresentable,
-{
-    fn from(specific_error: T) -> CargoError {
-        CargoError {
-            error_type: T::CARGO_ERROR_TYPE,
-            error_code: specific_error.error_code(),
-            other_info: specific_error.other_info(),
+impl From<CryptoError> for AdminManagerError {
+    fn from(crypto_err: CryptoError) -> Self {
+        match crypto_err {
+            CryptoError::SeedPhraseGenerationError(msg) => {
+                AdminManagerError::SeedPhraseGenerationError(msg)
+            }
+            CryptoError::IdentityGenerationError(msg) => {
+                AdminManagerError::IdentityGenerationError(msg)
+            }
+            CryptoError::EntropyTooLow => AdminManagerError::EntropyTooLow,
         }
-    }
-}
-
-impl Serialize for CargoError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("CargoError", 3)?;
-        state.serialize_field("errorType", &self.error_type)?;
-        state.serialize_field("errorCode", &self.error_code)?;
-        state.serialize_field("otherInfo", &self.other_info)?;
-        state.end()
-    }
-}
-
-impl fmt::Display for CargoError {
-    /* Required as C++ binding only propagates string representation
-    of error */
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", serde_json::to_string(self).unwrap())
     }
 }
