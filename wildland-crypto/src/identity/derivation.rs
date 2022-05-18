@@ -18,10 +18,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::identity::{
-    keys::{EncryptionKeyPair, SigningKeyPair},
-    seed::extend_seed,
-    KeyPair,
+use crate::{
+    error::CryptoError,
+    identity::{
+        keys::{EncryptionKeyPair, SigningKeyPair},
+        seed::extend_seed,
+        KeyPair,
+    },
 };
 
 use bip39::Mnemonic;
@@ -29,7 +32,7 @@ use cryptoxide::ed25519::keypair;
 use ed25519_bip32::{DerivationScheme, XPrv};
 use sha2::{Digest, Sha256};
 use std::{convert::TryFrom, str::FromStr};
-use wildland_admin_manager_api::{CryptoError, SeedPhraseWords, SEED_PHRASE_LEN};
+use wildland_admin_manager_api::{SeedPhraseWords, SEED_PHRASE_LEN};
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"

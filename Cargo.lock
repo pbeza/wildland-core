@@ -1125,12 +1125,12 @@ dependencies = [
 
 [[package]]
 name = "schannel"
-version = "0.1.19"
+version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f05ba609c234e60bee0d547fe94a4c7e9da733d1c962cf6e59efa4cd9c8bc75"
+checksum = "88d6731146462ea25d9244b2ed5fd1d716d25c52e4d54aa4fb0f3c4e9854dbe2"
 dependencies = [
  "lazy_static",
- "winapi",
+ "windows-sys",
 ]
 
 [[package]]
@@ -1185,17 +1185,6 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "serde_repr"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2ad84e47328a31223de7fed7a4f5087f2d6ddfe586cf3ca25b7a165bc0a5aed"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -1600,7 +1589,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "bip39",
  "thiserror",
@@ -1611,7 +1600,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager-api"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "thiserror",
 ]
@@ -1622,7 +1611,7 @@ version = "0.3.0"
 
 [[package]]
 name = "wildland-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1643,7 +1632,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "bip39",
  "crypto_box",
@@ -1657,7 +1646,6 @@ dependencies = [
  "salsa20",
  "serde",
  "serde_json",
- "serde_repr",
  "sha2",
  "thiserror",
  "wildland-admin-manager-api",
@@ -1669,7 +1657,7 @@ version = "0.1.0"
 
 [[package]]
 name = "wildland-storage-controller-client"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "dotenv",
  "http",
