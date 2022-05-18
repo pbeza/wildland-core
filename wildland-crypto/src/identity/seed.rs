@@ -21,7 +21,9 @@
 use bip39::Mnemonic;
 use hkdf::Hkdf;
 use sha2::Sha256;
-use wildland_admin_manager_api::{CryptoError, SeedPhraseWords, SEED_PHRASE_LEN};
+use wildland_admin_manager_api::{SeedPhraseWords, SEED_PHRASE_LEN};
+
+use crate::error::CryptoError;
 
 /// Create a new random seed phrase
 pub fn generate_random_seed_phrase() -> Result<SeedPhraseWords, CryptoError> {
