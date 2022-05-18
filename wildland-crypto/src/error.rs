@@ -20,16 +20,12 @@
 // Generic error wrapper for Rust errors that need to propagate into
 // the native bridge.
 
-use thiserror::Error;
 use wildland_admin_manager_api::AdminManagerError;
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum CryptoError {
-    #[error("Seed phrase generation error: {0}")]
     SeedPhraseGenerationError(String),
-    #[error("Identity generation error: {0}")]
     IdentityGenerationError(String),
-    #[error("Too low entropy")]
     EntropyTooLow,
 }
 
