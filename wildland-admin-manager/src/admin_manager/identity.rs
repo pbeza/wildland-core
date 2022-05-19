@@ -59,6 +59,6 @@ impl api::Identity for Identity {
     }
 
     fn get_seed_phrase(&self) -> api::SeedPhraseWords {
-        self.inner_identity.get_seed_phrase().clone()
+        self.inner_identity.get_seed_phrase()
     }
 }
