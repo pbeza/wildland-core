@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 thiserror = "1.0.31"
+wildland-corex = { version = "0.1.5", path = "../wildland-corex", registry = "wl-dev" }

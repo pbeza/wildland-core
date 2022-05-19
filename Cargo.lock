@@ -1595,7 +1595,6 @@ dependencies = [
  "thiserror",
  "wildland-admin-manager-api",
  "wildland-corex",
- "wildland-crypto",
 ]
 
 [[package]]
@@ -1603,6 +1602,7 @@ name = "wildland-admin-manager-api"
 version = "0.2.0"
 dependencies = [
  "thiserror",
+ "wildland-corex",
 ]
 
 [[package]]
@@ -1625,7 +1625,9 @@ dependencies = [
 name = "wildland-corex"
 version = "0.1.5"
 dependencies = [
+ "thiserror",
  "wildland-catlib",
+ "wildland-crypto",
  "wildland-dfs",
  "wildland-wallet",
 ]
@@ -1648,7 +1650,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror",
- "wildland-admin-manager-api",
 ]
 
 [[package]]
