@@ -1,9 +1,17 @@
+mod bridge;
+mod catalog;
+mod corex;
 mod crypto;
 mod error;
 
+pub use bridge::*;
+pub use catalog::*;
+pub use corex::CoreX;
 pub use crypto::*;
 pub use error::*;
+pub use wildland_catlib::{FingerPrint, Forest, ForestImpl, ForestPath};
 pub use wildland_crypto::identity::{Identity, SeedPhraseWords, SEED_PHRASE_LEN};
+pub use wildland_wallet::WalletType;
 
 pub fn get_version() -> &'static str {
     env!("CARGO_PKG_VERSION")

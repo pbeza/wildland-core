@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use wildland_corex::SeedPhraseWords;
+use wildland_corex::{FingerPrint, SeedPhraseWords};
 
 #[derive(Clone, Copy, Debug)]
 pub enum IdentityType {
@@ -14,6 +14,6 @@ pub trait Identity: Display + std::fmt::Debug {
     fn get_name(&self) -> String;
     fn set_name(&mut self, name: String);
     fn get_pubkey(&self) -> Vec<u8>;
-    fn get_fingerprint(&self) -> Vec<u8>;
+    fn get_fingerprint(&self) -> FingerPrint;
     fn get_seed_phrase(&self) -> SeedPhraseWords;
 }
