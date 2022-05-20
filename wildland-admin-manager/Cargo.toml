@@ -10,6 +10,9 @@ description = "Wildland Admin Manager"
 keywords = ["storage"]
 publish = ["wl-dev"]
 
+[lib]
+crate-type = ["staticlib", "lib"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -18,6 +21,12 @@ wildland-crypto = { version = "0.4.0", path = "../wildland-crypto", registry = "
 wildland-admin-manager-api = { version = "0.2.0", path = "../wildland-admin-manager-api", registry = "wl-dev" }
 bip39 = { version = "1.0.1", features = ["rand"] }
 thiserror = "1.0.31"
+cxx = "1.0"
+lazy_static = "1"
 
 [package.metadata.workspaces]
 independent = true
+
+
+[build-dependencies]
+cxx-build = { version = "1.0" }

@@ -11,6 +11,12 @@ pub struct AdminManager<I: api::Identity> {
     master_identity: Option<I>,
 }
 
+impl AdminManager<Identity> {
+    pub fn print_foo(&self) {
+        println!("Jestem!");
+    }
+}
+
 impl Default for AdminManager<Identity> {
     fn default() -> Self {
         Self {
