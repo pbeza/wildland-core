@@ -1589,20 +1589,20 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "bip39",
  "thiserror",
  "wildland-admin-manager-api",
  "wildland-corex",
- "wildland-crypto",
 ]
 
 [[package]]
 name = "wildland-admin-manager-api"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "thiserror",
+ "wildland-corex",
 ]
 
 [[package]]
@@ -1623,16 +1623,18 @@ dependencies = [
 
 [[package]]
 name = "wildland-corex"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
+ "thiserror",
  "wildland-catlib",
+ "wildland-crypto",
  "wildland-dfs",
  "wildland-wallet",
 ]
 
 [[package]]
 name = "wildland-crypto"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "bip39",
  "crypto_box",
@@ -1648,7 +1650,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror",
- "wildland-admin-manager-api",
 ]
 
 [[package]]

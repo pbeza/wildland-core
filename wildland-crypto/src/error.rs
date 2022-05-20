@@ -20,25 +20,9 @@
 // Generic error wrapper for Rust errors that need to propagate into
 // the native bridge.
 
-use wildland_admin_manager_api::AdminManagerError;
-
 #[derive(Debug)]
 pub enum CryptoError {
     SeedPhraseGenerationError(String),
     IdentityGenerationError(String),
     EntropyTooLow,
-}
-
-impl From<CryptoError> for AdminManagerError {
-    fn from(crypto_err: CryptoError) -> Self {
-        match crypto_err {
-            CryptoError::SeedPhraseGenerationError(msg) => {
-                AdminManagerError::SeedPhraseGenerationError(msg)
-            }
-            CryptoError::IdentityGenerationError(msg) => {
-                AdminManagerError::IdentityGenerationError(msg)
-            }
-            CryptoError::EntropyTooLow => AdminManagerError::EntropyTooLow,
-        }
-    }
 }

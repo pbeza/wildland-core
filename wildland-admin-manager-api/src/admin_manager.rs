@@ -1,4 +1,5 @@
-use super::{identity::Identity, AdminManagerResult, SeedPhraseWords};
+use super::{identity::Identity, AdminManagerResult};
+use wildland_corex::SeedPhraseWords;
 
 pub trait AdminManager {
     type Identity: Identity;
