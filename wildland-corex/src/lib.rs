@@ -1,3 +1,10 @@
+mod crypto;
+mod error;
+
+pub use crypto::*;
+pub use error::*;
+pub use wildland_crypto::identity::{Identity, SeedPhraseWords, SEED_PHRASE_LEN};
+
 pub fn get_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

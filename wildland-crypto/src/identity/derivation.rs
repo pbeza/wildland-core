@@ -22,7 +22,7 @@ use crate::{
     error::CryptoError,
     identity::{
         keys::{EncryptionKeyPair, SigningKeyPair},
-        seed::extend_seed,
+        seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN},
         KeyPair,
     },
 };
@@ -32,7 +32,6 @@ use cryptoxide::ed25519::keypair;
 use ed25519_bip32::{DerivationScheme, XPrv};
 use sha2::{Digest, Sha256};
 use std::{convert::TryFrom, str::FromStr};
-use wildland_admin_manager_api::{SeedPhraseWords, SEED_PHRASE_LEN};
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
@@ -119,8 +118,8 @@ impl Identity {
         &self.xprv
     }
 
-    pub fn get_seed_phrase(&self) -> &SeedPhraseWords {
-        &self.words
+    pub fn get_seed_phrase(&self) -> SeedPhraseWords {
+        self.words.clone()
     }
 
     /// Deterministically derive Wildland identity from Ethereum
@@ -137,15 +136,6 @@ impl Identity {
         let hashed_entropy = hasher.finalize();
         let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16]).unwrap();
         Self::try_from(mnemonic)
-    }
-
-    /// Retrieve mnemonic from identity. Useful during onboarding process.
-    pub fn mnemonic(&self) -> Vec<String> {
-        let mut result: Vec<String> = vec!["".to_string(); 12];
-        for (i, word) in self.words.iter().enumerate() {
-            result[i] = word.to_string();
-        }
-        result
     }
 
     /// Derive the key that can be used to sign user manifest.
@@ -201,17 +191,17 @@ impl Identity {
     }
 
     fn derive_private_key_from_path(&self, path: &str) -> XPrv {
-        let tokens: Vec<&str> = path.split('/').collect();
-        if !tokens[0].is_empty() || (tokens[1] != "m") {
-            panic!("Derivation path must start with '/m/'");
-        }
+        let mut tokens = path.split('/');
 
-        let mut secret_xprv: XPrv = self.xprv.clone();
-        for derivation_index in &tokens[2..] {
-            let di: u32 = u32::from_str_radix(derivation_index, 16).unwrap();
-            secret_xprv = (&secret_xprv).derive(DerivationScheme::V2, di);
+        match (tokens.next(), tokens.next()) {
+            (Some(""), Some("m")) => {
+                tokens.fold(self.xprv.clone(), |secret_xprv, derivation_index| {
+                    let di = u32::from_str_radix(derivation_index, 16).unwrap();
+                    (&secret_xprv).derive(DerivationScheme::V2, di)
+                })
+            }
+            _ => panic!("Derivation path must start with '/m/'"), // TODO replace panic with some error handling
         }
-        secret_xprv
     }
 }
 
@@ -374,11 +364,21 @@ mod tests {
         );
         let user = Identity::from_entropy(&entropy.to_vec()).ok().unwrap();
         assert_eq!(
-            vec!(
-                "expect", "cruel", "stadium", "sand", "couch", "garden", "nothing", "wool",
-                "grocery", "shop", "noise", "voice"
-            ),
-            user.mnemonic()
+            [
+                "expect".to_owned(),
+                "cruel".to_owned(),
+                "stadium".to_owned(),
+                "sand".to_owned(),
+                "couch".to_owned(),
+                "garden".to_owned(),
+                "nothing".to_owned(),
+                "wool".to_owned(),
+                "grocery".to_owned(),
+                "shop".to_owned(),
+                "noise".to_owned(),
+                "voice".to_owned()
+            ],
+            user.get_seed_phrase()
         );
     }
 
@@ -426,6 +426,6 @@ mod tests {
             .try_into()
             .unwrap();
         let user = Identity::try_from(mnemonic_array).unwrap();
-        assert_eq!(user.mnemonic().join(" "), TEST_MNEMONIC_12);
+        assert_eq!(user.get_seed_phrase().join(" "), TEST_MNEMONIC_12);
     }
 }

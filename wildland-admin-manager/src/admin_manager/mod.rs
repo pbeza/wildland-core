@@ -3,7 +3,7 @@ mod identity;
 use api::AdminManagerError;
 pub use identity::Identity;
 use wildland_admin_manager_api as api;
-use wildland_crypto::identity as crypto_identity;
+use wildland_corex::SeedPhraseWords;
 
 pub enum Email {
     Unverified {
@@ -35,12 +35,12 @@ impl api::AdminManager for AdminManager<Identity> {
     fn create_master_identity_from_seed_phrase(
         &mut self,
         name: String,
-        seed: api::SeedPhraseWords,
+        seed: SeedPhraseWords,
     ) -> api::AdminManagerResult<Identity> {
         let identity = Identity::new(
             api::IdentityType::Master,
             name,
-            seed.try_into().map_err(AdminManagerError::from)?, // TODO delegate to corex ?
+            wildland_corex::try_identity_from_seed(seed)?,
         );
         self.master_identity = Some(identity.clone()); // TODO Can user have multiple master identities? If not should it be overwritten?
         Ok(identity)
@@ -49,20 +49,19 @@ impl api::AdminManager for AdminManager<Identity> {
     fn create_device_identity_from_seed_phrase(
         &mut self,
         name: String,
-        seed: api::SeedPhraseWords,
+        seed: SeedPhraseWords,
     ) -> api::AdminManagerResult<Identity> {
         let identity = Identity::new(
             api::IdentityType::Device,
             name,
-            seed.try_into().map_err(AdminManagerError::from)?, // TODO delegate to corex ?
+            wildland_corex::try_identity_from_seed(seed)?,
         );
         // TODO keep it somehow?
         Ok(identity)
     }
 
-    fn create_seed_phrase() -> api::AdminManagerResult<api::SeedPhraseWords> {
-        // TODO delegate to corex ?
-        crypto_identity::generate_random_seed_phrase().map_err(AdminManagerError::from)
+    fn create_seed_phrase() -> api::AdminManagerResult<SeedPhraseWords> {
+        wildland_corex::generate_random_seed_phrase().map_err(AdminManagerError::from)
     }
 
     fn get_master_identity(&self) -> Option<Identity> {
