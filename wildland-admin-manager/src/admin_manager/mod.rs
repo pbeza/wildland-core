@@ -7,7 +7,7 @@ use wildland_corex::SeedPhraseWords;
 
 pub enum Email {
     Unverified {
-        email: String,
+        mailbox_address: String,
         verification_code: String,
     },
     Verified(String),
@@ -73,7 +73,7 @@ impl api::AdminManager for AdminManager<Identity> {
         let verification_code = "1232456".to_owned();
         // TODO actually send the code
         self.email = Some(Email::Unverified {
-            email,
+            mailbox_address: email,
             verification_code,
         });
         Ok(())
@@ -86,7 +86,7 @@ impl api::AdminManager for AdminManager<Identity> {
             .ok_or(AdminManagerError::EmailCandidateNotSet)?
         {
             Email::Unverified {
-                email,
+                mailbox_address: email,
                 verification_code: stored_verification_code,
             } => {
                 if stored_verification_code == &input_verification_code {
