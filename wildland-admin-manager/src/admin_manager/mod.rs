@@ -13,9 +13,16 @@ pub struct AdminManager<I: api::Identity> {
 
 impl Default for AdminManager<Identity> {
     fn default() -> Self {
+        println!("elo z rusta");
         Self {
             master_identity: Default::default(),
         }
+    }
+}
+
+impl<I: api::Identity> Drop for AdminManager<I> {
+    fn drop(&mut self) {
+        println!("drop");
     }
 }
 
