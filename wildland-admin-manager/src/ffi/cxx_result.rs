@@ -19,7 +19,7 @@ impl<T: Clone + std::fmt::Debug> CxxResult<T> {
         self.0.as_ref().unwrap()
     }
 
-    pub fn unwrap_err(&self) -> Box<AdminManagerError> {
-        Box::new(self.0.clone().unwrap_err())
+    pub fn unwrap_err(&self) -> &AdminManagerError {
+        self.0.as_ref().unwrap_err()
     }
 }
