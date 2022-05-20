@@ -22,7 +22,7 @@ use crate::{
     error::CryptoError,
     identity::{
         keys::{EncryptionKeyPair, SigningKeyPair},
-        seed::extend_seed,
+        seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN},
         KeyPair,
     },
 };
@@ -32,7 +32,6 @@ use cryptoxide::ed25519::keypair;
 use ed25519_bip32::{DerivationScheme, XPrv};
 use sha2::{Digest, Sha256};
 use std::{convert::TryFrom, str::FromStr};
-use wildland_admin_manager_api::{SeedPhraseWords, SEED_PHRASE_LEN};
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"

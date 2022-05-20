@@ -1,12 +1,12 @@
 use std::fmt::Display;
 use wildland_admin_manager_api as api;
-use wildland_crypto::identity as crypto_identity;
+use wildland_corex::{Identity as CryptoIdentity, SeedPhraseWords};
 
 #[derive(Clone, Debug)]
 pub struct Identity {
     identity_type: api::IdentityType,
     name: String,
-    inner_identity: crypto_identity::Identity,
+    inner_identity: CryptoIdentity,
 }
 
 impl Display for Identity {
@@ -31,7 +31,7 @@ impl Identity {
     pub fn new(
         identity_type: api::IdentityType,
         name: String,
-        inner_identity: crypto_identity::Identity,
+        inner_identity: CryptoIdentity,
     ) -> Self {
         Self {
             identity_type,
@@ -58,7 +58,7 @@ impl api::Identity for Identity {
         self.identity_type
     }
 
-    fn get_seed_phrase(&self) -> api::SeedPhraseWords {
+    fn get_seed_phrase(&self) -> SeedPhraseWords {
         self.inner_identity.get_seed_phrase()
     }
 }

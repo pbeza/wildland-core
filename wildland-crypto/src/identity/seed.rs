@@ -18,12 +18,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::error::CryptoError;
 use bip39::Mnemonic;
 use hkdf::Hkdf;
 use sha2::Sha256;
-use wildland_admin_manager_api::{SeedPhraseWords, SEED_PHRASE_LEN};
 
-use crate::error::CryptoError;
+pub const SEED_PHRASE_LEN: usize = 12;
+pub type SeedPhraseWords = [String; SEED_PHRASE_LEN];
 
 /// Create a new random seed phrase
 pub fn generate_random_seed_phrase() -> Result<SeedPhraseWords, CryptoError> {
