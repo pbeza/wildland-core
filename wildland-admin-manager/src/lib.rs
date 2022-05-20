@@ -1,5 +1,5 @@
 pub mod admin_manager;
-mod api;
+pub mod api;
 mod ffi;
 
 pub fn get_version() -> &'static str {

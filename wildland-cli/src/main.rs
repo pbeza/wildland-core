@@ -1,8 +1,10 @@
 use anyhow::{anyhow, Result};
 use clap::StructOpt;
 use cli_args::{CliArgs, IdentitySubCommand, SubCommand};
-use wildland_admin_manager::admin_manager::{AdminManager, Identity};
-use wildland_admin_manager_api::{AdminManager as ApiAdminManager, SEED_PHRASE_LEN};
+use wildland_admin_manager::{
+    admin_manager::{AdminManager, Identity},
+    api::{AdminManager as AdminManagerApi, SEED_PHRASE_LEN},
+};
 
 mod cli_args;
 mod version;

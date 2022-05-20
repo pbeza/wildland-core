@@ -1,4 +1,4 @@
-use super::{identity::Identity, AdminManagerResult, SeedPhraseWords};
+use super::{identity::Identity, seed_phrase::SeedPhrase, AdminManagerResult};
 
 pub trait AdminManager {
     type Identity: Identity;
@@ -8,7 +8,7 @@ pub trait AdminManager {
     fn create_master_identity_from_seed_phrase(
         &mut self,
         name: String,
-        seed: SeedPhraseWords,
+        seed: SeedPhrase,
     ) -> AdminManagerResult<Self::Identity>;
 
     /// Creates a device identity based on the provided seed phrase (whether it's a newly
@@ -16,11 +16,11 @@ pub trait AdminManager {
     fn create_device_identity_from_seed_phrase(
         &mut self,
         name: String,
-        seed: SeedPhraseWords,
+        seed: SeedPhrase,
     ) -> AdminManagerResult<Self::Identity>;
 
     /// Creates a randomly generated seed phrase
-    fn create_seed_phrase() -> AdminManagerResult<SeedPhraseWords>;
+    fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
 
     fn get_master_identity(&self) -> Option<Self::Identity>;
 }
