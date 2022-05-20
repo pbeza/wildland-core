@@ -31,7 +31,7 @@ impl api::AdminManager for AdminManager<Identity> {
             wildland_corex::try_identity_from_seed(seed.into())?,
         );
         self.master_identity = Some(identity.clone()); // TODO Can user have multiple master identities? If not should it be overwritten?
-        Ok(identity)
+        Ok(identity) // TODO return ref
     }
 
     fn create_device_identity_from_seed_phrase(
@@ -45,7 +45,7 @@ impl api::AdminManager for AdminManager<Identity> {
             wildland_corex::try_identity_from_seed(seed.into())?,
         );
         // TODO keep it somehow?
-        Ok(identity)
+        Ok(identity) // TODO return ref
     }
 
     fn create_seed_phrase() -> api::AdminManagerResult<SeedPhrase> {
@@ -54,7 +54,7 @@ impl api::AdminManager for AdminManager<Identity> {
             .map(SeedPhrase::from)
     }
 
-    fn get_master_identity(&self) -> Option<Identity> {
-        self.master_identity.clone()
+    fn get_master_identity(&self) -> &Option<Identity> {
+        &self.master_identity
     }
 }

@@ -62,4 +62,8 @@ impl api::Identity for Identity {
     fn get_seed_phrase(&self) -> SeedPhraseWords {
         self.inner_identity.get_seed_phrase()
     }
+
+    fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
 }

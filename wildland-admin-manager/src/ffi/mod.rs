@@ -1,36 +1,46 @@
+pub mod cxx_option;
 mod cxx_result;
 
-use self::cxx_result::CxxResult;
+use self::{cxx_option::CxxRefOption, cxx_result::CxxResult};
 use crate::{
     admin_manager::{AdminManager, Identity},
     api::{AdminManager as AdminManagerApi, AdminManagerError, SeedPhrase},
 };
 
-type AdminManagerType = AdminManager<Identity>;
+struct CxxAdminManager(AdminManager<Identity>);
 type SeedPhraseResult = CxxResult<SeedPhrase>;
-// type OptionalIdentity = CxxOption<Identity>;
+pub type OptionalIdentity<'a> = CxxRefOption<'a, Identity>;
 
-fn create_admin_manager() -> Box<AdminManagerType> {
-    Box::new(AdminManager::<Identity>::default())
+fn create_admin_manager() -> Box<CxxAdminManager> {
+    Box::new(CxxAdminManager(AdminManager::<Identity>::default()))
 }
 
 fn create_seed_phrase() -> Box<SeedPhraseResult> {
     Box::new(AdminManager::<Identity>::create_seed_phrase().into())
 }
 
+impl CxxAdminManager {
+    fn get_master_identity(self: &CxxAdminManager) -> Box<OptionalIdentity> {
+        Box::new(self.0.get_master_identity().into())
+    }
+}
+
+// #[allow(clippy::needless_lifetimes)] // TODO check it
 #[cxx::bridge(namespace = "cargo::api")]
 mod api {
     extern "Rust" {
-        type AdminManagerType;
-        // type OptionalIdentity;
-        fn create_admin_manager() -> Box<AdminManagerType>;
-        // fn get_master_identity(self: &AdminManagerType) -> OptionalIdentity;
+        type CxxAdminManager;
+        fn create_admin_manager() -> Box<CxxAdminManager>;
+        fn get_master_identity(self: &CxxAdminManager) -> Box<OptionalIdentity>;
 
         type SeedPhraseResult;
         fn create_seed_phrase() -> Box<SeedPhraseResult>;
         fn is_ok(self: &SeedPhraseResult) -> bool;
         fn unwrap(self: &SeedPhraseResult) -> &SeedPhrase;
         fn unwrap_err(self: &SeedPhraseResult) -> &AdminManagerError;
+
+        type OptionalIdentity<'a>;
+        fn is_some(self: &OptionalIdentity) -> bool;
 
         type SeedPhrase;
         fn get_string(self: &SeedPhrase) -> String;

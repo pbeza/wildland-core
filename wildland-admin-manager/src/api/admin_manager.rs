@@ -22,5 +22,5 @@ pub trait AdminManager {
     /// Creates a randomly generated seed phrase
     fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
 
-    fn get_master_identity(&self) -> Option<Self::Identity>;
+    fn get_master_identity(&self) -> &Option<Self::Identity>;
 }
