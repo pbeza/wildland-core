@@ -1,4 +1,4 @@
-use super::SeedPhraseWords;
+use wildland_corex::SeedPhraseWords;
 
 #[derive(Clone, Copy, Debug)]
 pub enum IdentityType {
