@@ -1,5 +1,7 @@
 use wildland_corex::SeedPhraseWords as CorexSeedPhrase;
 
+use super::AdminManagerError;
+
 #[derive(Debug, Clone)]
 pub struct SeedPhrase([String; 12]);
 
@@ -22,9 +24,11 @@ impl From<SeedPhrase> for CorexSeedPhrase {
 }
 
 impl TryFrom<Vec<String>> for SeedPhrase {
-    type Error = Vec<String>;
+    type Error = AdminManagerError;
 
-    fn try_from(value: Vec<String>) -> Result<Self, Self::Error> {
-        todo!()
+    fn try_from(vec: Vec<String>) -> Result<Self, Self::Error> {
+        Ok(SeedPhrase(vec.try_into().map_err(|vec: Vec<_>| {
+            AdminManagerError::ParseSeedPhraseError(vec.join(" "))
+        })?))
     }
 }

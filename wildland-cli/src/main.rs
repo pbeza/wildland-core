@@ -1,9 +1,9 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::StructOpt;
 use cli_args::{CliArgs, IdentitySubCommand, SubCommand};
 use wildland_admin_manager::{
     admin_manager::{AdminManager, Identity},
-    api::{AdminManager as AdminManagerApi, SEED_PHRASE_LEN},
+    api::AdminManager as AdminManagerApi,
 };
 
 mod cli_args;
@@ -32,11 +32,7 @@ fn main() -> Result<()> {
                     .split(' ')
                     .map(|elem| elem.to_string())
                     .collect::<Vec<_>>()
-                    .try_into()
-                    .map_err(|e: Vec<String>| {
-                        let phrase = e.join(" ");
-                        anyhow!("Could not parse seed phrase {phrase:?} - expecting {SEED_PHRASE_LEN} words")
-                    })?;
+                    .try_into()?;
                 let identity =
                     admin_manager.create_master_identity_from_seed_phrase("name".into(), seed)?;
                 println!("{identity}")
