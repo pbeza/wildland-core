@@ -1323,6 +1323,51 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
+name = "swift-bridge"
+version = "0.1.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0193ad474702e731afda7ab3d3a8d53ff2d7a14e4144f4b99a31ad11999f4a0"
+dependencies = [
+ "swift-bridge-build",
+ "swift-bridge-macro",
+]
+
+[[package]]
+name = "swift-bridge-build"
+version = "0.1.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f6fc4a69a8df97dbd5adbb7a79e98cf09cc4a8dc3ff75b93c49263731edb1c0"
+dependencies = [
+ "proc-macro2",
+ "swift-bridge-ir",
+ "syn",
+ "tempfile",
+]
+
+[[package]]
+name = "swift-bridge-ir"
+version = "0.1.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be2cea832ff1504d699619b16270f6d9049b943ce6a3f4d48ff87d2dabc4384c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "swift-bridge-macro"
+version = "0.1.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f36f615e670b136ffffa5cf985b021fa700d0a937cba48f94c12bd247ba47afe"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "swift-bridge-ir",
+ "syn",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1669,6 +1714,8 @@ dependencies = [
  "bip39",
  "cxx",
  "cxx-build",
+ "swift-bridge",
+ "swift-bridge-build",
  "thiserror",
  "wildland-admin-manager-api",
  "wildland-corex",

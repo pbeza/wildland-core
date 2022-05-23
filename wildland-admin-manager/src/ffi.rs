@@ -1,4 +1,5 @@
 use crate::admin_manager;
+use std::boxed::Box;
 use std::sync::Arc;
 
 ///
@@ -13,6 +14,10 @@ use std::sync::Arc;
 ///
 pub struct RcRef<T>(Arc<T>);
 impl<T> RcRef<T> {
+    fn new(obj: T) -> RcRef<T> {
+        RcRef::<T>(Arc::new(obj))
+    }
+
     fn new_boxed(obj: T) -> Box<RcRef<T>> {
         Box::new(RcRef::<T>(Arc::new(obj)))
     }
@@ -60,6 +65,7 @@ type ArrayAdminManager = Array<AdminManager>;
 // The module with functions and types declarations
 // visible in wildland's clients.
 //
+#[cfg(feature = "cxx_binding")]
 #[cxx::bridge(namespace = "wildland")]
 mod ffi_definition {
     extern "Rust" {
@@ -69,12 +75,10 @@ mod ffi_definition {
 
         // RcRef<AdminManager> declarations
         type RcRefAdminManager;
-        fn get_admin_instance() -> Box<RcRefAdminManager>;
         fn deref(self: &RcRefAdminManager) -> &AdminManager;
 
         // Array<AdminManager> declarations
         type ArrayAdminManager;
-        fn get_admin_instances_vector() -> Box<ArrayAdminManager>;
         fn at(self: &ArrayAdminManager, elem: usize) -> &AdminManager;
         fn size(self: &ArrayAdminManager) -> usize;
 
@@ -84,6 +88,31 @@ mod ffi_definition {
         fn return_vec_u8() -> Vec<u8>;
         fn return_u8() -> u8;
         fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String);
+        fn get_admin_instances_vector() -> Box<ArrayAdminManager>;
+        fn get_admin_instance() -> Box<RcRefAdminManager>;
+    }
+}
+
+#[cfg(feature = "swift_binding")]
+#[swift_bridge::bridge]
+mod ffi_definition {
+    extern "Rust" {
+        // AdminManager implementation
+        type AdminManager;
+        fn print_foo(self: &AdminManager);
+
+        // RcRef<AdminManager> declarations
+        type RcRefAdminManager;
+        fn deref(self: &RcRefAdminManager) -> &AdminManager;
+
+        // Static functions declarations
+        fn return_string() -> String;
+        fn return_vec_string() -> Vec<String>;
+        fn return_vec_u8() -> Vec<u8>;
+        fn return_u8() -> u8;
+        fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String);
+        fn get_admin_instance() -> RcRefAdminManager;
+        fn get_admin_instances_vector() -> Vec<RcRefAdminManager>;
     }
 }
 
@@ -114,10 +143,22 @@ pub fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String) {
     println!("{:?}", d);
 }
 
+#[cfg(feature = "cxx_binding")]
 pub fn get_admin_instance() -> Box<RcRefAdminManager> {
     RcRef::new_boxed(AdminManager::default())
 }
 
+#[cfg(feature = "swift_binding")]
+pub fn get_admin_instance() -> RcRefAdminManager {
+    RcRef::new(AdminManager::default())
+}
+
+#[cfg(feature = "cxx_binding")]
 pub fn get_admin_instances_vector() -> Box<ArrayAdminManager> {
     Array::new_boxed(vec![AdminManager::default()])
+}
+
+#[cfg(feature = "swift_binding")]
+pub fn get_admin_instances_vector() -> Vec<RcRefAdminManager> {
+    vec![RcRef::new(AdminManager::default())]
 }

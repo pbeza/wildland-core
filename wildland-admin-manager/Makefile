@@ -14,7 +14,7 @@ CXX_RUST=../target/cxxbridge/rust
 
 
 prepare:
-	cargo build
+	cargo build --features "cxx_binding"
 	mkdir -p cpp
 	cp $(CXX_OUT)/ffi.rs.h cpp/ffi.rs.h
 	cp $(CXX_OUT)/ffi.rs.cc cpp/ffi.rs.cc
@@ -78,5 +78,23 @@ python_test: python
 	cp test/ffi/main.py wildland_python/main.py
 	cd wildland_python ; python main.py
 
+swift:
+	mkdir -p wildland_swift
+	SWIFT_BRIDGE_OUT_DIR="$(CURDIR)/wildland_swift" cargo build --features "swift_binding"
+	swiftc -L ../target/debug -lwildland_admin_manager \
+		-I wildland_swift -import-objc-header \
+		swift_ffi/bridging-header.h \
+		./wildland_swift/SwiftBridgeCore.swift \
+		./wildland_swift/wildland/wildland.swift \
+		test/ffi/main.swift \
+		-o wildland_swift/swift_app
+
+swift_test: swift
+	@echo ""
+	@echo "Result from the Swift test application:"
+	@echo ""
+	./wildland_swift/swift_app
+
+
 clean:
-	rm -r wildland_java wildland_csharp wildland_python cpp
+	rm -r wildland_java wildland_csharp wildland_python cpp wildland_swift
