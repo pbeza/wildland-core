@@ -16,28 +16,31 @@ CXX_RUST=../target/cxxbridge/rust
 prepare:
 	cargo build
 	mkdir -p cpp
-	cp $(CXX_OUT)/lib.rs.h cpp/lib.rs.h
-	cp $(CXX_OUT)/lib.rs.cc cpp/lib.rs.cc
+	cp $(CXX_OUT)/ffi.rs.h cpp/ffi.rs.h
+	cp $(CXX_OUT)/ffi.rs.cc cpp/ffi.rs.cc
 	cp $(CXX_RUST)/cxx.h cpp/cxx.h
 	cp cxx.cc cpp/cxx.cc
 
 	##### Workarounds: ######
 
 	# Swig doesn't like `final` keyword:
-	sed -i 's/final//g' cpp/lib.rs.h
+	sed -i 's/final//g' cpp/ffi.rs.h
 
 	# Inline namespaces also make problems:
-	sed -i 's/::rust/::rust::cxxbridge1/g' cpp/lib.rs.h
+	sed -i 's/::rust/::rust::cxxbridge1/g' cpp/ffi.rs.h
 
 	# Every param between `[[`  `]]` is unparsable
-	sed -i 's/\[\[noreturn\]\]//g' cpp/lib.rs.h
+	sed -i 's/\[\[noreturn\]\]//g' cpp/ffi.rs.h
+
+	# Not all variadic `...` are supported by swig
+	sed -i 's/\.\.\.//g' cpp/ffi.rs.h cpp/ffi.rs.cc
 
 java: prepare
 	mkdir -p wildland_java
-	cd cpp ; swig -java -c++ -outdir ../wildland_java ../wildland.i
+	cd cpp ; swig -java -c++ -w516,503,476,302 -outdir ../wildland_java ../wildland.i
 	mv wildland_wrap.cxx cpp/wildland_wrap.cxx
-	cd cpp ; g++ -fpermissive -shared -fPIC --std=c++14 \
-		wildland_wrap.cxx cxx.cc lib.rs.cc \
+	cd cpp ; g++ -fpermissive -shared -fPIC --std=c++14 -w \
+		wildland_wrap.cxx cxx.cc ffi.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
 		-I$(JDK_INC_DIR) \
@@ -51,10 +54,10 @@ java_test: java
 
 csharp: prepare
 	mkdir -p wildland_csharp
-	cd cpp ; swig -csharp -c++ -outdir ../wildland_csharp ../wildland.i
+	cd cpp ; swig -csharp -c++ -w516,503,476,302 -outdir ../wildland_csharp ../wildland.i
 	mv wildland_wrap.cxx cpp/wildland_wrap.cxx
-	cd cpp ; g++ -fpermissive -shared -fPIC --std=c++14 \
-		wildland_wrap.cxx cxx.cc lib.rs.cc \
+	cd cpp ; g++ -fpermissive -shared -fPIC --std=c++14 -w \
+		wildland_wrap.cxx cxx.cc ffi.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
 		-o ../wildland_csharp/libwildland.so
@@ -66,10 +69,10 @@ csharp_test: csharp
 
 python: prepare
 	mkdir -p wildland_python
-	cd cpp ; swig -python -c++ -outdir ../wildland_python ../wildland.i
+	cd cpp ; swig -python -c++ -w516,503,476,302,383,509 -outdir ../wildland_python ../wildland.i
 	mv wildland_wrap.cxx cpp/wildland_wrap.cxx
-	cd cpp ; g++ -fpermissive -shared -fPIC --std=c++14 \
-		wildland_wrap.cxx cxx.cc lib.rs.cc \
+	cd cpp ; g++ -fpermissive -shared -fPIC --std=c++14 -w \
+		wildland_wrap.cxx cxx.cc ffi.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
 		-I$(PYTHON_DIR) \
@@ -80,4 +83,4 @@ python_test: python
 	cd wildland_python ; python main.py
 
 clean:
-	rm -r wildland_java wildland_csharp wildland_python
+	rm -r wildland_java wildland_csharp wildland_python cpp

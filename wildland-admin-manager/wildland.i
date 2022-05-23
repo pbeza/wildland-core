@@ -2,12 +2,12 @@
 
 // The following lines will be added to generated wrapper file.
 %{
-#include "lib.rs.h"
+#include "ffi.rs.h"
 #include "cxx.h"
 %}
 
 
-// Translate c++ size_t to something more common to other langs
+// Translate C++ size_t to something more common to other langs
 // in order to start using vectors (actually to get elements at
 // given index)
 %inline %{
@@ -22,16 +22,44 @@ typedef unsigned char uint8_t;
 %enddef
 
 // We don't want to have default constructors in our FFI API
+// Since Opaque types cannot be created using cxx.rs
 %nodefaultctor;
 
 // Rename String to RustString, since there's already defined
 // String class in Java
 %rename(RustString) String;
 
-// Inlcude the C++ API
-%include "lib.rs.h"
+// Ignore unused cxx.rs structs
+%ignore unsafe_bitcopy_t;
+%ignore Opaque;
+%ignore layout;
 
-// We use Vec<String> and Vec<u8> so we have to instantiate Vec template
+// We can't create Opaque types in cxx.rs
+%ignore Box(const T &);
+%ignore Box(T &&);
+
+// For Rust Box support:
+// The following typemap introduce move semantics in the generated code.
+// It is necessary when one need to create a type returned by value
+// from Rust and which doesn't support copy constructor (like Box).
+%typemap(java, out, optimal="1") SWIGTYPE %{
+  $result = new $1_ltype(( $1_ltype &&)$1);
+%}
+
+%typemap(csharp, out, optimal="1") SWIGTYPE %{
+  $result = new $1_ltype(( $1_ltype &&)$1);
+%}
+
+// TODO: make it generic
+%typemap(python, out, optimal="1") ::rust::cxxbridge1::Box<::wildland::adminmanager::RcRefAdminManager> %{
+  resultobj = SWIG_NewPointerObj((new $1_ltype(static_cast< $1_ltype&&  >($1))), SWIGTYPE_p_rust__cxxbridge1__BoxT_wildland__adminmanager__RcRefAdminManager_t, SWIG_POINTER_OWN |  0 );
+%}
+
+// Inlcude the generated C++ API
+%include "ffi.rs.h"
+
+
+// We have to instantiate templates that we use.
 %template(StringVector) ::rust::cxxbridge1::Vec<::rust::cxxbridge1::String>;
 %template(ByteVector) ::rust::cxxbridge1::Vec<::std::uint8_t>;
-
+%template(AdminRefs) ::rust::cxxbridge1::Box<::wildland::adminmanager::RcRefAdminManager>;

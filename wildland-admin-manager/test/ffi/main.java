@@ -32,5 +32,7 @@ public class main {
       var d = new RustString("Asdf");
       wildland.print_args(a, b, c, d);
 
+      var rc = wildland.return_rc();
+      rc.deref().print_foo();
    }
  }

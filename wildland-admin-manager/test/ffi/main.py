@@ -46,3 +46,6 @@ d = wildland.RustString("Here I am")
 wildland.print_args(a, b, c, d)
 
 #####
+
+rc = wildland.return_rc();
+rc.deref().print_foo();
