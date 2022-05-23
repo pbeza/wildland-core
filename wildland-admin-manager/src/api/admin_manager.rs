@@ -8,7 +8,7 @@ pub trait AdminManager {
     fn create_master_identity_from_seed_phrase(
         &mut self,
         name: String,
-        seed: SeedPhrase,
+        seed: &SeedPhrase,
     ) -> AdminManagerResult<Self::Identity>;
 
     /// Creates a device identity based on the provided seed phrase (whether it's a newly
@@ -16,7 +16,7 @@ pub trait AdminManager {
     fn create_device_identity_from_seed_phrase(
         &mut self,
         name: String,
-        seed: SeedPhrase,
+        seed: &SeedPhrase,
     ) -> AdminManagerResult<Self::Identity>;
 
     /// Creates a randomly generated seed phrase

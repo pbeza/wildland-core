@@ -22,7 +22,7 @@ fn main() -> Result<()> {
             } => {
                 let seed_phrase = AdminManager::create_seed_phrase()?;
                 let identity = admin_manager
-                    .create_master_identity_from_seed_phrase("name".into(), seed_phrase)?;
+                    .create_master_identity_from_seed_phrase("name".into(), &seed_phrase)?;
                 println!("{identity}")
             }
             SubCommand::Identity {
@@ -34,7 +34,7 @@ fn main() -> Result<()> {
                     .collect::<Vec<_>>()
                     .try_into()?;
                 let identity =
-                    admin_manager.create_master_identity_from_seed_phrase("name".into(), seed)?;
+                    admin_manager.create_master_identity_from_seed_phrase("name".into(), &seed)?;
                 println!("{identity}")
             }
         }

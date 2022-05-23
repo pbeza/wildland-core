@@ -59,10 +59,10 @@ pub struct Identity {
     words: SeedPhraseWords,
 }
 
-impl TryFrom<SeedPhraseWords> for Identity {
+impl TryFrom<&SeedPhraseWords> for Identity {
     type Error = CryptoError;
 
-    fn try_from(seed_phrase: SeedPhraseWords) -> Result<Self, Self::Error> {
+    fn try_from(seed_phrase: &SeedPhraseWords) -> Result<Self, Self::Error> {
         let mnemonic = Mnemonic::from_str(&seed_phrase.join(" "))
             .map_err(|e| CryptoError::IdentityGenerationError(e.to_string()))?;
         Self::try_from(mnemonic)

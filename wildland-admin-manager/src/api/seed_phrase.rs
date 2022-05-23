@@ -32,3 +32,9 @@ impl TryFrom<Vec<String>> for SeedPhrase {
         })?))
     }
 }
+
+impl AsRef<[String; 12]> for SeedPhrase {
+    fn as_ref(&self) -> &[String; 12] {
+        &self.0
+    }
+}
