@@ -22,7 +22,6 @@ wildland-admin-manager-api = { version = "0.2.0", path = "../wildland-admin-mana
 bip39 = { version = "1.0.1", features = ["rand"] }
 thiserror = "1.0.31"
 cxx = "1.0"
-lazy_static = "1"
 
 [package.metadata.workspaces]
 independent = true

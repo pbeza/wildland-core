@@ -18,15 +18,14 @@ typedef unsigned char uint8_t;
 
 // The is_complete structure is not parsed by SWIG, so omit this
 // during the process
-%define CXXBRIDGE1_IS_COMPLETE;
-%enddef
+%define CXXBRIDGE1_IS_COMPLETE; %enddef
 
-// We don't want to have default constructors in our FFI API
-// Since Opaque types cannot be created using cxx.rs
+// We don't want to have default constructors in our FFI API,
+// since Opaque types cannot be created using cxx.rs
 %nodefaultctor;
 
 // Rename String to RustString, since there's already defined
-// String class in Java
+// String class in Java and C#
 %rename(RustString) String;
 
 // Ignore unused cxx.rs structs
@@ -61,6 +60,6 @@ typedef unsigned char uint8_t;
 // We have to instantiate templates that we use.
 %template(StringVector) ::rust::cxxbridge1::Vec<::rust::cxxbridge1::String>;
 %template(ByteVector) ::rust::cxxbridge1::Vec<::std::uint8_t>;
-%template(AdminRefsVecBoxed) ::rust::cxxbridge1::Box<::wildland::adminmanager::RcRefAdminManager>;
-%template(ArrayAdminManagerBoxed) ::rust::cxxbridge1::Box<::wildland::adminmanager::ArrayAdminManager>;
-%template(AdminRefs) ::rust::cxxbridge1::Box<::wildland::adminmanager::RcRefAdminManager>;
+%template(AdminRefsVecBoxed) ::rust::cxxbridge1::Box<::wildland::RcRefAdminManager>;
+%template(ArrayAdminManagerBoxed) ::rust::cxxbridge1::Box<::wildland::ArrayAdminManager>;
+%template(AdminRefs) ::rust::cxxbridge1::Box<::wildland::RcRefAdminManager>;

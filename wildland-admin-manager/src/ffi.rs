@@ -30,7 +30,7 @@ impl<T> Array<T> {
     }
 
     pub fn size(&self) -> usize {
-        self.size()
+        self.0.len()
     }
 }
 
@@ -38,11 +38,12 @@ type RcRefAdminManager = RcRef<AdminManager>;
 type ArrayAdminManager = Array<AdminManager>;
 type AdminManager = admin_manager::AdminManager<admin_manager::Identity>;
 
-#[cxx::bridge(namespace = "wildland::adminmanager")]
+
+#[cxx::bridge(namespace = "wildland")]
 mod ffi_definition {
     extern "Rust" {
         type AdminManager;
-        
+
         type RcRefAdminManager;
         fn get_admin_instance() -> Box<RcRefAdminManager>;
         fn deref(self: &RcRefAdminManager) -> &AdminManager;
@@ -89,5 +90,5 @@ pub fn get_admin_instance() -> Box<RcRefAdminManager> {
 }
 
 pub fn get_admin_instances_vector() -> Box<ArrayAdminManager> {
-    ArrayAdminManager::new_boxed(vec![AdminManager::default()])
+    Array::new_boxed(vec![AdminManager::default()])
 }
