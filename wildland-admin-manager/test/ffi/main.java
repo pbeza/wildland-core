@@ -5,8 +5,11 @@ public class main {
      System.out.println("Hello World Java");
      System.loadLibrary("wildland");
      
-     var admin_manager = wildland.get_admin();
-     admin_manager.print_foo();
+     var admin_manager = wildland.get_admin_instance();
+     admin_manager.deref().print_foo();
+
+     var admin_manager_vector = wildland.get_admin_instances_vector();
+     admin_manager_vector.at(0).print_foo();
      
      System.out.println(wildland.return_string().c_str());
      
@@ -32,7 +35,5 @@ public class main {
       var d = new RustString("Asdf");
       wildland.print_args(a, b, c, d);
 
-      var rc = wildland.return_rc();
-      rc.deref().print_foo();
    }
  }

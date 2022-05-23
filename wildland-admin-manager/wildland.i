@@ -61,4 +61,6 @@ typedef unsigned char uint8_t;
 // We have to instantiate templates that we use.
 %template(StringVector) ::rust::cxxbridge1::Vec<::rust::cxxbridge1::String>;
 %template(ByteVector) ::rust::cxxbridge1::Vec<::std::uint8_t>;
+%template(AdminRefsVecBoxed) ::rust::cxxbridge1::Box<::wildland::adminmanager::RcRefAdminManager>;
+%template(ArrayAdminManagerBoxed) ::rust::cxxbridge1::Box<::wildland::adminmanager::ArrayAdminManager>;
 %template(AdminRefs) ::rust::cxxbridge1::Box<::wildland::adminmanager::RcRefAdminManager>;

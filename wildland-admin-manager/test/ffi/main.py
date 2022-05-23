@@ -3,14 +3,18 @@ import wildland
 
 print("Hello World Python")
 
+# Python specific pointers deref function:
 import ctypes
 def deref_ptr(ptr, typ):
     return ctypes.cast(int(ptr), ctypes.POINTER(typ))[0]
 
 #####
 
-admin_manager = wildland.get_admin()
-admin_manager.print_foo()
+admin_manager = wildland.get_admin_instance()
+admin_manager.deref().print_foo()
+
+vector_admin_manager = wildland.get_admin_instances_vector()
+vector_admin_manager.at(0).print_foo()
 
 #####
 
@@ -42,10 +46,5 @@ b.push_back(66)
 b.push_back(77)
 b.push_back(88)
 c = 10
-d = wildland.RustString("Here I am")
+d = wildland.RustString("String from Python")
 wildland.print_args(a, b, c, d)
-
-#####
-
-rc = wildland.return_rc();
-rc.deref().print_foo();
