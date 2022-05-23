@@ -50,7 +50,7 @@ java: prepare
 java_test: java
 	cp test/ffi/main.java wildland_java/main.java
 	cd wildland_java ; javac main.java
-	cd wildland_java ; java -Djava.library.path="/home/tkulik/repos/wildland-core/wildland-admin-manager/wildland_java" main
+	cd wildland_java ; java -Djava.library.path="./wildland_java" main
 
 csharp: prepare
 	mkdir -p wildland_csharp

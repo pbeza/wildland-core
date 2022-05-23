@@ -50,9 +50,8 @@ typedef unsigned char uint8_t;
   $result = new $1_ltype(( $1_ltype &&)$1);
 %}
 
-// TODO: make it generic
-%typemap(python, out, optimal="1") ::rust::cxxbridge1::Box<::wildland::adminmanager::RcRefAdminManager> %{
-  resultobj = SWIG_NewPointerObj((new $1_ltype(static_cast< $1_ltype&&  >($1))), SWIGTYPE_p_rust__cxxbridge1__BoxT_wildland__adminmanager__RcRefAdminManager_t, SWIG_POINTER_OWN |  0 );
+%typemap(python, out, optimal="1") SWIGTYPE %{
+  $result = SWIG_NewPointerObj((new $1_ltype(static_cast< $1_ltype&&  >($1))), $&1_descriptor, SWIG_POINTER_OWN |  0 );
 %}
 
 // Inlcude the generated C++ API
