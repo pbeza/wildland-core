@@ -1,6 +1,16 @@
 use crate::admin_manager;
 use std::sync::Arc;
 
+///
+/// RcRef is used as a shared pointer that can be used in languages
+/// supported by `SWIG`. The mentioned tool takes care of garbage
+/// collectors handling.
+///
+/// When the target client delete RcRef object, the reference count
+/// will be decreased. The pointee object is deleted only if there's
+/// no other reference (on both sides - Rust and the target lang)
+/// available.
+///
 pub struct RcRef<T>(Arc<T>);
 impl<T> RcRef<T> {
     fn new_boxed(obj: T) -> Box<RcRef<T>> {
@@ -19,6 +29,11 @@ impl<T> Drop for RcRef<T> {
     }
 }
 
+///
+/// Array type is very similar to RcRef, but it wraps
+/// the vector structure and prepares the interface
+/// to work with arrays.
+///
 pub struct Array<T>(Arc<Vec<T>>);
 impl<T> Array<T> {
     pub fn new_boxed(arr: Vec<T>) -> Box<Array<T>> {
@@ -34,26 +49,36 @@ impl<T> Array<T> {
     }
 }
 
+//
+// All templated types have to be manually instantiated (cxx.rs constraint)
+//
+type AdminManager = admin_manager::AdminManager<admin_manager::Identity>;
 type RcRefAdminManager = RcRef<AdminManager>;
 type ArrayAdminManager = Array<AdminManager>;
-type AdminManager = admin_manager::AdminManager<admin_manager::Identity>;
 
-
+//
+// The module with functions and types declarations
+// visible in wildland's clients.
+//
 #[cxx::bridge(namespace = "wildland")]
 mod ffi_definition {
     extern "Rust" {
+        // AdminManager implementation
         type AdminManager;
+        fn print_foo(self: &AdminManager);
 
+        // RcRef<AdminManager> declarations
         type RcRefAdminManager;
         fn get_admin_instance() -> Box<RcRefAdminManager>;
         fn deref(self: &RcRefAdminManager) -> &AdminManager;
 
+        // Array<AdminManager> declarations
         type ArrayAdminManager;
         fn get_admin_instances_vector() -> Box<ArrayAdminManager>;
         fn at(self: &ArrayAdminManager, elem: usize) -> &AdminManager;
         fn size(self: &ArrayAdminManager) -> usize;
 
-        fn print_foo(self: &AdminManager);
+        // Static functions declarations
         fn return_string() -> String;
         fn return_vec_string() -> Vec<String>;
         fn return_vec_u8() -> Vec<u8>;
@@ -61,6 +86,10 @@ mod ffi_definition {
         fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String);
     }
 }
+
+//
+// Implementations of static functions available for the client app
+//
 
 pub fn return_string() -> String {
     String::from("Returned String")
