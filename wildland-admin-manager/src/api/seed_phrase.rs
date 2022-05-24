@@ -9,6 +9,10 @@ impl SeedPhrase {
     pub fn get_string(&self) -> String {
         self.0.join(" ")
     }
+
+    pub fn get_vec(&self) -> Vec<String> {
+        self.0.clone().into()
+    }
 }
 
 impl From<CorexSeedPhrase> for SeedPhrase {

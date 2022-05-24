@@ -42,6 +42,7 @@ mod api {
 
         type SeedPhrase;
         fn get_string(self: &SeedPhrase) -> String;
+        fn get_vec(self: &SeedPhrase) -> Vec<String>;
 
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;
