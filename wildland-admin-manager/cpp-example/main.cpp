@@ -5,7 +5,7 @@ using namespace cargo::api;
 
 int main()
 {
-    auto am = create_admin_manager();
+    auto admin_manager = create_admin_manager();
 
     auto seed_result = create_seed_phrase();
     if (seed_result->is_ok())
@@ -14,9 +14,9 @@ int main()
         auto seed_str = std::string(seed_ok_ref.get_string());
         std::cout << "Generated seed: " << seed_str << std::endl;
 
-        auto identity_result = am->create_master_identity_from_seed_phrase(::rust::String{"Some generic name"}, seed_ok_ref);
+        auto identity_result = admin_manager->create_master_identity_from_seed_phrase(::rust::String{"Some generic name"}, seed_ok_ref);
 
-        auto optional_identity = am->get_master_identity(); // The same identity as inside the result above
+        auto optional_identity = admin_manager->get_master_identity(); // The same identity as inside the result above
         if (optional_identity->is_some())
         {
             auto &identity = optional_identity->unwrap();
