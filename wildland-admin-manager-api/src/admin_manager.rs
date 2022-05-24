@@ -26,8 +26,10 @@ pub trait AdminManager {
     fn get_master_identity(&self) -> Option<Self::Identity>;
 
     /// Sends a 6-digit verification code to provided email address.
-    /// Invalidates previously sent codes.
-    fn send_verification_code(&mut self, email: String) -> AdminManagerResult<()>;
+    fn send_verification_code(&mut self) -> AdminManagerResult<()>;
+
+    // Sets new unverified email
+    fn set_email(&mut self, email: String);
 
     /// Checks whether verification code entered by a user is the same as generated one for a set email
     /// Returns error when email is not set

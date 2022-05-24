@@ -68,14 +68,17 @@ impl api::AdminManager for AdminManager<Identity> {
         self.master_identity.clone()
     }
 
-    fn send_verification_code(&mut self, email: String) -> api::AdminManagerResult<()> {
+    fn set_email(&mut self, email: String) {
         // TODO generate code
         let verification_code = "1232456".to_owned();
-        // TODO actually send the code
         self.email = Some(Email::Unverified {
             mailbox_address: email,
             verification_code,
         });
+    }
+
+    fn send_verification_code(&mut self) -> api::AdminManagerResult<()> {
+        // TODO actually send the code
         Ok(())
     }
 
@@ -119,8 +122,8 @@ mod tests {
     #[test]
     fn verification_fails_when_codes_do_not_match() {
         let mut am = AdminManager::default();
-        am.send_verification_code("email@email.com".to_string())
-            .unwrap();
+        am.set_email("email@email.com".to_string());
+        am.send_verification_code().unwrap();
         assert_eq!(
             am.verify_email("1232455".to_owned()).unwrap_err(),
             AdminManagerError::ValidationCodesDoNotMatch
@@ -130,8 +133,8 @@ mod tests {
     #[test]
     fn verification_fails_if_email_is_already_verified() {
         let mut am = AdminManager::default();
-        am.send_verification_code("email@email.com".to_string())
-            .unwrap();
+        am.set_email("email@email.com".to_string());
+        am.send_verification_code().unwrap();
         assert!(am.verify_email("1232456".to_owned()).is_ok());
         assert_eq!(
             am.verify_email("1232456".to_owned()).unwrap_err(),
