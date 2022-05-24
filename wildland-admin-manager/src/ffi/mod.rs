@@ -14,7 +14,6 @@ type SeedPhraseResult = CxxResult<SeedPhrase>;
 type IdentityResult = CxxResult<Identity>;
 pub type OptionalIdentity<'a> = CxxRefOption<'a, Identity>;
 
-// #[allow(clippy::needless_lifetimes)] // TODO check it
 #[cxx::bridge(namespace = "cargo::api")]
 mod api {
     extern "Rust" {
