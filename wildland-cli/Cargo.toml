@@ -16,7 +16,6 @@ publish = ["wl-dev"]
 clap = { version = "3.1.6", features = ["derive"] }
 wildland-corex = { version = "0.1.3-alpha.0", path = "../wildland-corex", registry = "wl-dev" }
 wildland-admin-manager = { version = "0.3.0", path = "../wildland-admin-manager", registry = "wl-dev" }
-wildland-admin-manager-api = { version = "0.2.0", path = "../wildland-admin-manager-api", registry = "wl-dev" }
 yansi = "0.5.1"
 anyhow = "1.0.57"
 
