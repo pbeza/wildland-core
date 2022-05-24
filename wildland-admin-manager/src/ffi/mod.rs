@@ -7,17 +7,17 @@ use crate::{
     api::{AdminManager as AdminManagerApi, AdminManagerError, SeedPhrase},
 };
 
-struct CxxAdminManager(AdminManager<Identity>);
+struct CxxAdminManager(AdminManager);
 type SeedPhraseResult = CxxResult<SeedPhrase>;
 type IdentityResult = CxxResult<Identity>;
 pub type OptionalIdentity<'a> = CxxRefOption<'a, Identity>;
 
 fn create_admin_manager() -> Box<CxxAdminManager> {
-    Box::new(CxxAdminManager(AdminManager::<Identity>::default()))
+    Box::new(CxxAdminManager(AdminManager::default()))
 }
 
 fn create_seed_phrase() -> Box<SeedPhraseResult> {
-    Box::new(AdminManager::<Identity>::create_seed_phrase().into())
+    Box::new(AdminManager::create_seed_phrase().into())
 }
 
 impl CxxAdminManager {
@@ -33,7 +33,7 @@ impl CxxAdminManager {
         )
     }
 
-    fn get_master_identity(self: &CxxAdminManager) -> Box<OptionalIdentity> {
+    fn get_master_identity(self: &mut CxxAdminManager) -> Box<OptionalIdentity> {
         Box::new(self.0.get_master_identity().into())
     }
 }
@@ -44,7 +44,7 @@ mod api {
     extern "Rust" {
         type CxxAdminManager;
         fn create_admin_manager() -> Box<CxxAdminManager>;
-        fn get_master_identity(self: &CxxAdminManager) -> Box<OptionalIdentity>;
+        fn get_master_identity(self: &mut CxxAdminManager) -> Box<OptionalIdentity>;
         fn create_master_identity_from_seed_phrase(
             self: &mut CxxAdminManager,
             name: String,
@@ -61,7 +61,9 @@ mod api {
         type IdentityResult;
         type OptionalIdentity<'a>;
         fn is_some(self: &OptionalIdentity) -> bool;
-        unsafe fn unwrap<'a>(self: &'a OptionalIdentity<'a>) -> &'a Identity;
+        unsafe fn unwrap<'a>(self: &'a mut OptionalIdentity<'a>) -> &'a mut Identity;
+        fn set_name(self: &mut Identity, name: String);
+        fn get_name(self: &Identity) -> String;
 
         type SeedPhrase;
         fn get_string(self: &SeedPhrase) -> String;

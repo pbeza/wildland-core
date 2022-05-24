@@ -3,13 +3,13 @@ mod identity;
 use crate::api::{self, AdminManagerError, SeedPhrase};
 pub use identity::Identity;
 
-pub struct AdminManager<I: api::Identity> {
+pub struct AdminManager {
     // TODO do we want to store more than one master identity
     // TODO do we want to keep mappings between a master identity and a set of device identities
-    master_identity: Option<I>,
+    master_identity: Option<Identity>,
 }
 
-impl Default for AdminManager<Identity> {
+impl Default for AdminManager {
     fn default() -> Self {
         Self {
             master_identity: Default::default(),
@@ -17,9 +17,7 @@ impl Default for AdminManager<Identity> {
     }
 }
 
-impl api::AdminManager for AdminManager<Identity> {
-    type Identity = Identity;
-
+impl api::AdminManager for AdminManager {
     fn create_master_identity_from_seed_phrase(
         &mut self,
         name: String,
@@ -54,7 +52,7 @@ impl api::AdminManager for AdminManager<Identity> {
             .map(SeedPhrase::from)
     }
 
-    fn get_master_identity(&self) -> &Option<Identity> {
-        &self.master_identity
+    fn get_master_identity(&mut self) -> &mut Option<Identity> {
+        &mut self.master_identity
     }
 }

@@ -40,30 +40,28 @@ impl Identity {
             inner_identity,
         }
     }
-}
 
-impl api::Identity for Identity {
-    fn get_name(&self) -> String {
+    // fn get_pubkey(&self) -> Vec<u8> {
+    //     todo!() // TODO
+    // }
+
+    // fn get_fingerprint(&self) -> Vec<u8> {
+    //     todo!() // TODO
+    // }
+
+    // fn get_identity_type(&self) -> api::IdentityType {
+    //     self.identity_type
+    // }
+
+    // fn get_seed_phrase(&self) -> SeedPhraseWords {
+    //     self.inner_identity.get_seed_phrase()
+    // }
+
+    pub fn get_name(&self) -> String {
         self.name.clone()
     }
 
-    fn get_pubkey(&self) -> Vec<u8> {
-        todo!() // TODO
-    }
-
-    fn get_fingerprint(&self) -> Vec<u8> {
-        todo!() // TODO
-    }
-
-    fn get_identity_type(&self) -> api::IdentityType {
-        self.identity_type
-    }
-
-    fn get_seed_phrase(&self) -> SeedPhraseWords {
-        self.inner_identity.get_seed_phrase()
-    }
-
-    fn set_name(&mut self, name: String) {
+    pub fn set_name(&mut self, name: String) {
         self.name = name;
     }
 }

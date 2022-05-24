@@ -1,10 +1,7 @@
 use anyhow::Result;
 use clap::StructOpt;
 use cli_args::{CliArgs, IdentitySubCommand, SubCommand};
-use wildland_admin_manager::{
-    admin_manager::{AdminManager, Identity},
-    api::AdminManager as AdminManagerApi,
-};
+use wildland_admin_manager::{admin_manager::AdminManager, api::AdminManager as AdminManagerApi};
 
 mod cli_args;
 mod version;
@@ -15,7 +12,7 @@ fn main() -> Result<()> {
     if cli.version {
         version::print_version();
     } else {
-        let mut admin_manager = AdminManager::<Identity>::default();
+        let mut admin_manager = AdminManager::default();
         match cli.sub_command_action {
             SubCommand::Identity {
                 identity_action: IdentitySubCommand::Generate,
