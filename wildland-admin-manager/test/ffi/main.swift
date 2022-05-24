@@ -7,6 +7,13 @@ for v in get_admin_instances_vector() {
     v.deref().print_foo()
 }
 
+
+// var ve = get_admin_instances_vector()
+// for i in (0..<ve.size()) {
+//     ve.at(i).deref().print_foo()
+// }
+
+
 print(return_string().toString());
 
 for v in return_vec_string() {

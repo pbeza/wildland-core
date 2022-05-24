@@ -12,7 +12,7 @@ namespace Main
             admin_manager.deref().print_foo();
 
             var admin_manager_vector = wildland.get_admin_instances_vector();
-            admin_manager_vector.at(0).print_foo();
+            admin_manager_vector.at(0).deref().print_foo();
 
             Console.WriteLine(wildland.return_string());
         

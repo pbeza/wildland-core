@@ -14,7 +14,7 @@ admin_manager = wildland.get_admin_instance()
 admin_manager.deref().print_foo()
 
 vector_admin_manager = wildland.get_admin_instances_vector()
-vector_admin_manager.at(0).print_foo()
+vector_admin_manager.at(0).deref().print_foo()
 
 #####
 

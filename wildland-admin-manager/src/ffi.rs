@@ -1,6 +1,7 @@
 use crate::admin_manager;
 use std::boxed::Box;
 use std::sync::Arc;
+use wildland_admin_manager_api::AdminManagerError;
 
 ///
 /// RcRef is used as a shared pointer that can be used in languages
@@ -27,6 +28,12 @@ impl<T> RcRef<T> {
     }
 }
 
+impl<T> Clone for RcRef<T> {
+    fn clone(&self) -> RcRef<T> {
+        RcRef(self.0.clone())
+    }
+}
+
 impl<T> Drop for RcRef<T> {
     fn drop(&mut self) {
         //TODO: add logging handler
@@ -39,20 +46,25 @@ impl<T> Drop for RcRef<T> {
 /// the vector structure and prepares the interface
 /// to work with arrays.
 ///
-pub struct Array<T>(Arc<Vec<T>>);
+pub struct Array<T>(Vec<RcRef<T>>);
 impl<T> Array<T> {
-    pub fn new_boxed(arr: Vec<T>) -> Box<Array<T>> {
-        Box::new(Array(Arc::new(arr)))
+    pub fn new_boxed(arr: Vec<RcRef<T>>) -> Box<Array<T>> {
+        Box::new(Array(arr))
     }
 
-    pub fn at(&self, elem: usize) -> &T {
-        &self.0[elem]
+    pub fn at(&self, elem: usize) -> Box<RcRef<T>> {
+        Box::new(self.0[elem].clone())
     }
 
     pub fn size(&self) -> usize {
         self.0.len()
     }
 }
+
+///
+/// Result wrapper
+/// 
+// pub struct Result<Res, Err>
 
 //
 // All templated types have to be manually instantiated (cxx.rs constraint)
@@ -79,7 +91,7 @@ mod ffi_definition {
 
         // Array<AdminManager> declarations
         type ArrayAdminManager;
-        fn at(self: &ArrayAdminManager, elem: usize) -> &AdminManager;
+        fn at(self: &ArrayAdminManager, elem: usize) -> Box<RcRefAdminManager>;
         fn size(self: &ArrayAdminManager) -> usize;
 
         // Static functions declarations
@@ -88,6 +100,8 @@ mod ffi_definition {
         fn return_vec_u8() -> Vec<u8>;
         fn return_u8() -> u8;
         fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String);
+
+        // TODO: this is the only difference between cxx and swift for now:
         fn get_admin_instances_vector() -> Box<ArrayAdminManager>;
         fn get_admin_instance() -> Box<RcRefAdminManager>;
     }
@@ -97,6 +111,8 @@ mod ffi_definition {
 #[swift_bridge::bridge]
 mod ffi_definition {
     extern "Rust" {
+        type AdminManagerError;
+
         // AdminManager implementation
         type AdminManager;
         fn print_foo(self: &AdminManager);
@@ -105,14 +121,23 @@ mod ffi_definition {
         type RcRefAdminManager;
         fn deref(self: &RcRefAdminManager) -> &AdminManager;
 
+        // Array<AdminManager> declarations
+        
+        type ArrayAdminManager;
+        fn at(self: &ArrayAdminManager, elem: usize) -> RcRefAdminManager;
+        fn size(self: &ArrayAdminManager) -> usize;
+
         // Static functions declarations
         fn return_string() -> String;
         fn return_vec_string() -> Vec<String>;
         fn return_vec_u8() -> Vec<u8>;
         fn return_u8() -> u8;
         fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String);
+
+        // TODO: this is the only difference between cxx and swift for now:
         fn get_admin_instance() -> RcRefAdminManager;
         fn get_admin_instances_vector() -> Vec<RcRefAdminManager>;
+        // fn get_some_result() -> Result<String, AdminManagerError>;
     }
 }
 
@@ -143,22 +168,30 @@ pub fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String) {
     println!("{:?}", d);
 }
 
-#[cfg(feature = "cxx_binding")]
+/// TODO:
+/// Why swift-bridge don't have a problem with Boxed type.
+/// Details:
+/// * Declaration of `get_admin_instance` in swift FFI
+///   returns `RcRefAdminManager` instead of `Box<RcRefAdminManager>`.
+///   Is it type-related? If every returned type is treated as a pointer
+///   then there's no problem. What if some FFI method will be translated
+///   by swift-bridge to receive the returned value by copy not by pointer?
+///   Is this scenario possible?
 pub fn get_admin_instance() -> Box<RcRefAdminManager> {
     RcRef::new_boxed(AdminManager::default())
 }
 
 #[cfg(feature = "swift_binding")]
-pub fn get_admin_instance() -> RcRefAdminManager {
-    RcRef::new(AdminManager::default())
+pub fn get_admin_instances_vector() -> Vec<RcRefAdminManager> {
+    vec![RcRef::new(AdminManager::default())]
 }
 
 #[cfg(feature = "cxx_binding")]
 pub fn get_admin_instances_vector() -> Box<ArrayAdminManager> {
-    Array::new_boxed(vec![AdminManager::default()])
+    Array::new_boxed(vec![RcRef::new(AdminManager::default())])
 }
 
-#[cfg(feature = "swift_binding")]
-pub fn get_admin_instances_vector() -> Vec<RcRefAdminManager> {
-    vec![RcRef::new(AdminManager::default())]
+
+pub fn get_some_result() -> Result<String, AdminManagerError> {
+    Ok("asdf".to_owned())
 }
