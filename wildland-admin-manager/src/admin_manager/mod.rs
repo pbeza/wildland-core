@@ -22,14 +22,14 @@ impl api::AdminManager for AdminManager {
         &mut self,
         name: String,
         seed: &SeedPhrase,
-    ) -> api::AdminManagerResult<Identity> {
+    ) -> api::AdminManagerResult<&mut Identity> {
         let identity = Identity::new(
             api::IdentityType::Master,
             name,
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
         );
-        self.master_identity = Some(identity.clone()); // TODO Can user have multiple master identities? If not should it be overwritten?
-        Ok(identity) // TODO return ref
+        self.master_identity = Some(identity); // TODO Can user have multiple master identities? If not should it be overwritten?
+        Ok(self.master_identity.as_mut().unwrap()) // TODO return ref
     }
 
     fn create_device_identity_from_seed_phrase(

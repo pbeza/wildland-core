@@ -11,8 +11,8 @@ use cxx_option::*;
 use cxx_result::*;
 
 type SeedPhraseResult = CxxResult<SeedPhrase>;
-type IdentityResult = CxxResult<Identity>;
-pub type OptionalIdentity<'a> = CxxRefOption<'a, Identity>;
+type IdentityResult<'a> = CxxResult<&'a mut Identity>;
+pub type OptionalIdentity<'a> = CxxOption<&'a mut Identity>;
 
 #[cxx::bridge(namespace = "cargo::api")]
 mod api {
@@ -20,11 +20,11 @@ mod api {
         type CxxAdminManager;
         fn create_admin_manager() -> Box<CxxAdminManager>;
         fn get_master_identity(self: &mut CxxAdminManager) -> Box<OptionalIdentity>;
-        fn create_master_identity_from_seed_phrase(
-            self: &mut CxxAdminManager,
+        unsafe fn create_master_identity_from_seed_phrase<'a>(
+            self: &'a mut CxxAdminManager,
             name: String,
             seed: &SeedPhrase,
-        ) -> Box<IdentityResult>;
+        ) -> Box<IdentityResult<'a>>;
 
         type SeedPhraseResult;
         fn create_seed_phrase() -> Box<SeedPhraseResult>;
@@ -33,10 +33,11 @@ mod api {
         fn unwrap_err(self: &SeedPhraseResult) -> &AdminManagerError;
 
         type Identity;
-        type IdentityResult;
+        type IdentityResult<'a>;
+        unsafe fn unwrap_mut<'a>(self: &'a mut IdentityResult<'a>) -> &'a mut Identity;
         type OptionalIdentity<'a>;
         fn is_some(self: &OptionalIdentity) -> bool;
-        unsafe fn unwrap<'a>(self: &'a mut OptionalIdentity<'a>) -> &'a mut Identity;
+        unsafe fn unwrap_mut<'a>(self: &'a mut OptionalIdentity<'a>) -> &'a mut Identity;
         fn set_name(self: &mut Identity, name: String);
         fn get_name(self: &Identity) -> String;
 

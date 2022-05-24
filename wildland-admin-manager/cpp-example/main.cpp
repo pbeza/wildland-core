@@ -22,15 +22,21 @@ int main()
         }
 
         auto identity_result = admin_manager->create_master_identity_from_seed_phrase(::rust::String{"Some generic name"}, seed_ok_ref);
+        auto &identity_ref = identity_result->unwrap_mut();
+        std::cout << "Identity name 1: " << std::string(identity_ref.get_name()) << std::endl;
+        identity_ref.set_name(::rust::String("Name 2"));
 
-        auto optional_identity = admin_manager->get_master_identity(); // The same identity as inside the result above
+        auto optional_identity = admin_manager->get_master_identity();
+        // The same identity reference as inside the result above
+        // It is unsafe but it is hard to avoid multiple mut refs outside Rust
+        // TODO do we want to make this thread safe?
         if (optional_identity->is_some())
         {
-            auto &identity = optional_identity->unwrap();
+            auto &identity = optional_identity->unwrap_mut();
 
-            std::cout << "Identity name: " << std::string(identity.get_name()) << std::endl;
+            std::cout << "Identity name 2: " << std::string(identity.get_name()) << std::endl;
             identity.set_name(::rust::String{"New name"}); // Identity can be mutated
-            std::cout << "Identity name: " << std::string(identity.get_name()) << std::endl;
+            std::cout << "Identity name 3: " << std::string(identity.get_name()) << std::endl;
         }
     }
     else

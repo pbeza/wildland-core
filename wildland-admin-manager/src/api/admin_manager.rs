@@ -8,7 +8,7 @@ pub trait AdminManager {
         &mut self,
         name: String,
         seed: &SeedPhrase,
-    ) -> AdminManagerResult<Identity>;
+    ) -> AdminManagerResult<&mut Identity>;
 
     /// Creates a device identity based on the provided seed phrase (whether it's a newly
     /// generated seed phrase or manually entered in the recovery flow.

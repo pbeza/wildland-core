@@ -25,6 +25,6 @@ impl CxxAdminManager {
     }
 
     pub fn get_master_identity(self: &mut CxxAdminManager) -> Box<OptionalIdentity> {
-        Box::new(self.0.get_master_identity().into())
+        Box::new(self.0.get_master_identity().as_mut().into())
     }
 }
