@@ -4,12 +4,13 @@ use wildland_corex::Identity as CryptoIdentity;
 pub use wildland_corex::{SeedPhraseWords, SEED_PHRASE_LEN};
 
 #[derive(Clone, Debug)]
-pub struct Identity {
+// TODO I had no idea how to name that specific Identity implementation
+pub struct Ed25519Bip32Identity {
     identity_type: api::IdentityType,
     name: String,
     inner_identity: CryptoIdentity,
 }
-impl Display for Identity {
+impl Display for Ed25519Bip32Identity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -27,7 +28,7 @@ Seed phrase: {}
     }
 }
 
-impl Identity {
+impl Ed25519Bip32Identity {
     pub fn new(
         identity_type: api::IdentityType,
         name: String,
@@ -41,7 +42,7 @@ impl Identity {
     }
 }
 
-impl api::IdentityApi for Identity {
+impl api::Identity for Ed25519Bip32Identity {
     fn get_pubkey(&self) -> Vec<u8> {
         todo!() // TODO
     }

@@ -3,10 +3,7 @@ mod cxx_identity;
 mod cxx_option;
 mod cxx_result;
 
-use crate::{
-    admin_manager::Identity,
-    api::{AdminManagerError, SeedPhrase},
-};
+use crate::api::{AdminManagerError, SeedPhrase};
 use cxx_admin_manager::*;
 use cxx_identity::*;
 use cxx_result::*;
@@ -32,7 +29,6 @@ mod api {
         fn unwrap(self: &SeedPhraseResult) -> &SeedPhrase;
         fn unwrap_err(self: &SeedPhraseResult) -> &AdminManagerError;
 
-        type Identity;
         type IdentityResult;
         type OptionalIdentity<'a>;
         type DynIdentity;

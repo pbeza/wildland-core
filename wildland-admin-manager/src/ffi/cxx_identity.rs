@@ -1,7 +1,7 @@
 use super::{cxx_option::CxxOption, cxx_result::CxxResult};
-use crate::api::IdentityApi;
+use crate::api::Identity;
 
-pub type DynIdentity = Box<dyn IdentityApi>;
+pub type DynIdentity = Box<dyn Identity>;
 pub type IdentityResult = CxxResult<DynIdentity>;
 pub type OptionalIdentity<'a> = CxxOption<CxxDynIdentity<'a>>;
 

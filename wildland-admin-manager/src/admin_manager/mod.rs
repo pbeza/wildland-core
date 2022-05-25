@@ -1,13 +1,13 @@
 mod identity;
 
-use crate::api::{self, AdminManagerError, IdentityApi, SeedPhrase};
-pub use identity::Identity;
+use crate::api::{self, AdminManagerError, Identity, SeedPhrase};
+pub use identity::Ed25519Bip32Identity;
 
 #[derive(Default)]
 pub struct AdminManager {
     // TODO do we want to store more than one master identity
     // TODO do we want to keep mappings between a master identity and a set of device identities
-    master_identity: Option<Box<dyn IdentityApi>>,
+    master_identity: Option<Box<dyn Identity>>,
 }
 
 impl api::AdminManager for AdminManager {
@@ -15,8 +15,8 @@ impl api::AdminManager for AdminManager {
         &mut self,
         name: String,
         seed: &SeedPhrase,
-    ) -> api::AdminManagerResult<Box<dyn IdentityApi>> {
-        let identity = Identity::new(
+    ) -> api::AdminManagerResult<Box<dyn Identity>> {
+        let identity = Ed25519Bip32Identity::new(
             api::IdentityType::Master,
             name,
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
@@ -46,7 +46,7 @@ impl api::AdminManager for AdminManager {
             .map(SeedPhrase::from)
     }
 
-    fn get_master_identity(&mut self) -> &mut Option<Box<dyn IdentityApi>> {
+    fn get_master_identity(&mut self) -> &mut Option<Box<dyn Identity>> {
         &mut self.master_identity
     }
 }
