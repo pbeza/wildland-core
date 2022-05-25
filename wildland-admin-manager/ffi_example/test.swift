@@ -1,9 +1,9 @@
 print("Hello World Swift");
 
-var admin_manager = get_admin_instance();
-admin_manager.deref().print_foo();
+var custom_struct = get_custom_instance();
+custom_struct.deref().print_foo();
 
-for v in get_admin_instances_vector() {
+for v in get_custom_instances_vector() {
     v.deref().print_foo()
 }
 

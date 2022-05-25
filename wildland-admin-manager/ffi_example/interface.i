@@ -2,7 +2,7 @@
 
 // The following lines will be added to generated wrapper file.
 %{
-#include "mod.rs.h"
+#include "ffi.rs.h"
 #include "cxx.h"
 %}
 
@@ -74,10 +74,13 @@ typedef unsigned char uint8_t;
 
 
 // Inlcude the generated C++ API
-%include "mod.rs.h"
+%include "ffi.rs.h"
 
 
 // We have to instantiate templates that we use.
 // TODO: Extend the comment to this section with some instructions.
-// %template(StringVector) ::rust::cxxbridge1::Vec<::rust::cxxbridge1::String>;
-// %template(ByteVector) ::rust::cxxbridge1::Vec<::std::uint8_t>;
+%template(StringVector) ::rust::cxxbridge1::Vec<::rust::cxxbridge1::String>;
+%template(ByteVector) ::rust::cxxbridge1::Vec<::std::uint8_t>;
+%template(CustomRefsVecBoxed) ::rust::cxxbridge1::Box<::wildland::RcRefCustomManager>;
+%template(ArrayCustomManagerBoxed) ::rust::cxxbridge1::Box<::wildland::ArrayCustomManager>;
+%template(CustomRefs) ::rust::cxxbridge1::Box<::wildland::RcRefCustomManager>;

@@ -1,9 +1,9 @@
 #[cfg(feature = "cxx_binding")]
 fn main() {
-    cxx_build::bridge("src/ffi.rs")
+    cxx_build::bridge("src/ffi/mod.rs")
         .flag_if_supported("-std=c++14")
-        .compile("admin_demo");
-    println!("cargo:rerun-if-changed=src/ffi.rs");
+        .compile("wildland");
+    println!("cargo:rerun-if-changed=src/ffi/mod.rs");
 }
 
 #[cfg(feature = "swift_binding")]
@@ -11,7 +11,7 @@ fn main() {
     use std::path::PathBuf;
     let out_dir = PathBuf::from("./wildland_swift");
 
-    let bridges = vec!["src/ffi.rs"];
+    let bridges = vec!["src/ffi/mod.rs"];
     for path in &bridges {
         println!("cargo:rerun-if-changed={}", path);
     }

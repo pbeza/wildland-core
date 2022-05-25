@@ -5,11 +5,11 @@ public class main {
      System.out.println("Hello World Java");
      System.loadLibrary("wildland");
      
-     var admin_manager = wildland.get_admin_instance();
-     admin_manager.deref().print_foo();
+     var custom_struct = wildland.get_custom_instance();
+     custom_struct.deref().print_foo();
 
-     var admin_manager_vector = wildland.get_admin_instances_vector();
-     admin_manager_vector.at(0).deref().print_foo();
+     var custom_struct_vector = wildland.get_custom_instances_vector();
+     custom_struct_vector.at(0).deref().print_foo();
      
      System.out.println(wildland.return_string().c_str());
      

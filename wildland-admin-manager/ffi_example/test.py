@@ -10,11 +10,11 @@ def deref_ptr(ptr, typ):
 
 #####
 
-admin_manager = wildland.get_admin_instance()
-admin_manager.deref().print_foo()
+custom_struct = wildland.get_custom_instance()
+custom_struct.deref().print_foo()
 
-vector_admin_manager = wildland.get_admin_instances_vector()
-vector_admin_manager.at(0).deref().print_foo()
+vector_custom_struct = wildland.get_custom_instances_vector()
+vector_custom_struct.at(0).deref().print_foo()
 
 #####
 
