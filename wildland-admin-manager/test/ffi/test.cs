@@ -6,8 +6,8 @@ namespace Main
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("C# FFI Testsuite");
-        
+            Console.WriteLine("C# FFI Test Suite");
+
             var admin_manager = wildland.create_admin_manager();
             var seed_result = wildland.create_seed_phrase();
             if (seed_result.is_ok()) {
@@ -17,7 +17,7 @@ namespace Main
                 Console.WriteLine(identity.get_name().c_str());
                 identity.set_name(new RustString("name 2"));
                 Console.WriteLine(identity.get_name().c_str());
-            
+
                 var identity_opt = admin_manager.get_master_identity(); // second ref to the same identity
                 if (identity_opt.is_some()) {
                     var identity_second_ref = identity_opt.unwrap();
@@ -33,7 +33,7 @@ namespace Main
             if (sending_result.is_ok()) {
                 var verification_result = admin_manager.verify_email(new RustString("123456"));
                 if (verification_result.is_ok()) {
-                    Console.WriteLine("Verification successfull");
+                    Console.WriteLine("Verification successful");
                 } else {
                     Console.WriteLine(verification_result.unwrap_err().to_string().c_str());
                 }
