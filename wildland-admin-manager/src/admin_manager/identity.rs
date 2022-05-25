@@ -9,7 +9,6 @@ pub struct Identity {
     name: String,
     inner_identity: CryptoIdentity,
 }
-
 impl Display for Identity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -40,28 +39,30 @@ impl Identity {
             inner_identity,
         }
     }
+}
 
-    // fn get_pubkey(&self) -> Vec<u8> {
-    //     todo!() // TODO
-    // }
+impl api::IdentityApi for Identity {
+    fn get_pubkey(&self) -> Vec<u8> {
+        todo!() // TODO
+    }
 
-    // fn get_fingerprint(&self) -> Vec<u8> {
-    //     todo!() // TODO
-    // }
+    fn get_fingerprint(&self) -> Vec<u8> {
+        todo!() // TODO
+    }
 
-    // fn get_identity_type(&self) -> api::IdentityType {
-    //     self.identity_type
-    // }
+    fn get_identity_type(&self) -> api::IdentityType {
+        self.identity_type
+    }
 
-    // fn get_seed_phrase(&self) -> SeedPhraseWords {
-    //     self.inner_identity.get_seed_phrase()
-    // }
+    fn get_seed_phrase(&self) -> SeedPhraseWords {
+        self.inner_identity.get_seed_phrase()
+    }
 
-    pub fn get_name(&self) -> String {
+    fn get_name(&self) -> String {
         self.name.clone()
     }
 
-    pub fn set_name(&mut self, name: String) {
+    fn set_name(&mut self, name: String) {
         self.name = name;
     }
 }

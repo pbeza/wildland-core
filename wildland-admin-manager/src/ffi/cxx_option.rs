@@ -1,6 +1,7 @@
-pub struct CxxRefOption<'a, T>(pub &'a mut Option<T>);
+#[derive(Debug)]
+pub struct CxxOption<T>(Option<T>);
 
-impl<'a, T: Clone + std::fmt::Debug> CxxRefOption<'a, T> {
+impl<T> CxxOption<T> {
     pub fn is_some(&self) -> bool {
         self.0.is_some()
     }
@@ -10,8 +11,8 @@ impl<'a, T: Clone + std::fmt::Debug> CxxRefOption<'a, T> {
     }
 }
 
-impl<'a, T> From<&'a mut Option<T>> for CxxRefOption<'a, T> {
-    fn from(opt: &'a mut Option<T>) -> Self {
-        CxxRefOption(opt)
+impl<T> From<Option<T>> for CxxOption<T> {
+    fn from(opt: Option<T>) -> Self {
+        CxxOption(opt)
     }
 }

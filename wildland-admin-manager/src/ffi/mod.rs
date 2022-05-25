@@ -1,4 +1,5 @@
 mod cxx_admin_manager;
+mod cxx_identity;
 mod cxx_option;
 mod cxx_result;
 
@@ -7,13 +8,12 @@ use crate::{
     api::{AdminManagerError, SeedPhrase},
 };
 use cxx_admin_manager::*;
-use cxx_option::*;
+use cxx_identity::*;
 use cxx_result::*;
 
 type SeedPhraseResult = CxxResult<SeedPhrase>;
-type IdentityResult = CxxResult<Identity>;
-pub type OptionalIdentity<'a> = CxxRefOption<'a, Identity>;
 
+#[allow(clippy::needless_lifetimes)]
 #[cxx::bridge(namespace = "cargo::api")]
 mod api {
     extern "Rust" {
@@ -35,10 +35,12 @@ mod api {
         type Identity;
         type IdentityResult;
         type OptionalIdentity<'a>;
+        type DynIdentity;
+        type CxxDynIdentity<'a>;
         fn is_some(self: &OptionalIdentity) -> bool;
-        unsafe fn unwrap<'a>(self: &'a mut OptionalIdentity<'a>) -> &'a mut Identity;
-        fn set_name(self: &mut Identity, name: String);
-        fn get_name(self: &Identity) -> String;
+        unsafe fn unwrap<'a>(self: &'a mut OptionalIdentity<'a>) -> &'a mut CxxDynIdentity;
+        fn set_name(self: &mut CxxDynIdentity, name: String);
+        fn get_name(self: &CxxDynIdentity) -> String;
 
         type SeedPhrase;
         fn get_string(self: &SeedPhrase) -> String;

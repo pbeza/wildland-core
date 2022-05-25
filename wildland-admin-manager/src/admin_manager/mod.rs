@@ -1,20 +1,13 @@
 mod identity;
 
-use crate::api::{self, AdminManagerError, SeedPhrase};
+use crate::api::{self, AdminManagerError, IdentityApi, SeedPhrase};
 pub use identity::Identity;
 
+#[derive(Default)]
 pub struct AdminManager {
     // TODO do we want to store more than one master identity
     // TODO do we want to keep mappings between a master identity and a set of device identities
-    master_identity: Option<Identity>,
-}
-
-impl Default for AdminManager {
-    fn default() -> Self {
-        Self {
-            master_identity: Default::default(),
-        }
-    }
+    master_identity: Option<Box<dyn IdentityApi>>,
 }
 
 impl api::AdminManager for AdminManager {
@@ -22,29 +15,30 @@ impl api::AdminManager for AdminManager {
         &mut self,
         name: String,
         seed: &SeedPhrase,
-    ) -> api::AdminManagerResult<Identity> {
+    ) -> api::AdminManagerResult<Box<dyn IdentityApi>> {
         let identity = Identity::new(
             api::IdentityType::Master,
             name,
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
         );
-        self.master_identity = Some(identity.clone()); // TODO Can user have multiple master identities? If not should it be overwritten?
-        Ok(identity) // TODO return ref
+        self.master_identity = Some(Box::new(identity.clone())); // TODO Can user have multiple master identities? If not should it be overwritten?
+        Ok(Box::new(identity)) // TODO return ref
     }
 
-    fn create_device_identity_from_seed_phrase(
-        &mut self,
-        name: String,
-        seed: &SeedPhrase,
-    ) -> api::AdminManagerResult<Identity> {
-        let identity = Identity::new(
-            api::IdentityType::Device,
-            name,
-            wildland_corex::try_identity_from_seed(seed.as_ref())?,
-        );
-        // TODO keep it somehow?
-        Ok(identity) // TODO return ref
-    }
+    // fn create_device_identity_from_seed_phrase(
+    //     &mut self,
+    //     name: String,
+    //     seed: &SeedPhrase,
+    // ) -> api::AdminManagerResult<Identity> {
+    //     // let identity = Identity::new(
+    //     //     api::IdentityType::Device,
+    //     //     name,
+    //     //     wildland_corex::try_identity_from_seed(seed.as_ref())?,
+    //     // );
+    //     let identity = Identity::new(api::IdentityType::Device, name, seed);
+    //     // TODO keep it somehow?
+    //     Ok(identity) // TODO return ref
+    // }
 
     fn create_seed_phrase() -> api::AdminManagerResult<SeedPhrase> {
         wildland_corex::generate_random_seed_phrase()
@@ -52,7 +46,7 @@ impl api::AdminManager for AdminManager {
             .map(SeedPhrase::from)
     }
 
-    fn get_master_identity(&mut self) -> &mut Option<Identity> {
+    fn get_master_identity(&mut self) -> &mut Option<Box<dyn IdentityApi>> {
         &mut self.master_identity
     }
 }

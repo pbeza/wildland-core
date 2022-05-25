@@ -1,16 +1,15 @@
 use crate::api::{AdminManagerError, AdminManagerResult};
 use std::fmt::Debug;
 
-#[derive(Debug)]
-pub struct CxxResult<T: Debug>(AdminManagerResult<T>);
+pub struct CxxResult<T>(AdminManagerResult<T>);
 
-impl<T: Debug> From<AdminManagerResult<T>> for CxxResult<T> {
+impl<T> From<AdminManagerResult<T>> for CxxResult<T> {
     fn from(res: AdminManagerResult<T>) -> Self {
         CxxResult(res)
     }
 }
 
-impl<T: Clone + std::fmt::Debug> CxxResult<T> {
+impl<T: Debug> CxxResult<T> {
     pub fn is_ok(&self) -> bool {
         self.0.is_ok()
     }

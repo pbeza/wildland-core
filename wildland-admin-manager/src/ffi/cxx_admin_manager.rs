@@ -1,4 +1,4 @@
-use super::{IdentityResult, OptionalIdentity, SeedPhraseResult};
+use super::{CxxDynIdentity, IdentityResult, OptionalIdentity, SeedPhraseResult};
 use crate::{admin_manager::AdminManager, api::AdminManager as AdminManagerApi, api::SeedPhrase};
 
 pub struct CxxAdminManager(AdminManager);
@@ -17,14 +17,12 @@ impl CxxAdminManager {
         name: String,
         seed: &SeedPhrase,
     ) -> Box<IdentityResult> {
-        Box::new(
-            self.0
-                .create_master_identity_from_seed_phrase(name, seed)
-                .into(),
-        )
+        let inner = self.0.create_master_identity_from_seed_phrase(name, seed);
+        Box::new(inner.into())
     }
 
     pub fn get_master_identity(self: &mut CxxAdminManager) -> Box<OptionalIdentity> {
-        Box::new(self.0.get_master_identity().into())
+        let id = self.0.get_master_identity().as_mut().map(CxxDynIdentity);
+        Box::new(id.into())
     }
 }
