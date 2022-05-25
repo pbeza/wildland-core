@@ -1,7 +1,7 @@
 mod identity;
 
 use crate::api::{self, AdminManagerError, Identity, SeedPhrase};
-pub use identity::Ed25519Bip32Identity;
+pub use identity::CryptoIdentity;
 
 #[derive(Default)]
 pub struct AdminManager {
@@ -16,7 +16,7 @@ impl api::AdminManager for AdminManager {
         name: String,
         seed: &SeedPhrase,
     ) -> api::AdminManagerResult<&mut Box<dyn Identity>> {
-        let identity = Ed25519Bip32Identity::new(
+        let identity = CryptoIdentity::new(
             api::IdentityType::Master,
             name,
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
@@ -25,19 +25,6 @@ impl api::AdminManager for AdminManager {
         Ok(self.master_identity.as_mut().unwrap())
     }
 
-    // fn create_device_identity_from_seed_phrase(
-    //     &mut self,
-    //     name: String,
-    //     seed: &SeedPhrase,
-    // ) -> api::AdminManagerResult<Identity> {
-    //     // let identity = Identity::new(
-    //     //     api::IdentityType::Device,
-    //     //     name,
-    //     //     wildland_corex::try_identity_from_seed(seed.as_ref())?,
-    //     // );
-    //     let identity = Identity::new(api::IdentityType::Device, name, seed);
-    //     // TODO keep it somehow?
-    //     Ok(identity) // TODO return ref
     // }
 
     fn create_seed_phrase() -> api::AdminManagerResult<SeedPhrase> {

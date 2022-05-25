@@ -1,16 +1,16 @@
 use crate::api;
 use std::fmt::Display;
-use wildland_corex::Identity as CryptoIdentity;
+use wildland_corex::Identity;
 pub use wildland_corex::{SeedPhraseWords, SEED_PHRASE_LEN};
 
 #[derive(Clone, Debug)]
 // TODO I had no idea how to name that specific Identity implementation
-pub struct Ed25519Bip32Identity {
+pub struct CryptoIdentity {
     identity_type: api::IdentityType,
     name: String,
-    inner_identity: CryptoIdentity,
+    inner_identity: Identity,
 }
-impl Display for Ed25519Bip32Identity {
+impl Display for CryptoIdentity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -28,12 +28,8 @@ Seed phrase: {}
     }
 }
 
-impl Ed25519Bip32Identity {
-    pub fn new(
-        identity_type: api::IdentityType,
-        name: String,
-        inner_identity: CryptoIdentity,
-    ) -> Self {
+impl CryptoIdentity {
+    pub fn new(identity_type: api::IdentityType, name: String, inner_identity: Identity) -> Self {
         Self {
             identity_type,
             name,
@@ -42,7 +38,7 @@ impl Ed25519Bip32Identity {
     }
 }
 
-impl api::Identity for Ed25519Bip32Identity {
+impl api::Identity for CryptoIdentity {
     fn get_pubkey(&self) -> Vec<u8> {
         todo!() // TODO
     }

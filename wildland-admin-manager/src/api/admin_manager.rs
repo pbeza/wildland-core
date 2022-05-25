@@ -9,14 +9,6 @@ pub trait AdminManager {
         seed: &SeedPhrase,
     ) -> AdminManagerResult<&mut Box<dyn Identity>>;
 
-    /// Creates a device identity based on the provided seed phrase (whether it's a newly
-    /// generated seed phrase or manually entered in the recovery flow.
-    // fn create_device_identity_from_seed_phrase(
-    //     &mut self,
-    //     name: String,
-    //     seed: &SeedPhrase,
-    // ) -> AdminManagerResult<Box<dyn Identity>>;
-
     /// Creates a randomly generated seed phrase
     fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
 
