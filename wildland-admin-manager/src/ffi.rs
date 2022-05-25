@@ -64,7 +64,6 @@ impl<T> Array<T> {
 ///
 /// Result wrapper
 /// 
-// pub struct Result<Res, Err>
 
 //
 // All templated types have to be manually instantiated (cxx.rs constraint)
@@ -91,7 +90,7 @@ mod ffi_definition {
 
         // Array<AdminManager> declarations
         type ArrayAdminManager;
-        fn at(self: &ArrayAdminManager, elem: usize) -> Box<RcRefAdminManager>;
+        fn at(self: &ArrayAdminManager, elem: usize) ->  Box<RcRefAdminManager>;
         fn size(self: &ArrayAdminManager) -> usize;
 
         // Static functions declarations
@@ -189,9 +188,4 @@ pub fn get_admin_instances_vector() -> Vec<RcRefAdminManager> {
 #[cfg(feature = "cxx_binding")]
 pub fn get_admin_instances_vector() -> Box<ArrayAdminManager> {
     Array::new_boxed(vec![RcRef::new(AdminManager::default())])
-}
-
-
-pub fn get_some_result() -> Result<String, AdminManagerError> {
-    Ok("asdf".to_owned())
 }

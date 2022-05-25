@@ -16,7 +16,7 @@ typedef unsigned char uint8_t;
 %}
 
 
-// The is_complete structure is not parsed by SWIG, so omit this
+// The is_complete structure can't be parsed by SWIG, so let's omit this
 // during the process
 %define CXXBRIDGE1_IS_COMPLETE; %enddef
 
@@ -28,12 +28,30 @@ typedef unsigned char uint8_t;
 // String class in Java and C#
 %rename(RustString) String;
 
-// Ignore unused cxx.rs structs
+// Ignore unused cxx.rs structs internal structs (that are actually
+// problematic during the parsing process for SWIG).
 %ignore unsafe_bitcopy_t;
 %ignore Opaque;
 %ignore layout;
 
-// We can't create Opaque types in cxx.rs
+
+// We don't use this constructors, so it's better not to generate
+// unused code and opaque types in the target languages.
+%ignore cbegin;    // It's not that simple to provide users with iterators
+%ignore cend;
+%ignore begin;
+%ignore end;
+%ignore data;
+%ignore Vec(unsafe_bitcopy_t, const Vec &);
+%ignore Vec(std::initializer_list<T>);
+%ignore String(unsafe_bitcopy_t, const String &);
+%ignore String(const char *, std::size_t);
+%ignore String(const char16_t *, std::size_t);
+
+// We can't create and copy Opaque types in CXX.RS, but we want to
+// return Box<T>, where T is an Opaque type. Hence we have to drop
+// the Box copy and move constructors in order to use Boxes in 
+// the target languages.
 %ignore Box(const T &);
 %ignore Box(T &&);
 
@@ -41,6 +59,7 @@ typedef unsigned char uint8_t;
 // The following typemap introduce move semantics in the generated code.
 // It is necessary when one need to create a type returned by value
 // from Rust and which doesn't support copy constructor (like Box).
+// TODO: Extend the comment to this section
 %typemap(java, out, optimal="1") SWIGTYPE %{
   $result = new $1_ltype(( $1_ltype &&)$1);
 %}
@@ -53,11 +72,13 @@ typedef unsigned char uint8_t;
   $result = SWIG_NewPointerObj((new $1_ltype(static_cast< $1_ltype&&  >($1))), $&1_descriptor, SWIG_POINTER_OWN |  0 );
 %}
 
+
 // Inlcude the generated C++ API
 %include "ffi.rs.h"
 
 
 // We have to instantiate templates that we use.
+// TODO: Extend the comment to this section with some instructions.
 %template(StringVector) ::rust::cxxbridge1::Vec<::rust::cxxbridge1::String>;
 %template(ByteVector) ::rust::cxxbridge1::Vec<::std::uint8_t>;
 %template(AdminRefsVecBoxed) ::rust::cxxbridge1::Box<::wildland::RcRefAdminManager>;
