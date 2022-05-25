@@ -16,8 +16,11 @@ impl CxxAdminManager {
         self: &mut CxxAdminManager,
         name: String,
         seed: &SeedPhrase,
-    ) -> Box<IdentityResult> {
-        let inner = self.0.create_master_identity_from_seed_phrase(name, seed);
+    ) -> Box<IdentityResult<'_>> {
+        let inner = self
+            .0
+            .create_master_identity_from_seed_phrase(name, seed)
+            .map(CxxDynIdentity);
         Box::new(inner.into())
     }
 

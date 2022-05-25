@@ -15,14 +15,14 @@ impl api::AdminManager for AdminManager {
         &mut self,
         name: String,
         seed: &SeedPhrase,
-    ) -> api::AdminManagerResult<Box<dyn Identity>> {
+    ) -> api::AdminManagerResult<&mut Box<dyn Identity>> {
         let identity = Ed25519Bip32Identity::new(
             api::IdentityType::Master,
             name,
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
         );
-        self.master_identity = Some(Box::new(identity.clone())); // TODO Can user have multiple master identities? If not should it be overwritten?
-        Ok(Box::new(identity)) // TODO return ref
+        self.master_identity = Some(Box::new(identity)); // TODO Can user have multiple master identities? If not should it be overwritten?
+        Ok(self.master_identity.as_mut().unwrap())
     }
 
     // fn create_device_identity_from_seed_phrase(

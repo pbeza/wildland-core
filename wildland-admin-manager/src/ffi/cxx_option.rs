@@ -6,7 +6,7 @@ impl<T> CxxOption<T> {
         self.0.is_some()
     }
 
-    pub fn unwrap(&mut self) -> &mut T {
+    pub fn unwrap_mut(&mut self) -> &mut T {
         self.0.as_mut().unwrap()
     }
 }

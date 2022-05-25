@@ -17,11 +17,11 @@ mod api {
         type CxxAdminManager;
         fn create_admin_manager() -> Box<CxxAdminManager>;
         fn get_master_identity(self: &mut CxxAdminManager) -> Box<OptionalIdentity>;
-        fn create_master_identity_from_seed_phrase(
-            self: &mut CxxAdminManager,
+        unsafe fn create_master_identity_from_seed_phrase<'a>(
+            self: &'a mut CxxAdminManager,
             name: String,
             seed: &SeedPhrase,
-        ) -> Box<IdentityResult>;
+        ) -> Box<IdentityResult<'a>>;
 
         type SeedPhraseResult;
         fn create_seed_phrase() -> Box<SeedPhraseResult>;
@@ -29,12 +29,13 @@ mod api {
         fn unwrap(self: &SeedPhraseResult) -> &SeedPhrase;
         fn unwrap_err(self: &SeedPhraseResult) -> &AdminManagerError;
 
-        type IdentityResult;
+        type IdentityResult<'a>;
+        unsafe fn unwrap_mut<'a>(self: &'a mut IdentityResult<'a>) -> &'a mut CxxDynIdentity<'a>;
         type OptionalIdentity<'a>;
         type DynIdentity;
         type CxxDynIdentity<'a>;
         fn is_some(self: &OptionalIdentity) -> bool;
-        unsafe fn unwrap<'a>(self: &'a mut OptionalIdentity<'a>) -> &'a mut CxxDynIdentity;
+        unsafe fn unwrap_mut<'a>(self: &'a mut OptionalIdentity<'a>) -> &'a mut CxxDynIdentity;
         fn set_name(self: &mut CxxDynIdentity, name: String);
         fn get_name(self: &CxxDynIdentity) -> String;
 

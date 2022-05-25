@@ -18,6 +18,10 @@ impl<T: Debug> CxxResult<T> {
         self.0.as_ref().unwrap()
     }
 
+    pub fn unwrap_mut(&mut self) -> &mut T {
+        self.0.as_mut().unwrap()
+    }
+
     pub fn unwrap_err(&self) -> &AdminManagerError {
         self.0.as_ref().unwrap_err()
     }

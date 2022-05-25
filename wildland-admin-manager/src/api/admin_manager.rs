@@ -7,7 +7,7 @@ pub trait AdminManager {
         &mut self,
         name: String,
         seed: &SeedPhrase,
-    ) -> AdminManagerResult<Box<dyn Identity>>;
+    ) -> AdminManagerResult<&mut Box<dyn Identity>>;
 
     /// Creates a device identity based on the provided seed phrase (whether it's a newly
     /// generated seed phrase or manually entered in the recovery flow.
