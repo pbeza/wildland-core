@@ -16,7 +16,7 @@ int main()
         std::cout << "Generated seed: " << seed_str << std::endl;
 
         auto words_vec = seed_ok_ref.get_vec();
-        for (auto &word : words_vec) // rust Vec can be used similarly as the std::vector
+        for (auto &word : words_vec) // rust Vec can be used similarly as the std::vector (Opaque types inside vector are not supported)
         {
             std::cout << std::string(word) << std::endl;
         }
