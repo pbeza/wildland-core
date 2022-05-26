@@ -1,10 +1,10 @@
 [package]
 name = "wildland-admin-manager-api"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 thiserror = "1.0.31"
-wildland-corex = { version = "0.1.5", path = "../wildland-corex", registry = "wl-dev" }
+wildland-corex = { version = "0.1.7", path = "../wildland-corex", registry = "wl-dev" }
