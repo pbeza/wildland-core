@@ -107,18 +107,15 @@ pub fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String) {
     println!("{:?}", d);
 }
 
-// TODO:
-// Why swift-bridge don't have a problem with Boxed type.
-// Details:
-// * Declaration of `get_admin_instance` in swift FFI
-//   returns `RcRefCustomStruct` instead of `Box<RcRefCustomStruct>`.
-//   Is it type-related? If every returned type is treated as a pointer
-//   then there's no problem. What if some FFI method will be translated
-//   by swift-bridge to receive the returned value by copy not by pointer?
-//   Is this scenario possible?
-// pub fn get_admin_instance() -> Box<RcRefCustomStruct> {
-//     RcRef::new_boxed(CustomStruct::default())
-// }
+#[cfg(feature = "swift_binding")]
+pub fn get_admin_instance() -> RcRefCustomStruct {
+    RcRef::new(CustomStruct::default())
+}
+
+#[cfg(feature = "cxx_binding")]
+pub fn get_admin_instance() -> Box<RcRefCustomStruct> {
+    RcRef::new_boxed(CustomStruct::default())
+}
 
 #[cfg(feature = "swift_binding")]
 pub fn get_admin_instances_vector() -> Vec<RcRefCustomStruct> {

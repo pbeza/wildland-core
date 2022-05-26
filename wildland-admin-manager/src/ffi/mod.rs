@@ -1,6 +1,5 @@
-mod rcref;
 mod array;
-
+mod rcref;
 
 #[cfg(feature = "cxx_binding")]
 #[cxx::bridge(namespace = "wildland")]
@@ -18,6 +17,7 @@ mod ffi_definition {
     }
 }
 
+#[allow(dead_code)]
 fn test() {
     println!("Hello World!");
 }

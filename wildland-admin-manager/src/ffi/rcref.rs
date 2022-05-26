@@ -8,19 +8,21 @@
 /// no other reference (on both sides - Rust and the target lang)
 /// available.
 ///
-
 use std::sync::Arc;
 
 pub struct RcRef<T>(Arc<T>);
 impl<T> RcRef<T> {
+    #[allow(dead_code)]
     fn new(obj: T) -> RcRef<T> {
         RcRef::<T>(Arc::new(obj))
     }
 
+    #[allow(dead_code)]
     fn new_boxed(obj: T) -> Box<RcRef<T>> {
         Box::new(RcRef::<T>(Arc::new(obj)))
     }
 
+    #[allow(dead_code)]
     fn deref(&self) -> &T {
         &self.0
     }
