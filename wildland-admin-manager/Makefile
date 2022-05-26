@@ -1,12 +1,26 @@
 .PHONY: prepare java csharp clean
 
 
-# Override the following paths in order
-# to point the proper folder with inlcude files:
+#############################################
+# Override the following variables if needed:
+#############################################
+# Java includes
 JDK_INC_DIR=/usr/lib/jvm/java-17-openjdk-17.0.3.0.7-1.fc35.x86_64/include
+
+# Python includes
 PYTHON_DIR=/usr/include/python3.10/
 
+# `g++` for Linux, `clang++` for Windows (TODO: to be checked.)
+CC=g++
 
+# `mono` for Linux, nothing (empty) for Windows
+CSHARP_RUN=mono
+
+# `mcs` for Linux, `csc` for Windows
+CSHARP_COMPILE=mcs
+#############################################
+#############################################
+#############################################
 
 # Those paths should not be changed:
 CXX_OUT=../target/cxxbridge/wildland-admin-manager/src/ffi
@@ -40,7 +54,7 @@ java: prepare
 	mkdir -p wildland_java
 	cd cpp ; swig -java -c++ -w516,503,476,302 -outdir ../wildland_java ../wildland.i
 	mv wildland_wrap.cxx cpp/wildland_wrap.cxx
-	cd cpp ; g++ -fpermissive -shared -fPIC --std=c++14 -w \
+	cd cpp ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
 		wildland_wrap.cxx mod.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
@@ -57,7 +71,7 @@ csharp: prepare
 	mkdir -p wildland_csharp
 	cd cpp ; swig -csharp -c++ -w516,503,476,302 -outdir ../wildland_csharp ../wildland.i
 	mv wildland_wrap.cxx cpp/wildland_wrap.cxx
-	cd cpp ; g++ -fpermissive -shared -fPIC --std=c++14 -w \
+	cd cpp ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
 		wildland_wrap.cxx mod.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
@@ -65,14 +79,14 @@ csharp: prepare
 
 csharp_test: csharp
 	cp test/ffi/test.cs wildland_csharp/test.cs
-	cd wildland_csharp ; mcs -out:test.exe *.cs
-	cd wildland_csharp ; mono test.exe
+	cd wildland_csharp ; $(CSHARP_COMPILE) -out:test.exe *.cs
+	cd wildland_csharp ; $(CSHARP_RUN) test.exe
 
 python: prepare
 	mkdir -p wildland_python
 	cd cpp ; swig -python -c++ -w516,503,476,302,383,509 -outdir ../wildland_python ../wildland.i
 	mv wildland_wrap.cxx cpp/wildland_wrap.cxx
-	cd cpp ; g++ -fpermissive -shared -fPIC --std=c++14 -w \
+	cd cpp ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
 		wildland_wrap.cxx mod.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
