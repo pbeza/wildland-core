@@ -31,6 +31,7 @@ mod ffi_cxx {
         fn unwrap_err(self: &SeedPhraseResult) -> &AdminManagerError;
 
         type IdentityResult<'a>;
+        unsafe fn unwrap<'a>(self: &'a IdentityResult<'a>) -> &'a CxxDynIdentity<'a>;
         unsafe fn unwrap_mut<'a>(self: &'a mut IdentityResult<'a>) -> &'a mut CxxDynIdentity<'a>;
         type OptionalIdentity<'a>;
         type DynIdentity;
