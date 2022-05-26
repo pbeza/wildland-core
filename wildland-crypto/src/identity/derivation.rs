@@ -27,11 +27,11 @@ use crate::{
     },
 };
 
-use bip39::Mnemonic;
+use bip39::{Language::English, Mnemonic, Seed};
 use cryptoxide::ed25519::keypair;
 use ed25519_bip32::{DerivationScheme, XPrv};
 use sha2::{Digest, Sha256};
-use std::{convert::TryFrom, str::FromStr};
+use std::convert::TryFrom;
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
@@ -63,7 +63,7 @@ impl TryFrom<SeedPhraseWords> for Identity {
     type Error = CryptoError;
 
     fn try_from(seed_phrase: SeedPhraseWords) -> Result<Self, Self::Error> {
-        let mnemonic = Mnemonic::from_str(&seed_phrase.join(" "))
+        let mnemonic = Mnemonic::from_phrase(&seed_phrase.join(" "), English)
             .map_err(|e| CryptoError::IdentityGenerationError(e.to_string()))?;
         Self::try_from(mnemonic)
     }
@@ -80,7 +80,7 @@ impl TryFrom<Mnemonic> for Identity {
         // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
         // We don't need them here.
         let passphrase = "";
-        let seed = mnemonic.to_seed_normalized(passphrase);
+        let seed = Seed::new(&mnemonic, passphrase);
         // Seed here is randomness of high quality (it is hard to guess).
         // But we only have 64 bytes of it, and we need extra 32 bytes for
         // BIP32's "chain code", which should satisfy following requirements:
@@ -98,7 +98,8 @@ impl TryFrom<Mnemonic> for Identity {
         Ok(Identity {
             xprv: root_xprv,
             words: mnemonic
-                .word_iter()
+                .phrase()
+                .split(' ')
                 .map(|word| word.to_owned())
                 .collect::<Vec<_>>()
                 .try_into()
@@ -134,7 +135,7 @@ impl Identity {
         let mut hasher = Sha256::new();
         hasher.update(entropy);
         let hashed_entropy = hasher.finalize();
-        let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16]).unwrap();
+        let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16], English).unwrap();
         Self::try_from(mnemonic)
     }
 
@@ -207,9 +208,7 @@ impl Identity {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use crate::common::test_utilities::generate_random_nonce;
+    use crate::common::test_utilities::{generate_random_nonce, MNEMONIC_PHRASE};
     use ed25519_bip32::XPrv;
     use hex::encode;
     use hex_literal::hex;
@@ -217,10 +216,9 @@ mod tests {
     use super::*;
 
     const MSG: &[u8] = b"Hello World";
-    const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
     fn user() -> Identity {
-        let mnemonic = Mnemonic::from_str(MNEMONIC).unwrap();
+        let mnemonic = Mnemonic::from_phrase(MNEMONIC_PHRASE, English).unwrap();
         Identity::try_from(mnemonic).unwrap()
     }
 
