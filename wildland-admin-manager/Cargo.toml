@@ -9,8 +9,12 @@ homepage = "https://wildland.io/"
 description = "Wildland Admin Manager"
 keywords = ["storage"]
 publish = ["wl-dev"]
+build = "build.rs"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["staticlib", "lib"]
+
 
 [dependencies]
 wildland-corex = { version = "0.1.5", path = "../wildland-corex", registry = "wl-dev" }
@@ -18,5 +22,15 @@ wildland-admin-manager-api = { version = "0.2.0", path = "../wildland-admin-mana
 bip39 = { version = "1.0.1", features = ["rand"] }
 thiserror = "1.0.31"
 
+# Bindings generators:
+cxx = { version = "1.0" }
+swift-bridge = { version = "0.1" }
+
+
 [package.metadata.workspaces]
 independent = true
+
+
+[build-dependencies]
+cxx-build = { version = "1.0" }
+swift-bridge-build = { version = "0.1" }
