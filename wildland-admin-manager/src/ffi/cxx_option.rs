@@ -6,8 +6,11 @@ impl<T> CxxOption<T> {
         self.0.is_some()
     }
 
-    pub fn unwrap_mut(&mut self) -> &mut T {
-        self.0.as_mut().unwrap()
+    // SWIG treat all references as mutable so there is no need to provide many unwrap methods
+    // like e.g. unwrap for &ref and unwrap_mut for &mut ref
+    // In C++ though, there is no possibility to obtain mutable reference without additional method
+    pub fn unwrap(&self) -> &T {
+        self.0.as_ref().unwrap()
     }
 }
 

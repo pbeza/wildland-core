@@ -32,12 +32,11 @@ mod ffi_cxx {
 
         type IdentityResult<'a>;
         unsafe fn unwrap<'a>(self: &'a IdentityResult<'a>) -> &'a CxxDynIdentity<'a>;
-        unsafe fn unwrap_mut<'a>(self: &'a mut IdentityResult<'a>) -> &'a mut CxxDynIdentity<'a>;
         type OptionalIdentity<'a>;
         type DynIdentity;
         type CxxDynIdentity<'a>;
         fn is_some(self: &OptionalIdentity) -> bool;
-        unsafe fn unwrap_mut<'a>(self: &'a mut OptionalIdentity<'a>) -> &'a mut CxxDynIdentity;
+        unsafe fn unwrap<'a>(self: &'a mut OptionalIdentity<'a>) -> &CxxDynIdentity;
         fn set_name(self: &mut CxxDynIdentity, name: String);
         fn get_name(self: &CxxDynIdentity) -> String;
 
