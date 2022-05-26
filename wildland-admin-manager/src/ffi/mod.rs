@@ -1,7 +1,9 @@
+mod array;
 mod cxx_admin_manager;
 mod cxx_identity;
 mod cxx_option;
 mod cxx_result;
+mod rcref;
 
 use crate::api::{AdminManagerError, SeedPhrase};
 use cxx_admin_manager::*;
@@ -10,9 +12,8 @@ use cxx_result::*;
 
 type SeedPhraseResult = CxxResult<SeedPhrase>;
 
-#[allow(clippy::needless_lifetimes)]
-#[cxx::bridge(namespace = "cargo::api")]
-mod api {
+#[cxx::bridge(namespace = "wildland")]
+mod ffi_cxx {
     extern "Rust" {
         type CxxAdminManager;
         fn create_admin_manager() -> Box<CxxAdminManager>;
@@ -48,4 +49,16 @@ mod api {
         fn code(self: &AdminManagerError) -> u32;
 
     }
+}
+
+#[swift_bridge::bridge]
+mod ffi_bridge {
+    extern "Rust" {
+        fn test();
+    }
+}
+
+#[allow(dead_code)]
+fn test() {
+    println!("Hello World!");
 }

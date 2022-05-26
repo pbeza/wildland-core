@@ -1,7 +1,7 @@
 #include <iostream>
 #include "../../target/cxxbridge/wildland-admin-manager/src/ffi/mod.rs.h"
 
-using namespace cargo::api;
+using namespace wildland;
 
 int main()
 {
