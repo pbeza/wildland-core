@@ -12,6 +12,7 @@ use cxx_result::*;
 
 type SeedPhraseResult = CxxResult<SeedPhrase>;
 
+#[allow(clippy::needless_lifetimes)]
 #[cxx::bridge(namespace = "wildland")]
 mod ffi_cxx {
     extern "Rust" {
