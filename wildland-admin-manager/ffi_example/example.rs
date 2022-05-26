@@ -19,9 +19,8 @@ type ArrayCustomStruct = Array<CustomStruct>;
 // The module with functions and types declarations
 // visible in wildland's clients.
 //
-#[cfg(feature = "cxx_binding")]
 #[cxx::bridge(namespace = "wildland")]
-mod ffi_definition {
+mod ffi_cxx {
     extern "Rust" {
         // CustomStruct declaration
         type CustomStruct;
@@ -44,14 +43,13 @@ mod ffi_definition {
         fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String);
 
         // TODO: this is the only difference between cxx and swift for now:
-        fn get_admin_instances_vector() -> Box<ArrayCustomStruct>;
-        fn get_admin_instance() -> Box<RcRefCustomStruct>;
+        fn get_admin_instances_vector_ref() -> Box<ArrayCustomStruct>;
+        fn get_admin_instance_ref() -> Box<RcRefCustomStruct>;
     }
 }
 
-#[cfg(feature = "swift_binding")]
 #[swift_bridge::bridge]
-mod ffi_definition {
+mod ffi_swift {
     extern "Rust" {
         type CustomStructError;
 
@@ -107,22 +105,18 @@ pub fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String) {
     println!("{:?}", d);
 }
 
-#[cfg(feature = "swift_binding")]
 pub fn get_admin_instance() -> RcRefCustomStruct {
     RcRef::new(CustomStruct::default())
 }
 
-#[cfg(feature = "cxx_binding")]
-pub fn get_admin_instance() -> Box<RcRefCustomStruct> {
+pub fn get_admin_instance_ref() -> Box<RcRefCustomStruct> {
     RcRef::new_boxed(CustomStruct::default())
 }
 
-#[cfg(feature = "swift_binding")]
 pub fn get_admin_instances_vector() -> Vec<RcRefCustomStruct> {
     vec![RcRef::new(CustomStruct::default())]
 }
 
-#[cfg(feature = "cxx_binding")]
-pub fn get_admin_instances_vector() -> Box<ArrayCustomStruct> {
+pub fn get_admin_instances_vector_ref() -> Box<ArrayCustomStruct> {
     Array::new_boxed(vec![RcRef::new(CustomStruct::default())])
 }
