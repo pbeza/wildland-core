@@ -10,20 +10,19 @@
 ///
 use std::sync::Arc;
 
-pub struct RcRef<T>(Arc<T>);
-impl<T> RcRef<T> {
+#[derive(Debug)]
+pub struct RcRef<T: ?Sized>(Arc<T>);
+impl<T: ?Sized> RcRef<T> {
     #[allow(dead_code)]
-    fn new(obj: T) -> RcRef<T> {
-        RcRef::<T>(Arc::new(obj))
+    pub fn from_arc(obj: Arc<T>) -> RcRef<T> {
+        RcRef::<T>(obj)
     }
 
-    #[allow(dead_code)]
-    fn new_boxed(obj: T) -> Box<RcRef<T>> {
-        Box::new(RcRef::<T>(Arc::new(obj)))
+    pub fn get_mut(&mut self) -> &mut T {
+        unsafe { Arc::<T>::get_mut_unchecked(&mut self.0) }
     }
 
-    #[allow(dead_code)]
-    fn deref(&self) -> &T {
+    pub fn deref(&self) -> &T {
         &self.0
     }
 }
@@ -34,7 +33,7 @@ impl<T> Clone for RcRef<T> {
     }
 }
 
-impl<T> Drop for RcRef<T> {
+impl<T: ?Sized> Drop for RcRef<T> {
     fn drop(&mut self) {
         //TODO: add logging handler
         println!("DEBUG: Droping RcRef")

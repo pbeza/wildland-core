@@ -12,18 +12,17 @@ use cxx_result::*;
 
 type SeedPhraseResult = CxxResult<SeedPhrase>;
 
-#[allow(clippy::needless_lifetimes)]
 #[cxx::bridge(namespace = "wildland")]
 mod ffi_cxx {
     extern "Rust" {
         type CxxAdminManager;
         fn create_admin_manager() -> Box<CxxAdminManager>;
         fn get_master_identity(self: &mut CxxAdminManager) -> Box<OptionalIdentity>;
-        unsafe fn create_master_identity_from_seed_phrase<'a>(
-            self: &'a mut CxxAdminManager,
+        fn create_master_identity_from_seed_phrase(
+            self: &mut CxxAdminManager,
             name: String,
             seed: &SeedPhrase,
-        ) -> Box<IdentityResult<'a>>;
+        ) -> Box<IdentityResult>;
 
         type SeedPhraseResult;
         fn create_seed_phrase() -> Box<SeedPhraseResult>;
@@ -31,13 +30,12 @@ mod ffi_cxx {
         fn unwrap(self: &SeedPhraseResult) -> &SeedPhrase;
         fn unwrap_err(self: &SeedPhraseResult) -> &AdminManagerError;
 
-        type IdentityResult<'a>;
-        unsafe fn unwrap<'a>(self: &'a IdentityResult<'a>) -> &'a CxxDynIdentity<'a>;
-        type OptionalIdentity<'a>;
-        type DynIdentity;
-        type CxxDynIdentity<'a>;
+        type IdentityResult;
+        unsafe fn unwrap(self: &IdentityResult) -> &CxxDynIdentity;
+        type OptionalIdentity;
+        type CxxDynIdentity;
         fn is_some(self: &OptionalIdentity) -> bool;
-        unsafe fn unwrap<'a>(self: &'a mut OptionalIdentity<'a>) -> &CxxDynIdentity;
+        unsafe fn unwrap(self: &OptionalIdentity) -> &CxxDynIdentity;
         fn set_name(self: &mut CxxDynIdentity, name: String);
         fn get_name(self: &CxxDynIdentity) -> String;
 

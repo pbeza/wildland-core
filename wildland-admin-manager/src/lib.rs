@@ -1,3 +1,5 @@
+#![feature(get_mut_unchecked)]
+
 pub mod admin_manager;
 pub mod api;
 pub mod ffi;

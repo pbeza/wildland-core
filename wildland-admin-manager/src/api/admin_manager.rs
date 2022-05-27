@@ -1,4 +1,5 @@
 use super::{seed_phrase::SeedPhrase, AdminManagerResult, Identity};
+use std::sync::Arc;
 
 pub trait AdminManager {
     /// Creates a master identity based on the provided seed phrase (whether it's a newly
@@ -7,10 +8,10 @@ pub trait AdminManager {
         &mut self,
         name: String,
         seed: &SeedPhrase,
-    ) -> AdminManagerResult<&mut Box<dyn Identity>>;
+    ) -> AdminManagerResult<Arc<dyn Identity>>;
 
     /// Creates a randomly generated seed phrase
     fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
 
-    fn get_master_identity(&mut self) -> &mut Option<Box<dyn Identity>>;
+    fn get_master_identity(&self) -> Option<Arc<dyn Identity>>;
 }
