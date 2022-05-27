@@ -1,28 +1,28 @@
-use clap::{AppSettings, Parser};
+use crate::{bridge, container, forest, identity, storage};
+use clap::{AppSettings, Parser, Subcommand};
 
-#[derive(clap::Subcommand)]
-pub enum IdentitySubCommand {
-    Generate,
-    Restore { seed_phrase: String },
-}
-
-#[derive(clap::Subcommand)]
-pub enum SubCommand {
-    Identity {
-        #[clap(subcommand)]
-        identity_action: IdentitySubCommand,
-    },
+#[derive(Subcommand, Debug)]
+pub enum RootSubcommands {
+    Identity(identity::IdentityCliOpts),
+    Forest(forest::ForestCliOpts),
+    Container(container::ContainerCliOpts),
+    Storage(storage::StorageCliOpts),
+    Bridge(bridge::BridgeCliOpts),
 }
 
 #[derive(Parser)]
 #[clap(
     about,
-    arg_required_else_help = true,
+    // arg_required_else_help = true,
     global_setting(AppSettings::NoAutoVersion)
 )]
-pub struct CliArgs {
-    #[clap(long, short = 'V')]
+pub struct CliOpts {
+    #[clap(long)] //, short = 'V')]
     pub version: bool,
+
+    #[clap(short = 'v')]
+    pub verbose: bool,
+
     #[clap(subcommand)]
-    pub sub_command_action: SubCommand,
+    pub subcommand: RootSubcommands,
 }
