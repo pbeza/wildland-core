@@ -1,7 +1,7 @@
 #[derive(Debug)]
-pub struct CxxOption<T>(Option<T>);
+pub struct Opt<T>(Option<T>);
 
-impl<T> CxxOption<T> {
+impl<T> Opt<T> {
     pub fn is_some(&self) -> bool {
         self.0.is_some()
     }
@@ -14,8 +14,8 @@ impl<T> CxxOption<T> {
     }
 }
 
-impl<T> From<Option<T>> for CxxOption<T> {
+impl<T> From<Option<T>> for Opt<T> {
     fn from(opt: Option<T>) -> Self {
-        CxxOption(opt)
+        Opt(opt)
     }
 }

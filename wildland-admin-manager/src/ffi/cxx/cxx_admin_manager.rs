@@ -1,5 +1,8 @@
-use super::{CxxDynIdentity, IdentityResult, OptionalIdentity, SeedPhraseResult};
-use crate::{admin_manager::AdminManager, api::AdminManager as AdminManagerApi, api::SeedPhrase};
+use super::{CxxDynIdentity, IdentityResult, OptionalIdentity};
+use crate::{
+    admin_manager::AdminManager, api::AdminManager as AdminManagerApi, api::SeedPhrase,
+    ffi::SeedPhraseResult,
+};
 
 pub struct CxxAdminManager(AdminManager);
 

@@ -1,9 +1,11 @@
-use super::{cxx_option::CxxOption, cxx_result::CxxResult};
-use crate::api::Identity;
+use crate::{
+    api::Identity,
+    ffi::{option::Opt, result::Res},
+};
 
 pub type DynIdentity = Box<dyn Identity>;
-pub type IdentityResult<'a> = CxxResult<CxxDynIdentity<'a>>;
-pub type OptionalIdentity<'a> = CxxOption<CxxDynIdentity<'a>>;
+pub type IdentityResult<'a> = Res<CxxDynIdentity<'a>>;
+pub type OptionalIdentity<'a> = Opt<CxxDynIdentity<'a>>;
 
 #[derive(Debug)]
 pub struct CxxDynIdentity<'a>(pub &'a mut DynIdentity);
