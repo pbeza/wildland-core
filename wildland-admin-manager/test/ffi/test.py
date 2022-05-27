@@ -17,3 +17,11 @@ if seed_result.is_ok():
     print(identity.get_name().c_str())
     identity.set_name(wildland.RustString("name 2"))
     print(identity.get_name().c_str())
+
+    identity_opt = admin_manager.get_master_identity()
+    if identity_opt.is_some():
+        identity_second_ref = identity_opt.unwrap()
+        identity_second_ref.set_name(wildland.RustString("name 3"))
+        print(identity_second_ref.get_name().c_str())
+    
+    print(identity.get_name().c_str())

@@ -63,3 +63,10 @@ impl api::Identity for CryptoIdentity {
         self.name = name;
     }
 }
+
+impl Drop for CryptoIdentity {
+    fn drop(&mut self) {
+        //TODO: add logging handler
+        println!("DEBUG: Dropping CryptoIdentity")
+    }
+}

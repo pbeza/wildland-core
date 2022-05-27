@@ -36,6 +36,6 @@ impl<T> Clone for RcRef<T> {
 impl<T: ?Sized> Drop for RcRef<T> {
     fn drop(&mut self) {
         //TODO: add logging handler
-        println!("DEBUG: Droping RcRef")
+        println!("DEBUG: Dropping RcRef")
     }
 }
