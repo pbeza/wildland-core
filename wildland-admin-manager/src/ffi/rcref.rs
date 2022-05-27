@@ -13,7 +13,7 @@ use std::sync::Arc;
 pub struct RcRef<T>(Arc<T>);
 impl<T> RcRef<T> {
     #[allow(dead_code)]
-    fn new(obj: T) -> RcRef<T> {
+    pub fn new(obj: T) -> RcRef<T> {
         RcRef::<T>(Arc::new(obj))
     }
 

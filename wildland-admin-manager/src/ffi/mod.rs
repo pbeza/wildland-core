@@ -5,10 +5,15 @@ mod cxx_option;
 mod cxx_result;
 mod rcref;
 
-use crate::api::{AdminManagerError, SeedPhrase};
+use crate::{
+    admin_manager::AdminManager,
+    api::{AdminManagerError, SeedPhrase},
+};
 use cxx_admin_manager::*;
 use cxx_identity::*;
 use cxx_result::*;
+
+use self::rcref::RcRef;
 
 type SeedPhraseResult = CxxResult<SeedPhrase>;
 
@@ -52,14 +57,23 @@ mod ffi_cxx {
     }
 }
 
+// type BoxedCxxAdminManager = Box<CxxAdminManager>;
+// type BoxedSeedPhraseResult = Box<SeedPhraseResult>;
+
+// pub struct SwiftAdminManager(AdminManager);
+pub fn create_admin_manager_2() -> RcRef<AdminManager> {
+    // TODO rename
+    RcRef::new(AdminManager::default())
+}
+type RcRefAdminManager = RcRef<AdminManager>;
+
 #[swift_bridge::bridge]
 mod ffi_bridge {
     extern "Rust" {
-        fn test();
+        // type SeedPhraseResult;
+        // type BoxedSeedPhraseResult;
+        // fn create_seed_phrase() -> BoxedSeedPhraseResult;
+        type RcRefAdminManager;
+        fn create_admin_manager_2() -> RcRefAdminManager;
     }
-}
-
-#[allow(dead_code)]
-fn test() {
-    println!("Hello World!");
 }
