@@ -8,7 +8,7 @@ pub type OptionalIdentity = CxxOption<CxxDynIdentity>;
 pub struct CxxDynIdentity(pub RcRef<dyn Identity>);
 impl CxxDynIdentity {
     pub fn set_name(&mut self, name: String) {
-        self.0.get_mut().set_name(name); // TODO we must decide what to do when get_mut returns None
+        self.0.get_mut().set_name(name);
     }
 
     pub fn get_name(&self) -> String {
