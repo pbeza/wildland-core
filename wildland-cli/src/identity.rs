@@ -10,15 +10,12 @@ pub struct IdentityCliOpts {
 
 #[derive(Subcommand, Debug)]
 pub enum IdentitySubcommand {
-    Generate {
-    },
+    Generate {},
     Restore {
         #[clap(long)]
         seed: String,
     },
-    List {
-
-    }
+    List {},
 }
 
 impl IdentityCliOpts {
@@ -26,11 +23,9 @@ impl IdentityCliOpts {
         let mut admin_manager = AdminManager::default();
 
         match &self.subcommand {
-            IdentitySubcommand::Generate { } => generate_identity(&mut admin_manager)?,
-            IdentitySubcommand::Restore { seed } => {
-                restore_identity(seed, admin_manager)?
-            },
-            IdentitySubcommand::List { } => {
+            IdentitySubcommand::Generate {} => generate_identity(&mut admin_manager)?,
+            IdentitySubcommand::Restore { seed } => restore_identity(seed, admin_manager)?,
+            IdentitySubcommand::List {} => {
                 todo!()
             }
         }
@@ -49,18 +44,14 @@ fn restore_identity(
         .collect::<Vec<_>>()
         .try_into()?;
 
-    let identity =
-        admin_manager.create_master_identity_from_seed_phrase(&seed)?;
+    let identity = admin_manager.create_master_identity_from_seed_phrase(&seed)?;
 
     Ok(println!("{identity}"))
 }
 
-fn generate_identity(
-    admin_manager: &mut AdminManager,
-) -> Result<(), anyhow::Error> {
+fn generate_identity(admin_manager: &mut AdminManager) -> Result<(), anyhow::Error> {
     let seed_phrase = AdminManager::create_seed_phrase()?;
-    let identity =
-        admin_manager.create_master_identity_from_seed_phrase(&seed_phrase)?;
+    let identity = admin_manager.create_master_identity_from_seed_phrase(&seed_phrase)?;
 
     Ok(println!("{identity}"))
 }

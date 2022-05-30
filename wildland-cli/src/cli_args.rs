@@ -12,10 +12,7 @@ pub enum RootSubcommands {
 }
 
 #[derive(Parser, Debug)]
-#[clap(
-    about,
-    arg_required_else_help = false,
-)]
+#[clap(about, arg_required_else_help = false)]
 pub struct CliOpts {
     #[clap(long, short = 'v')]
     pub verbose: bool,

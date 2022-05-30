@@ -25,10 +25,7 @@ Seed phrase: {}
 }
 
 impl CryptoIdentity {
-    pub fn new(
-        identity_type: api::IdentityType,
-        inner_identity: Identity,
-    ) -> Self {
+    pub fn new(identity_type: api::IdentityType, inner_identity: Identity) -> Self {
         Self {
             identity_type,
             inner_identity,
