@@ -19,6 +19,7 @@ fn main() -> Result<()> {
         RootSubcommands::Container(opts) => opts.handle_command(),
         RootSubcommands::Storage(opts) => opts.handle_command(),
         RootSubcommands::Bridge(opts) => opts.handle_command(),
+        RootSubcommands::Version(opts) => opts.handle_command(),
     }?;
 
     Ok(())

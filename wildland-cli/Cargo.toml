@@ -18,6 +18,8 @@ wildland-corex = { version = "0.1.3-alpha.0", path = "../wildland-corex", regist
 wildland-admin-manager = { version = "0.5.1", path = "../wildland-admin-manager", registry = "wl-dev" }
 yansi = "0.5.1"
 anyhow = "1.0.57"
+serde_json = "1.0.81"
+serde = { version = "1.0.137", features = ["derive"] }
 
 [package.metadata.workspaces]
 independent = true

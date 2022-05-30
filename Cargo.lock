@@ -1728,6 +1728,8 @@ version = "0.2.6"
 dependencies = [
  "anyhow",
  "clap",
+ "serde",
+ "serde_json",
  "wildland-admin-manager",
  "wildland-corex",
  "yansi",
