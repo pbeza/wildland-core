@@ -90,7 +90,7 @@ impl TryFrom<Mnemonic> for Identity {
         // To achieve this, we use key derivation function (KDF).
         // A very standard variant of that is HKDF.
         let mut output_key_material = [0u8; 96];
-        extend_seed(seed, &mut output_key_material);
+        extend_seed(seed.as_bytes(), &mut output_key_material);
 
         // Now we can use this randomness as bip32-ed25519 extended private key
         let root_xprv = XPrv::normalize_bytes_ed25519(output_key_material);
