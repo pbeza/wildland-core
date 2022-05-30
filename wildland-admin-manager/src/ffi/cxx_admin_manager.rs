@@ -1,19 +1,22 @@
-use super::{rcref::RcRef, CxxDynIdentity, IdentityResult, OptionalIdentity, SeedPhraseResult};
-use crate::{admin_manager::AdminManager, api::AdminManager as AdminManagerApi, api::SeedPhrase};
+use super::{rcref::RcRef, DynIdentity, IdentityResult, OptionalIdentity, SeedPhraseResult};
+use crate::{
+    admin_manager::AdminManager as RustAdminManager, api::AdminManager as AdminManagerApi,
+    api::SeedPhrase,
+};
 
-pub struct CxxAdminManager(AdminManager);
+pub struct AdminManager(RustAdminManager);
 
-pub fn create_admin_manager() -> Box<CxxAdminManager> {
-    Box::new(CxxAdminManager(AdminManager::default()))
+pub fn create_admin_manager() -> Box<AdminManager> {
+    Box::new(AdminManager(RustAdminManager::default()))
 }
 
 pub fn create_seed_phrase() -> Box<SeedPhraseResult> {
-    Box::new(AdminManager::create_seed_phrase().into())
+    Box::new(RustAdminManager::create_seed_phrase().into())
 }
 
-impl CxxAdminManager {
+impl AdminManager {
     pub fn create_master_identity_from_seed_phrase(
-        self: &mut CxxAdminManager,
+        &mut self,
         name: String,
         seed: &SeedPhrase,
     ) -> Box<IdentityResult> {
@@ -21,16 +24,16 @@ impl CxxAdminManager {
             .0
             .create_master_identity_from_seed_phrase(name, seed)
             .map(RcRef::from_arc)
-            .map(CxxDynIdentity);
+            .map(DynIdentity);
         Box::new(inner.into())
     }
 
-    pub fn get_master_identity(self: &CxxAdminManager) -> Box<OptionalIdentity> {
+    pub fn get_master_identity(&self) -> Box<OptionalIdentity> {
         let id = self
             .0
             .get_master_identity()
             .map(RcRef::from_arc)
-            .map(CxxDynIdentity);
+            .map(DynIdentity);
         Box::new(id.into())
     }
 }

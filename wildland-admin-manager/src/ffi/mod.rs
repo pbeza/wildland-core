@@ -6,7 +6,7 @@ mod cxx_result;
 mod rcref;
 
 use crate::api::{AdminManagerError, SeedPhrase};
-use cxx_admin_manager::*;
+use cxx_admin_manager::{create_admin_manager, create_seed_phrase, AdminManager};
 use cxx_identity::*;
 use cxx_result::*;
 
@@ -15,11 +15,11 @@ type SeedPhraseResult = CxxResult<SeedPhrase>;
 #[cxx::bridge(namespace = "wildland")]
 mod ffi_cxx {
     extern "Rust" {
-        type CxxAdminManager;
-        fn create_admin_manager() -> Box<CxxAdminManager>;
-        fn get_master_identity(self: &mut CxxAdminManager) -> Box<OptionalIdentity>;
+        type AdminManager;
+        fn create_admin_manager() -> Box<AdminManager>;
+        fn get_master_identity(self: &mut AdminManager) -> Box<OptionalIdentity>;
         fn create_master_identity_from_seed_phrase(
-            self: &mut CxxAdminManager,
+            self: &mut AdminManager,
             name: String,
             seed: &SeedPhrase,
         ) -> Box<IdentityResult>;
@@ -31,13 +31,13 @@ mod ffi_cxx {
         fn unwrap_err(self: &SeedPhraseResult) -> &AdminManagerError;
 
         type IdentityResult;
-        unsafe fn unwrap(self: &IdentityResult) -> &CxxDynIdentity;
+        unsafe fn unwrap(self: &IdentityResult) -> &DynIdentity;
         type OptionalIdentity;
-        type CxxDynIdentity;
+        type DynIdentity;
         fn is_some(self: &OptionalIdentity) -> bool;
-        unsafe fn unwrap(self: &OptionalIdentity) -> &CxxDynIdentity;
-        fn set_name(self: &mut CxxDynIdentity, name: String);
-        fn get_name(self: &CxxDynIdentity) -> String;
+        unsafe fn unwrap(self: &OptionalIdentity) -> &DynIdentity;
+        fn set_name(self: &mut DynIdentity, name: String);
+        fn get_name(self: &DynIdentity) -> String;
 
         type SeedPhrase;
         fn get_string(self: &SeedPhrase) -> String;
