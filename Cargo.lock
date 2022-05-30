@@ -1709,7 +1709,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "bip39",
  "cxx",
@@ -1726,7 +1726,7 @@ version = "0.3.0"
 
 [[package]]
 name = "wildland-cli"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -1737,7 +1737,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-corex"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "thiserror",
  "wildland-catlib",
@@ -1748,7 +1748,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "bip39",
  "crypto_box",
@@ -1772,7 +1772,7 @@ version = "0.1.0"
 
 [[package]]
 name = "wildland-storage-controller-client"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "dotenv",
  "http",

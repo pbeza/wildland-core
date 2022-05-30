@@ -14,4 +14,14 @@ pub trait AdminManager {
     fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
 
     fn get_master_identity(&self) -> Option<Arc<dyn Identity>>;
+
+    /// Sends a 6-digit verification code to provided email address.
+    fn send_verification_code(&mut self) -> AdminManagerResult<()>;
+
+    // Sets new unverified email
+    fn set_email(&mut self, email: String);
+
+    /// Checks whether verification code entered by a user is the same as generated one for a set email
+    /// Returns error when email is not set
+    fn verify_email(&mut self, verification_code: String) -> AdminManagerResult<()>;
 }
