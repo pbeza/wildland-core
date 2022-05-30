@@ -5,16 +5,26 @@ pub use identity::Identity;
 use wildland_admin_manager_api as api;
 use wildland_corex::SeedPhraseWords;
 
+pub enum Email {
+    Unverified {
+        mailbox_address: String,
+        verification_code: String,
+    },
+    Verified(String),
+}
+
 pub struct AdminManager<I: api::Identity> {
     // TODO do we want to store more than one master identity
     // TODO do we want to keep mappings between a master identity and a set of device identities
     master_identity: Option<I>,
+    email: Option<Email>,
 }
 
 impl Default for AdminManager<Identity> {
     fn default() -> Self {
         Self {
             master_identity: Default::default(),
+            email: Default::default(),
         }
     }
 }
@@ -56,5 +66,79 @@ impl api::AdminManager for AdminManager<Identity> {
 
     fn get_master_identity(&self) -> Option<Identity> {
         self.master_identity.clone()
+    }
+
+    fn set_email(&mut self, email: String) {
+        // TODO generate code
+        let verification_code = "1232456".to_owned();
+        self.email = Some(Email::Unverified {
+            mailbox_address: email,
+            verification_code,
+        });
+    }
+
+    fn send_verification_code(&mut self) -> api::AdminManagerResult<()> {
+        // TODO actually send the code
+        Ok(())
+    }
+
+    fn verify_email(&mut self, input_verification_code: String) -> api::AdminManagerResult<()> {
+        match self
+            .email
+            .as_ref()
+            .ok_or(AdminManagerError::EmailCandidateNotSet)?
+        {
+            Email::Unverified {
+                mailbox_address: email,
+                verification_code: stored_verification_code,
+            } => {
+                if stored_verification_code == &input_verification_code {
+                    self.email = Some(Email::Verified(email.clone()));
+                } else {
+                    return Err(AdminManagerError::ValidationCodesDoNotMatch);
+                }
+            }
+            Email::Verified(_) => return Err(AdminManagerError::EmailAlreadyVerified),
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AdminManager;
+    use wildland_admin_manager_api::{AdminManager as AdminManagerApi, AdminManagerError};
+
+    #[test]
+    fn cannot_verify_email_when_not_set() {
+        let mut am = AdminManager::default();
+        assert_eq!(
+            am.verify_email("1232456".to_owned()).unwrap_err(),
+            AdminManagerError::EmailCandidateNotSet
+        );
+    }
+
+    #[test]
+    fn verification_fails_when_codes_do_not_match() {
+        let mut am = AdminManager::default();
+        am.set_email("email@email.com".to_string());
+        am.send_verification_code().unwrap();
+        assert_eq!(
+            am.verify_email("1232455".to_owned()).unwrap_err(),
+            AdminManagerError::ValidationCodesDoNotMatch
+        );
+    }
+
+    #[test]
+    fn verification_fails_if_email_is_already_verified() {
+        let mut am = AdminManager::default();
+        am.set_email("email@email.com".to_string());
+        am.send_verification_code().unwrap();
+        assert!(am.verify_email("1232456".to_owned()).is_ok());
+        assert_eq!(
+            am.verify_email("1232456".to_owned()).unwrap_err(),
+            AdminManagerError::EmailAlreadyVerified
+        );
     }
 }

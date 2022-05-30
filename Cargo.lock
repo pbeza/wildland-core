@@ -1188,12 +1188,12 @@ dependencies = [
 
 [[package]]
 name = "schannel"
-version = "0.1.19"
+version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f05ba609c234e60bee0d547fe94a4c7e9da733d1c962cf6e59efa4cd9c8bc75"
+checksum = "88d6731146462ea25d9244b2ed5fd1d716d25c52e4d54aa4fb0f3c4e9854dbe2"
 dependencies = [
  "lazy_static",
- "winapi",
+ "windows-sys",
 ]
 
 [[package]]
@@ -1709,7 +1709,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "bip39",
  "cxx",
@@ -1723,7 +1723,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager-api"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "thiserror",
  "wildland-corex",
@@ -1735,7 +1735,7 @@ version = "0.3.0"
 
 [[package]]
 name = "wildland-cli"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -1747,7 +1747,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-corex"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "thiserror",
  "wildland-catlib",
@@ -1758,7 +1758,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "bip39",
  "crypto_box",
@@ -1782,7 +1782,7 @@ version = "0.1.0"
 
 [[package]]
 name = "wildland-storage-controller-client"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "dotenv",
  "http",
