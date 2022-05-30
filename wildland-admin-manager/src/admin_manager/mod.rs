@@ -24,12 +24,10 @@ pub enum Email {
 impl api::AdminManager for AdminManager {
     fn create_master_identity_from_seed_phrase(
         &mut self,
-        name: String,
         seed: &SeedPhrase,
     ) -> api::AdminManagerResult<AdminManagerIdentity> {
         let identity = CryptoIdentity::new(
             api::IdentityType::Master,
-            name,
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
         );
         self.master_identity = Some(Arc::new(Mutex::new(identity))); // TODO Can user have multiple master identities? If not should it be overwritten?

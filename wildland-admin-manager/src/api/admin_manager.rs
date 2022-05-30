@@ -8,7 +8,6 @@ pub trait AdminManager {
     /// generated seed phrase or manually entered in the recovery flow.
     fn create_master_identity_from_seed_phrase(
         &mut self,
-        name: String,
         seed: &SeedPhrase,
     ) -> AdminManagerResult<AdminManagerIdentity>;
 
