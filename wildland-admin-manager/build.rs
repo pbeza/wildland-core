@@ -1,3 +1,4 @@
+#[cfg(feature = "bindings")]
 fn main() {
     // Build Swift bridge
     use std::path::PathBuf;
@@ -16,3 +17,6 @@ fn main() {
         .compile("wildland");
     println!("cargo:rerun-if-changed=src/ffi/mod.rs");
 }
+
+#[cfg(not(feature = "bindings"))]
+fn main() {}
