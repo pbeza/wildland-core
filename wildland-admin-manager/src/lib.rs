@@ -2,6 +2,7 @@
 
 pub mod admin_manager;
 pub mod api;
+#[cfg(feature = "bindings")]
 pub mod ffi;
 
 pub fn get_version() -> &'static str {
