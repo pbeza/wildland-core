@@ -1,6 +1,6 @@
 [package]
 name = "wildland-admin-manager"
-version = "0.3.1"
+version = "0.4.0"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -22,7 +22,7 @@ bindings = ["cxx", "swift-bridge", "cxx-build", "swift-bridge-build"]
 
 [dependencies]
 wildland-corex = { version = "0.1.5", path = "../wildland-corex", registry = "wl-dev" }
-wildland-admin-manager-api = { version = "0.2.0", path = "../wildland-admin-manager-api", registry = "wl-dev" }
+wildland-admin-manager-api = { version = "0.3.0", path = "../wildland-admin-manager-api", registry = "wl-dev" }
 bip39 = { version = "1.0.1", features = ["rand"] }
 thiserror = "1.0.31"
 
