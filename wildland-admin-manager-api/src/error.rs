@@ -1,8 +1,14 @@
 use thiserror::Error;
 use wildland_corex::CoreXError;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum AdminManagerError {
+    #[error("Email has been already verified")]
+    EmailAlreadyVerified,
+    #[error("Validation codes do not match")]
+    ValidationCodesDoNotMatch,
+    #[error("Email candidate not set")]
+    EmailCandidateNotSet,
     #[error("CoreX error: {0}")]
     CoreX(CoreXError),
 }
