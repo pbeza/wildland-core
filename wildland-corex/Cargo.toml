@@ -1,6 +1,6 @@
 [package]
 name = "wildland-corex"
-version = "0.1.6"
+version = "0.1.8"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"

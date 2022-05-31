@@ -4,7 +4,6 @@ use wildland_corex::Identity;
 pub use wildland_corex::{SeedPhraseWords, SEED_PHRASE_LEN};
 
 #[derive(Clone, Debug)]
-// TODO I had no idea how to name that specific Identity implementation
 pub struct CryptoIdentity {
     identity_type: api::IdentityType,
     name: String,

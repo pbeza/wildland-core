@@ -17,7 +17,7 @@ CC=g++
 CSHARP_RUN=mono
 
 # `mcs` for Linux, `csc` for Windows
-CSHARP_COMPILE=mcs
+CSHARP_COMPILER=mcs
 #############################################
 #############################################
 #############################################
@@ -28,7 +28,7 @@ CXX_RUST=../target/cxxbridge/rust
 
 
 prepare:
-	cargo build
+	cargo build --features "bindings"
 	mkdir -p cpp
 	cp $(CXX_OUT)/mod.rs.h cpp/mod.rs.h
 	cp $(CXX_OUT)/mod.rs.cc cpp/mod.rs.cc
@@ -79,7 +79,7 @@ csharp: prepare
 
 csharp_test: csharp
 	cp test/ffi/test.cs wildland_csharp/test.cs
-	cd wildland_csharp ; $(CSHARP_COMPILE) -out:test.exe *.cs
+	cd wildland_csharp ; $(CSHARP_COMPILER) -out:test.exe *.cs
 	cd wildland_csharp ; $(CSHARP_RUN) test.exe
 
 python: prepare
@@ -99,7 +99,7 @@ python_test: python
 
 swift:
 	mkdir -p wildland_swift
-	SWIFT_BRIDGE_OUT_DIR="$(CURDIR)/wildland_swift" cargo build
+	SWIFT_BRIDGE_OUT_DIR="$(CURDIR)/wildland_swift" cargo build --features "bindings"
 	cp test/ffi/test.swift wildland_swift/main.swift
 	swiftc -L ../target/debug -lwildland_admin_manager -lstdc++ \
 		-I wildland_swift -import-objc-header \

@@ -4,7 +4,6 @@ use crate::api::SeedPhrase;
 mod array;
 pub mod cxx;
 mod option;
-mod rcref;
 mod result;
 pub mod swift;
 

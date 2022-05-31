@@ -83,5 +83,5 @@ typedef unsigned char uint8_t;
 // %template(ByteVector) ::rust::cxxbridge1::Vec<::std::uint8_t>;
 %template(BoxedSeedPhraseResult) ::rust::cxxbridge1::Box<::wildland::SeedPhraseResult>;
 %template(BoxedIdentityResult) ::rust::cxxbridge1::Box<::wildland::IdentityResult>;
-%template(BoxedOptionalResult) ::rust::cxxbridge1::Box<::wildland::OptionalIdentity>;
-%template(BoxedAdminManager) ::rust::cxxbridge1::Box<::wildland::CxxAdminManager>;
+%template(BoxedOptionalIdentity) ::rust::cxxbridge1::Box<::wildland::OptionalIdentity>;
+%template(BoxedAdminManager) ::rust::cxxbridge1::Box<::wildland::AdminManager>;

@@ -1,6 +1,6 @@
 [package]
 name = "wildland-crypto"
-version = "0.4.1"
+version = "0.4.3"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
