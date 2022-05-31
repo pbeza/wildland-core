@@ -22,7 +22,7 @@ bindings = ["cxx", "swift-bridge", "cxx-build", "swift-bridge-build"]
 
 [dependencies]
 wildland-corex = { version = "0.1.7", path = "../wildland-corex", registry = "wl-dev" }
-wildland-admin-manager-api = { version = "0.3.0", path = "../wildland-admin-manager-api", registry = "wl-dev" }
+wildland-admin-manager-api = { version = "0.3.1", path = "../wildland-admin-manager-api", registry = "wl-dev" }
 thiserror = "1.0.31"
 
 # Bindings generators:

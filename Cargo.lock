@@ -1681,7 +1681,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "cxx",
  "cxx-build",
@@ -1694,7 +1694,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager-api"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "thiserror",
  "wildland-corex",
@@ -1706,7 +1706,7 @@ version = "0.3.0"
 
 [[package]]
 name = "wildland-cli"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "anyhow",
  "clap",
