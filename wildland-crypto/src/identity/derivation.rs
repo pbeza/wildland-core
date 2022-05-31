@@ -59,10 +59,10 @@ pub struct Identity {
     words: SeedPhraseWords,
 }
 
-impl TryFrom<SeedPhraseWords> for Identity {
+impl TryFrom<&SeedPhraseWords> for Identity {
     type Error = CryptoError;
 
-    fn try_from(seed_phrase: SeedPhraseWords) -> Result<Self, Self::Error> {
+    fn try_from(seed_phrase: &SeedPhraseWords) -> Result<Self, Self::Error> {
         let mnemonic = Mnemonic::from_str(&seed_phrase.join(" "))
             .map_err(|e| CryptoError::IdentityGenerationError(e.to_string()))?;
         Self::try_from(mnemonic)
@@ -400,7 +400,7 @@ mod tests {
             .collect::<Vec<String>>()
             .try_into()
             .unwrap();
-        let user = Identity::try_from(mnemonic_array).unwrap();
+        let user = Identity::try_from(&mnemonic_array).unwrap();
 
         assert_eq!(user.get_xprv(), &XPrv::normalize_bytes_ed25519(ROOT_XPRV))
     }
@@ -414,7 +414,7 @@ mod tests {
             .try_into()
             .unwrap();
 
-        assert!(Identity::try_from(mnemonic_array).is_err());
+        assert!(Identity::try_from(&mnemonic_array).is_err());
     }
 
     #[test]
@@ -425,7 +425,7 @@ mod tests {
             .collect::<Vec<String>>()
             .try_into()
             .unwrap();
-        let user = Identity::try_from(mnemonic_array).unwrap();
+        let user = Identity::try_from(&mnemonic_array).unwrap();
         assert_eq!(user.get_seed_phrase().join(" "), TEST_MNEMONIC_12);
     }
 }

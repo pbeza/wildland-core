@@ -1,15 +1,15 @@
+use crate::api;
 use std::fmt::Display;
-use wildland_admin_manager_api as api;
-use wildland_corex::{Identity as CryptoIdentity, SeedPhraseWords};
+use wildland_corex::Identity;
+pub use wildland_corex::{SeedPhraseWords, SEED_PHRASE_LEN};
 
 #[derive(Clone, Debug)]
-pub struct Identity {
+pub struct CryptoIdentity {
     identity_type: api::IdentityType,
     name: String,
-    inner_identity: CryptoIdentity,
+    inner_identity: Identity,
 }
-
-impl Display for Identity {
+impl Display for CryptoIdentity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -27,12 +27,8 @@ Seed phrase: {}
     }
 }
 
-impl Identity {
-    pub fn new(
-        identity_type: api::IdentityType,
-        name: String,
-        inner_identity: CryptoIdentity,
-    ) -> Self {
+impl CryptoIdentity {
+    pub fn new(identity_type: api::IdentityType, name: String, inner_identity: Identity) -> Self {
         Self {
             identity_type,
             name,
@@ -41,11 +37,7 @@ impl Identity {
     }
 }
 
-impl api::Identity for Identity {
-    fn get_name(&self) -> String {
-        self.name.clone()
-    }
-
+impl api::Identity for CryptoIdentity {
     fn get_pubkey(&self) -> Vec<u8> {
         todo!() // TODO
     }
@@ -60,5 +52,20 @@ impl api::Identity for Identity {
 
     fn get_seed_phrase(&self) -> SeedPhraseWords {
         self.inner_identity.get_seed_phrase()
+    }
+
+    fn get_name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+}
+
+impl Drop for CryptoIdentity {
+    fn drop(&mut self) {
+        //TODO: add logging handler
+        println!("DEBUG: Dropping CryptoIdentity")
     }
 }

@@ -1,6 +1,5 @@
 /// FFI example file
 
-
 struct CustomStruct;
 impl CustomStruct {
     fn print_foo(&self) {
@@ -42,7 +41,7 @@ mod ffi_cxx {
         fn return_u8() -> u8;
         fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String);
 
-        // TODO: this is the only difference between cxx and swift for now:
+        // this is the only difference between cxx and swift for now:
         fn get_admin_instances_vector_ref() -> Box<ArrayCustomStruct>;
         fn get_admin_instance_ref() -> Box<RcRefCustomStruct>;
     }
@@ -73,7 +72,7 @@ mod ffi_swift {
         fn return_u8() -> u8;
         fn print_args(a: Vec<String>, b: Vec<u8>, c: u8, d: String);
 
-        // TODO: this is the only difference between cxx and swift for now:
+        // this is the only difference between cxx and swift for now:
         fn get_admin_instance() -> RcRefCustomStruct;
         fn get_admin_instances_vector() -> Vec<RcRefCustomStruct>;
     }

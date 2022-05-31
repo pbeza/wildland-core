@@ -1,29 +1,19 @@
-use super::{identity::Identity, AdminManagerResult};
-use wildland_corex::SeedPhraseWords;
+use super::{seed_phrase::SeedPhrase, AdminManagerResult, Identity};
+use std::sync::Arc;
 
 pub trait AdminManager {
-    type Identity: Identity;
-
     /// Creates a master identity based on the provided seed phrase (whether it's a newly
     /// generated seed phrase or manually entered in the recovery flow.
     fn create_master_identity_from_seed_phrase(
         &mut self,
         name: String,
-        seed: SeedPhraseWords,
-    ) -> AdminManagerResult<Self::Identity>;
-
-    /// Creates a device identity based on the provided seed phrase (whether it's a newly
-    /// generated seed phrase or manually entered in the recovery flow.
-    fn create_device_identity_from_seed_phrase(
-        &mut self,
-        name: String,
-        seed: SeedPhraseWords,
-    ) -> AdminManagerResult<Self::Identity>;
+        seed: &SeedPhrase,
+    ) -> AdminManagerResult<Arc<dyn Identity>>;
 
     /// Creates a randomly generated seed phrase
-    fn create_seed_phrase() -> AdminManagerResult<SeedPhraseWords>;
+    fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
 
-    fn get_master_identity(&self) -> Option<Self::Identity>;
+    fn get_master_identity(&self) -> Option<Arc<dyn Identity>>;
 
     /// Sends a 6-digit verification code to provided email address.
     fn send_verification_code(&mut self) -> AdminManagerResult<()>;
