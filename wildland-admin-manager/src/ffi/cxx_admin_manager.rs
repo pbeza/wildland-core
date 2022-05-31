@@ -1,4 +1,4 @@
-use super::{rcref::RcRef, DynIdentity, IdentityResult, OptionalIdentity, SeedPhraseResult};
+use super::{DynIdentity, IdentityResult, OptionalIdentity, SeedPhraseResult};
 use crate::{
     admin_manager::AdminManager as RustAdminManager, api::AdminManager as AdminManagerApi,
     api::SeedPhrase,
@@ -23,17 +23,12 @@ impl AdminManager {
         let inner = self
             .0
             .create_master_identity_from_seed_phrase(name, seed)
-            .map(RcRef::from_arc)
             .map(DynIdentity);
         Box::new(inner.into())
     }
 
     pub fn get_master_identity(&self) -> Box<OptionalIdentity> {
-        let id = self
-            .0
-            .get_master_identity()
-            .map(RcRef::from_arc)
-            .map(DynIdentity);
+        let id = self.0.get_master_identity().map(DynIdentity);
         Box::new(id.into())
     }
 }

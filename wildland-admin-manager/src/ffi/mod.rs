@@ -3,7 +3,6 @@ mod cxx_admin_manager;
 mod cxx_identity;
 mod cxx_option;
 mod cxx_result;
-mod rcref;
 
 use crate::api::{AdminManagerError, SeedPhrase};
 use cxx_admin_manager::{create_admin_manager, create_seed_phrase, AdminManager};
