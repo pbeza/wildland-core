@@ -53,7 +53,7 @@ fn single_use_encryption_key_path(index: u64) -> String {
 /// - signing (not rotated, used to sign "user manifest")
 /// - encryption (used by other people to encrypt secrets to the user, rotated)
 /// - single-use-encryption - to transfer secrets in public
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Identity {
     xprv: XPrv,
     words: SeedPhraseWords,

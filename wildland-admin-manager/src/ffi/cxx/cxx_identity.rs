@@ -2,16 +2,18 @@ use crate::{
     api::Identity,
     ffi::{option::Opt, result::Res},
 };
+use std::sync::Arc;
 
-pub type DynIdentity = Box<dyn Identity>;
-pub type IdentityResult<'a> = Res<CxxDynIdentity<'a>>;
-pub type OptionalIdentity<'a> = Opt<CxxDynIdentity<'a>>;
+pub type IdentityResult = Res<DynIdentity>;
+pub type OptionalIdentity = Opt<DynIdentity>;
 
+// TODO derive macro
 #[derive(Debug)]
-pub struct CxxDynIdentity<'a>(pub &'a mut DynIdentity);
-impl CxxDynIdentity<'_> {
+pub struct DynIdentity(pub Arc<dyn Identity>);
+impl DynIdentity {
     pub fn set_name(&mut self, name: String) {
-        self.0.set_name(name);
+        let inner = unsafe { Arc::get_mut_unchecked(&mut self.0) };
+        inner.set_name(name)
     }
 
     pub fn get_name(&self) -> String {
