@@ -3,7 +3,7 @@ use wildland_corex::CoreXError;
 
 pub type AdminManagerResult<T> = std::result::Result<T, AdminManagerError>;
 
-#[derive(Error, Debug, Clone, PartialEq)]
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum AdminManagerError {
     #[error("Email has been already verified")]
     EmailAlreadyVerified,
