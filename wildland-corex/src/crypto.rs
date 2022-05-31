@@ -1,7 +1,7 @@
 use crate::CoreXError;
 use wildland_crypto::identity::{self, Identity, SeedPhraseWords};
 
-pub fn try_identity_from_seed(seed: SeedPhraseWords) -> Result<Identity, CoreXError> {
+pub fn try_identity_from_seed(seed: &SeedPhraseWords) -> Result<Identity, CoreXError> {
     Identity::try_from(seed).map_err(CoreXError::from)
 }
 

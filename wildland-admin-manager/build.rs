@@ -13,7 +13,7 @@ fn main() {
 
     // Build CXX bridge
     cxx_build::bridge("src/ffi/mod.rs")
-        .flag_if_supported("-std=c++14")
+        .flag_if_supported("-std=c++20")
         .compile("wildland");
     println!("cargo:rerun-if-changed=src/ffi/mod.rs");
 }
