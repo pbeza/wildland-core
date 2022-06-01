@@ -7,6 +7,8 @@ pub enum CoreXError {
     SeedPhraseGenerationError(String),
     #[error("Identity generation error: {0}")]
     IdentityGenerationError(String),
+    #[error("Identity read error: {0}")]
+    IdentityReadError(String),
     #[error("Too low entropy")]
     EntropyTooLow,
 }

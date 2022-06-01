@@ -1,8 +1,10 @@
 mod identity;
 
+use crate::api::Identity;
 use crate::api::{self, AdminManagerError, AdminManagerIdentity, SeedPhrase};
 pub use identity::CryptoIdentity;
 use std::sync::{Arc, Mutex};
+use wildland_corex::WalletType;
 
 #[derive(Default, Debug, Clone)]
 pub struct AdminManager {
@@ -30,7 +32,11 @@ impl api::AdminManager for AdminManager {
             api::IdentityType::Master,
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
         );
+
+        identity.save(WalletType::File)?;
+
         self.master_identity = Some(Arc::new(Mutex::new(identity))); // TODO Can user have multiple master identities? If not should it be overwritten?
+
         Ok(self.master_identity.as_ref().unwrap().clone())
     }
 

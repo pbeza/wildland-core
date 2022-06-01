@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use wildland_corex::SeedPhraseWords;
+use wildland_corex::{CoreXError, SeedPhraseWords, WalletType};
 
 #[derive(Clone, Copy, Debug)]
 pub enum IdentityType {
@@ -14,4 +14,5 @@ pub trait Identity: Display + std::fmt::Debug + Send {
     fn get_pubkey(&self) -> Vec<u8>;
     fn get_fingerprint(&self) -> Vec<u8>;
     fn get_seed_phrase(&self) -> SeedPhraseWords;
+    fn save(&self, wallet: WalletType) -> Result<(), CoreXError>;
 }
