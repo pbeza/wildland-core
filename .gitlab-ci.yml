@@ -9,6 +9,9 @@ test:
   stage: test
   except:
     - tags
+  only:
+    - main
+    - merge_requests
   script:
     - cargo test --verbose
 
@@ -16,6 +19,9 @@ lint:
   stage: test
   except:
     - tags
+  only:
+    - main
+    - merge_requests
   script:
     - rustup component add clippy
     - cargo clippy --all-targets -- -D warnings
@@ -24,6 +30,9 @@ format:
   stage: test
   except:
     - tags
+  only:
+    - main
+    - merge_requests
   script:
     - rustup component add rustfmt
     - cargo fmt -- --check
@@ -32,6 +41,9 @@ audit:
   stage: test
   except:
     - tags
+  only:
+    - main
+    - merge_requests
   script:
     - cargo install cargo-audit
     - cargo audit

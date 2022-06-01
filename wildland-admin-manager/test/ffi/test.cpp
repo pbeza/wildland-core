@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../../target/cxxbridge/wildland-admin-manager/src/ffi/mod.rs.h"
+#include "mod.rs.h"
 
 using namespace wildland;
 using namespace ::rust;
