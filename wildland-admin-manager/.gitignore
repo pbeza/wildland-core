@@ -2,5 +2,6 @@ wildland_java
 wildland_csharp
 wildland_python
 wildland_swift
-cpp
+wildland_cpp
+_temporary
 wildland_wrap.cxx
