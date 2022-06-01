@@ -10,7 +10,7 @@ JDK_INC_DIR=/usr/lib/jvm/java-17-openjdk/include
 # Python includes
 PYTHON_DIR=/usr/include/python3.10/
 
-# `g++` for Linux, `clang++` for Windows (TODO: to be checked.)
+# `g++` for Linux, `clang++` for Windows
 CC=g++
 
 # `mono` for Linux, nothing (empty) for Windows

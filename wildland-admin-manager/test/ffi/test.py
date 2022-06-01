@@ -1,7 +1,7 @@
 import wildland
 
 
-print("TODO: Python FFI Testsuite")
+print("Python FFI Testsuite")
 
 # Python specific pointers deref function:
 import ctypes
