@@ -1,14 +1,14 @@
 mod identity;
 
-use crate::api::{self, AdminManagerError, Identity, SeedPhrase};
+use crate::api::{self, AdminManagerError, AdminManagerIdentity, SeedPhrase};
 pub use identity::CryptoIdentity;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Default)]
 pub struct AdminManager {
     // TODO do we want to store more than one master identity
     // TODO do we want to keep mappings between a master identity and a set of device identities
-    master_identity: Option<Arc<dyn Identity>>,
+    master_identity: Option<AdminManagerIdentity>,
     email: Option<Email>,
 }
 
@@ -25,13 +25,13 @@ impl api::AdminManager for AdminManager {
         &mut self,
         name: String,
         seed: &SeedPhrase,
-    ) -> api::AdminManagerResult<Arc<dyn Identity>> {
+    ) -> api::AdminManagerResult<AdminManagerIdentity> {
         let identity = CryptoIdentity::new(
             api::IdentityType::Master,
             name,
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
         );
-        self.master_identity = Some(Arc::new(identity)); // TODO Can user have multiple master identities? If not should it be overwritten?
+        self.master_identity = Some(Arc::new(Mutex::new(identity))); // TODO Can user have multiple master identities? If not should it be overwritten?
         Ok(self.master_identity.as_ref().unwrap().clone())
     }
 
@@ -41,7 +41,7 @@ impl api::AdminManager for AdminManager {
             .map(SeedPhrase::from)
     }
 
-    fn get_master_identity(&self) -> Option<Arc<dyn Identity>> {
+    fn get_master_identity(&self) -> Option<AdminManagerIdentity> {
         self.master_identity.clone()
     }
 

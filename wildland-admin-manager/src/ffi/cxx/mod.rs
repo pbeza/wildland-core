@@ -1,12 +1,10 @@
 mod cxx_admin_manager;
-mod cxx_identity;
 
 use crate::{
     api::{AdminManagerError, SeedPhrase},
-    ffi::SeedPhraseResult,
+    ffi::{identity::*, SeedPhraseResult},
 };
 use cxx_admin_manager::*;
-use cxx_identity::*;
 
 #[allow(clippy::needless_lifetimes)]
 #[cxx::bridge(namespace = "wildland")]
@@ -33,7 +31,7 @@ mod ffi_cxx {
         fn get_vec(self: &SeedPhrase) -> Vec<String>;
 
         type DynIdentity;
-        fn set_name(self: &mut DynIdentity, name: String);
+        fn set_name(self: &DynIdentity, name: String);
         fn get_name(self: &DynIdentity) -> String;
 
         type IdentityResult;
