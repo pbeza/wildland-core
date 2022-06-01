@@ -3,10 +3,10 @@ pub mod test_utilities {
     use salsa20::XNonce;
 
     pub fn generate_random_nonce() -> XNonce {
-        let mut rng = crypto_box::rand_core::OsRng;
+        let mut rng = rand_core::OsRng;
         crypto_box::generate_nonce(&mut rng)
     }
-
+    pub static MNEMONIC_PHRASE: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     pub static SIGNING_PUBLIC_KEY: &str =
         "1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f";
     pub static SIGNING_SECRET_KEY: &str =
