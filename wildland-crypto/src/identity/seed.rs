@@ -21,7 +21,6 @@
 use bip39::{Language::English, Mnemonic, MnemonicType};
 use hkdf::Hkdf;
 use sha2::Sha256;
-use MnemonicType::Words12;
 
 use crate::error::CryptoError;
 
@@ -30,19 +29,23 @@ pub type SeedPhraseWords = [String; SEED_PHRASE_LEN];
 
 /// Create a new random seed phrase
 pub fn generate_random_seed_phrase() -> Result<SeedPhraseWords, CryptoError> {
-    Mnemonic::new(Words12, English)
-        .phrase()
-        .split(' ')
-        .map(|word| word.to_owned())
-        .collect::<Vec<String>>()
-        .try_into()
-        .map_err(|e: Vec<_>| {
-            CryptoError::SeedPhraseGenerationError(format!(
-                "Invalid seed phrase length: {} - expected {}",
-                e.len(),
-                SEED_PHRASE_LEN
-            ))
-        })
+    Mnemonic::new(
+        MnemonicType::for_word_count(SEED_PHRASE_LEN)
+            .map_err(|e| CryptoError::SeedPhraseGenerationError(e.to_string()))?,
+        English,
+    )
+    .phrase()
+    .split(' ')
+    .map(|word| word.to_owned())
+    .collect::<Vec<String>>()
+    .try_into()
+    .map_err(|e: Vec<_>| {
+        CryptoError::SeedPhraseGenerationError(format!(
+            "Invalid seed phrase length: {} - expected {}",
+            e.len(),
+            SEED_PHRASE_LEN
+        ))
+    })
 }
 
 pub fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
