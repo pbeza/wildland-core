@@ -1,8 +1,7 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::StructOpt;
 use cli_args::{CliArgs, IdentitySubCommand, SubCommand};
-use wildland_admin_manager::admin_manager::{AdminManager, Identity};
-use wildland_admin_manager_api::{AdminManager as ApiAdminManager, SEED_PHRASE_LEN};
+use wildland_admin_manager::{admin_manager::AdminManager, api::AdminManager as AdminManagerApi};
 
 mod cli_args;
 mod version;
@@ -13,14 +12,14 @@ fn main() -> Result<()> {
     if cli.version {
         version::print_version();
     } else {
-        let mut admin_manager = AdminManager::<Identity>::default();
+        let mut admin_manager = AdminManager::default();
         match cli.sub_command_action {
             SubCommand::Identity {
                 identity_action: IdentitySubCommand::Generate,
             } => {
                 let seed_phrase = AdminManager::create_seed_phrase()?;
                 let identity = admin_manager
-                    .create_master_identity_from_seed_phrase("name".into(), seed_phrase)?;
+                    .create_master_identity_from_seed_phrase("name".into(), &seed_phrase)?;
                 println!("{identity}")
             }
             SubCommand::Identity {
@@ -30,13 +29,9 @@ fn main() -> Result<()> {
                     .split(' ')
                     .map(|elem| elem.to_string())
                     .collect::<Vec<_>>()
-                    .try_into()
-                    .map_err(|e: Vec<String>| {
-                        let phrase = e.join(" ");
-                        anyhow!("Could not parse seed phrase {phrase:?} - expecting {SEED_PHRASE_LEN} words")
-                    })?;
+                    .try_into()?;
                 let identity =
-                    admin_manager.create_master_identity_from_seed_phrase("name".into(), seed)?;
+                    admin_manager.create_master_identity_from_seed_phrase("name".into(), &seed)?;
                 println!("{identity}")
             }
         }

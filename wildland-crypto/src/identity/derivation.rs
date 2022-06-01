@@ -53,13 +53,13 @@ fn single_use_encryption_key_path(index: u64) -> String {
 /// - signing (not rotated, used to sign "user manifest")
 /// - encryption (used by other people to encrypt secrets to the user, rotated)
 /// - single-use-encryption - to transfer secrets in public
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Identity {
     xprv: XPrv,
     words: SeedPhraseWords,
 }
 
-impl TryFrom<SeedPhraseWords> for Identity {
+impl TryFrom<&SeedPhraseWords> for Identity {
     type Error = CryptoError;
 
     fn try_from(seed_phrase: SeedPhraseWords) -> Result<Self, Self::Error> {
@@ -398,7 +398,7 @@ mod tests {
             .collect::<Vec<String>>()
             .try_into()
             .unwrap();
-        let user = Identity::try_from(mnemonic_array).unwrap();
+        let user = Identity::try_from(&mnemonic_array).unwrap();
 
         assert_eq!(user.get_xprv(), &XPrv::normalize_bytes_ed25519(ROOT_XPRV))
     }
@@ -412,7 +412,7 @@ mod tests {
             .try_into()
             .unwrap();
 
-        assert!(Identity::try_from(mnemonic_array).is_err());
+        assert!(Identity::try_from(&mnemonic_array).is_err());
     }
 
     #[test]
@@ -423,7 +423,7 @@ mod tests {
             .collect::<Vec<String>>()
             .try_into()
             .unwrap();
-        let user = Identity::try_from(mnemonic_array).unwrap();
+        let user = Identity::try_from(&mnemonic_array).unwrap();
         assert_eq!(user.get_seed_phrase().join(" "), TEST_MNEMONIC_12);
     }
 }

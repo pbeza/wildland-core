@@ -1,7 +1,7 @@
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq, Clone)]
 pub enum CoreXError {
     #[error("Seed phrase generation error: {0}")]
     SeedPhraseGenerationError(String),

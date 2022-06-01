@@ -1,9 +1,16 @@
 mod identity;
 
-use api::AdminManagerError;
-pub use identity::Identity;
-use wildland_admin_manager_api as api;
-use wildland_corex::SeedPhraseWords;
+use crate::api::{self, AdminManagerError, Identity, SeedPhrase};
+pub use identity::CryptoIdentity;
+use std::sync::Arc;
+
+#[derive(Default)]
+pub struct AdminManager {
+    // TODO do we want to store more than one master identity
+    // TODO do we want to keep mappings between a master identity and a set of device identities
+    master_identity: Option<Arc<dyn Identity>>,
+    email: Option<Email>,
+}
 
 pub enum Email {
     Unverified {
@@ -13,58 +20,30 @@ pub enum Email {
     Verified(String),
 }
 
-pub struct AdminManager<I: api::Identity> {
-    // TODO do we want to store more than one master identity
-    // TODO do we want to keep mappings between a master identity and a set of device identities
-    master_identity: Option<I>,
-    email: Option<Email>,
-}
-
-impl Default for AdminManager<Identity> {
-    fn default() -> Self {
-        Self {
-            master_identity: Default::default(),
-            email: Default::default(),
-        }
-    }
-}
-
-impl api::AdminManager for AdminManager<Identity> {
-    type Identity = Identity;
-
+impl api::AdminManager for AdminManager {
     fn create_master_identity_from_seed_phrase(
         &mut self,
         name: String,
-        seed: SeedPhraseWords,
-    ) -> api::AdminManagerResult<Identity> {
-        let identity = Identity::new(
+        seed: &SeedPhrase,
+    ) -> api::AdminManagerResult<Arc<dyn Identity>> {
+        let identity = CryptoIdentity::new(
             api::IdentityType::Master,
             name,
-            wildland_corex::try_identity_from_seed(seed)?,
+            wildland_corex::try_identity_from_seed(seed.as_ref())?,
         );
-        self.master_identity = Some(identity.clone()); // TODO Can user have multiple master identities? If not should it be overwritten?
-        Ok(identity)
+        self.master_identity = Some(Arc::new(identity)); // TODO Can user have multiple master identities? If not should it be overwritten?
+        Ok(self.master_identity.as_ref().unwrap().clone())
     }
 
-    fn create_device_identity_from_seed_phrase(
-        &mut self,
-        name: String,
-        seed: SeedPhraseWords,
-    ) -> api::AdminManagerResult<Identity> {
-        let identity = Identity::new(
-            api::IdentityType::Device,
-            name,
-            wildland_corex::try_identity_from_seed(seed)?,
-        );
-        // TODO keep it somehow?
-        Ok(identity)
+    // }
+
+    fn create_seed_phrase() -> api::AdminManagerResult<SeedPhrase> {
+        wildland_corex::generate_random_seed_phrase()
+            .map_err(AdminManagerError::from)
+            .map(SeedPhrase::from)
     }
 
-    fn create_seed_phrase() -> api::AdminManagerResult<SeedPhraseWords> {
-        wildland_corex::generate_random_seed_phrase().map_err(AdminManagerError::from)
-    }
-
-    fn get_master_identity(&self) -> Option<Identity> {
+    fn get_master_identity(&self) -> Option<Arc<dyn Identity>> {
         self.master_identity.clone()
     }
 
@@ -107,8 +86,8 @@ impl api::AdminManager for AdminManager<Identity> {
 
 #[cfg(test)]
 mod tests {
-    use super::AdminManager;
-    use wildland_admin_manager_api::{AdminManager as AdminManagerApi, AdminManagerError};
+    use super::*;
+    use crate::api::AdminManager as AdminManagerApi;
 
     #[test]
     fn cannot_verify_email_when_not_set() {
