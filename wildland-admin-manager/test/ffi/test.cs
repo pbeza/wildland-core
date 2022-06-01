@@ -6,7 +6,7 @@ namespace Main
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("TODO: C# FFI Testsuite");
+            Console.WriteLine("C# FFI Testsuite");
         
             var admin_manager = wildland.create_admin_manager();
             var seed_result = wildland.create_seed_phrase();

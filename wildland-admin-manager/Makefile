@@ -1,16 +1,16 @@
-.PHONY: prepare java csharp clean
+.PHONY: prepare java csharp cpp python swift clean
 
 
 #############################################
 # Override the following variables if needed:
 #############################################
 # Java includes
-JDK_INC_DIR=/usr/lib/jvm/java-11-openjdk-amd64/include
+JDK_INC_DIR=/usr/lib/jvm/java-17-openjdk/include
 
 # Python includes
 PYTHON_DIR=/usr/include/python3.10/
 
-# `g++` for Linux, `clang++` for Windows (TODO: to be checked.)
+# `g++` for Linux, `clang++` for Windows
 CC=g++
 
 # `mono` for Linux, nothing (empty) for Windows
@@ -25,14 +25,17 @@ CSHARP_COMPILER=mcs
 # Those paths should not be changed:
 CXX_OUT=../target/cxxbridge/wildland-admin-manager/src/ffi
 CXX_RUST=../target/cxxbridge/rust
+RUST_BUILD=cargo +nightly build --features "bindings"
 
 
 prepare:
-	cargo build --features "bindings"
-	mkdir -p cpp
-	cp $(CXX_OUT)/mod.rs.h cpp/mod.rs.h
-	cp $(CXX_OUT)/mod.rs.cc cpp/mod.rs.cc
-	cp $(CXX_RUST)/cxx.h cpp/cxx.h
+	$(RUST_BUILD)
+	mkdir -p _temporary
+	cp $(CXX_OUT)/mod.rs.h _temporary/mod.rs.h
+	cp $(CXX_OUT)/mod.rs.cc _temporary/mod.rs.cc
+	cp $(CXX_RUST)/cxx.h _temporary/cxx.h
+
+swig_preparation: prepare
 	##############################
 	##### SWIG Workarounds: ######
 	##############################
@@ -42,19 +45,19 @@ prepare:
 	## binding generator. Those should be removed before
 	## using Swig parser.
 	## * Swig doesn't understand `final` keyword:
-		sed -i 's/final//g' cpp/mod.rs.h
+		sed -i 's/final//g' _temporary/mod.rs.h
 	## * Inline namespaces make problems:
-		sed -i 's/::rust/::rust::cxxbridge1/g' cpp/mod.rs.h
+		sed -i 's/::rust/::rust::cxxbridge1/g' _temporary/mod.rs.h
 	## * Every param between `[[`  `]]` is unparsable:
-		sed -i 's/\[\[noreturn\]\]//g' cpp/mod.rs.h
+		sed -i 's/\[\[noreturn\]\]//g' _temporary/mod.rs.h
 	## * Not all variadic `...` are supported:
-		sed -i 's/\.\.\.//g' cpp/mod.rs.h
+		sed -i 's/\.\.\.//g' _temporary/mod.rs.h
 
-java: prepare
+java: swig_preparation
 	mkdir -p wildland_java
-	cd cpp ; swig -java -c++ -w516,503,476,302 -outdir ../wildland_java ../wildland.i
-	mv wildland_wrap.cxx cpp/wildland_wrap.cxx
-	cd cpp ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
+	cd _temporary ; swig -java -c++ -w516,503,476,302 -outdir ../wildland_java ../wildland.i
+	mv wildland_wrap.cxx _temporary/wildland_wrap.cxx
+	cd _temporary ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
 		wildland_wrap.cxx mod.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
@@ -67,11 +70,11 @@ java_test: java
 	cd wildland_java ; javac test.java
 	cd wildland_java ; java -Djava.library.path="." main
 
-csharp: prepare
+csharp: swig_preparation
 	mkdir -p wildland_csharp
-	cd cpp ; swig -csharp -c++ -w516,503,476,302 -outdir ../wildland_csharp ../wildland.i
-	mv wildland_wrap.cxx cpp/wildland_wrap.cxx
-	cd cpp ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
+	cd _temporary ; swig -csharp -c++ -w516,503,476,302 -outdir ../wildland_csharp ../wildland.i
+	mv wildland_wrap.cxx _temporary/wildland_wrap.cxx
+	cd _temporary ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
 		wildland_wrap.cxx mod.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
@@ -82,11 +85,11 @@ csharp_test: csharp
 	cd wildland_csharp ; $(CSHARP_COMPILER) -out:test.exe *.cs
 	cd wildland_csharp ; $(CSHARP_RUN) test.exe
 
-python: prepare
+python: swig_preparation
 	mkdir -p wildland_python
-	cd cpp ; swig -python -c++ -w516,503,476,302,383,509 -outdir ../wildland_python ../wildland.i
-	mv wildland_wrap.cxx cpp/wildland_wrap.cxx
-	cd cpp ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
+	cd _temporary ; swig -python -c++ -w516,503,476,302,383,509 -outdir ../wildland_python ../wildland.i
+	mv wildland_wrap.cxx _temporary/wildland_wrap.cxx
+	cd _temporary ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
 		wildland_wrap.cxx mod.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
@@ -99,11 +102,11 @@ python_test: python
 
 swift:
 	mkdir -p wildland_swift
-	SWIFT_BRIDGE_OUT_DIR="$(CURDIR)/wildland_swift" cargo build --features "bindings"
+	SWIFT_BRIDGE_OUT_DIR="$(CURDIR)/wildland_swift" $(RUST_BUILD)
 	cp test/ffi/test.swift wildland_swift/main.swift
 	swiftc -L ../target/debug -lwildland_admin_manager \
 		-I wildland_swift -import-objc-header \
-		swift_ffi/bridging-header.h \
+		swift_header.h \
 		./wildland_swift/SwiftBridgeCore.swift \
 		./wildland_swift/wildland/wildland.swift \
 		wildland_swift/main.swift \
@@ -115,6 +118,22 @@ swift_test: swift
 	@echo ""
 	./wildland_swift/swift_app
 
+cpp: prepare
+	mkdir -p wildland_cpp
+	cd _temporary ; $(CC) -std=c++20 -w \
+		../test/ffi/test.cpp mod.rs.cc \
+		-L../../target/debug \
+		-I. \
+		-lwildland_admin_manager \
+		-o ../wildland_cpp/test
+
+cpp_test: cpp
+	./wildland_cpp/test
 
 clean:
-	rm -r wildland_java wildland_csharp wildland_python cpp wildland_swift
+	rm -r _temporary \
+		wildland_java \
+		wildland_csharp \
+		wildland_python \
+		wildland_swift \
+		wildland_cpp
