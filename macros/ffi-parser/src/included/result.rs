@@ -1,16 +1,14 @@
-use crate::api::{AdminManagerError, AdminManagerResult};
 use std::fmt::Debug;
 
-#[derive(Debug)]
-pub struct Res<T>(AdminManagerResult<T>);
+pub struct Res<T>(pub ResultFfi<T>);
 
-impl<T> From<AdminManagerResult<T>> for Res<T> {
-    fn from(res: AdminManagerResult<T>) -> Self {
+impl<T> From<ResultFfi<T>> for Res<T> {
+    fn from(res: ResultFfi<T>) -> Self {
         Res(res)
     }
 }
 
-impl<T: Debug + Clone> Res<T> {
+impl<T: Clone + Debug> Res<T> {
     pub fn is_ok(&self) -> bool {
         self.0.is_ok()
     }
@@ -25,10 +23,10 @@ impl<T: Debug + Clone> Res<T> {
         self.0.as_ref().unwrap().clone()
     }
 
-    pub fn boxed_unwrap_err(&self) -> Box<AdminManagerError> {
+    pub fn boxed_unwrap_err(&self) -> Box<ResultFfiError> {
         Box::new(self.unwrap_err())
     }
-    pub fn unwrap_err(&self) -> AdminManagerError {
+    pub fn unwrap_err(&self) -> ResultFfiError {
         self.0.as_ref().unwrap_err().clone()
     }
 }

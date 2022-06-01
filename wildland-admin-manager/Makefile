@@ -5,7 +5,7 @@
 # Override the following variables if needed:
 #############################################
 # Java includes
-JDK_INC_DIR=/usr/lib/jvm/java-11-openjdk-amd64/include
+JDK_INC_DIR=/usr/lib/jvm/java-17-openjdk/include
 
 # Python includes
 PYTHON_DIR=/usr/include/python3.10/
@@ -23,14 +23,14 @@ CSHARP_COMPILER=mcs
 #############################################
 
 # Those paths should not be changed:
-CXX_OUT=../target/cxxbridge/wildland-admin-manager/src/ffi/cxx
+CXX_OUT=../target/cxxbridge/wildland-admin-manager/_temporary/
 CXX_RUST=../target/cxxbridge/rust
-RUST_BUILD=cargo +nightly build --features "bindings"
+RUST_BUILD=cargo build --features "bindings"
 
 
 prepare:
-	$(RUST_BUILD)
 	mkdir -p _temporary
+	$(RUST_BUILD)
 	cp $(CXX_OUT)/mod.rs.h _temporary/mod.rs.h
 	cp $(CXX_OUT)/mod.rs.cc _temporary/mod.rs.cc
 	cp $(CXX_RUST)/cxx.h _temporary/cxx.h

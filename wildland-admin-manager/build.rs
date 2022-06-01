@@ -1,21 +1,11 @@
 #[cfg(feature = "bindings")]
 fn main() {
-    // Build Swift bridge
-    use std::path::PathBuf;
-    let out_dir = PathBuf::from("./wildland_swift");
-
-    let bridges = vec!["src/ffi/swift/mod.rs"];
-    for path in &bridges {
-        println!("cargo:rerun-if-changed={}", path);
-    }
-
-    swift_bridge_build::parse_bridges(bridges).write_all_concatenated(out_dir, "wildland");
-
-    // Build CXX bridge
-    cxx_build::bridge("src/ffi/cxx/mod.rs")
-        .flag_if_supported("-std=c++20")
-        .compile("wildland");
-    println!("cargo:rerun-if-changed=src/ffi/cxx/mod.rs");
+    use ffi_macro_build::ffi_macro_build;
+    // use std::env;
+    // let out_dir = env::var("CARGO_BUILD_TARGET_DIR").unwrap();
+    // let out_dir = ;
+    ffi_macro_build::parse_ffi_module("src/ffi/mod.rs", "./_temporary/").unwrap();
+    println!("cargo:rerun-if-changed=src/ffi/mod.rs");
 }
 
 #[cfg(not(feature = "bindings"))]
