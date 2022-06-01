@@ -47,7 +47,7 @@ impl api::AdminManager for AdminManager {
 
     fn set_email(&mut self, email: String) {
         // TODO generate code
-        let verification_code = "1232456".to_owned();
+        let verification_code = "123456".to_owned();
         self.email = Some(Email::Unverified {
             mailbox_address: email,
             verification_code,
@@ -91,7 +91,7 @@ mod tests {
     fn cannot_verify_email_when_not_set() {
         let mut am = AdminManager::default();
         assert_eq!(
-            am.verify_email("1232456".to_owned()).unwrap_err(),
+            am.verify_email("123456".to_owned()).unwrap_err(),
             AdminManagerError::EmailCandidateNotSet
         );
     }
@@ -102,7 +102,7 @@ mod tests {
         am.set_email("email@email.com".to_string());
         am.send_verification_code().unwrap();
         assert_eq!(
-            am.verify_email("1232455".to_owned()).unwrap_err(),
+            am.verify_email("123455".to_owned()).unwrap_err(),
             AdminManagerError::ValidationCodesDoNotMatch
         );
     }
@@ -112,9 +112,9 @@ mod tests {
         let mut am = AdminManager::default();
         am.set_email("email@email.com".to_string());
         am.send_verification_code().unwrap();
-        assert!(am.verify_email("1232456".to_owned()).is_ok());
+        assert!(am.verify_email("123456".to_owned()).is_ok());
         assert_eq!(
-            am.verify_email("1232456".to_owned()).unwrap_err(),
+            am.verify_email("123456".to_owned()).unwrap_err(),
             AdminManagerError::EmailAlreadyVerified
         );
     }

@@ -6,7 +6,6 @@ use crate::{
 pub type IdentityResult = Res<DynIdentity>;
 pub type OptionalIdentity = Opt<DynIdentity>;
 
-// TODO derive macro
 #[derive(Debug)]
 pub struct DynIdentity(pub AdminManagerIdentity);
 impl DynIdentity {
