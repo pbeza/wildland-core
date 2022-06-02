@@ -2,7 +2,7 @@ mod cxx_admin_manager;
 
 use crate::{
     api::{AdminManagerError, SeedPhrase},
-    ffi::{identity::*, SeedPhraseResult},
+    ffi::{identity::*, EmptyResult, SeedPhraseResult},
 };
 use cxx_admin_manager::*;
 
@@ -20,6 +20,16 @@ mod ffi_cxx {
             name: String,
             seed: &SeedPhrase,
         ) -> Box<IdentityResult>;
+        fn set_email(self: &mut AdminManager, email: String);
+        fn send_verification_code(self: &mut AdminManager) -> Box<EmptyResult>;
+        fn verify_email(
+            self: &mut AdminManager,
+            input_verification_code: String,
+        ) -> Box<EmptyResult>;
+
+        type EmptyResult;
+        fn is_ok(self: &EmptyResult) -> bool;
+        fn unwrap_err(self: &EmptyResult) -> &AdminManagerError;
 
         type SeedPhraseResult;
         fn is_ok(self: &SeedPhraseResult) -> bool;

@@ -94,3 +94,4 @@ typedef unsigned char uint8_t;
 %template(BoxedIdentityResult) ::rust::cxxbridge1::Box<::wildland::IdentityResult>;
 %template(BoxedOptionalIdentity) ::rust::cxxbridge1::Box<::wildland::OptionalIdentity>;
 %template(BoxedAdminManager) ::rust::cxxbridge1::Box<::wildland::AdminManager>;
+%template(BoxedEmptyResult) ::rust::cxxbridge1::Box<::wildland::EmptyResult>;

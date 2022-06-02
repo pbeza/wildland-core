@@ -29,3 +29,13 @@ if seed_result.is_ok():
         print(identity_second_ref.get_name().c_str())
 
     print(identity.get_name().c_str())
+
+    admin_manager.set_email(wildland.RustString("test@email.com"))
+    sending_result = admin_manager.send_verification_code()  # Code is hardcoded for now
+    if sending_result.is_ok():
+        verification_result = admin_manager.verify_email(
+            wildland.RustString("123456"))
+        if verification_result.is_ok():
+            print("Verification successfull")
+        else:
+            print(verification_result.unwrap_err().to_string().c_str())

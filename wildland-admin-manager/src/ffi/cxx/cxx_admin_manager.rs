@@ -1,4 +1,4 @@
-use super::SeedPhraseResult;
+use super::{EmptyResult, SeedPhraseResult};
 use crate::{
     admin_manager::AdminManager as RustAdminManager,
     api::AdminManager as AdminManagerApi,
@@ -30,7 +30,21 @@ impl AdminManager {
     }
 
     pub fn get_master_identity(&self) -> Box<OptionalIdentity> {
-        let id = self.0.get_master_identity().map(DynIdentity);
-        Box::new(id.into())
+        Box::new(self.0.get_master_identity().map(DynIdentity).into())
+    }
+
+    pub fn set_email(&mut self, email: String) {
+        self.0.set_email(email)
+    }
+
+    pub fn send_verification_code(self: &mut AdminManager) -> Box<EmptyResult> {
+        Box::new(self.0.send_verification_code().into())
+    }
+
+    pub fn verify_email(
+        self: &mut AdminManager,
+        input_verification_code: String,
+    ) -> Box<EmptyResult> {
+        Box::new(self.0.verify_email(input_verification_code).into())
     }
 }

@@ -34,6 +34,21 @@ int main()
             identity.set_name(::rust::String{"New name 3"}); // Identity can be mutated
             std::cout << "Identity name: " << std::string(identity.get_name()) << std::endl;
         }
+
+        admin_manager->set_email(::rust::String("test@email.com"));
+        Box<EmptyResult> sending_result = admin_manager->send_verification_code(); // Code is hardcoded for now
+        if (sending_result->is_ok())
+        {
+            Box<EmptyResult> verification_result = admin_manager->verify_email(::rust::String("123456"));
+            if (verification_result->is_ok())
+            {
+                std::cout << "Verification successfull" << std::endl;
+            }
+            else
+            {
+                std::cout << verification_result->unwrap_err().to_string().c_str() << std::endl;
+            }
+        }
     }
     else
     {

@@ -18,4 +18,15 @@ if seed_phrase_result.is_ok() {
     }
 
     print(identity.get_name().toString()); // first ref is still valid
+
+    admin_manager.set_email(RustString("test@email.com"));
+    var sending_result = admin_manager.send_verification_code(); // Code is hardcoded for now
+    if (sending_result.is_ok()) {
+      var verification_result = admin_manager.verify_email(RustString("123456"));
+      if (verification_result.is_ok()) {
+        print("Verification successfull");
+      } else {
+        print(verification_result.unwrap_err().to_string().c_str());
+      }
+    }
 }

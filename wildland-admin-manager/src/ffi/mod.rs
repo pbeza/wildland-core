@@ -9,3 +9,4 @@ mod result;
 pub mod swift;
 
 type SeedPhraseResult = Res<SeedPhrase>;
+type EmptyResult = Res<()>;
