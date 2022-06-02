@@ -28,6 +28,11 @@ typedef unsigned char uint8_t;
 // String class in Java and C#
 %rename(RustString) String;
 
+// Rename boxed_unwrap to unwrap
+%rename(unwrap) boxed_unwrap;
+// Rename boxed_unwrap_err to unwrap_err
+%rename(unwrap_err) boxed_unwrap_err;
+
 // Ignore unused cxx.rs internal structs (that are actually
 // problematic during the parsing process for SWIG).
 %ignore unsafe_bitcopy_t;
@@ -91,7 +96,10 @@ typedef unsigned char uint8_t;
 // In result each type added to cxx module that uses generics needs to
 // be declared here:
 %template(BoxedSeedPhraseResult) ::rust::cxxbridge1::Box<::wildland::SeedPhraseResult>;
+%template(BoxedSeedPhrase) ::rust::cxxbridge1::Box<::wildland::SeedPhrase>;
+%template(BoxedDynIdentity) ::rust::cxxbridge1::Box<::wildland::DynIdentity>;
 %template(BoxedIdentityResult) ::rust::cxxbridge1::Box<::wildland::IdentityResult>;
 %template(BoxedOptionalIdentity) ::rust::cxxbridge1::Box<::wildland::OptionalIdentity>;
 %template(BoxedAdminManager) ::rust::cxxbridge1::Box<::wildland::AdminManager>;
 %template(BoxedEmptyResult) ::rust::cxxbridge1::Box<::wildland::EmptyResult>;
+%template(BoxedAdminManagerError) ::rust::cxxbridge1::Box<::wildland::AdminManagerError>;

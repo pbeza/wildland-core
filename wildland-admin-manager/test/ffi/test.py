@@ -13,15 +13,15 @@ class TestAdminManager(unittest.TestCase):
         print(seed.get_string().c_str())
 
     def test_create_identity_from_seed(self):
-        seed_result = wildland.create_seed_phrase()
+        seed = wildland.create_seed_phrase().unwrap()
         identity_result = self.admin_manager.create_master_identity_from_seed_phrase(
-            wildland.RustString("name 1"), seed_result.unwrap())
+            wildland.RustString("name 1"), seed)
         identity_result.is_ok()
 
     def test_get_identity(self):
         self.test_create_identity_from_seed()
         identity_opt = self.admin_manager.get_master_identity()
-        assert identity_opt.is_some() == True
+        assert identity_opt.is_some()
 
     def test_identity_is_none(self):
         assert self.admin_manager.get_master_identity().is_some() == False

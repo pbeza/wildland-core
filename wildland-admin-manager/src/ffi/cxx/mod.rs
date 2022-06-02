@@ -18,7 +18,7 @@ mod ffi_cxx {
         fn create_master_identity_from_seed_phrase(
             self: &mut AdminManager,
             name: String,
-            seed: &SeedPhrase,
+            seed: &Box<SeedPhrase>,
         ) -> Box<IdentityResult>;
         fn set_email(self: &mut AdminManager, email: String);
         fn send_verification_code(self: &mut AdminManager) -> Box<EmptyResult>;
@@ -29,12 +29,12 @@ mod ffi_cxx {
 
         type EmptyResult;
         fn is_ok(self: &EmptyResult) -> bool;
-        fn unwrap_err(self: &EmptyResult) -> &AdminManagerError;
+        fn boxed_unwrap_err(self: &EmptyResult) -> Box<AdminManagerError>;
 
         type SeedPhraseResult;
         fn is_ok(self: &SeedPhraseResult) -> bool;
-        fn unwrap(self: &SeedPhraseResult) -> &SeedPhrase;
-        fn unwrap_err(self: &SeedPhraseResult) -> &AdminManagerError;
+        fn boxed_unwrap(self: &SeedPhraseResult) -> Box<SeedPhrase>;
+        fn boxed_unwrap_err(self: &SeedPhraseResult) -> Box<AdminManagerError>;
 
         type SeedPhrase;
         fn get_string(self: &SeedPhrase) -> String;
@@ -46,12 +46,12 @@ mod ffi_cxx {
 
         type IdentityResult;
         fn is_ok(self: &IdentityResult) -> bool;
-        fn unwrap(self: &IdentityResult) -> &DynIdentity;
-        fn unwrap_err(self: &IdentityResult) -> &AdminManagerError;
+        fn boxed_unwrap(self: &IdentityResult) -> Box<DynIdentity>;
+        fn boxed_unwrap_err(self: &IdentityResult) -> Box<AdminManagerError>;
 
         type OptionalIdentity;
         fn is_some(self: &OptionalIdentity) -> bool;
-        fn unwrap(self: &OptionalIdentity) -> &DynIdentity;
+        fn boxed_unwrap(self: &OptionalIdentity) -> Box<DynIdentity>;
 
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;

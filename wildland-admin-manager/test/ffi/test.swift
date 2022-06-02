@@ -26,7 +26,7 @@ if seed_phrase_result.is_ok() {
       if (verification_result.is_ok()) {
         print("Verification successfull");
       } else {
-        print(verification_result.unwrap_err().to_string().c_str());
+        print(verification_result.unwrap_err().to_string().toString());
       }
     }
 }
