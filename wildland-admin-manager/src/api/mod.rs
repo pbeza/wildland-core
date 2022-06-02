@@ -3,7 +3,7 @@ mod identity;
 mod result;
 mod seed_phrase;
 
-pub use admin_manager::AdminManager;
+pub use admin_manager::{AdminManager, AdminManagerIdentity};
 pub use identity::{Identity, IdentityType};
 pub use result::*;
 pub use seed_phrase::SeedPhrase;

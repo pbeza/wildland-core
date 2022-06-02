@@ -20,6 +20,7 @@ fn main() -> Result<()> {
                 let seed_phrase = AdminManager::create_seed_phrase()?;
                 let identity = admin_manager
                     .create_master_identity_from_seed_phrase("name".into(), &seed_phrase)?;
+                let identity = identity.lock().unwrap();
                 println!("{identity}")
             }
             SubCommand::Identity {
@@ -32,6 +33,7 @@ fn main() -> Result<()> {
                     .try_into()?;
                 let identity =
                     admin_manager.create_master_identity_from_seed_phrase("name".into(), &seed)?;
+                let identity = identity.lock().unwrap();
                 println!("{identity}")
             }
         }

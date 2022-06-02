@@ -23,7 +23,7 @@ CSHARP_COMPILER=mcs
 #############################################
 
 # Those paths should not be changed:
-CXX_OUT=../target/cxxbridge/wildland-admin-manager/src/ffi
+CXX_OUT=../target/cxxbridge/wildland-admin-manager/src/ffi/cxx
 CXX_RUST=../target/cxxbridge/rust
 RUST_BUILD=cargo +nightly build --features "bindings"
 
@@ -104,7 +104,7 @@ swift:
 	mkdir -p wildland_swift
 	SWIFT_BRIDGE_OUT_DIR="$(CURDIR)/wildland_swift" $(RUST_BUILD)
 	cp test/ffi/test.swift wildland_swift/main.swift
-	swiftc -L ../target/debug -lwildland_admin_manager \
+	swiftc -L ../target/debug -lwildland_admin_manager -lstdc++ \
 		-I wildland_swift -import-objc-header \
 		swift_header.h \
 		./wildland_swift/SwiftBridgeCore.swift \
