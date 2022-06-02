@@ -6,7 +6,6 @@ class main {
 
     var admin_manager = wildland.create_admin_manager();
     var seed_result = wildland.create_seed_phrase();
-
     if (seed_result.is_ok()) {
       var seed = seed_result.unwrap();
       var identity_result = admin_manager.create_master_identity_from_seed_phrase(new RustString("name 1"), seed);

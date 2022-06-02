@@ -1,5 +1,7 @@
 use super::{seed_phrase::SeedPhrase, AdminManagerResult, Identity};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+
+pub type AdminManagerIdentity = Arc<Mutex<dyn Identity>>;
 
 pub trait AdminManager {
     /// Creates a master identity based on the provided seed phrase (whether it's a newly
@@ -8,12 +10,12 @@ pub trait AdminManager {
         &mut self,
         name: String,
         seed: &SeedPhrase,
-    ) -> AdminManagerResult<Arc<dyn Identity>>;
+    ) -> AdminManagerResult<AdminManagerIdentity>;
 
     /// Creates a randomly generated seed phrase
     fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
 
-    fn get_master_identity(&self) -> Option<Arc<dyn Identity>>;
+    fn get_master_identity(&self) -> Option<AdminManagerIdentity>;
 
     /// Sends a 6-digit verification code to provided email address.
     fn send_verification_code(&mut self) -> AdminManagerResult<()>;

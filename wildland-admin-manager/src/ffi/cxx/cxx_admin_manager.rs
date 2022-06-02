@@ -1,7 +1,9 @@
-use super::{DynIdentity, IdentityResult, OptionalIdentity, SeedPhraseResult};
+use super::SeedPhraseResult;
 use crate::{
-    admin_manager::AdminManager as RustAdminManager, api::AdminManager as AdminManagerApi,
+    admin_manager::AdminManager as RustAdminManager,
+    api::AdminManager as AdminManagerApi,
     api::SeedPhrase,
+    ffi::identity::{DynIdentity, IdentityResult, OptionalIdentity},
 };
 
 pub struct AdminManager(RustAdminManager);
