@@ -1,6 +1,7 @@
 use crate::api::{AdminManagerError, AdminManagerResult};
 use std::fmt::Debug;
 
+#[derive(Debug)]
 pub struct Res<T>(AdminManagerResult<T>);
 
 impl<T> From<AdminManagerResult<T>> for Res<T> {

@@ -45,11 +45,13 @@ mod ffi_cxx {
         fn get_name(self: &DynIdentity) -> String;
 
         type IdentityResult;
-        unsafe fn unwrap(self: &IdentityResult) -> &DynIdentity;
+        fn is_ok(self: &IdentityResult) -> bool;
+        fn unwrap(self: &IdentityResult) -> &DynIdentity;
+        fn unwrap_err(self: &IdentityResult) -> &AdminManagerError;
 
         type OptionalIdentity;
         fn is_some(self: &OptionalIdentity) -> bool;
-        unsafe fn unwrap(self: &OptionalIdentity) -> &DynIdentity;
+        fn unwrap(self: &OptionalIdentity) -> &DynIdentity;
 
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;
