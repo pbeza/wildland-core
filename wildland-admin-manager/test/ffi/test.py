@@ -34,6 +34,16 @@ class TestAdminManager(unittest.TestCase):
         assert self.admin_manager.verify_email(
             wildland.RustString("123456")).is_ok()
 
+    def test_failed_email_verification(self):
+        self.admin_manager.set_email(wildland.RustString("test@email.com"))
+        # Code is hardcoded for now
+        sending_result = self.admin_manager.send_verification_code()
+        assert sending_result.is_ok()
+        verification_err = self.admin_manager.verify_email(
+            wildland.RustString("999999"))
+        assert verification_err.is_ok() == False
+        print(verification_err.unwrap_err().to_string().c_str())
+
 
 class TestIdentity(unittest.TestCase):
     def setUp(self):
