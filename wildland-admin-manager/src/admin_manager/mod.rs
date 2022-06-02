@@ -1,14 +1,14 @@
 mod identity;
 
-use crate::api::{self, AdminManagerError, Identity, SeedPhrase};
+use crate::api::{self, AdminManagerError, AdminManagerIdentity, SeedPhrase};
 pub use identity::CryptoIdentity;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Default)]
 pub struct AdminManager {
     // TODO do we want to store more than one master identity
     // TODO do we want to keep mappings between a master identity and a set of device identities
-    master_identity: Option<Arc<dyn Identity>>,
+    master_identity: Option<AdminManagerIdentity>,
     email: Option<Email>,
 }
 
@@ -25,17 +25,15 @@ impl api::AdminManager for AdminManager {
         &mut self,
         name: String,
         seed: &SeedPhrase,
-    ) -> api::AdminManagerResult<Arc<dyn Identity>> {
+    ) -> api::AdminManagerResult<AdminManagerIdentity> {
         let identity = CryptoIdentity::new(
             api::IdentityType::Master,
             name,
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
         );
-        self.master_identity = Some(Arc::new(identity)); // TODO Can user have multiple master identities? If not should it be overwritten?
+        self.master_identity = Some(Arc::new(Mutex::new(identity))); // TODO Can user have multiple master identities? If not should it be overwritten?
         Ok(self.master_identity.as_ref().unwrap().clone())
     }
-
-    // }
 
     fn create_seed_phrase() -> api::AdminManagerResult<SeedPhrase> {
         wildland_corex::generate_random_seed_phrase()
@@ -43,13 +41,13 @@ impl api::AdminManager for AdminManager {
             .map(SeedPhrase::from)
     }
 
-    fn get_master_identity(&self) -> Option<Arc<dyn Identity>> {
+    fn get_master_identity(&self) -> Option<AdminManagerIdentity> {
         self.master_identity.clone()
     }
 
     fn set_email(&mut self, email: String) {
         // TODO generate code
-        let verification_code = "1232456".to_owned();
+        let verification_code = "123456".to_owned();
         self.email = Some(Email::Unverified {
             mailbox_address: email,
             verification_code,
@@ -93,7 +91,7 @@ mod tests {
     fn cannot_verify_email_when_not_set() {
         let mut am = AdminManager::default();
         assert_eq!(
-            am.verify_email("1232456".to_owned()).unwrap_err(),
+            am.verify_email("123456".to_owned()).unwrap_err(),
             AdminManagerError::EmailCandidateNotSet
         );
     }
@@ -104,7 +102,7 @@ mod tests {
         am.set_email("email@email.com".to_string());
         am.send_verification_code().unwrap();
         assert_eq!(
-            am.verify_email("1232455".to_owned()).unwrap_err(),
+            am.verify_email("123455".to_owned()).unwrap_err(),
             AdminManagerError::ValidationCodesDoNotMatch
         );
     }
@@ -114,9 +112,9 @@ mod tests {
         let mut am = AdminManager::default();
         am.set_email("email@email.com".to_string());
         am.send_verification_code().unwrap();
-        assert!(am.verify_email("1232456".to_owned()).is_ok());
+        assert!(am.verify_email("123456".to_owned()).is_ok());
         assert_eq!(
-            am.verify_email("1232456".to_owned()).unwrap_err(),
+            am.verify_email("123456".to_owned()).unwrap_err(),
             AdminManagerError::EmailAlreadyVerified
         );
     }

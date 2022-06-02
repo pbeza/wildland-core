@@ -4,7 +4,7 @@ fn main() {
     use std::path::PathBuf;
     let out_dir = PathBuf::from("./wildland_swift");
 
-    let bridges = vec!["src/ffi/mod.rs"];
+    let bridges = vec!["src/ffi/swift/mod.rs"];
     for path in &bridges {
         println!("cargo:rerun-if-changed={}", path);
     }
@@ -12,10 +12,10 @@ fn main() {
     swift_bridge_build::parse_bridges(bridges).write_all_concatenated(out_dir, "wildland");
 
     // Build CXX bridge
-    cxx_build::bridge("src/ffi/mod.rs")
+    cxx_build::bridge("src/ffi/cxx/mod.rs")
         .flag_if_supported("-std=c++20")
         .compile("wildland");
-    println!("cargo:rerun-if-changed=src/ffi/mod.rs");
+    println!("cargo:rerun-if-changed=src/ffi/cxx/mod.rs");
 }
 
 #[cfg(not(feature = "bindings"))]

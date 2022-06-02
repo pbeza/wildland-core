@@ -28,12 +28,11 @@ int main()
         Box<OptionalIdentity> optional_identity = admin_manager->get_master_identity(); // The same identity as inside the result above
         if (optional_identity->is_some())
         {
-            // unwrap_mut was removed since SWIG transforms every ref to &mut ref - no way to obtain &mut ref in c++
             const DynIdentity &identity = optional_identity->unwrap();
 
-            // std::cout << "Identity name: " << std::string(identity.get_name()) << std::endl;
-            // identity.set_name(::rust::String{"New name 3"}); // Identity can be mutated
-            // std::cout << "Identity name: " << std::string(identity.get_name()) << std::endl;
+            std::cout << "Identity name: " << std::string(identity.get_name()) << std::endl;
+            identity.set_name(::rust::String{"New name 3"}); // Identity can be mutated
+            std::cout << "Identity name: " << std::string(identity.get_name()) << std::endl;
         }
     }
     else
