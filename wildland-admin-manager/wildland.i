@@ -28,10 +28,11 @@ typedef unsigned char uint8_t;
 // String class in Java and C#
 %rename(RustString) String;
 
-// Rename boxed_unwrap to unwrap
+// Rename boxed types
 %rename(unwrap) boxed_unwrap;
-// Rename boxed_unwrap_err to unwrap_err
 %rename(unwrap_err) boxed_unwrap_err;
+%rename(create_email_client_mock_builder) create_boxed_email_client_mock_builder;
+%rename(build) build_boxed;
 
 // Ignore unused cxx.rs internal structs (that are actually
 // problematic during the parsing process for SWIG).
@@ -103,3 +104,5 @@ typedef unsigned char uint8_t;
 %template(BoxedAdminManager) ::rust::cxxbridge1::Box<::wildland::AdminManager>;
 %template(BoxedEmptyResult) ::rust::cxxbridge1::Box<::wildland::EmptyResult>;
 %template(BoxedAdminManagerError) ::rust::cxxbridge1::Box<::wildland::AdminManagerError>;
+%template(BoxedDynEmailClient) ::rust::cxxbridge1::Box<::wildland::DynEmailClient>;
+%template(BoxedEmailClientMockBuilder) ::rust::cxxbridge1::Box<::wildland::EmailClientMockBuilder>;

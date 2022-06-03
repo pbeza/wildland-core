@@ -2,9 +2,18 @@ import unittest
 import wildland
 
 
+def set_up_admin_manager_with_email_client(times_send: int):
+    email_client_builder = wildland.create_email_client_mock_builder()
+    email_client_builder.expect_send(wildland.RustString(
+        "test@email.com"), wildland.RustString("123456"), times_send)
+    email_client = email_client_builder.build()
+
+    return wildland.create_admin_manager(email_client)
+
+
 class TestAdminManager(unittest.TestCase):
     def setUp(self):
-        self.admin_manager = wildland.create_admin_manager()
+        self.admin_manager = set_up_admin_manager_with_email_client(0)
 
     def test_seed_generation(self):
         seed_result = wildland.create_seed_phrase()
@@ -25,6 +34,11 @@ class TestAdminManager(unittest.TestCase):
 
     def test_identity_is_none(self):
         assert self.admin_manager.get_master_identity().is_some() == False
+
+
+class TestEmailSending(unittest.TestCase):
+    def setUp(self):
+        self.admin_manager = set_up_admin_manager_with_email_client(1)
 
     def test_successfully_verify_email(self):
         self.admin_manager.set_email(wildland.RustString("test@email.com"))
@@ -47,7 +61,7 @@ class TestAdminManager(unittest.TestCase):
 
 class TestIdentity(unittest.TestCase):
     def setUp(self):
-        self.admin_manager = wildland.create_admin_manager()
+        self.admin_manager = set_up_admin_manager_with_email_client(0)
         seed_result = wildland.create_seed_phrase()
         self.identity_result = self.admin_manager.create_master_identity_from_seed_phrase(
             wildland.RustString("name 1"), seed_result.unwrap())
