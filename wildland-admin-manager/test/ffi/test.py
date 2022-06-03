@@ -3,10 +3,10 @@ import wildland
 
 
 def set_up_admin_manager_with_email_client(times_send: int):
-    email_client_builder = wildland.create_email_client_mock_builder()
-    email_client_builder.expect_send(wildland.RustString(
+    email_client_mock_builder = wildland.create_email_client_mock_builder()
+    email_client_mock_builder.expect_send(wildland.RustString(
         "test@email.com"), wildland.RustString("123456"), times_send)
-    email_client = email_client_builder.build()
+    email_client = email_client_mock_builder.build()
 
     return wildland.create_admin_manager(email_client)
 
