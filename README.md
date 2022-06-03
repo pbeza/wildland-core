@@ -24,19 +24,3 @@ wildland-corex = { version = "0.1.0", path = "../wildland-corex", registry = "wl
 ### Publishing to the registry
 
 This registry does not have a web frontend. In order to get the publish token, use the following endpoint: [https://crates.wildland.dev/me](https://crates.wildland.dev/me)
-
-### Building with nightly toolchain
-
-Some unstable Rust features are used in `wildland-admin-manager` crate so it requires building with nightly toolchain.
-
-It can be set as a default toolchain with the command:
-
-```bash
-rustup default nightly
-```
-
-or set for individual build command:
-
-```bash
-cargo +nightly build
-```
