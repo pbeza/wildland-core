@@ -3,7 +3,7 @@ mod swift_admin_manager;
 use super::{EmptyResult, SeedPhraseResult};
 use crate::{
     api::{AdminManagerError, SeedPhrase},
-    ffi::{email_client::DynEmailClient, identity::*},
+    ffi::{email_client::*, identity::*},
 };
 use swift_admin_manager::*;
 
@@ -53,5 +53,17 @@ mod ffi_bridge {
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;
         fn code(self: &AdminManagerError) -> u32;
+
+        // MOCKS
+        // TODO hide behind some feature flag
+        type EmailClientMockBuilder;
+        fn create_email_client_mock_builder() -> EmailClientMockBuilder;
+        fn expect_send(
+            self: &mut EmailClientMockBuilder,
+            address: String,
+            message: String,
+            times: usize,
+        );
+        fn build(self: &EmailClientMockBuilder) -> DynEmailClient;
     }
 }

@@ -8,10 +8,10 @@ pub struct DynEmailClient(pub Arc<dyn EmailClient>);
 // TODO feature flag
 
 pub fn create_boxed_email_client_mock_builder() -> Box<EmailClientMockBuilder> {
-    Box::new(create_mock_email_client_builder())
+    Box::new(create_email_client_mock_builder())
 }
 
-pub fn create_mock_email_client_builder() -> EmailClientMockBuilder {
+pub fn create_email_client_mock_builder() -> EmailClientMockBuilder {
     EmailClientMockBuilder(Arc::new(MockEmailClient::new()))
 }
 
@@ -27,6 +27,10 @@ impl EmailClientMockBuilder {
     }
 
     pub fn build_boxed(&self) -> BoxedDynEmailClient {
-        Box::new(DynEmailClient(self.0.clone()))
+        Box::new(self.build())
+    }
+
+    pub fn build(&self) -> DynEmailClient {
+        DynEmailClient(self.0.clone())
     }
 }

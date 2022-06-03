@@ -1,7 +1,11 @@
 print("TODO: Swift FFI Testsuite");
 
+var email_client_mock_builder = create_email_client_mock_builder();
+email_client_mock_builder.expect_send(RustString("test@email.com"), RustString("123456"), 1);
+var email_client_mock = email_client_mock_builder.build();
+
 var seed_phrase_result = create_seed_phrase();
-var admin_manager = create_admin_manager();
+var admin_manager = create_admin_manager(email_client_mock);
 if seed_phrase_result.is_ok() {
     var seed = seed_phrase_result.unwrap();
     var identity_result = admin_manager.create_master_identity_from_seed_phrase(RustString("name 1"), seed);
