@@ -1,6 +1,6 @@
 mod swift_admin_manager;
 
-use super::SeedPhraseResult;
+use super::{EmptyResult, SeedPhraseResult};
 use crate::{
     api::{AdminManagerError, SeedPhrase},
     ffi::identity::*,
@@ -21,11 +21,18 @@ mod ffi_bridge {
             name: String,
             seed: &SeedPhrase,
         ) -> IdentityResult;
+        fn set_email(self: &mut AdminManager, email: String);
+        fn send_verification_code(self: &mut AdminManager) -> EmptyResult;
+        fn verify_email(self: &mut AdminManager, input_verification_code: String) -> EmptyResult;
+
+        type EmptyResult;
+        fn is_ok(self: &EmptyResult) -> bool;
+        fn unwrap_err(self: &EmptyResult) -> AdminManagerError;
 
         type SeedPhraseResult;
         fn is_ok(self: &SeedPhraseResult) -> bool;
-        fn unwrap(self: &SeedPhraseResult) -> &SeedPhrase;
-        fn unwrap_err(self: &SeedPhraseResult) -> &AdminManagerError;
+        fn unwrap(self: &SeedPhraseResult) -> SeedPhrase;
+        fn unwrap_err(self: &SeedPhraseResult) -> AdminManagerError;
 
         type SeedPhrase;
         fn get_string(self: &SeedPhrase) -> String;
@@ -36,11 +43,11 @@ mod ffi_bridge {
         fn get_name(self: &DynIdentity) -> String;
 
         type IdentityResult;
-        unsafe fn unwrap(self: &IdentityResult) -> &DynIdentity;
+        fn unwrap(self: &IdentityResult) -> DynIdentity;
 
         type OptionalIdentity;
         fn is_some(self: &OptionalIdentity) -> bool;
-        unsafe fn unwrap(self: &OptionalIdentity) -> &DynIdentity;
+        fn unwrap(self: &OptionalIdentity) -> DynIdentity;
 
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;
