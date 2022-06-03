@@ -6,7 +6,7 @@ use crate::{
 };
 use cxx_admin_manager::*;
 
-#[allow(clippy::needless_lifetimes)]
+#[allow(clippy::borrowed_box)]
 #[cxx::bridge(namespace = "wildland")]
 mod ffi_cxx {
     extern "Rust" {
