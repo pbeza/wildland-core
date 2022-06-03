@@ -26,7 +26,7 @@ fn main() -> Result<()> {
     if cli.version {
         version::print_version();
     } else {
-        let mut admin_manager = AdminManager::new(EmailClientStub);
+        let mut admin_manager = AdminManager::new(std::sync::Arc::new(EmailClientStub));
         match cli.sub_command_action {
             SubCommand::Identity {
                 identity_action: IdentitySubCommand::Generate,

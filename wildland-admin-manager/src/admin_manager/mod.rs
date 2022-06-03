@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn cannot_verify_email_when_not_set() {
-        let mut am = AdminManager::new(Box::new(MockEmailClient::new()));
+        let mut am = AdminManager::new(Arc::new(MockEmailClient::new()));
         assert_eq!(
             am.verify_email("123456".to_owned()).unwrap_err(),
             AdminManagerError::EmailCandidateNotSet
@@ -127,7 +127,7 @@ mod tests {
             .withf(|address, code| address == "email@email.com" && code == "123456")
             .returning(|_, _| Ok(()));
 
-        let mut am = AdminManager::new(Box::new(email_client));
+        let mut am = AdminManager::new(Arc::new(email_client));
         am.set_email("email@email.com".to_string());
         am.send_verification_code().unwrap();
 
@@ -146,7 +146,7 @@ mod tests {
             .withf(|address, code| address == "email@email.com" && code == "123456")
             .returning(|_, _| Ok(()));
 
-        let mut am = AdminManager::new(Box::new(email_client));
+        let mut am = AdminManager::new(Arc::new(email_client));
         am.set_email("email@email.com".to_string());
         am.send_verification_code().unwrap();
         assert!(am.verify_email("123456".to_owned()).is_ok());
