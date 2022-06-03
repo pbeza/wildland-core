@@ -5,7 +5,7 @@
 # Override the following variables if needed:
 #############################################
 # Java includes
-JDK_INC_DIR=/usr/lib/jvm/java-17-openjdk/include
+JDK_INC_DIR=/usr/lib/jvm/java-11-openjdk-amd64/include
 
 # Python includes
 PYTHON_DIR=/usr/include/python3.10/
