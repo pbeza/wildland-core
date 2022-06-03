@@ -2,11 +2,7 @@ mod admin_manager;
 
 use crate::{
     api::{AdminManagerError, SeedPhrase},
-    ffi::{
-        email_client::{create_boxed_mock_email_client, DynEmailClient},
-        identity::*,
-        EmptyResult, SeedPhraseResult,
-    },
+    ffi::{email_client::*, identity::*, EmptyResult, SeedPhraseResult},
 };
 use admin_manager::*;
 
@@ -16,7 +12,6 @@ mod ffi_cxx {
     extern "Rust" {
         fn create_seed_phrase() -> Box<SeedPhraseResult>;
         fn create_admin_manager(email_client: &Box<DynEmailClient>) -> Box<AdminManager>;
-        fn create_boxed_mock_email_client() -> Box<DynEmailClient>;
 
         type DynEmailClient;
 
@@ -63,5 +58,17 @@ mod ffi_cxx {
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;
         fn code(self: &AdminManagerError) -> u32;
+
+        // MOCKS
+        // TODO hide behind some feature flag
+        type EmailClientMockBuilder;
+        fn create_boxed_email_client_mock_builder() -> Box<EmailClientMockBuilder>;
+        fn expect_send(
+            self: &mut EmailClientMockBuilder,
+            address: String,
+            message: String,
+            times: usize,
+        );
+        fn build_boxed(self: &EmailClientMockBuilder) -> Box<DynEmailClient>;
     }
 }

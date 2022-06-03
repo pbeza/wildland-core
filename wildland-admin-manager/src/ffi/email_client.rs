@@ -5,10 +5,28 @@ pub type BoxedDynEmailClient = Box<DynEmailClient>;
 
 pub struct DynEmailClient(pub Arc<dyn EmailClient>);
 
-pub fn create_boxed_mock_email_client() -> BoxedDynEmailClient {
-    Box::new(DynEmailClient(Arc::new(MockEmailClient::new())))
+// TODO feature flag
+
+pub fn create_boxed_email_client_mock_builder() -> Box<EmailClientMockBuilder> {
+    Box::new(create_mock_email_client_builder())
 }
 
-pub fn create_mock_email_client() -> DynEmailClient {
-    DynEmailClient(Arc::new(MockEmailClient::new()))
+pub fn create_mock_email_client_builder() -> EmailClientMockBuilder {
+    EmailClientMockBuilder(Arc::new(MockEmailClient::new()))
+}
+
+pub struct EmailClientMockBuilder(pub Arc<MockEmailClient>);
+impl EmailClientMockBuilder {
+    pub fn expect_send(&mut self, address: String, message: String, times: usize) {
+        Arc::get_mut(&mut self.0)
+            .unwrap()
+            .expect_send()
+            .times(times)
+            .withf(move |addr, code| addr == address && code == message)
+            .returning(|_, _| Ok(()));
+    }
+
+    pub fn build_boxed(&self) -> BoxedDynEmailClient {
+        Box::new(DynEmailClient(self.0.clone()))
+    }
 }
