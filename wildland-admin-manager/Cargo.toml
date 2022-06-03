@@ -1,6 +1,6 @@
 [package]
 name = "wildland-admin-manager"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -21,8 +21,7 @@ bindings = ["cxx", "swift-bridge", "cxx-build", "swift-bridge-build"]
 
 
 [dependencies]
-wildland-corex = { version = "0.1.5", path = "../wildland-corex", registry = "wl-dev" }
-bip39 = { version = "1.0.1", features = ["rand"] }
+wildland-corex = { version = "0.1.9", path = "../wildland-corex", registry = "wl-dev" }
 thiserror = "1.0.31"
 
 # Bindings generators:
