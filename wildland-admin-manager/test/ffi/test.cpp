@@ -7,12 +7,12 @@ using namespace ::rust;
 int main()
 {
     // Create mocked email client
-    Box<EmailClientMockBuilder> email_client_mock = create_boxed_email_client_mock_builder();
-    email_client_mock->expect_send(::rust::String("test@email.com"), ::rust::String("123456"), 1);
-    Box<DynEmailClient> email_client = email_client_mock->build_boxed();
+    Box<EmailClientMockBuilder> email_client_mock_builder = create_boxed_email_client_mock_builder();
+    email_client_mock_builder->expect_send(::rust::String("test@email.com"), ::rust::String("123456"), 1);
+    Box<DynEmailClient> email_client_mock = email_client_mock_builder->build_boxed();
 
     // Create admin manager filled with mocked email_client
-    Box<AdminManager> admin_manager = create_admin_manager(email_client);
+    Box<AdminManager> admin_manager = create_admin_manager(email_client_mock);
 
     Box<SeedPhraseResult> seed_result = create_seed_phrase();
     if (seed_result->is_ok())
