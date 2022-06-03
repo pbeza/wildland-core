@@ -24,6 +24,7 @@ bindings = ["cxx", "swift-bridge", "cxx-build", "swift-bridge-build"]
 wildland-corex = { version = "0.1.5", path = "../wildland-corex", registry = "wl-dev" }
 bip39 = { version = "1.0.1", features = ["rand"] }
 thiserror = "1.0.31"
+mockall = "0.11.1"
 
 # Bindings generators:
 cxx = { version = "1.0", optional = true }

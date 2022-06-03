@@ -12,9 +12,6 @@ pub trait AdminManager {
         seed: &SeedPhrase,
     ) -> AdminManagerResult<AdminManagerIdentity>;
 
-    /// Creates a randomly generated seed phrase
-    fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
-
     fn get_master_identity(&self) -> Option<AdminManagerIdentity>;
 
     /// Sends a 6-digit verification code to provided email address.

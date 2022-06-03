@@ -3,16 +3,17 @@ mod swift_admin_manager;
 use super::{EmptyResult, SeedPhraseResult};
 use crate::{
     api::{AdminManagerError, SeedPhrase},
-    ffi::identity::*,
+    ffi::{email_client::DynEmailClient, identity::*},
 };
-use swift_admin_manager::AdminManager;
 use swift_admin_manager::*;
 
 #[swift_bridge::bridge]
 mod ffi_bridge {
     extern "Rust" {
         fn create_seed_phrase() -> SeedPhraseResult;
-        fn create_admin_manager() -> AdminManager;
+        fn create_admin_manager(email_client: &DynEmailClient) -> AdminManager;
+
+        type DynEmailClient;
 
         type AdminManager;
         fn get_master_identity(self: &mut AdminManager) -> OptionalIdentity;
