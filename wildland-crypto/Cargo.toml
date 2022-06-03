@@ -1,6 +1,6 @@
 [package]
 name = "wildland-crypto"
-version = "0.4.3"
+version = "0.4.5"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -19,9 +19,8 @@ rand_core = { version = "0.6", features = ["std"] }
 rand = "0.8.4"
 thiserror = "1.0.31"
 
-
 # bip39 is used to handle mnemonics
-bip39 = { version = "1.0.1", features = ["rand"] }
+tiny-bip39 = "0.8.2"
 
 # hkdf is used to bridge 64 -> 96 bytes of randomness
 # (gap between bip39 output and ed25519-bip32 input)
