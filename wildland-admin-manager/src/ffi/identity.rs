@@ -6,7 +6,7 @@ use crate::{
 pub type IdentityResult = Res<DynIdentity>;
 pub type OptionalIdentity = Opt<DynIdentity>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DynIdentity(pub AdminManagerIdentity);
 impl DynIdentity {
     pub fn set_name(&self, name: String) {
