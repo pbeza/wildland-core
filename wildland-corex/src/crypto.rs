@@ -1,6 +1,6 @@
 use crate::CoreXError;
 use wildland_crypto::identity::{self, keys::SigningKeyPair, Identity, SeedPhraseWords};
-use wildland_wallet::{ManifestSigningKeypair, FileWallet, SigningKeyType, Wallet};
+use wildland_wallet::{FileWallet, ManifestSigningKeypair, SigningKeyType, Wallet};
 
 pub enum WalletType {
     File,

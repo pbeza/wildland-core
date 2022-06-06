@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use wildland_admin_manager::api::Identity;
 use wildland_admin_manager::{admin_manager::AdminManager, api::AdminManager as AdminManagerApi};
 use wildland_corex::SeedPhraseWords;
-use wildland_corex::{list_keypairs, SigningKeypair, ManifestSigningKeypair};
+use wildland_corex::{list_keypairs, ManifestSigningKeypair, SigningKeypair};
 use yansi::Paint;
 
 #[derive(Parser, Debug)]
@@ -40,7 +40,7 @@ impl IdentityCliOpts {
                     1 => {
                         println!("🔑 Found 1 identity");
                         print_identities(ids);
-                    },
+                    }
                     _ => {
                         println!("🔑 Found {} identities", ids.len());
                         print_identities(ids);
@@ -54,7 +54,7 @@ impl IdentityCliOpts {
 }
 
 fn restore_identity(
-    seed_phrase: &String,
+    seed_phrase: &str,
     mut admin_manager: AdminManager,
 ) -> Result<(), anyhow::Error> {
     let seed = seed_phrase
@@ -65,10 +65,12 @@ fn restore_identity(
 
     let identity = admin_manager.create_master_identity_from_seed_phrase(&seed)?;
 
-    Ok(println!(
+    println!(
         "🎉 {:?} identity restored successfully.",
         Paint::blue(identity.lock().unwrap().get_identity_type()).bold()
-    ))
+    );
+
+    Ok(())
 }
 
 fn generate_identity(admin_manager: &mut AdminManager) -> Result<(), anyhow::Error> {
@@ -80,11 +82,13 @@ fn generate_identity(admin_manager: &mut AdminManager) -> Result<(), anyhow::Err
         Paint::blue(identity.lock().unwrap().get_identity_type()).bold()
     );
 
-    Ok(print_seedphrase(identity))
+    print_seedphrase(identity);
+
+    Ok(())
 }
 
 fn nasty_padding(s: &SeedPhraseWords, idx: usize) -> usize {
-    [&s[0 + idx], &s[4 + idx], &s[8 + idx]]
+    [&s[idx], &s[4 + idx], &s[8 + idx]]
         .iter()
         .max_by_key(|p| p.len())
         .unwrap()
@@ -93,8 +97,7 @@ fn nasty_padding(s: &SeedPhraseWords, idx: usize) -> usize {
 }
 
 fn print_identities(ids: Vec<ManifestSigningKeypair>) {
-    ids.into_iter()
-    .for_each(|kp| {
+    ids.into_iter().for_each(|kp| {
         println!();
         println!("\tType: {}", Paint::blue("Master").bold());
         println!("\tFingerprint: {}", kp.fingerprint());
@@ -115,6 +118,6 @@ fn print_seedphrase(identity: Arc<Mutex<dyn Identity>>) {
                 padding = nasty_padding(&seed_phrase, j)
             );
         }
-        println!("");
+        println!();
     }
 }

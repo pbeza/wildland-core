@@ -7,5 +7,5 @@ pub fn get_version() -> &'static str {
 }
 
 pub use api::*;
-pub use wallet::file::FileWallet;
 pub use keys::sign::ManifestSigningKeypair;
+pub use wallet::file::FileWallet;

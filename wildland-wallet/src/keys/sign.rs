@@ -44,7 +44,7 @@ impl SigningKeypair for ManifestSigningKeypair {
     fn fingerprint(&self) -> String {
         let hash = Sha256::digest(&self.public_key);
 
-        String::from(hex::encode(&hash[..16]))
+        hex::encode(&hash[..16])
     }
 
     fn can_sign(&self) -> bool {

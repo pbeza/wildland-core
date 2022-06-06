@@ -1,11 +1,11 @@
 use anyhow::{Error, Result};
+use hex::FromHex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fs;
-use hex::FromHex;
 use xdg::BaseDirectories;
 
-use crate::{SigningKeyType, ManifestSigningKeypair, Wallet, SigningKeypair};
+use crate::{ManifestSigningKeypair, SigningKeyType, SigningKeypair, Wallet};
 
 pub struct FileWallet {
     base_directory: BaseDirectories,
@@ -34,19 +34,16 @@ struct WalletKeyFileContents {
 
 impl Wallet<ManifestSigningKeypair> for FileWallet {
     fn save_signing_secret(&self, keypair: ManifestSigningKeypair) -> Result<()> {
-        Ok(self
-            .write_secret_file(
-                format!("{}.json", keypair.fingerprint()),
-                json!(WalletKeyFileContents {
-                    privkey: hex::encode(keypair.get_private_key()),
-                    pubkey: hex::encode(keypair.get_public_key()),
-                    key_type: keypair.get_key_type(),
-                })
-                .to_string(),
-            )
-            .map_err(|err| {
-                anyhow::Error::msg(format!("Could not write to secret file. {}.", err))
-            })?)
+        self.write_secret_file(
+            format!("{}.json", keypair.fingerprint()),
+            json!(WalletKeyFileContents {
+                privkey: hex::encode(keypair.get_private_key()),
+                pubkey: hex::encode(keypair.get_public_key()),
+                key_type: keypair.get_key_type(),
+            })
+            .to_string(),
+        )
+        .map_err(|err| anyhow::Error::msg(format!("Could not write to secret file. {}.", err)))
     }
 
     fn list_secrets(&self) -> Result<Vec<ManifestSigningKeypair>> {
