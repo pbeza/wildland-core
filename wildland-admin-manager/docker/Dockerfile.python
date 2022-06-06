@@ -1,0 +1,26 @@
+FROM wildland-sdk-base:latest
+
+# Run with:
+#
+# docker-compose -f wildland-admin-manager/docker/docker-compose.yml run --rm wildland-sdk-python
+
+ENV CC=g++
+
+RUN apt-get -qy update && apt-get install -y swig python3-dev
+
+RUN mkdir -p wildland_python \
+    && cd "${WLTMP}" \
+    && swig -python -c++ -w516,503,476,302,383,509 -outdir ../wildland_python ../wildland.i \
+    && mv ../wildland_wrap.cxx . \
+    && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
+    wildland_wrap.cxx mod.rs.cc \
+    -L../../target/debug \
+    -lwildland_admin_manager \
+    $(python3-config --includes) \
+    -o ../wildland_python/_wildland.so
+
+# Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.
+
+RUN cp test/ffi/test.py wildland_python/test.py
+
+ENTRYPOINT ["python3", "wildland_python/test.py"]

@@ -1,4 +1,4 @@
-print("TODO: Swift FFI Testsuite");
+print("TODO: Swift FFI Test Suite");
 
 var seed_phrase_result = create_seed_phrase();
 var admin_manager = create_admin_manager();
@@ -24,7 +24,7 @@ if seed_phrase_result.is_ok() {
     if (sending_result.is_ok()) {
       var verification_result = admin_manager.verify_email(RustString("123456"));
       if (verification_result.is_ok()) {
-        print("Verification successfull");
+        print("Verification successful");
       } else {
         print(verification_result.unwrap_err().to_string().toString());
       }
