@@ -2,7 +2,7 @@ use reqwest::Client;
 use serde::Serialize;
 
 use wildland_crypto::{
-    identity::{keys::SigningKeyPair, KeyPair},
+    identity::keys::{SigningKeypair, Keypair},
     signature::encode_signature,
 };
 
@@ -120,7 +120,7 @@ impl StorageControllerClient {
         let message = serde_json::to_vec(request).map_err(|source| {
             StorageControllerClientError::CannotSerializeRequestError { source }
         })?;
-        let keypair = KeyPair::signing_keypair_from_str(
+        let keypair = SigningKeypair::from_str(
             self.get_credential_id(),
             self.get_credential_secret(),
         )?;

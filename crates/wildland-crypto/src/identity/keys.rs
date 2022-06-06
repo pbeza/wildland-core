@@ -19,127 +19,90 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::identity::error::CryptoError::{
-    self, CannotCreateKeyPairError, CannotDecryptMessageError, CannotEncryptMessageError,
+    self, CannotCreateKeypairError, CannotDecryptMessageError, CannotEncryptMessageError,
 };
-use crypto_box::{aead::Aead, PublicKey, SecretKey};
-use cryptoxide::ed25519::{signature, verify, SIGNATURE_LENGTH};
-use hex::{encode, FromHex};
-use salsa20::XNonce;
+use hex::{FromHex};
+// use crypto_box::aead::Aead;
+use ed25519_dalek::Keypair as SigningKeypairA;
+use ed25519_dalek::PublicKey as VerifyingKeyA;
+use ed25519_dalek::SecretKey as SigningKeyA;
 
-pub trait SigningKeyPair {
-    fn pubkey_as_bytes(&self) -> [u8; 32];
-    fn seckey_as_bytes(&self) -> [u8; 32];
-    fn sign(&self, message: &[u8]) -> [u8; SIGNATURE_LENGTH];
-    fn verify(&self, message: &[u8], signature: &[u8; SIGNATURE_LENGTH]) -> bool;
+use crypto_box::PublicKey as PublicKeyA;
+use crypto_box::SecretKey as SecretKeyA;
+
+pub type SigningKeypair = SigningKeypairA;
+pub type SigningKey = SigningKeyA;
+pub type VerifyingKey = VerifyingKeyA;
+
+pub type PublicKey = PublicKeyA;
+pub type SecretKey = SecretKeyA;
+pub struct EncryptingKeypair {
+    pub secret: SecretKey,
+    pub public: PublicKey,
 }
 
-pub trait EncryptionKeyPair {
-    fn pubkey(&self) -> PublicKey;
-    fn seckey(&self) -> SecretKey;
-    fn encrypt(
-        &self,
-        message: &[u8],
-        nonce: &XNonce,
-        recipient_pubkey: &PublicKey,
-    ) -> Result<Vec<u8>, CryptoError>;
+// impl EncryptingKeypair {
+//     fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
+//         let pubkey = <[u8; 32]>::from_hex(public_key)
+//             .map_err(|_| CannotCreateKeypairError(public_key.into()))?;
+//         let seckey: [u8; 32] = <[u8; 32]>::from_hex(secret_key)
+//             .map_err(|_| CannotCreateKeypairError(secret_key.into()))?;
+//         Ok( Self::from_bytes(pubkey, seckey))
+//     }
+// }
 
-    fn decrypt(
-        &self,
-        ciphertext: &[u8],
-        nonce: &XNonce,
-        sender_pubkey: &PublicKey,
-    ) -> Result<Vec<u8>, CryptoError>;
+// impl SigningKeypair {
+//     fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
+//         let pubkey = <[u8; 32]>::from_hex(public_key)
+//             .map_err(|_| CannotCreateKeypairError(public_key.into()))?;
+//         let seckey: [u8; 32] = <[u8; 32]>::from_hex(secret_key)
+//             .map_err(|_| CannotCreateKeypairError(secret_key.into()))?;
+//         Ok( Self::from_bytes(pubkey, seckey))
+//     }
+// }
+
+pub trait Keypair {
+    fn from_bytes(seckey: [u8; 32], pubkey: [u8; 32]) -> Self;
+    fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> where Self: Sized;
 }
 
-/// KeyPair type.
-///
-/// Represents a keypair derived from seed. Can be used to sign or to encrypt,
-/// depending on the way it was derived.
-pub struct KeyPair {
-    seckey: [u8; 32],
-    pubkey: [u8; 32],
-}
-
-impl KeyPair {
-    pub fn signing_keypair_from_str(
-        public_key: &str,
-        secret_key: &str,
-    ) -> Result<impl SigningKeyPair, CryptoError> {
-        KeyPair::from_str(public_key, secret_key)
+impl Keypair for EncryptingKeypair {
+    fn from_bytes(seckey: [u8; 32], pubkey: [u8; 32]) -> Self {
+        Self { secret: SecretKey::from(seckey), public: PublicKey::from(pubkey) }
     }
-
-    pub(crate) fn from_bytes(seckey: [u8; 32], pubkey: [u8; 32]) -> Self {
-        Self { seckey, pubkey }
-    }
-
-    pub(crate) fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
+    fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
         let pubkey = <[u8; 32]>::from_hex(public_key)
-            .map_err(|_| CannotCreateKeyPairError(public_key.into()))?;
+            .map_err(|_| CannotCreateKeypairError(public_key.into()))?;
         let seckey: [u8; 32] = <[u8; 32]>::from_hex(secret_key)
-            .map_err(|_| CannotCreateKeyPairError(secret_key.into()))?;
-
-        Ok(Self { pubkey, seckey })
-    }
-
-    fn packed(&self) -> [u8; 64] {
-        let mut bytes: [u8; 64] = [0; 64];
-        bytes[..32].copy_from_slice(&self.seckey[..32]);
-        bytes[32..64].copy_from_slice(&self.pubkey[..32]);
-        bytes
+            .map_err(|_| CannotCreateKeypairError(secret_key.into()))?;
+        Ok( Self::from_bytes(pubkey, seckey))
     }
 }
 
-impl SigningKeyPair for KeyPair {
-    fn pubkey_as_bytes(&self) -> [u8; 32] {
-        self.pubkey
+impl Keypair for SigningKeypair {
+    fn from_bytes(seckey: [u8; 32], pubkey: [u8; 32]) -> Self {
+        let secret: SigningKey = SigningKey::from_bytes(&seckey).unwrap();
+        let public: VerifyingKey = VerifyingKey::from_bytes(&pubkey).unwrap();
+
+        SigningKeypair{
+            secret: secret,
+            public: public
+        }
     }
 
-    fn seckey_as_bytes(&self) -> [u8; 32] {
-        self.seckey
-    }
+    fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
+        let pubkey = <[u8; 32]>::from_hex(public_key)
+            .map_err(|_| CannotCreateKeypairError(public_key.into()))?;
+        let seckey: [u8; 32] = <[u8; 32]>::from_hex(secret_key)
+            .map_err(|_| CannotCreateKeypairError(secret_key.into()))?;
 
-    fn sign(&self, message: &[u8]) -> [u8; SIGNATURE_LENGTH] {
-        signature(message, &self.packed())
-    }
+        let secret_key: SigningKey = SigningKey::from_bytes(&seckey).unwrap();
+        let public_key: VerifyingKey = VerifyingKey::from_bytes(&pubkey).unwrap();
 
-    fn verify(&self, message: &[u8], signature: &[u8; SIGNATURE_LENGTH]) -> bool {
-        verify(message, &self.pubkey, signature)
-    }
-}
-
-impl EncryptionKeyPair for KeyPair {
-    fn pubkey(&self) -> PublicKey {
-        crypto_box::PublicKey::from(self.pubkey)
-    }
-
-    fn seckey(&self) -> SecretKey {
-        crypto_box::SecretKey::from(self.seckey)
-    }
-
-    fn encrypt(
-        &self,
-        message: &[u8],
-        nonce: &XNonce,
-        recipient_pubkey: &PublicKey,
-    ) -> Result<Vec<u8>, CryptoError> {
-        let salsa_box = crypto_box::Box::new(recipient_pubkey, &self.seckey());
-
-        salsa_box
-            .encrypt(nonce, message)
-            .map_err(|_| CannotEncryptMessageError(encode(message)))
-    }
-
-    fn decrypt(
-        &self,
-        ciphertext: &[u8],
-        nonce: &XNonce,
-        sender_pubkey: &PublicKey,
-    ) -> Result<Vec<u8>, CryptoError> {
-        let salsa_box = crypto_box::Box::new(sender_pubkey, &self.seckey());
-
-        salsa_box
-            .decrypt(nonce, ciphertext)
-            .map_err(|_| CannotDecryptMessageError(encode(ciphertext)))
+        Ok(SigningKeypair{
+            secret: secret_key,
+            public: public_key
+        })
     }
 }
 
@@ -150,8 +113,11 @@ mod tests {
         ENCRYPTION_SECRET_KEY_1, ENCRYPTION_SECRET_KEY_2, SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY,
         TIMESTAMP,
     };
-    use crate::identity::keys::{EncryptionKeyPair, SigningKeyPair};
-    use crate::identity::KeyPair;
+    use crate::identity::keys::{EncryptingKeypair, SigningKeypair, Keypair};
+    use crate::identity::keys::{PublicKey, SecretKey};
+    use ed25519_dalek::{Signer};
+    use salsa20::XNonce;
+    use crypto_box::{aead::Aead};
     use serde::{Deserialize, Serialize};
     use serde_json::Value;
 
@@ -162,10 +128,22 @@ mod tests {
         pub timestamp: String,
     }
 
+    fn encrypt(msg: &[u8], sender: &SecretKey, recipient: &PublicKey, nonce: &XNonce) -> Vec<u8> {
+        let sbox = crypto_box::Box::new(recipient, sender);
+        let ciphertext = sbox.encrypt(&nonce, msg).unwrap();
+        ciphertext
+    }
+
+    fn decrypt(ciphertext: &[u8], sender: &PublicKey, recipient: &SecretKey, nonce: &XNonce) -> Vec<u8> {
+        let sbox = crypto_box::Box::new(sender, recipient);
+        let msg = sbox.decrypt(&nonce, ciphertext).unwrap();
+        msg
+    }
+
     #[test]
     fn should_sign_custom_struct() {
         // given
-        let keypair = KeyPair::from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap();
+        let keypair = SigningKeypair::from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap();
         let message_to_sign = generate_message();
         let expected_message = get_expected_message();
 
@@ -173,31 +151,35 @@ mod tests {
         let signature = &keypair.sign(&message_to_sign);
 
         // then
-        assert!(&keypair.verify(&expected_message, signature));
+        keypair.verify(&expected_message, signature).expect("OK");
     }
 
     #[test]
     fn can_encrypt_custom_struct() {
         let alice_keypair =
-            KeyPair::from_str(ENCRYPTION_PUBLIC_KEY_1, ENCRYPTION_SECRET_KEY_1).unwrap();
+            EncryptingKeypair::from_str(ENCRYPTION_PUBLIC_KEY_2, ENCRYPTION_SECRET_KEY_2).unwrap();
         let bob_keypair =
-            KeyPair::from_str(ENCRYPTION_PUBLIC_KEY_2, ENCRYPTION_SECRET_KEY_2).unwrap();
+            EncryptingKeypair::from_str(ENCRYPTION_PUBLIC_KEY_2, ENCRYPTION_SECRET_KEY_2).unwrap();
         let nonce = generate_random_nonce();
         let message_to_encrypt = generate_message();
         let expected_message = get_expected_message();
 
-        let ciphertext = alice_keypair
-            .encrypt(message_to_encrypt.as_ref(), &nonce, &bob_keypair.pubkey())
-            .unwrap();
-        let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
+        let ciphertext = encrypt(message_to_encrypt.as_ref(),
+                                 &alice_keypair.secret,
+                                 &bob_keypair.public,
+                                 &nonce);
+        let result = decrypt(ciphertext.as_slice(),
+                             &alice_keypair.public,
+                             &bob_keypair.secret,
+                             &nonce);
 
-        assert_eq!(expected_message, result.unwrap().as_slice())
+        assert_eq!(expected_message, result.as_slice())
     }
 
     #[test]
     fn should_create_keypair_when_keys_have_proper_length() {
         // when
-        let keypair = KeyPair::from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY);
+        let keypair = SigningKeypair::from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY);
 
         // then
         assert!(keypair.is_ok());
@@ -206,7 +188,7 @@ mod tests {
     #[test]
     fn should_not_create_keypair_when_pub_key_is_too_short() {
         // when
-        let keypair = KeyPair::from_str("", SIGNING_SECRET_KEY);
+        let keypair = SigningKeypair::from_str("", SIGNING_SECRET_KEY);
 
         // then
         assert!(keypair.is_err());
@@ -215,7 +197,7 @@ mod tests {
     #[test]
     fn should_not_create_keypair_when_pub_key_is_too_long() {
         // when
-        let keypair = KeyPair::from_str(
+        let keypair = SigningKeypair::from_str(
             "1234567890123456789012345678901234567890123456789012345678901234567890",
             SIGNING_SECRET_KEY,
         );
@@ -227,7 +209,7 @@ mod tests {
     #[test]
     fn should_not_create_keypair_when_sec_key_is_too_short() {
         // when
-        let keypair = KeyPair::from_str(SIGNING_PUBLIC_KEY, "");
+        let keypair = SigningKeypair::from_str(SIGNING_PUBLIC_KEY, "");
 
         // then
         assert!(keypair.is_err());
@@ -236,7 +218,7 @@ mod tests {
     #[test]
     fn should_not_create_keypair_when_sec_key_is_too_long() {
         // when
-        let keypair = KeyPair::from_str(
+        let keypair = SigningKeypair::from_str(
             SIGNING_PUBLIC_KEY,
             "1234567890123456789012345678901234567890123456789012345678901234567890",
         );
