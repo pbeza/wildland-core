@@ -1,8 +1,10 @@
 mod admin_manager;
 
+#[cfg(feature = "mocks")]
+use crate::ffi::email_client::mock::*;
 use crate::{
     api::{AdminManagerError, SeedPhrase},
-    ffi::{email_client::*, identity::*, EmptyResult, SeedPhraseResult},
+    ffi::{email_client::DynEmailClient, identity::*, EmptyResult, SeedPhraseResult},
 };
 use admin_manager::*;
 
@@ -58,9 +60,10 @@ mod ffi_cxx {
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;
         fn code(self: &AdminManagerError) -> u32;
+    }
 
-        // MOCKS
-        // TODO hide behind some feature flag
+    #[cfg(feature = "mocks")]
+    extern "Rust" {
         type EmailClientMockBuilder;
         fn create_boxed_email_client_mock_builder() -> Box<EmailClientMockBuilder>;
         fn expect_send(
