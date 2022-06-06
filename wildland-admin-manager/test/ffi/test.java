@@ -1,7 +1,7 @@
 
 class main {
   public static void main(java.lang.String argv[]) {
-    System.out.println("Java FFI Testsuite");
+    System.out.println("Java FFI Test Suite");
     System.loadLibrary("wildland");
 
     var admin_manager = wildland.create_admin_manager();
@@ -29,7 +29,7 @@ class main {
     if (sending_result.is_ok()) {
       var verification_result = admin_manager.verify_email(new RustString("123456"));
       if (verification_result.is_ok()) {
-        System.out.println("Verification successfull");
+        System.out.println("Verification successful");
       } else {
         System.out.println(verification_result.unwrap_err().to_string().c_str());
       }
