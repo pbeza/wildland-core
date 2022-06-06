@@ -29,12 +29,12 @@ mod ffi_cxx {
 
         type EmptyResult;
         fn is_ok(self: &EmptyResult) -> bool;
-        fn boxed_unwrap_err(self: &EmptyResult) -> Box<AdminManagerError>;
+        fn unwrap_err(self: &EmptyResult) -> Box<AdminManagerError>;
 
         type SeedPhraseResult;
         fn is_ok(self: &SeedPhraseResult) -> bool;
-        fn boxed_unwrap(self: &SeedPhraseResult) -> Box<SeedPhrase>;
-        fn boxed_unwrap_err(self: &SeedPhraseResult) -> Box<AdminManagerError>;
+        fn unwrap(self: &SeedPhraseResult) -> Box<SeedPhrase>;
+        fn unwrap_err(self: &SeedPhraseResult) -> Box<AdminManagerError>;
 
         type SeedPhrase;
         fn get_string(self: &SeedPhrase) -> String;
@@ -46,12 +46,12 @@ mod ffi_cxx {
 
         type IdentityResult;
         fn is_ok(self: &IdentityResult) -> bool;
-        fn boxed_unwrap(self: &IdentityResult) -> Box<DynIdentity>;
-        fn boxed_unwrap_err(self: &IdentityResult) -> Box<AdminManagerError>;
+        fn unwrap(self: &IdentityResult) -> Box<DynIdentity>;
+        fn unwrap_err(self: &IdentityResult) -> Box<AdminManagerError>;
 
         type OptionalIdentity;
         fn is_some(self: &OptionalIdentity) -> bool;
-        fn boxed_unwrap(self: &OptionalIdentity) -> Box<DynIdentity>;
+        fn unwrap(self: &OptionalIdentity) -> Box<DynIdentity>;
 
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;

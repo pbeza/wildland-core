@@ -25,11 +25,12 @@ CSHARP_COMPILER=mcs
 # Those paths should not be changed:
 CXX_OUT=../target/cxxbridge/wildland-admin-manager/src/ffi/cxx
 CXX_RUST=../target/cxxbridge/rust
-RUST_BUILD=cargo +nightly build --features "bindings"
+RUST_CXX_BUILD=cargo build --features "bindings"
+RUST_SWIFT_BUILD=cargo build --features "swift-bindings"
 
 
 prepare:
-	$(RUST_BUILD)
+	$(RUST_CXX_BUILD)
 	mkdir -p _temporary
 	cp $(CXX_OUT)/mod.rs.h _temporary/mod.rs.h
 	cp $(CXX_OUT)/mod.rs.cc _temporary/mod.rs.cc
@@ -102,7 +103,7 @@ python_test: python
 
 swift:
 	mkdir -p wildland_swift
-	SWIFT_BRIDGE_OUT_DIR="$(CURDIR)/wildland_swift" $(RUST_BUILD)
+	SWIFT_BRIDGE_OUT_DIR="$(CURDIR)/wildland_swift" $(RUST_SWIFT_BUILD)
 	cp test/ffi/test.swift wildland_swift/main.swift
 	swiftc -L ../target/debug -lwildland_admin_manager -lstdc++ \
 		-I wildland_swift -import-objc-header \

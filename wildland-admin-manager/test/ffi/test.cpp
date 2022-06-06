@@ -11,7 +11,7 @@ int main()
     Box<SeedPhraseResult> seed_result = create_seed_phrase();
     if (seed_result->is_ok())
     {
-        Box<SeedPhrase> seed_ok = seed_result->boxed_unwrap(); // it is safe to unwrap after `is_ok` check
+        Box<SeedPhrase> seed_ok = seed_result->unwrap(); // it is safe to unwrap after `is_ok` check
 
         std::string seed_str = std::string(seed_ok->get_string());
         std::cout << "Generated seed: " << seed_str << std::endl;
@@ -23,12 +23,12 @@ int main()
         }
 
         Box<IdentityResult> identity_result = admin_manager->create_master_identity_from_seed_phrase(String{"Some generic name"}, seed_ok);
-        std::cout << "Identity name: " << std::string(identity_result->boxed_unwrap()->get_name()) << std::endl;
+        std::cout << "Identity name: " << std::string(identity_result->unwrap()->get_name()) << std::endl;
 
         Box<OptionalIdentity> optional_identity = admin_manager->get_master_identity(); // The same identity as inside the result above
         if (optional_identity->is_some())
         {
-            Box<DynIdentity> identity = optional_identity->boxed_unwrap();
+            Box<DynIdentity> identity = optional_identity->unwrap();
 
             std::cout << "Identity name: " << std::string(identity->get_name()) << std::endl;
             identity->set_name(::rust::String{"New name 3"}); // Identity can be mutated
@@ -46,13 +46,13 @@ int main()
             }
             else
             {
-                std::cout << verification_result->boxed_unwrap_err()->to_string().c_str() << std::endl;
+                std::cout << verification_result->unwrap_err()->to_string().c_str() << std::endl;
             }
         }
     }
     else
     {
-        Box<AdminManagerError> seed_err = seed_result->boxed_unwrap_err();
+        Box<AdminManagerError> seed_err = seed_result->unwrap_err();
         // error interface is extendable but for now it exposes methods for getting message and code
         std::string err_msg = std::string(seed_err->to_string());
         uint32_t code = seed_err->code();

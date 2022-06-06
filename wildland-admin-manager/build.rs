@@ -1,4 +1,4 @@
-#[cfg(feature = "bindings")]
+#[cfg(feature = "swift-bindings")]
 fn main() {
     // Build Swift bridge
     use std::path::PathBuf;
@@ -10,7 +10,10 @@ fn main() {
     }
 
     swift_bridge_build::parse_bridges(bridges).write_all_concatenated(out_dir, "wildland");
+}
 
+#[cfg(feature = "bindings")]
+fn main() {
     // Build CXX bridge
     cxx_build::bridge("src/ffi/cxx/mod.rs")
         .flag_if_supported("-std=c++20")
@@ -18,5 +21,5 @@ fn main() {
     println!("cargo:rerun-if-changed=src/ffi/cxx/mod.rs");
 }
 
-#[cfg(not(feature = "bindings"))]
+#[cfg(not(any(feature = "bindings", feature = "swift-bindings")))]
 fn main() {}

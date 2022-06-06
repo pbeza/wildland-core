@@ -1,6 +1,6 @@
 pub mod admin_manager;
 pub mod api;
-#[cfg(feature = "bindings")]
+#[cfg(any(feature = "bindings", feature = "swift-bindings"))]
 pub mod ffi;
 
 pub fn get_version() -> &'static str {

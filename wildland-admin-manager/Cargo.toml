@@ -17,7 +17,8 @@ crate-type = ["staticlib", "lib"]
 
 
 [features]
-bindings = ["cxx", "swift-bridge", "cxx-build", "swift-bridge-build"]
+swift-bindings = ["swift-bridge", "swift-bridge-build"]
+bindings = ["cxx", "cxx-build"]
 
 
 [dependencies]
