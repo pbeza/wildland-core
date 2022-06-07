@@ -48,7 +48,7 @@ int main()
             Box<EmptyResult> verification_result = admin_manager->verify_email(::rust::String("123456"));
             if (verification_result->is_ok())
             {
-                std::cout << "Verification successfull" << std::endl;
+                std::cout << "Verification successful" << std::endl;
             }
             else
             {

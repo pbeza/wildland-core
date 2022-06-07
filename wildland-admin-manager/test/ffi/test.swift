@@ -1,4 +1,4 @@
-print("TODO: Swift FFI Testsuite");
+print("TODO: Swift FFI Test Suite");
 
 var email_client_mock_builder = create_email_client_mock_builder();
 email_client_mock_builder.expect_send(RustString("test@email.com"), RustString("123456"), 1);
@@ -28,7 +28,7 @@ if seed_phrase_result.is_ok() {
     if (sending_result.is_ok()) {
       var verification_result = admin_manager.verify_email(RustString("123456"));
       if (verification_result.is_ok()) {
-        print("Verification successfull");
+        print("Verification successful");
       } else {
         print(verification_result.unwrap_err().to_string().toString());
       }
