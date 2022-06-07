@@ -1,7 +1,6 @@
 mod swift_admin_manager;
 
 use super::{EmptyResult, SeedPhraseResult};
-#[cfg(feature = "mocks")]
 use crate::ffi::email_client::mock::*;
 use crate::{
     api::{AdminManagerError, SeedPhrase},
@@ -55,10 +54,8 @@ mod ffi_bridge {
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;
         fn code(self: &AdminManagerError) -> u32;
-
     }
 
-    #[cfg(feature = "mocks")]
     extern "Rust" {
         type EmailClientMockBuilder;
         fn create_email_client_mock_builder() -> EmailClientMockBuilder;

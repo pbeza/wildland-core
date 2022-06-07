@@ -1,6 +1,5 @@
 mod admin_manager;
 
-#[cfg(feature = "mocks")]
 use crate::ffi::email_client::mock::*;
 use crate::{
     api::{AdminManagerError, SeedPhrase},
@@ -62,7 +61,6 @@ mod ffi_cxx {
         fn code(self: &AdminManagerError) -> u32;
     }
 
-    #[cfg(feature = "mocks")]
     extern "Rust" {
         type EmailClientMockBuilder;
         fn create_boxed_email_client_mock_builder() -> Box<EmailClientMockBuilder>;

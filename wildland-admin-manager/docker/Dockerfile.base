@@ -13,7 +13,7 @@ RUN printf '[registries]\nwl-dev = { index = "https://crates.wildland.dev/git/in
     && cargo clean \
     && rm -rf "${WLTMP}" \
     && mkdir -p "${WLTMP}" \
-    && cargo build --features "bindings,mocks"
+    && cargo build --features "bindings"
 RUN cp "${CXX_RUST}/cxx.h" "${CXX_OUT}/mod.rs.h" "${CXX_OUT}/mod.rs.cc" "${WLTMP}"
 
 # SWIG Workarounds

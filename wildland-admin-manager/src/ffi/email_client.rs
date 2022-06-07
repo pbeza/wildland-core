@@ -5,7 +5,6 @@ pub type BoxedDynEmailClient = Box<DynEmailClient>;
 
 pub struct DynEmailClient(pub Arc<dyn EmailClient>);
 
-#[cfg(feature = "mocks")]
 pub mod mock {
     use super::*;
 

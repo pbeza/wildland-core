@@ -18,7 +18,6 @@ crate-type = ["staticlib", "lib"]
 
 [features]
 bindings = ["cxx", "swift-bridge", "cxx-build", "swift-bridge-build"]
-mocks = []
 
 
 [dependencies]

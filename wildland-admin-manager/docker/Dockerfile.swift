@@ -14,7 +14,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y \
     && mkdir -p wildland_swift \
     && . $HOME/.cargo/env \
     && cargo clean \
-    && SWIFT_BRIDGE_OUT_DIR="$PWD/wildland_swift" cargo build --features "bindings,mocks" \
+    && SWIFT_BRIDGE_OUT_DIR="$PWD/wildland_swift" cargo build --features "bindings" \
     && cp test/ffi/test.swift wildland_swift/main.swift \
     && swiftc -L ../target/debug -lwildland_admin_manager -lstdc++ \
     -I wildland_swift -import-objc-header \
