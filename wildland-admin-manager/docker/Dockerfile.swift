@@ -4,9 +4,9 @@ FROM swift:5.6.1-focal
 #
 # docker-compose -f wildland-admin-manager/docker/docker-compose.yml run --rm wildland-sdk-swift
 
+RUN apt-get -qy update && apt-get install -y curl g++
 RUN mkdir -p wildland-core/wildland-admin-manager /root/.cargo
 COPY . wildland-core
-RUN apt-get -qy update && apt-get install -y curl g++
 WORKDIR /wildland-core/wildland-admin-manager
 # need to upgrade Rust toolchain to be able to compile the latest swift-bridge (trigerred by `cargo build`)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y \
