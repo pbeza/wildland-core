@@ -1,18 +1,20 @@
 mod swift_admin_manager;
 
 use super::{EmptyResult, SeedPhraseResult};
+use crate::ffi::email_client::mock::*;
 use crate::{
     api::{AdminManagerError, SeedPhrase},
-    ffi::identity::*,
+    ffi::{email_client::*, identity::*},
 };
-use swift_admin_manager::AdminManager;
 use swift_admin_manager::*;
 
 #[swift_bridge::bridge]
 mod ffi_bridge {
     extern "Rust" {
         fn create_seed_phrase() -> SeedPhraseResult;
-        fn create_admin_manager() -> AdminManager;
+        fn create_admin_manager(email_client: &DynEmailClient) -> AdminManager;
+
+        type DynEmailClient;
 
         type AdminManager;
         fn get_master_identity(self: &mut AdminManager) -> OptionalIdentity;
@@ -52,5 +54,17 @@ mod ffi_bridge {
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;
         fn code(self: &AdminManagerError) -> u32;
+    }
+
+    extern "Rust" {
+        type EmailClientMockBuilder;
+        fn create_email_client_mock_builder() -> EmailClientMockBuilder;
+        fn expect_send(
+            self: &mut EmailClientMockBuilder,
+            address: String,
+            message: String,
+            times: usize,
+        );
+        fn build(self: &EmailClientMockBuilder) -> DynEmailClient;
     }
 }

@@ -1,17 +1,17 @@
 use crate::{
-    admin_manager::AdminManager as RustAdminManager,
+    admin_manager::{self, AdminManager as RustAdminManager},
     api::{AdminManager as AdminManagerApi, SeedPhrase},
-    ffi::{identity::*, EmptyResult, SeedPhraseResult},
+    ffi::{email_client::DynEmailClient, identity::*, EmptyResult, SeedPhraseResult},
 };
 
 pub struct AdminManager(RustAdminManager);
 
-pub fn create_admin_manager() -> AdminManager {
-    AdminManager(RustAdminManager::default())
+pub fn create_admin_manager(email_client: &DynEmailClient) -> AdminManager {
+    AdminManager(RustAdminManager::new(email_client.0.clone()))
 }
 
 pub fn create_seed_phrase() -> SeedPhraseResult {
-    RustAdminManager::create_seed_phrase().into()
+    admin_manager::create_seed_phrase().into()
 }
 
 impl AdminManager {

@@ -1,19 +1,24 @@
 use super::{EmptyResult, SeedPhraseResult};
 use crate::{
-    admin_manager::AdminManager as RustAdminManager,
-    api::AdminManager as AdminManagerApi,
-    api::SeedPhrase,
-    ffi::identity::{DynIdentity, IdentityResult, OptionalIdentity},
+    admin_manager::{self, AdminManager as RustAdminManager},
+    api::{AdminManager as AdminManagerApi, SeedPhrase},
+    ffi::{
+        email_client::BoxedDynEmailClient,
+        identity::{DynIdentity, IdentityResult, OptionalIdentity},
+    },
 };
 
+// TODO in the future we must provide some mock for testing on the clients side and an actual implementation
 pub struct AdminManager(RustAdminManager);
 
-pub fn create_admin_manager() -> Box<AdminManager> {
-    Box::new(AdminManager(RustAdminManager::default()))
+pub fn create_admin_manager(email_client: &BoxedDynEmailClient) -> Box<AdminManager> {
+    Box::new(AdminManager(RustAdminManager::new(
+        (**email_client).0.clone(),
+    )))
 }
 
 pub fn create_seed_phrase() -> Box<SeedPhraseResult> {
-    Box::new(RustAdminManager::create_seed_phrase().into())
+    Box::new(admin_manager::create_seed_phrase().into())
 }
 
 impl AdminManager {

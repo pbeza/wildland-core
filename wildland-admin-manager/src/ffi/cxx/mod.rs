@@ -1,17 +1,20 @@
-mod cxx_admin_manager;
+mod admin_manager;
 
+use crate::ffi::email_client::mock::*;
 use crate::{
     api::{AdminManagerError, SeedPhrase},
-    ffi::{identity::*, EmptyResult, SeedPhraseResult},
+    ffi::{email_client::DynEmailClient, identity::*, EmptyResult, SeedPhraseResult},
 };
-use cxx_admin_manager::*;
+use admin_manager::*;
 
 #[allow(clippy::borrowed_box)]
 #[cxx::bridge(namespace = "wildland")]
 mod ffi_cxx {
     extern "Rust" {
         fn create_seed_phrase() -> Box<SeedPhraseResult>;
-        fn create_admin_manager() -> Box<AdminManager>;
+        fn create_admin_manager(email_client: &Box<DynEmailClient>) -> Box<AdminManager>;
+
+        type DynEmailClient;
 
         type AdminManager;
         fn get_master_identity(self: &mut AdminManager) -> Box<OptionalIdentity>;
@@ -56,5 +59,17 @@ mod ffi_cxx {
         type AdminManagerError;
         fn to_string(self: &AdminManagerError) -> String;
         fn code(self: &AdminManagerError) -> u32;
+    }
+
+    extern "Rust" {
+        type EmailClientMockBuilder;
+        fn create_boxed_email_client_mock_builder() -> Box<EmailClientMockBuilder>;
+        fn expect_send(
+            self: &mut EmailClientMockBuilder,
+            address: String,
+            message: String,
+            times: usize,
+        );
+        fn build_boxed(self: &EmailClientMockBuilder) -> Box<DynEmailClient>;
     }
 }

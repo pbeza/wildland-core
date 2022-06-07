@@ -25,7 +25,7 @@ CSHARP_COMPILER=mcs
 # Those paths should not be changed:
 CXX_OUT=../target/cxxbridge/wildland-admin-manager/src/ffi/cxx
 CXX_RUST=../target/cxxbridge/rust
-RUST_BUILD=cargo +nightly build --features "bindings"
+RUST_BUILD=cargo build --features "bindings"
 
 
 prepare:

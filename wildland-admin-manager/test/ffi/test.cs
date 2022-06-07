@@ -6,9 +6,13 @@ namespace Main
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("C# FFI Test Suite");
+            Console.WriteLine("C# FFI Testsuite");
 
-            var admin_manager = wildland.create_admin_manager();
+            var email_client_mock_builder = wildland.create_email_client_mock_builder();
+            email_client_mock_builder.expect_send(new RustString("test@email.com"), new RustString("123456"), 1);
+            var email_client_mock = email_client_mock_builder.build();
+        
+            var admin_manager = wildland.create_admin_manager(email_client_mock);
             var seed_result = wildland.create_seed_phrase();
             if (seed_result.is_ok()) {
                 var seed = seed_result.unwrap();

@@ -11,6 +11,8 @@ pub enum AdminManagerError {
     ValidationCodesDoNotMatch,
     #[error("Email candidate not set")]
     EmailCandidateNotSet,
+    #[error("Verification code has not been sent")]
+    VerificationCodeNotSent,
 
     #[error("Error while parsing seed phrase: {0}")]
     ParseSeedPhraseError(String),
@@ -27,7 +29,8 @@ impl AdminManagerError {
             AdminManagerError::ParseSeedPhraseError(_) => 101,
             AdminManagerError::EmailAlreadyVerified => todo!(),
             AdminManagerError::ValidationCodesDoNotMatch => todo!(),
-            AdminManagerError::EmailCandidateNotSet => todo!(), // TODO codes
+            AdminManagerError::EmailCandidateNotSet => todo!(),
+            AdminManagerError::VerificationCodeNotSent => todo!(), // TODO codes
         }
     }
 }
