@@ -8,7 +8,7 @@ pub enum IdentityType {
     Device,
 }
 
-pub trait Identity: Display + std::fmt::Debug {
+pub trait Identity: Display + std::fmt::Debug + Send {
     // fn new(identity_type: IdentityType, name: String, inner_identity: &SeedPhrase) -> Self;
     fn get_identity_type(&self) -> IdentityType;
     fn get_name(&self) -> String;
