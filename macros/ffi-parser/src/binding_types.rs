@@ -3,25 +3,27 @@ use syn::{parse_quote, ForeignItemFn, Type};
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub enum RustWrapperType {
-    Result { name: Type, new_name: Ident },
-    Option { name: Type, new_name: Ident },
-    Vector { name: Type, new_name: Ident },
-    Custom { name: Type, new_name: Ident },
-    Identic { name: Type, new_name: Ident },
+    Result,
+    Option,
+    Vector,
+    Arc,
+    Mutex,
+    DynTrait,
+    Custom,
+    Identic,
 }
 
-impl RustWrapperType {
-    pub fn get_new_name(&self) -> Ident {
-        match self {
-            Self::Result { new_name, .. } => new_name.clone(),
-            Self::Option { new_name, .. } => new_name.clone(),
-            Self::Vector { new_name, .. } => new_name.clone(),
-            Self::Custom { new_name, .. } => new_name.clone(),
-            Self::Identic { new_name, .. } => new_name.clone(),
-        }
-    }
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+pub struct WrapperType {
+    pub name: Type,
+    pub new_name: Ident,
+    pub typ: RustWrapperType,
+    pub inner_type: Option<Box<WrapperType>>,
+}
+
+impl WrapperType {
     pub fn get_new_type(&self) -> Type {
-        let id = self.get_new_name();
+        let id = &self.new_name;
         parse_quote!( #id )
     }
 }
@@ -29,12 +31,12 @@ impl RustWrapperType {
 #[derive(Debug)]
 pub struct Arg {
     pub arg_name: Ident,
-    pub typ: RustWrapperType,
+    pub typ: WrapperType,
 }
 
 #[derive(Debug)]
 pub struct Function {
     pub parsed_items: ForeignItemFn,
     pub arguments: Vec<Arg>,
-    pub return_type: Option<RustWrapperType>,
+    pub return_type: Option<WrapperType>,
 }

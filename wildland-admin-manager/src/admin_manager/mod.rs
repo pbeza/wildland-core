@@ -2,7 +2,7 @@ mod identity;
 
 use crate::api::{self, AdminManagerError, AdminManagerIdentity, SeedPhrase};
 pub use identity::CryptoIdentity;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Default, Debug)]
 pub struct AdminManager {

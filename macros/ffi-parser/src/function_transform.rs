@@ -11,8 +11,8 @@ use crate::binding_types::*;
 
 #[derive(Default)]
 pub struct Transformer {
-    pub rust_types_wrappers: HashSet<RustWrapperType>,
-    pub structures_wrappers: HashMap<RustWrapperType, Vec<Function>>,
+    pub rust_types_wrappers: HashSet<WrapperType>,
+    pub structures_wrappers: HashMap<WrapperType, Vec<Function>>,
     pub global_functions: Vec<Function>,
 }
 
@@ -35,10 +35,8 @@ impl Transformer {
                             arg_name: ident.clone(),
                             typ: new_wrapper_type.clone(),
                         });
-                        if let RustWrapperType::Custom { .. } = &new_wrapper_type {
-                            if ident.to_string() == "self" {
-                                associated_structure = Some(new_wrapper_type);
-                            }
+                        if ident.to_string() == "self" {
+                            associated_structure = Some(new_wrapper_type);
                         }
                     }
                     Ok(())
@@ -57,14 +55,14 @@ impl Transformer {
             ///////////////////////////////////
             // CXX hack: Return Boxed value: //   TODO: add some abstraction on top of that
             ///////////////////////////////////
-            if let RustWrapperType::Identic { .. } = new_wrapper_type {
+            if let RustWrapperType::Identic = &new_wrapper_type.typ {
             } else {
-                let new_name = new_wrapper_type.get_new_name();
+                let new_name = &new_wrapper_type.new_name;
                 function.sig.output = parse_quote!( -> Box<#new_name>);
             }
             return_type = Some(new_wrapper_type);
         }
-        if let Some(custom_type @ RustWrapperType::Custom { .. }) = associated_structure {
+        if let Some(custom_type) = associated_structure {
             if !self.structures_wrappers.contains_key(&custom_type) {
                 self.structures_wrappers.insert(custom_type.clone(), vec![]);
             }
@@ -101,7 +99,7 @@ impl Transformer {
         }
     }
 
-    fn tansform_rust_type_into_wrapper(&mut self, typ: &mut Type) -> Option<RustWrapperType> {
+    fn tansform_rust_type_into_wrapper(&mut self, typ: &mut Type) -> Option<WrapperType> {
         match typ {
             Type::Path(path) => {
                 path.path
@@ -118,11 +116,13 @@ impl Transformer {
                                     {
                                         *path_segment = Transformer::create_wrapper_name(
                                             "Result",
-                                            &inner_type_name.get_new_name().to_string(),
+                                            &inner_type_name.new_name.to_string(),
                                         );
-                                        Some(RustWrapperType::Result {
+                                        Some(WrapperType {
                                             name: inner_type_name.get_new_type(),
                                             new_name: path_segment.ident.clone(),
+                                            typ: RustWrapperType::Result,
+                                            inner_type: Some(inner_type_name.into()),
                                         })
                                     } else {
                                         None
@@ -139,11 +139,13 @@ impl Transformer {
                                     {
                                         *path_segment = Transformer::create_wrapper_name(
                                             "Optional",
-                                            &inner_type_name.get_new_name().to_string(),
+                                            &inner_type_name.new_name.to_string(),
                                         );
-                                        Some(RustWrapperType::Option {
+                                        Some(WrapperType {
                                             name: inner_type_name.get_new_type(),
                                             new_name: path_segment.ident.clone(),
+                                            typ: RustWrapperType::Option,
+                                            inner_type: Some(inner_type_name.into()),
                                         })
                                     } else {
                                         None
@@ -162,21 +164,25 @@ impl Transformer {
                                         | "i8" | "i16" | "i32" | "i64"
                                         | "i128" | "f8" | "f16" | "f32"
                                         | "f64" | "f128" | "String" | "usize") =
-                                            inner_type_name.get_new_name().to_string().as_str()
+                                            inner_type_name.new_name.to_string().as_str()
                                         {
                                             let new_id = Ident::new(&identical, Span::call_site());
-                                            Some(RustWrapperType::Identic {
+                                            Some(WrapperType {
                                                 name: parse_quote!( #new_id ),
                                                 new_name: new_id,
+                                                typ: RustWrapperType::Identic,
+                                                inner_type: Some(inner_type_name.into()),
                                             })
                                         } else {
                                             *path_segment = Transformer::create_wrapper_name(
                                                 "Vec",
-                                                &inner_type_name.get_new_name().to_string(),
+                                                &inner_type_name.new_name.to_string(),
                                             );
-                                            Some(RustWrapperType::Vector {
+                                            Some(WrapperType {
                                                 name: inner_type_name.get_new_type(),
                                                 new_name: path_segment.ident.clone(),
+                                                typ: RustWrapperType::Vector,
+                                                inner_type: Some(inner_type_name.into()),
                                             })
                                         }
                                     } else {
@@ -193,10 +199,38 @@ impl Transformer {
                                         self.tansform_rust_type_into_wrapper(inner_path)
                                     {
                                         *path_segment = Transformer::create_wrapper_name(
-                                            "",
-                                            &inner_type_name.get_new_name().to_string(),
+                                            "Shared",
+                                            &inner_type_name.new_name.to_string(),
                                         );
-                                        Some(inner_type_name)
+                                        Some(WrapperType {
+                                            name: inner_type_name.get_new_type(),
+                                            new_name: path_segment.ident.clone(),
+                                            typ: RustWrapperType::Arc,
+                                            inner_type: Some(inner_type_name.into()),
+                                        })
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            }
+                            "Mutex" => {
+                                let inner_path = Transformer::get_inner_generic_type(path_segment);
+                                if let Some(inner_path) = inner_path {
+                                    if let Some(inner_type_name) =
+                                        self.tansform_rust_type_into_wrapper(inner_path)
+                                    {
+                                        *path_segment = Transformer::create_wrapper_name(
+                                            "Mutex",
+                                            &inner_type_name.new_name.to_string(),
+                                        );
+                                        Some(WrapperType {
+                                            name: inner_type_name.get_new_type(),
+                                            new_name: path_segment.ident.clone(),
+                                            typ: RustWrapperType::Mutex,
+                                            inner_type: Some(inner_type_name.into()),
+                                        })
                                     } else {
                                         None
                                     }
@@ -208,18 +242,22 @@ impl Transformer {
                             | "i32" | "i64" | "i128" | "f8" | "f16" | "f32"
                             | "f64" | "f128" | "String" | "usize") => {
                                 let new_id = Ident::new(&identical, Span::call_site());
-                                Some(RustWrapperType::Identic {
+                                Some(WrapperType {
                                     name: parse_quote!( #new_id ),
                                     new_name: new_id,
+                                    typ: RustWrapperType::Identic,
+                                    inner_type: None,
                                 })
                             }
                             custom_type => {
                                 *path_segment =
                                     Transformer::create_wrapper_name("Rust", &custom_type);
                                 let new_id = Ident::new(custom_type, Span::call_site());
-                                Some(RustWrapperType::Custom {
+                                Some(WrapperType {
                                     name: parse_quote!( #new_id ),
                                     new_name: path_segment.ident.clone(),
+                                    typ: RustWrapperType::Custom,
+                                    inner_type: None,
                                 })
                             }
                         };
@@ -234,14 +272,15 @@ impl Transformer {
                 self.tansform_rust_type_into_wrapper(elem.as_mut())
             }
             Type::TraitObject(TypeTraitObject { bounds, .. }) => {
-                // bounds.it;
+                // bounds.it;  Transformer::create_wrapper_name("Dyn", "Identity");
                 // TODO:
-                let new_wrapper_type = RustWrapperType::Custom {
+                let new_wrapper_type = WrapperType {
                     name: parse_quote!(dyn Identity),
                     new_name: Ident::new("DynIdentity", Span::call_site()),
+                    typ: RustWrapperType::DynTrait,
+                    inner_type: None,
                 };
                 *typ = parse_quote!(DynIdentity);
-                Transformer::create_wrapper_name("Dyn", "Identity");
                 self.rust_types_wrappers.insert(new_wrapper_type.clone());
                 Some(new_wrapper_type)
             }
