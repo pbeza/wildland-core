@@ -1,15 +1,17 @@
 use crate::admin_manager::AdminManager;
 use crate::api::AdminManager as AdminManagerTrait;
 use crate::api::Identity;
-use crate::api::{AdminManagerError, AdminManagerResult, SeedPhrase};
+use crate::api::{AdminManagerError, SeedPhrase};
 use ffi_macro::binding_wrapper;
 
 // Define Error type and `()` type.
-type ResultFfiError = AdminManagerError;
+type ErrorType = AdminManagerError;
 type VoidType = ();
 
 #[binding_wrapper]
 mod ffi_binding {
+    use super::{AdminManagerTrait, Identity};
+
     extern "Rust" {
         type AdminManager;
         fn create_master_identity_from_seed_phrase(
@@ -36,8 +38,8 @@ mod ffi_binding {
         // fn get_seed_phrase(self: &Arc<Mutex<dyn Identity>>) -> SeedPhraseWords;    // Translate slice into vector for FFI purpose.
 
         type VoidType;
-        type ResultFfiError;
-        fn to_string(self: &ResultFfiError) -> String;
-        fn code(self: &ResultFfiError) -> u32;
+        type ErrorType;
+        fn to_string(self: &ErrorType) -> String;
+        fn code(self: &ErrorType) -> u32;
     }
 }

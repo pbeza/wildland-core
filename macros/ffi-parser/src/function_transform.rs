@@ -1,28 +1,29 @@
-use std::collections::{HashMap, HashSet};
-
+use crate::binding_types::*;
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
+use std::collections::{HashMap, HashSet};
 use syn::{
     parse_quote, FnArg, ForeignItemFn, GenericArgument, Pat, PatIdent, PathArguments, PathSegment,
     ReturnType, Type, TypeReference,
 };
 
-use crate::binding_types::*;
-
+///
+/// TODO: add doc here
+///
 #[derive(Default)]
-pub struct ModuleParser {
+pub struct ModuleTranslator {
     pub rust_types_wrappers: HashSet<WrapperType>,
     pub structures_wrappers: HashMap<WrapperType, Vec<Function>>,
     pub global_functions: Vec<Function>,
 }
 
-impl ModuleParser {
+impl ModuleTranslator {
     /// Method stores a wrapper to some custom user's type.
     /// Can be used while parsing `type SomeUserType;` in
     /// order to register a new type `RustUserType` in
     /// the collection of intermediate-form wrappers.
     pub fn register_custom_type(&mut self, original_type_name: Ident) -> WrapperType {
-        let new_name = ModuleParser::create_wrapper_name("Rust", &original_type_name.to_string());
+        let new_name = ModuleTranslator::create_wrapper_name("", &original_type_name.to_string());
         let wrapper_name = Ident::new(&new_name.ident.to_string(), Span::call_site());
         let new_wrapper_type = WrapperType {
             original_type_name: parse_quote!( #original_type_name ),
@@ -39,7 +40,7 @@ impl ModuleParser {
     ///
     /// Side effects: the method fills `rust_types_wrappers`, `structures_wrappers`
     ///               and `global_functions`.
-    pub fn transform_function(
+    pub fn replace_arg_types_with_wrappers(
         &mut self,
         function: &mut ForeignItemFn,
         boxed_result: bool,
@@ -55,7 +56,12 @@ impl ModuleParser {
                 FnArg::Typed(argument) => {
                     let new_wrapper_type = self
                         .tansform_rust_type_into_wrapper(argument.ty.as_mut())
-                        .expect("At least one type should be present");
+                        .ok_or_else(|| {
+                            format!(
+                                "Unsupported type in function signature: {}",
+                                function.sig.ident
+                            )
+                        })?;
                     if let Pat::Ident(PatIdent { ident, .. }) = argument.pat.as_ref() {
                         arguments.push(Arg {
                             arg_name: ident.clone(),
@@ -86,6 +92,7 @@ impl ModuleParser {
             }
             return_type = Some(new_wrapper_type);
         }
+
         if let Some(custom_type) = associated_structure {
             self.structures_wrappers
                 .entry(custom_type)
@@ -105,9 +112,9 @@ impl ModuleParser {
         Ok(())
     }
 
-    /// Translates T<I> into I.
+    /// Translates <T> into T.
     /// Example:
-    ///  * Vec<Result<u8>> --> Result<u8>
+    ///  * <Result<u8>> --> Result<u8>
     fn get_inner_generic_type(path_segment: &mut PathSegment) -> Option<&mut Type> {
         match &mut path_segment.arguments {
             PathArguments::AngleBracketed(args) => {
@@ -122,7 +129,7 @@ impl ModuleParser {
         }
     }
 
-    /// This method takes a type (for instance `Arc<Mutex<dyn SomeCustomType>>`)
+    /// Method takes a type (for instance `Arc<Mutex<dyn SomeCustomType>>`)
     /// and creates one or more intermediate-form wrappers.
     /// Examples:
     /// The following wrappers are created out of Result<Arc<Mutex<dyn SomeCustomType>>>:
@@ -138,10 +145,10 @@ impl ModuleParser {
         match typ {
             Type::Path(path) => path.path.segments.first_mut().and_then(|path_segment| {
                 let new_wrapper_type = match path_segment.ident.to_string().as_str() {
-                    "Result" => ModuleParser::get_inner_generic_type(path_segment)
+                    "Result" => ModuleTranslator::get_inner_generic_type(path_segment)
                         .and_then(|inner_path| self.tansform_rust_type_into_wrapper(inner_path))
                         .map(|inner_type_name| {
-                            *path_segment = ModuleParser::create_wrapper_name(
+                            *path_segment = ModuleTranslator::create_wrapper_name(
                                 "Result",
                                 &inner_type_name.wrapper_name.to_string(),
                             );
@@ -152,10 +159,10 @@ impl ModuleParser {
                                 inner_type: Some(inner_type_name.into()),
                             }
                         }),
-                    "Option" => ModuleParser::get_inner_generic_type(path_segment)
+                    "Option" => ModuleTranslator::get_inner_generic_type(path_segment)
                         .and_then(|inner_path| self.tansform_rust_type_into_wrapper(inner_path))
                         .map(|inner_type_name| {
-                            *path_segment = ModuleParser::create_wrapper_name(
+                            *path_segment = ModuleTranslator::create_wrapper_name(
                                 "Optional",
                                 &inner_type_name.wrapper_name.to_string(),
                             );
@@ -166,11 +173,11 @@ impl ModuleParser {
                                 inner_type: Some(inner_type_name.into()),
                             }
                         }),
-                    "Vec" => ModuleParser::get_inner_generic_type(path_segment)
+                    "Vec" => ModuleTranslator::get_inner_generic_type(path_segment)
                         .and_then(|inner_path| self.tansform_rust_type_into_wrapper(inner_path))
                         .map(|inner_type_name| {
                             if inner_type_name.typ != RustWrapperType::Primitive {
-                                *path_segment = ModuleParser::create_wrapper_name(
+                                *path_segment = ModuleTranslator::create_wrapper_name(
                                     "Vec",
                                     &inner_type_name.wrapper_name.to_string(),
                                 );
@@ -186,7 +193,7 @@ impl ModuleParser {
                                 inner_type: Some(inner_type_name.into()),
                             }
                         }),
-                    "Arc" => ModuleParser::get_inner_generic_type(path_segment)
+                    "Arc" => ModuleTranslator::get_inner_generic_type(path_segment)
                         .cloned()
                         .map(|inner_path| {
                             let generated_inner_type_name = inner_path
@@ -196,7 +203,7 @@ impl ModuleParser {
                                 .replace('<', "")
                                 .replace('>', "")
                                 .replace(' ', "");
-                            *path_segment = ModuleParser::create_wrapper_name(
+                            *path_segment = ModuleTranslator::create_wrapper_name(
                                 "Shared",
                                 &generated_inner_type_name,
                             );
@@ -209,7 +216,7 @@ impl ModuleParser {
                         }),
                     primitive @ ("u8" | "u16" | "u32" | "u64" | "u128" | "i8" | "i16" | "i32"
                     | "i64" | "i128" | "f8" | "f16" | "f32" | "f64" | "f128"
-                    | "String" | "usize") => {
+                    | "String" | "usize" | "bool") => {
                         let new_id = Ident::new(primitive, Span::call_site());
                         Some(WrapperType {
                             original_type_name: parse_quote!( #new_id ),
@@ -219,7 +226,7 @@ impl ModuleParser {
                         })
                     }
                     custom_type => {
-                        *path_segment = ModuleParser::create_wrapper_name("Rust", custom_type);
+                        *path_segment = ModuleTranslator::create_wrapper_name("", custom_type);
                         let new_id = Ident::new(custom_type, Span::call_site());
                         Some(WrapperType {
                             original_type_name: parse_quote!( #new_id ),
@@ -245,7 +252,7 @@ impl ModuleParser {
     /// Example:
     ///  * create_wrapper_name("Rust", "SomeCustomStruct")  --> `RustSomeCustomStruct`.
     ///
-    /// The result type is chosen for convenience.
+    /// This return type is chosen for convenience.
     ///
     pub fn create_wrapper_name(outer: &str, inner: &str) -> PathSegment {
         let original_type_name = Ident::new(&format!("{}{}", outer, inner), Span::call_site());

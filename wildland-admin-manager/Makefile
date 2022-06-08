@@ -101,6 +101,7 @@ python_test: python
 	cd wildland_python ; python test.py
 
 swift:
+	mkdir -p _temporary
 	mkdir -p wildland_swift
 	SWIFT_BRIDGE_OUT_DIR="$(CURDIR)/wildland_swift" $(RUST_BUILD)
 	cp test/ffi/test.swift wildland_swift/main.swift
