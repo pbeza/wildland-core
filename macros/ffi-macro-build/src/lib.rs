@@ -1,6 +1,5 @@
-use std::io::Write;
-
 use ffi_parser::BindingModule;
+use std::io::Write;
 use syn::{File, Item, __private::ToTokens};
 
 macro_rules! generate_files {

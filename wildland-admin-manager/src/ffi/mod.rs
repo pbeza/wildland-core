@@ -1,8 +1,10 @@
 use crate::admin_manager::AdminManager;
 use crate::api::AdminManager as AdminManagerTrait;
 use crate::api::Identity;
+use crate::api::IdentityType;
 use crate::api::{AdminManagerError, SeedPhrase};
 use ffi_macro::binding_wrapper;
+use wildland_corex::SeedPhraseWords;
 
 // Define Error type and `()` type.
 type ErrorType = AdminManagerError;
@@ -11,7 +13,6 @@ type VoidType = ();
 #[binding_wrapper]
 mod ffi_binding {
     use super::{AdminManagerTrait, Identity};
-
     extern "Rust" {
         type AdminManager;
         fn create_master_identity_from_seed_phrase(
@@ -30,12 +31,14 @@ mod ffi_binding {
         fn get_string(self: &SeedPhrase) -> String;
         fn get_vec(self: &SeedPhrase) -> Vec<String>;
 
-        // fn get_identity_type(self: &Arc<Mutex<dyn Identity>>) -> IdentityType;
+        type IdentityType;
+        type SeedPhraseWords;
+        fn get_identity_type(self: &Arc<Mutex<dyn Identity>>) -> IdentityType;
         fn get_name(self: &Arc<Mutex<dyn Identity>>) -> String;
         fn set_name(self: &mut Arc<Mutex<dyn Identity>>, name: String);
         fn get_pubkey(self: &Arc<Mutex<dyn Identity>>) -> Vec<u8>;
         fn get_fingerprint(self: &Arc<Mutex<dyn Identity>>) -> Vec<u8>;
-        // fn get_seed_phrase(self: &Arc<Mutex<dyn Identity>>) -> SeedPhraseWords;    // Translate slice into vector for FFI purpose.
+        fn get_seed_phrase(self: &Arc<Mutex<dyn Identity>>) -> SeedPhraseWords;
 
         type VoidType;
         type ErrorType;

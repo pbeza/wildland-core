@@ -15,7 +15,7 @@ class TestAdminManager(unittest.TestCase):
     def test_create_identity_from_seed(self):
         seed = wildland.create_seed_phrase().unwrap()
         identity_result = self.admin_manager.create_master_identity_from_seed_phrase(
-            wildland.RustString("name 1"), seed.into_raw())
+            wildland.RustString("name 1"), seed)
         identity_result.is_ok()
 
     def test_get_identity(self):
@@ -50,7 +50,7 @@ class TestIdentity(unittest.TestCase):
         self.admin_manager = wildland.create_admin_manager()
         seed_result = wildland.create_seed_phrase()
         self.identity_result = self.admin_manager.create_master_identity_from_seed_phrase(
-            wildland.RustString("name 1"), seed_result.unwrap().into_raw())
+            wildland.RustString("name 1"), seed_result.unwrap())
 
     def test_get_identity_name(self):
         assert self.identity_result.unwrap().get_name().c_str() == "name 1"

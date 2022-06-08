@@ -43,7 +43,7 @@ impl ModuleTranslator {
     pub fn replace_arg_types_with_wrappers(
         &mut self,
         function: &mut ForeignItemFn,
-        boxed_result: bool,
+        boxed_wrappers: bool,
     ) -> Result<(), String> {
         let mut arguments = vec![];
         let mut associated_structure = None;
@@ -69,6 +69,17 @@ impl ModuleTranslator {
                         });
                         if *ident == "self" {
                             associated_structure = Some(new_wrapper_type);
+                        } else if boxed_wrappers
+                            && new_wrapper_type.typ != RustWrapperType::Primitive
+                            && new_wrapper_type.typ != RustWrapperType::VectorPrimitive
+                        {
+                            let wrapper_name = &new_wrapper_type.wrapper_name;
+                            match &mut argument.ty.as_mut() {
+                                Type::Reference(typ) => *typ = parse_quote!( &Box<#wrapper_name>),
+                                Type::Path(typ) => *typ = parse_quote!( Box<#wrapper_name>),
+                                _ => {}
+                            }
+                            argument.ty = parse_quote!( &Box<#wrapper_name>);
                         }
                     }
                     Ok(())
@@ -83,7 +94,7 @@ impl ModuleTranslator {
             let new_wrapper_type = self
                 .tansform_rust_type_into_wrapper(typ.as_mut())
                 .ok_or("At least one type should be present in return type")?;
-            if boxed_result
+            if boxed_wrappers
                 && new_wrapper_type.typ != RustWrapperType::Primitive
                 && new_wrapper_type.typ != RustWrapperType::VectorPrimitive
             {
