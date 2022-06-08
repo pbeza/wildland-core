@@ -141,26 +141,28 @@ impl BindingModule {
                         }
                     }
                 },
-                RustWrapperType::Vector => if wrapper
-                    .inner_type
-                    .as_ref()
-                    .expect("Vector has to have inner generic type")
-                    .typ
-                    != RustWrapperType::Primitive
-                {
-                    quote! {
-                        pub struct #wrapper_name(Vec<#original_type_name>);
-                        impl #wrapper_name {
-                            pub fn at(&self, elem: usize) -> #return_original_type_name {
-                                self.0[elem].clone()
-                            }
-                            pub fn size(&self) -> usize {
-                                self.0.len()
+                RustWrapperType::Vector => {
+                    if wrapper
+                        .inner_type
+                        .as_ref()
+                        .expect("Vector has to have inner generic type")
+                        .typ
+                        != RustWrapperType::Primitive
+                    {
+                        quote! {
+                            pub struct #wrapper_name(Vec<#original_type_name>);
+                            impl #wrapper_name {
+                                pub fn at(&self, elem: usize) -> #return_original_type_name {
+                                    self.0[elem].clone()
+                                }
+                                pub fn size(&self) -> usize {
+                                    self.0.len()
+                                }
                             }
                         }
+                    } else {
+                        quote! {}
                     }
-                } else {
-                    quote! {}
                 }
                 RustWrapperType::Custom => {
                     quote! {
