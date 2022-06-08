@@ -62,13 +62,7 @@ impl BindingModule {
                 RustWrapperType::Arc => quote! {
                     extern "Rust" { type #new_name; }
                 },
-                RustWrapperType::Mutex => quote! {
-                    extern "Rust" { type #new_name; }
-                },
                 RustWrapperType::Custom => quote! {
-                    extern "Rust" { type #new_name; }
-                },
-                RustWrapperType::DynTrait => quote! {
                     extern "Rust" { type #new_name; }
                 },
                 RustWrapperType::Identic => quote! { extern "Rust" {} },
@@ -93,9 +87,6 @@ impl BindingModule {
                 }
                 RustWrapperType::Option => quote! { type #new_name = Opt<#name>; }.into(),
                 RustWrapperType::Vector => quote! { type #new_name = Array<#name>; }.into(),
-                RustWrapperType::Arc => quote! { type #new_name = Shared<#name>; }.into(),
-                RustWrapperType::Mutex => quote! { type #new_name = Mut<#name>; }.into(),
-                RustWrapperType::DynTrait => quote! { type #new_name = #name; }.into(),
                 // Those types will be created along with
                 // the custom wrapper types:
                 _ => quote! {}.into(),
@@ -104,7 +95,7 @@ impl BindingModule {
         }
     }
 
-    fn generate_function_body(functions: &Vec<Function>, skip_first: bool) -> Vec<ItemFn> {
+    fn generate_function_body(functions: &Vec<Function>, skip_first: bool, custom_self: Option<TokenStream>) -> Vec<ItemFn> {
         functions
             .iter()
             .map(|function| {
@@ -116,7 +107,11 @@ impl BindingModule {
                     .map(|Arg { arg_name, .. }| quote! {  #arg_name.into() })
                     .collect::<Vec<_>>();
                 let struct_name: TokenStream = if skip_first {
-                    quote! { self.0. }
+                    if let Some(custom_self) = &custom_self {
+                        custom_self.clone()
+                    } else {
+                        quote! { self.0. }
+                    }
                 } else {
                     quote! { crate:: }
                 };
@@ -139,7 +134,7 @@ impl BindingModule {
                             quote! {
                                 {
                                     #new_name::from(
-                                        #struct_name #fn_name( #(#args),* ).map(|ok| #new_name::from(ok))
+                                        #struct_name #fn_name( #(#args),* ).map(|ok| #name::from(ok))
                                     ).into()
                                 }
                             }
@@ -151,9 +146,6 @@ impl BindingModule {
                             quote! {{ #new_name::from(#struct_name #fn_name( #(#args),* )).into() }}
                         }
                         RustWrapperType::Arc => {
-                            quote! {{ #struct_name #fn_name( #(#args),* ) }}
-                        }
-                        RustWrapperType::Mutex => {
                             quote! {{ #struct_name #fn_name( #(#args),* ) }}
                         }
                         RustWrapperType::Identic => {
@@ -182,7 +174,7 @@ impl BindingModule {
             match custom_type.typ {
                 RustWrapperType::Custom => {
                     let generated_functions =
-                        BindingModule::generate_function_body(&functions, true);
+                        BindingModule::generate_function_body(&functions, true, None);
                     let generated_custom_wrapper_types: TokenStream = quote! {
                         #[derive(Clone, Debug)]
                         struct #new_name(#name);
@@ -192,6 +184,34 @@ impl BindingModule {
                         impl From<#name> for #new_name {
                             fn from(w: #name) -> #new_name {
                                 #new_name(w)
+                            }
+                        }
+                        impl<'a> Into<&'a #name> for &'a #new_name {
+                            fn into(self) -> &'a #name {
+                                &self.0
+                            }
+                        }
+                    }
+                    .into();
+                    self.generated.extend(generated_custom_wrapper_types);
+                }
+                RustWrapperType::Arc => {
+                    let generated_functions =
+                        BindingModule::generate_function_body(&functions, true, Some(quote!{self.0.lock().unwrap().}));
+                    let generated_custom_wrapper_types: TokenStream = quote! {
+                        #[derive(Clone, Debug)]
+                        struct #new_name(Arc<#name>);
+                        impl #new_name {
+                            #(#generated_functions)*
+                        }
+                        impl From<Arc<#name>> for #new_name {
+                            fn from(w: Arc<#name>) -> #new_name {
+                                #new_name(w)
+                            }
+                        }
+                        impl<'a> Into<&'a #name> for &'a #new_name {
+                            fn into(self) -> &'a #name {
+                                &self.0
                             }
                         }
                     }
@@ -205,7 +225,7 @@ impl BindingModule {
 
     fn generate_global_functions_wrappers(&mut self) {
         let generated_functions =
-            BindingModule::generate_function_body(&self.transformer.global_functions, false);
+            BindingModule::generate_function_body(&self.transformer.global_functions, false, None);
         let generated_custom_wrapper_types: TokenStream = quote! {
                 #(#generated_functions)*
         }

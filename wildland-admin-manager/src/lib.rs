@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use admin_manager::AdminManager;
-use api::{AdminManagerResult, SeedPhrase};
+use api::{AdminManagerResult, SeedPhrase, AdminManager as AdminManagerTrait};
 
 pub mod admin_manager;
 pub mod api;
@@ -10,20 +8,7 @@ pub mod api;
 pub mod ffi;
 
 pub fn create_seed_phrase() -> AdminManagerResult<SeedPhrase> {
-    Ok(SeedPhrase::from([
-        "test".to_owned(),
-        "test".to_owned(),
-        "test".to_owned(),
-        "test".to_owned(),
-        "test".to_owned(),
-        "test".to_owned(),
-        "test".to_owned(),
-        "test".to_owned(),
-        "test".to_owned(),
-        "test".to_owned(),
-        "test".to_owned(),
-        "test".to_owned(),
-    ]))
+    AdminManager::create_seed_phrase()
 }
 
 pub fn create_admin_manager() -> AdminManager {

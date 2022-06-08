@@ -47,40 +47,6 @@ impl<T> From<Option<T>> for Opt<T> {
 }
 
 
-#[derive(Debug)]
-pub struct Shared<T: ?Sized + Unpin>(pub Arc<T>);
-
-impl<T: ?Sized> Clone for Shared<T> {
-    fn clone(&self) -> Shared<T> {
-        Shared(self.0.clone())
-    }
-}
-
-// impl<T> From<Arc<T>> for Shared<T> {
-//     fn from(sh: Arc<T>) -> Self {
-//         Shared(sh)
-//     }
-// }
-// impl<T> Into<Arc<T>> for Shared<T> {
-//     fn into(self) -> Arc<T> {
-//         self.0
-//     }
-// }
-
-
-#[derive(Debug)]
-pub struct Mut<T: ?Sized + Unpin>(pub Mutex<T>);
-// impl<T> From<Mutex<T>> for Mut<T> {
-//     fn from(sh: Arc<T>) -> Self {
-//         Shared(sh)
-//     }
-// }
-// impl<T: ?Sized> Into<Mutex<T>> for Mut<T> {
-//     fn into(self) -> Arc<T> {
-//         self.0
-//     }
-// }
-
 
 
 

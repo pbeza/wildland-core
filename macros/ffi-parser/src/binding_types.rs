@@ -7,8 +7,6 @@ pub enum RustWrapperType {
     Option,
     Vector,
     Arc,
-    Mutex,
-    DynTrait,
     Custom,
     Identic,
 }

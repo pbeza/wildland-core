@@ -95,11 +95,20 @@ typedef unsigned char uint8_t;
 // order to let the target languages users handle them properly.
 // In result each type added to cxx module that uses generics needs to
 // be declared here:
-%template(BoxedResultRustSeedPhrase) ::rust::cxxbridge1::Box<::ResultRustSeedPhrase>;
-%template(BoxedDynIdentity) ::rust::cxxbridge1::Box<::DynIdentity>;
-%template(BoxedResultDynIdentity) ::rust::cxxbridge1::Box<::ResultDynIdentity>;
-%template(BoxedOptionalDynIdentity) ::rust::cxxbridge1::Box<::OptionalDynIdentity>;
-%template(BoxedResultFfiError) ::rust::cxxbridge1::Box<::ResultFfiError>;
-%template(BoxedRustAdminManagerError) ::rust::cxxbridge1::Box<::RustAdminManagerError>;
+// %template(BoxedResultRustSeedPhrase) ::rust::cxxbridge1::Box<::ResultRustSeedPhrase>;
+// %template(BoxedResultDynIdentity) ::rust::cxxbridge1::Box<::ResultSIdentity>;
+// %template(BoxedOptionalDynIdentity) ::rust::cxxbridge1::Box<::OptionalDynIdentity>;
+// %template(BoxedResultFfiError) ::rust::cxxbridge1::Box<::ResultFfiError>;
+// %template(BoxedRustAdminManagerError) ::rust::cxxbridge1::Box<::RustAdminManagerError>;
+// %template(BoxedRustAdminManager) ::rust::cxxbridge1::Box<::RustAdminManager>;
+// %template(BoxedRustSeedPhrase) ::rust::cxxbridge1::Box<::RustSeedPhrase>;
+
+
+
 %template(BoxedRustAdminManager) ::rust::cxxbridge1::Box<::RustAdminManager>;
+%template(BoxedResultSharedMutexIdentity) ::rust::cxxbridge1::Box<::ResultSharedMutexIdentity>;
+%template(BoxedSharedMutexIdentity) ::rust::cxxbridge1::Box<::SharedMutexIdentity>;
 %template(BoxedRustSeedPhrase) ::rust::cxxbridge1::Box<::RustSeedPhrase>;
+%template(BoxedResultRustSeedPhrase) ::rust::cxxbridge1::Box<::ResultRustSeedPhrase>;
+%template(BoxedOptionalSharedMutexIdentity) ::rust::cxxbridge1::Box<::OptionalSharedMutexIdentity>;
+%template(BoxedRustResultFfiError) ::rust::cxxbridge1::Box<::RustResultFfiError>;
