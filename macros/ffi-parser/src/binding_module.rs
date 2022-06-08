@@ -20,14 +20,14 @@ impl BindingModule {
         module
             .content
             .as_mut()
-            .ok_or("The module is empty.".to_owned())?
+            .ok_or_else(|| "The module is empty.".to_owned())?
             .1
             .iter_mut()
             .find_map(|module_item| match module_item {
                 Item::ForeignMod(rust_module) => Some(&mut rust_module.items),
                 _ => None,
             })
-            .ok_or("Expected extern \"Rust\" in module definition.".to_owned())
+            .ok_or_else(|| "Expected extern \"Rust\" in module definition.".to_owned())
     }
 
     fn generate_rust_wrappers_in_extern_mod(&mut self, boxed_result: bool) -> Result<(), String> {
@@ -84,10 +84,7 @@ impl BindingModule {
                 RustWrapperType::Arc => quote! {
                     extern "Rust" { type #wrapper_name; }
                 },
-                RustWrapperType::Custom => quote! {
-                    extern "Rust" { type #wrapper_name; }
-                },
-                RustWrapperType::Primitive => quote! { extern "Rust" {} },
+                _ => quote! { extern "Rust" {} },
             };
             let module_module: ItemForeignMod = parse_quote!(#tokens);
             BindingModule::get_vec_of_extern_items_from_module(
@@ -132,7 +129,6 @@ impl BindingModule {
                             }
                         }
                     }
-                    .into()
                 }
                 RustWrapperType::Option => quote! {
                     pub struct #wrapper_name(Option<#original_type_name>);
@@ -144,8 +140,7 @@ impl BindingModule {
                             self.0.as_ref().unwrap().clone().into()
                         }
                     }
-                }
-                .into(),
+                },
                 RustWrapperType::Vector => if wrapper
                     .inner_type
                     .as_ref()
@@ -167,15 +162,41 @@ impl BindingModule {
                 } else {
                     quote! {}
                 }
-                .into(),
-                _ => quote! {}.into(),
+                RustWrapperType::Custom => {
+                    quote! {
+                        #[derive(Clone, Debug)]
+                        pub struct #wrapper_name(#original_type_name);
+                        impl From<#original_type_name> for #wrapper_name {
+                            fn from(w: #original_type_name) -> #wrapper_name {
+                                #wrapper_name(w)
+                            }
+                        }
+                        impl<'a> Into<&'a #original_type_name> for &'a #wrapper_name {
+                            fn into(self) -> &'a #original_type_name {
+                                &self.0
+                            }
+                        }
+                    }
+                }
+                RustWrapperType::Arc => {
+                    quote! {
+                        #[derive(Clone, Debug)]
+                        pub struct #wrapper_name(Arc<#original_type_name>);
+                        impl From<Arc<#original_type_name>> for #wrapper_name {
+                            fn from(w: Arc<#original_type_name>) -> #wrapper_name {
+                                #wrapper_name(w)
+                            }
+                        }
+                    }
+                }
+                _ => quote! {},
             };
             self.generated.extend(tokens);
         }
     }
 
     fn generate_function_body(
-        functions: &Vec<Function>,
+        functions: &[Function],
         skip_first: bool,
         custom_self: Option<TokenStream>,
     ) -> Vec<ItemFn> {
@@ -257,50 +278,28 @@ impl BindingModule {
     fn generate_custom_types_wrappers(&mut self) {
         for (custom_type, functions) in &self.transformer.structures_wrappers {
             let wrapper_name = &custom_type.wrapper_name;
-            let original_type_name = &custom_type.original_type_name;
             match custom_type.typ {
                 RustWrapperType::Custom => {
                     let generated_functions =
-                        BindingModule::generate_function_body(&functions, true, None);
+                        BindingModule::generate_function_body(functions, true, None);
                     let generated_custom_wrapper_types: TokenStream = quote! {
-                        #[derive(Clone, Debug)]
-                        pub struct #wrapper_name(#original_type_name);
                         impl #wrapper_name {
                             #(#generated_functions)*
                         }
-                        impl From<#original_type_name> for #wrapper_name {
-                            fn from(w: #original_type_name) -> #wrapper_name {
-                                #wrapper_name(w)
-                            }
-                        }
-                        impl<'a> Into<&'a #original_type_name> for &'a #wrapper_name {
-                            fn into(self) -> &'a #original_type_name {
-                                &self.0
-                            }
-                        }
-                    }
-                    .into();
+                    };
                     self.generated.extend(generated_custom_wrapper_types);
                 }
                 RustWrapperType::Arc => {
                     let generated_functions = BindingModule::generate_function_body(
-                        &functions,
+                        functions,
                         true,
                         Some(quote! {self.0.lock().unwrap().}),
                     );
                     let generated_custom_wrapper_types: TokenStream = quote! {
-                        #[derive(Clone, Debug)]
-                        pub struct #wrapper_name(Arc<#original_type_name>);
                         impl #wrapper_name {
                             #(#generated_functions)*
                         }
-                        impl From<Arc<#original_type_name>> for #wrapper_name {
-                            fn from(w: Arc<#original_type_name>) -> #wrapper_name {
-                                #wrapper_name(w)
-                            }
-                        }
-                    }
-                    .into();
+                    };
                     self.generated.extend(generated_custom_wrapper_types);
                 }
                 _ => {}
@@ -369,24 +368,23 @@ impl BindingModule {
                 #module
             }
         }
-        .into()
     }
 
     pub fn transform_module(mut module: ItemMod, for_cxx: bool) -> Result<Self, String> {
         let mut result: Self = Self::default();
         BindingModule::get_vec_of_extern_items_from_module(&mut module)?
             .iter_mut()
-            .map(|extern_item| match extern_item {
+            .try_for_each(|extern_item| match extern_item {
                 ForeignItem::Fn(function) => {
                     result.transformer.transform_function(function, for_cxx)
                 }
                 ForeignItem::Type(ForeignItemType { ident, .. }) => {
-                    *ident = Transformer::create_wrapper_name("Rust", &ident.to_string()).ident;
+                    let wrapper_type = result.transformer.register_custom_type(ident.clone());
+                    *ident = wrapper_type.wrapper_name;
                     Ok(())
                 }
                 _ => Ok(()),
-            })
-            .collect::<Result<(), String>>()?;
+            })?;
         BindingModule::get_vec_of_extern_items_from_module(&mut module)?.extend(vec![
             parse_quote!(
                 type ResultFfiError;

@@ -4,12 +4,14 @@ use crate::api::Identity;
 use crate::api::{AdminManagerError, AdminManagerResult, SeedPhrase};
 use ffi_macro::binding_wrapper;
 
-// Define Error type.
+// Define Error type and `()` type.
 type ResultFfiError = AdminManagerError;
+type VoidType = ();
 
 #[binding_wrapper]
 mod ffi_binding {
     extern "Rust" {
+        type AdminManager;
         fn create_master_identity_from_seed_phrase(
             self: &mut AdminManager,
             name: String,
@@ -17,10 +19,11 @@ mod ffi_binding {
         ) -> Result<Arc<Mutex<dyn Identity>>>;
         fn create_admin_manager() -> AdminManager;
         fn get_master_identity(self: &AdminManager) -> Option<Arc<Mutex<dyn Identity>>>;
-        // fn send_verification_code(self: &mut AdminManager) -> Result<()>;
+        fn send_verification_code(self: &mut AdminManager) -> Result<VoidType>;
         fn set_email(self: &mut AdminManager, email: String);
-        // fn verify_email(self: &mut AdminManager, verification_code: String) -> Result<()>;
+        fn verify_email(self: &mut AdminManager, verification_code: String) -> Result<VoidType>;
 
+        type SeedPhrase;
         fn create_seed_phrase() -> Result<SeedPhrase>;
         fn get_string(self: &SeedPhrase) -> String;
         fn get_vec(self: &SeedPhrase) -> Vec<String>;
@@ -32,6 +35,8 @@ mod ffi_binding {
         fn get_fingerprint(self: &Arc<Mutex<dyn Identity>>) -> Vec<u8>;
         // fn get_seed_phrase(self: &Arc<Mutex<dyn Identity>>) -> SeedPhraseWords;    // Translate slice into vector for FFI purpose.
 
+        type VoidType;
+        type ResultFfiError;
         fn to_string(self: &ResultFfiError) -> String;
         fn code(self: &ResultFfiError) -> u32;
     }

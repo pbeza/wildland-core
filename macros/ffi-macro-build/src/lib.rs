@@ -7,39 +7,41 @@ pub fn parse_ffi_module(path: &str, out_dir: &str) -> Result<(), std::io::Error>
     let file = std::fs::read_to_string(path)?;
     let mut file: File = syn::parse_str(&file).unwrap();
     for item in file.items.iter_mut() {
-        match item {
-            Item::Mod(module) => {
-                let parsed = BindingModule::transform_module(module.clone(), true).unwrap();
-                let mut output_rust = std::fs::File::create(format!("{}/ffi_cxx.rs", out_dir)).unwrap();
-                output_rust
-                    .write_all(
-                        &parsed
-                            .get_cxx_module()
-                            .to_token_stream()
-                            .to_string()
-                            .as_bytes(),
-                    )
-                    .unwrap();
+        if let Item::Mod(module) = item {
+            let parsed = BindingModule::transform_module(module.clone(), true).unwrap();
+            let mut output_rust = std::fs::File::create(format!("{}/ffi_cxx.rs", out_dir)).unwrap();
+            output_rust
+                .write_all(
+                    parsed
+                        .get_cxx_module()
+                        .to_token_stream()
+                        .to_string()
+                        .as_bytes(),
+                )
+                .unwrap();
 
-                let parsed = BindingModule::transform_module(module.clone(), false).unwrap();
-                let mut output_rust = std::fs::File::create(format!("{}/ffi_swift.rs", out_dir)).unwrap();
-                output_rust
-                    .write_all(
-                        &parsed
-                            .get_swift_module()
-                            .to_token_stream()
-                            .to_string()
-                            .as_bytes(),
-                    )
-                    .unwrap();
+            let parsed = BindingModule::transform_module(module.clone(), false).unwrap();
+            let mut output_rust =
+                std::fs::File::create(format!("{}/ffi_swift.rs", out_dir)).unwrap();
+            output_rust
+                .write_all(
+                    parsed
+                        .get_swift_module()
+                        .to_token_stream()
+                        .to_string()
+                        .as_bytes(),
+                )
+                .unwrap();
 
-                let mut output_interface =
-                    std::fs::File::create(format!("{}/generated.i", out_dir)).unwrap();
-                output_interface
-                    .write_all(&parsed.generate_swig_interface_file_from_cxx_module().as_bytes())
-                    .unwrap();
-            }
-            _ => {}
+            let mut output_interface =
+                std::fs::File::create(format!("{}/generated.i", out_dir)).unwrap();
+            output_interface
+                .write_all(
+                    parsed
+                        .generate_swig_interface_file_from_cxx_module()
+                        .as_bytes(),
+                )
+                .unwrap();
         }
     }
     // Build Swift bridge
