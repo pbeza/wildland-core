@@ -1,5 +1,5 @@
 use admin_manager::AdminManager;
-use api::{AdminManagerResult, SeedPhrase, AdminManager as AdminManagerTrait};
+use api::{AdminManager as AdminManagerTrait, AdminManagerResult, SeedPhrase};
 
 pub mod admin_manager;
 pub mod api;

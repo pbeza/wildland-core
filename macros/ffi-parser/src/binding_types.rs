@@ -13,15 +13,15 @@ pub enum RustWrapperType {
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct WrapperType {
-    pub name: Type,
-    pub new_name: Ident,
+    pub original_type_name: Type,
+    pub wrapper_name: Ident,
     pub typ: RustWrapperType,
     pub inner_type: Option<Box<WrapperType>>,
 }
 
 impl WrapperType {
     pub fn get_new_type(&self) -> Type {
-        let id = &self.new_name;
+        let id = &self.wrapper_name;
         parse_quote!( #id )
     }
 }

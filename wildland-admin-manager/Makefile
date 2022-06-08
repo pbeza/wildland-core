@@ -31,8 +31,8 @@ RUST_BUILD=cargo build --features "bindings"
 prepare:
 	mkdir -p _temporary
 	$(RUST_BUILD)
-	cp $(CXX_OUT)/mod.rs.h _temporary/mod.rs.h
-	cp $(CXX_OUT)/mod.rs.cc _temporary/mod.rs.cc
+	cp $(CXX_OUT)/ffi_cxx.rs.h _temporary/ffi_cxx.rs.h
+	cp $(CXX_OUT)/ffi_cxx.rs.cc _temporary/ffi_cxx.rs.cc
 	cp $(CXX_RUST)/cxx.h _temporary/cxx.h
 
 swig_preparation: prepare
@@ -45,20 +45,20 @@ swig_preparation: prepare
 	## binding generator. Those should be removed before
 	## using Swig parser.
 	## * Swig doesn't understand `final` keyword:
-		sed -i 's/final//g' _temporary/mod.rs.h
+		sed -i 's/final//g' _temporary/ffi_cxx.rs.h
 	## * Inline namespaces make problems:
-		sed -i 's/::rust/::rust::cxxbridge1/g' _temporary/mod.rs.h
+		sed -i 's/::rust/::rust::cxxbridge1/g' _temporary/ffi_cxx.rs.h
 	## * Every param between `[[`  `]]` is unparsable:
-		sed -i 's/\[\[noreturn\]\]//g' _temporary/mod.rs.h
+		sed -i 's/\[\[noreturn\]\]//g' _temporary/ffi_cxx.rs.h
 	## * Not all variadic `...` are supported:
-		sed -i 's/\.\.\.//g' _temporary/mod.rs.h
+		sed -i 's/\.\.\.//g' _temporary/ffi_cxx.rs.h
 
 java: swig_preparation
 	mkdir -p wildland_java
 	cd _temporary ; swig -java -c++ -w516,503,476,302 -outdir ../wildland_java ../wildland.i
 	mv wildland_wrap.cxx _temporary/wildland_wrap.cxx
 	cd _temporary ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
-		wildland_wrap.cxx mod.rs.cc \
+		wildland_wrap.cxx ffi_cxx.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
 		-I$(JDK_INC_DIR) \
@@ -75,7 +75,7 @@ csharp: swig_preparation
 	cd _temporary ; swig -csharp -c++ -w516,503,476,302 -outdir ../wildland_csharp ../wildland.i
 	mv wildland_wrap.cxx _temporary/wildland_wrap.cxx
 	cd _temporary ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
-		wildland_wrap.cxx mod.rs.cc \
+		wildland_wrap.cxx ffi_cxx.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
 		-o ../wildland_csharp/libwildland.so
@@ -90,7 +90,7 @@ python: swig_preparation
 	cd _temporary ; swig -python -c++ -w516,503,476,302,383,509 -outdir ../wildland_python ../wildland.i
 	mv wildland_wrap.cxx _temporary/wildland_wrap.cxx
 	cd _temporary ; $(CC) -fpermissive -shared -fPIC --std=c++14 -w \
-		wildland_wrap.cxx mod.rs.cc \
+		wildland_wrap.cxx ffi_cxx.rs.cc \
 		-L../../target/debug \
 		-lwildland_admin_manager \
 		-I$(PYTHON_DIR) \
@@ -121,7 +121,7 @@ swift_test: swift
 cpp: prepare
 	mkdir -p wildland_cpp
 	cd _temporary ; $(CC) -std=c++20 -w \
-		../test/ffi/test.cpp mod.rs.cc \
+		../test/ffi/test.cpp ffi_cxx.rs.cc \
 		-L../../target/debug \
 		-I. \
 		-lwildland_admin_manager \

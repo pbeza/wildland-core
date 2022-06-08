@@ -2,7 +2,7 @@
 
 // The following lines will be added to generated wrapper file.
 %{
-#include "mod.rs.h"
+#include "ffi_cxx.rs.h"
 #include "cxx.h"
 %}
 
@@ -28,10 +28,6 @@ typedef unsigned char uint8_t;
 // String class in Java and C#
 %rename(RustString) String;
 
-// Rename boxed_unwrap to unwrap
-%rename(unwrap) boxed_unwrap;
-// Rename boxed_unwrap_err to unwrap_err
-%rename(unwrap_err) boxed_unwrap_err;
 
 // Ignore unused cxx.rs internal structs (that are actually
 // problematic during the parsing process for SWIG).
@@ -88,27 +84,5 @@ typedef unsigned char uint8_t;
 //////////////////////////////////
 // Inlcude the generated C++ API
 //////////////////////////////////
-%include "mod.rs.h"
-
-// There are two generic types that we use on the FFI layer: Box<T> and Vec<T>
-// Swig needs to have defined the concrete instances of templated types in
-// order to let the target languages users handle them properly.
-// In result each type added to cxx module that uses generics needs to
-// be declared here:
-// %template(BoxedResultRustSeedPhrase) ::rust::cxxbridge1::Box<::ResultRustSeedPhrase>;
-// %template(BoxedResultDynIdentity) ::rust::cxxbridge1::Box<::ResultSIdentity>;
-// %template(BoxedOptionalDynIdentity) ::rust::cxxbridge1::Box<::OptionalDynIdentity>;
-// %template(BoxedResultFfiError) ::rust::cxxbridge1::Box<::ResultFfiError>;
-// %template(BoxedRustAdminManagerError) ::rust::cxxbridge1::Box<::RustAdminManagerError>;
-// %template(BoxedRustAdminManager) ::rust::cxxbridge1::Box<::RustAdminManager>;
-// %template(BoxedRustSeedPhrase) ::rust::cxxbridge1::Box<::RustSeedPhrase>;
-
-
-
-%template(BoxedRustAdminManager) ::rust::cxxbridge1::Box<::RustAdminManager>;
-%template(BoxedResultSharedMutexIdentity) ::rust::cxxbridge1::Box<::ResultSharedMutexIdentity>;
-%template(BoxedSharedMutexIdentity) ::rust::cxxbridge1::Box<::SharedMutexIdentity>;
-%template(BoxedRustSeedPhrase) ::rust::cxxbridge1::Box<::RustSeedPhrase>;
-%template(BoxedResultRustSeedPhrase) ::rust::cxxbridge1::Box<::ResultRustSeedPhrase>;
-%template(BoxedOptionalSharedMutexIdentity) ::rust::cxxbridge1::Box<::OptionalSharedMutexIdentity>;
-%template(BoxedRustResultFfiError) ::rust::cxxbridge1::Box<::RustResultFfiError>;
+%include "ffi_cxx.rs.h"
+%include "generated.i"
