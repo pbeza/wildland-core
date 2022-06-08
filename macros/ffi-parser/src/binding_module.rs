@@ -60,20 +60,34 @@ impl BindingModule {
                         fn is_some(self: &#wrapper_name) -> bool;
                     }
                 },
-                RustWrapperType::Vector => quote! {
-                    extern "Rust" {
-                        type #wrapper_name;
-                        fn at(self: &#wrapper_name) -> #return_original_type_name;
-                        fn size(self: &#wrapper_name) -> usize;
+                RustWrapperType::Vector => {
+                    if wrapper
+                        .inner_type
+                        .as_ref()
+                        .expect("Vector has to have inner generic type")
+                        .typ
+                        != RustWrapperType::Primitive
+                    {
+                        quote! {
+                            extern "Rust" {
+                                type #wrapper_name;
+                                fn at(self: &#wrapper_name) -> #return_original_type_name;
+                                fn size(self: &#wrapper_name) -> usize;
+                            }
+                        }
+                    } else {
+                        quote!(
+                            extern "Rust" {}
+                        )
                     }
-                },
+                }
                 RustWrapperType::Arc => quote! {
                     extern "Rust" { type #wrapper_name; }
                 },
                 RustWrapperType::Custom => quote! {
                     extern "Rust" { type #wrapper_name; }
                 },
-                RustWrapperType::Identic => quote! { extern "Rust" {} },
+                RustWrapperType::Primitive => quote! { extern "Rust" {} },
             };
             let module_module: ItemForeignMod = parse_quote!(#tokens);
             BindingModule::get_vec_of_extern_items_from_module(
@@ -99,7 +113,7 @@ impl BindingModule {
             } else {
                 parse_quote!(RustResultFfiError)
             };
-            let tokens: TokenStream = match wrapper.typ {
+            let tokens: TokenStream = match &wrapper.typ {
                 RustWrapperType::Result => {
                     // SWIG treat all references as mutable so there is no need to provide many unwrap methods
                     // like e.g. unwrap for &ref and unwrap_mut for &mut ref
@@ -132,16 +146,26 @@ impl BindingModule {
                     }
                 }
                 .into(),
-                RustWrapperType::Vector => quote! {
-                    pub struct #wrapper_name(Vec<#original_type_name>);
-                    impl #wrapper_name {
-                        pub fn at(&self, elem: usize) -> #return_original_type_name {
-                            self.0[elem].clone()
-                        }
-                        pub fn size(&self) -> usize {
-                            self.0.len()
+                RustWrapperType::Vector => if wrapper
+                    .inner_type
+                    .as_ref()
+                    .expect("Vector has to have inner generic type")
+                    .typ
+                    != RustWrapperType::Primitive
+                {
+                    quote! {
+                        pub struct #wrapper_name(Vec<#original_type_name>);
+                        impl #wrapper_name {
+                            pub fn at(&self, elem: usize) -> #return_original_type_name {
+                                self.0[elem].clone()
+                            }
+                            pub fn size(&self) -> usize {
+                                self.0.len()
+                            }
                         }
                     }
+                } else {
+                    quote! {}
                 }
                 .into(),
                 _ => quote! {}.into(),
@@ -195,16 +219,24 @@ impl BindingModule {
                                 ).into()
                             }}
                         }
-                        RustWrapperType::Vector => {
+                        RustWrapperType::Vector => if wrapper
+                        .inner_type
+                        .as_ref()
+                        .expect("Vector has to have inner generic type")
+                        .typ
+                        != RustWrapperType::Primitive
+                        {
                             quote! {{ #wrapper_name(#struct_name #fn_name( #(#args),* )).into() }}
-                        }
+                        } else {
+                            quote! {{ #struct_name #fn_name( #(#args),* ).into() }}
+                        },
                         RustWrapperType::Custom => {
                             quote! {{ #wrapper_name(#struct_name #fn_name( #(#args),* )).into() }}
                         }
                         RustWrapperType::Arc => {
                             quote! {{ #struct_name #fn_name( #(#args),* ) }}
                         }
-                        RustWrapperType::Identic => {
+                        RustWrapperType::Primitive => {
                             quote! {{ #struct_name #fn_name( #(#args),* ) }}
                         }
                     }
@@ -298,7 +330,14 @@ impl BindingModule {
                 ),
                 RustWrapperType::Vector => format!(
                     "%template(Vec{}) ::rust::cxxbridge1::Vec<::{}>;\n",
-                    key.wrapper_name, key.wrapper_name
+                    key.inner_type
+                        .as_ref()
+                        .expect("Vector has to have inner generic type")
+                        .wrapper_name,
+                    key.inner_type
+                        .as_ref()
+                        .expect("Vector has to have inner generic type")
+                        .wrapper_name
                 ),
                 RustWrapperType::Arc => format!(
                     "%template(Boxed{}) ::rust::cxxbridge1::Box<::{}>;\n",
@@ -312,7 +351,7 @@ impl BindingModule {
                     "%template(Boxed{}) ::rust::cxxbridge1::Box<::{}>;\n",
                     key.wrapper_name, key.wrapper_name
                 ),
-                RustWrapperType::Identic => "".to_owned(),
+                RustWrapperType::Primitive => "".to_owned(),
             })
             .collect()
     }

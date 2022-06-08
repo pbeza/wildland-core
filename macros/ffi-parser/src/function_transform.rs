@@ -17,7 +17,11 @@ pub struct Transformer {
 }
 
 impl Transformer {
-    pub fn transform_function(&mut self, function: &mut ForeignItemFn, box_result: bool) -> Result<(), String> {
+    pub fn transform_function(
+        &mut self,
+        function: &mut ForeignItemFn,
+        boxed_result: bool,
+    ) -> Result<(), String> {
         let mut arguments = vec![];
         let mut associated_structure = None;
         let mut return_type = None;
@@ -52,13 +56,18 @@ impl Transformer {
             let new_wrapper_type = self
                 .tansform_rust_type_into_wrapper(typ.as_mut())
                 .ok_or("At least one type should be present in return type")?;
-            if let RustWrapperType::Identic = &new_wrapper_type.typ {
-            } else if box_result {
-                ///////////////////////////////////
-                // CXX hack: Return Boxed value: //
-                ///////////////////////////////////
-                let wrapper_name = &new_wrapper_type.wrapper_name;
-                function.sig.output = parse_quote!( -> Box<#wrapper_name>);
+            if boxed_result && new_wrapper_type.typ != RustWrapperType::Primitive {
+                if let Some(boxed_inner) = &new_wrapper_type.inner_type {
+                    if !(new_wrapper_type.typ == RustWrapperType::Vector
+                        && boxed_inner.typ == RustWrapperType::Primitive)
+                    {
+                        let wrapper_name = &new_wrapper_type.wrapper_name;
+                        function.sig.output = parse_quote!( -> Box<#wrapper_name>);
+                    }
+                } else {
+                    let wrapper_name = &new_wrapper_type.wrapper_name;
+                    function.sig.output = parse_quote!( -> Box<#wrapper_name>);
+                }
             }
             return_type = Some(new_wrapper_type);
         }
@@ -151,36 +160,23 @@ impl Transformer {
                                 }
                             }
                             "Vec" => {
-                                // TODO: don't translate Vec<Primitive> to Primitive
-                                //       it causes lose of information in code generation process.
                                 let inner_path = Transformer::get_inner_generic_type(path_segment);
                                 if let Some(inner_path) = inner_path {
                                     if let Some(inner_type_name) =
                                         self.tansform_rust_type_into_wrapper(inner_path)
                                     {
-                                        if inner_type_name.typ == RustWrapperType::Identic {
-                                            let new_id = Ident::new(
-                                                &inner_type_name.wrapper_name.to_string(),
-                                                Span::call_site(),
-                                            );
-                                            Some(WrapperType {
-                                                original_type_name: parse_quote!( #new_id ),
-                                                wrapper_name: new_id,
-                                                typ: RustWrapperType::Identic,
-                                                inner_type: Some(inner_type_name.into()),
-                                            })
-                                        } else {
+                                        if inner_type_name.typ != RustWrapperType::Primitive {
                                             *path_segment = Transformer::create_wrapper_name(
                                                 "Vec",
                                                 &inner_type_name.wrapper_name.to_string(),
                                             );
-                                            Some(WrapperType {
-                                                original_type_name: inner_type_name.get_new_type(),
-                                                wrapper_name: path_segment.ident.clone(),
-                                                typ: RustWrapperType::Vector,
-                                                inner_type: Some(inner_type_name.into()),
-                                            })
                                         }
+                                        Some(WrapperType {
+                                            original_type_name: inner_type_name.get_new_type(),
+                                            wrapper_name: path_segment.ident.clone(),
+                                            typ: RustWrapperType::Vector,
+                                            inner_type: Some(inner_type_name.into()),
+                                        })
                                     } else {
                                         None
                                     }
@@ -212,14 +208,14 @@ impl Transformer {
                                     None
                                 }
                             }
-                            identical @ ("u8" | "u16" | "u32" | "u64" | "u128" | "i8" | "i16"
+                            primitive @ ("u8" | "u16" | "u32" | "u64" | "u128" | "i8" | "i16"
                             | "i32" | "i64" | "i128" | "f8" | "f16" | "f32"
                             | "f64" | "f128" | "String" | "usize") => {
-                                let new_id = Ident::new(&identical, Span::call_site());
+                                let new_id = Ident::new(&primitive, Span::call_site());
                                 Some(WrapperType {
                                     original_type_name: parse_quote!( #new_id ),
                                     wrapper_name: new_id,
-                                    typ: RustWrapperType::Identic,
+                                    typ: RustWrapperType::Primitive,
                                     inner_type: None,
                                 })
                             }

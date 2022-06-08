@@ -12,6 +12,8 @@
 %inline %{
 typedef long unsigned int size_t;
 typedef unsigned char uint8_t;
+typedef uint8_t u8;
+typedef rust::cxxbridge1::String String;
 %}
 
 

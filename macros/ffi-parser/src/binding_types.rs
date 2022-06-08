@@ -8,7 +8,7 @@ pub enum RustWrapperType {
     Vector,
     Arc,
     Custom,
-    Identic,
+    Primitive,
 }
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
