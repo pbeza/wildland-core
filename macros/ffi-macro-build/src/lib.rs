@@ -8,7 +8,7 @@ pub fn parse_ffi_module(path: &str, out_dir: &str) -> Result<(), std::io::Error>
     let mut file: File = syn::parse_str(&file).unwrap();
     for item in file.items.iter_mut() {
         if let Item::Mod(module) = item {
-            let parsed = BindingModule::transform_module(module.clone(), true).unwrap();
+            let parsed = BindingModule::translate_module(module.clone(), true).unwrap();
             let mut output_rust = std::fs::File::create(format!("{}/ffi_cxx.rs", out_dir)).unwrap();
             output_rust
                 .write_all(
@@ -20,7 +20,7 @@ pub fn parse_ffi_module(path: &str, out_dir: &str) -> Result<(), std::io::Error>
                 )
                 .unwrap();
 
-            let parsed = BindingModule::transform_module(module.clone(), false).unwrap();
+            let parsed = BindingModule::translate_module(module.clone(), false).unwrap();
             let mut output_rust =
                 std::fs::File::create(format!("{}/ffi_swift.rs", out_dir)).unwrap();
             output_rust

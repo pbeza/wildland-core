@@ -4,16 +4,23 @@ use syn::{
     parse_quote, Block, ForeignItem, ForeignItemType, Item, ItemFn, ItemForeignMod, ItemMod, Type,
 };
 
-use crate::{binding_types::*, function_transform::Transformer};
+use crate::{binding_types::*, function_transform::ModuleParser};
 
-#[derive(Default)]
 pub struct BindingModule {
-    transformer: Transformer,
-    module: Option<ItemMod>,
+    module_parser: ModuleParser,
+    module: ItemMod,
     generated: TokenStream,
 }
 
 impl BindingModule {
+    fn add_new_foreign_item_into_module(
+        module: &mut ItemMod,
+        tokens: &[ForeignItem],
+    ) -> Result<(), String> {
+        BindingModule::get_vec_of_extern_items_from_module(module)?.extend(tokens.iter().cloned());
+        Ok(())
+    }
+
     fn get_vec_of_extern_items_from_module(
         module: &mut ItemMod,
     ) -> Result<&mut Vec<ForeignItem>, String> {
@@ -31,7 +38,7 @@ impl BindingModule {
     }
 
     fn generate_rust_wrappers_in_extern_mod(&mut self, boxed_result: bool) -> Result<(), String> {
-        for wrapper in &self.transformer.rust_types_wrappers {
+        for wrapper in &self.module_parser.rust_types_wrappers {
             let wrapper_name = &wrapper.wrapper_name;
             let original_type_name = &wrapper.original_type_name;
             let return_original_type_name: Type = if boxed_result {
@@ -61,24 +68,12 @@ impl BindingModule {
                     }
                 },
                 RustWrapperType::Vector => {
-                    if wrapper
-                        .inner_type
-                        .as_ref()
-                        .expect("Vector has to have inner generic type")
-                        .typ
-                        != RustWrapperType::Primitive
-                    {
-                        quote! {
-                            extern "Rust" {
-                                type #wrapper_name;
-                                fn at(self: &#wrapper_name) -> #return_original_type_name;
-                                fn size(self: &#wrapper_name) -> usize;
-                            }
+                    quote! {
+                        extern "Rust" {
+                            type #wrapper_name;
+                            fn at(self: &#wrapper_name) -> #return_original_type_name;
+                            fn size(self: &#wrapper_name) -> usize;
                         }
-                    } else {
-                        quote!(
-                            extern "Rust" {}
-                        )
                     }
                 }
                 RustWrapperType::Arc => quote! {
@@ -87,17 +82,13 @@ impl BindingModule {
                 _ => quote! { extern "Rust" {} },
             };
             let module_module: ItemForeignMod = parse_quote!(#tokens);
-            BindingModule::get_vec_of_extern_items_from_module(
-                self.module.as_mut().ok_or("Module not found")?,
-            )
-            .map_err(|_| "Couldn't find extern \"Rust\"")?
-            .extend(module_module.items.iter().cloned());
+            BindingModule::add_new_foreign_item_into_module(&mut self.module, &module_module.items)?
         }
         Ok(())
     }
 
     fn generate_rust_wrappers_definitions(&mut self, boxed_result: bool) {
-        for wrapper in &self.transformer.rust_types_wrappers {
+        for wrapper in &self.module_parser.rust_types_wrappers {
             let wrapper_name = &wrapper.wrapper_name;
             let original_type_name = &wrapper.original_type_name;
             let return_original_type_name: Type = if boxed_result {
@@ -141,29 +132,17 @@ impl BindingModule {
                         }
                     }
                 },
-                RustWrapperType::Vector => {
-                    if wrapper
-                        .inner_type
-                        .as_ref()
-                        .expect("Vector has to have inner generic type")
-                        .typ
-                        != RustWrapperType::Primitive
-                    {
-                        quote! {
-                            pub struct #wrapper_name(Vec<#original_type_name>);
-                            impl #wrapper_name {
-                                pub fn at(&self, elem: usize) -> #return_original_type_name {
-                                    self.0[elem].clone()
-                                }
-                                pub fn size(&self) -> usize {
-                                    self.0.len()
-                                }
-                            }
+                RustWrapperType::Vector => quote! {
+                    pub struct #wrapper_name(Vec<#original_type_name>);
+                    impl #wrapper_name {
+                        pub fn at(&self, elem: usize) -> #return_original_type_name {
+                            self.0[elem].clone()
                         }
-                    } else {
-                        quote! {}
+                        pub fn size(&self) -> usize {
+                            self.0.len()
+                        }
                     }
-                }
+                },
                 RustWrapperType::Custom => {
                     quote! {
                         #[derive(Clone, Debug)]
@@ -242,17 +221,12 @@ impl BindingModule {
                                 ).into()
                             }}
                         }
-                        RustWrapperType::Vector => if wrapper
-                        .inner_type
-                        .as_ref()
-                        .expect("Vector has to have inner generic type")
-                        .typ
-                        != RustWrapperType::Primitive
-                        {
+                        RustWrapperType::Vector => {
                             quote! {{ #wrapper_name(#struct_name #fn_name( #(#args),* )).into() }}
-                        } else {
+                        }
+                        RustWrapperType::VectorPrimitive => {
                             quote! {{ #struct_name #fn_name( #(#args),* ).into() }}
-                        },
+                        }
                         RustWrapperType::Custom => {
                             quote! {{ #wrapper_name(#struct_name #fn_name( #(#args),* )).into() }}
                         }
@@ -278,7 +252,7 @@ impl BindingModule {
     }
 
     fn generate_custom_types_wrappers(&mut self) {
-        for (custom_type, functions) in &self.transformer.structures_wrappers {
+        for (custom_type, functions) in &self.module_parser.structures_wrappers {
             let wrapper_name = &custom_type.wrapper_name;
             match custom_type.typ {
                 RustWrapperType::Custom => {
@@ -310,8 +284,11 @@ impl BindingModule {
     }
 
     fn generate_global_functions_wrappers(&mut self) {
-        let generated_functions =
-            BindingModule::generate_function_body(&self.transformer.global_functions, false, None);
+        let generated_functions = BindingModule::generate_function_body(
+            &self.module_parser.global_functions,
+            false,
+            None,
+        );
         let generated_custom_wrapper_types = quote! { #(#generated_functions)* };
         self.generated.extend(generated_custom_wrapper_types);
     }
@@ -321,7 +298,7 @@ impl BindingModule {
     //////////////////////////////////
 
     pub fn generate_swig_interface_file_from_cxx_module(&self) -> String {
-        self.transformer
+        self.module_parser
             .rust_types_wrappers
             .iter()
             .map(|key| match key.typ {
@@ -331,6 +308,17 @@ impl BindingModule {
                 ),
                 RustWrapperType::Vector => format!(
                     "%template(Vec{}) ::rust::cxxbridge1::Vec<::{}>;\n",
+                    key.inner_type
+                        .as_ref()
+                        .expect("Vector has to have inner generic type")
+                        .wrapper_name,
+                    key.inner_type
+                        .as_ref()
+                        .expect("Vector has to have inner generic type")
+                        .wrapper_name
+                ),
+                RustWrapperType::VectorPrimitive => format!(
+                    "%template(Vec{}) ::rust::cxxbridge1::Vec<::rust::cxxbridge1::{}>;\n",
                     key.inner_type
                         .as_ref()
                         .expect("Vector has to have inner generic type")
@@ -372,27 +360,36 @@ impl BindingModule {
         }
     }
 
-    pub fn transform_module(mut module: ItemMod, for_cxx: bool) -> Result<Self, String> {
-        let mut result: Self = Self::default();
-        BindingModule::get_vec_of_extern_items_from_module(&mut module)?
+    fn transform_all_foreign_functions(&mut self, for_cxx: bool) -> Result<(), String> {
+        BindingModule::get_vec_of_extern_items_from_module(&mut self.module)?
             .iter_mut()
             .try_for_each(|extern_item| match extern_item {
                 ForeignItem::Fn(function) => {
-                    result.transformer.transform_function(function, for_cxx)
+                    self.module_parser.transform_function(function, for_cxx)
                 }
                 ForeignItem::Type(ForeignItemType { ident, .. }) => {
-                    let wrapper_type = result.transformer.register_custom_type(ident.clone());
+                    let wrapper_type = self.module_parser.register_custom_type(ident.clone());
                     *ident = wrapper_type.wrapper_name;
                     Ok(())
                 }
                 _ => Ok(()),
-            })?;
-        BindingModule::get_vec_of_extern_items_from_module(&mut module)?.extend(vec![
-            parse_quote!(
+            })
+    }
+
+    pub fn translate_module(module: ItemMod, for_cxx: bool) -> Result<Self, String> {
+        let mut result = Self {
+            module_parser: ModuleParser::default(),
+            module,
+            generated: quote!(),
+        };
+        result.transform_all_foreign_functions(for_cxx)?;
+        // Add FFI Error type:
+        BindingModule::add_new_foreign_item_into_module(
+            &mut result.module,
+            &[parse_quote!(
                 type ResultFfiError;
-            ),
-        ]);
-        result.module = Some(module);
+            )],
+        )?;
         result.generate_rust_wrappers_in_extern_mod(for_cxx)?;
         result.generate_rust_wrappers_definitions(for_cxx);
         result.generate_custom_types_wrappers();
@@ -405,24 +402,24 @@ impl BindingModule {
     /////////////////////////////////////
 
     pub fn get_cxx_module(&self) -> ItemMod {
-        let mut module = self.module.as_ref().unwrap().clone();
+        let mut module = self.module.clone();
         module.attrs = vec![];
         parse_quote! { #[cxx::bridge] #module }
     }
 
     pub fn get_swift_module(&self) -> ItemMod {
-        let mut module = self.module.as_ref().unwrap().clone();
+        let mut module = self.module.clone();
         module.attrs = vec![];
         parse_quote! { #[swift_bridge::bridge] #module }
     }
 
     pub fn parse_swift(input: TokenStream) -> Result<Self, String> {
         let module: ItemMod = parse_quote!( #[swift_bridge::bridge] #input );
-        BindingModule::transform_module(module, false)
+        BindingModule::translate_module(module, false)
     }
 
     pub fn parse_cxx(input: TokenStream) -> Result<Self, String> {
         let module: ItemMod = parse_quote!( #[cxx::bridge] #input );
-        BindingModule::transform_module(module, true)
+        BindingModule::translate_module(module, true)
     }
 }
