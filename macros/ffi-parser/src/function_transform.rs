@@ -21,16 +21,24 @@ impl ExternModuleTranslator {
     ///
     /// TODO: add doc here
     ///
-    pub fn translate_external_module(
+    pub fn translate_external_module_for_swift(
         extern_module: &mut ItemForeignMod,
-        boxed_wrappers: bool,
     ) -> Result<Self, String> {
         let mut result = ExternModuleTranslator::default();
-        result.replace_every_type_in_each_item_with_wrappers_in_module(
-            extern_module,
-            boxed_wrappers,
-        )?;
-        result.add_wrappers_types_and_methods_to_extern_module(extern_module, boxed_wrappers)?;
+        result.replace_every_type_in_each_item_with_wrappers_in_module(extern_module, false)?;
+        result.add_wrappers_types_and_methods_to_extern_module(extern_module)?;
+        Ok(result)
+    }
+
+    ///
+    /// TODO: add doc here
+    ///
+    pub fn translate_external_module_for_cxx(
+        extern_module: &mut ItemForeignMod,
+    ) -> Result<Self, String> {
+        let mut result = ExternModuleTranslator::default();
+        result.replace_every_type_in_each_item_with_wrappers_in_module(extern_module, true)?;
+        result.add_boxed_wrappers_types_and_methods_to_extern_module(extern_module)?;
         Ok(result)
     }
 
@@ -40,52 +48,35 @@ impl ExternModuleTranslator {
     fn add_wrappers_types_and_methods_to_extern_module(
         &mut self,
         extern_module: &mut ItemForeignMod,
-        boxed_wrappers: bool,
     ) -> Result<(), String> {
-        for wrapper in &self.rust_types_wrappers {
-            let wrapper_name = &wrapper.wrapper_name;
-            let original_type_name = &wrapper.original_type_name;
-            let return_original_type_name: Type = if boxed_wrappers {
-                parse_quote! ( Box<#original_type_name> )
-            } else {
-                parse_quote! (#original_type_name)
-            };
-            let error_type_name: Type = if boxed_wrappers {
-                parse_quote!(Box<ErrorType>)
-            } else {
-                parse_quote!(ErrorType)
-            };
-            let tokens = match wrapper.typ {
-                RustWrapperType::Result => quote! {
-                    extern "Rust" {
-                        type #wrapper_name;
-                        fn unwrap(self: &#wrapper_name) -> #return_original_type_name;
-                        fn unwrap_err(self: &#wrapper_name) -> #error_type_name;
-                        fn is_ok(self: &#wrapper_name) -> bool;
-                    }
-                },
-                RustWrapperType::Option => quote! {
-                    extern "Rust" {
-                        type #wrapper_name;
-                        fn unwrap(self: &#wrapper_name) -> #return_original_type_name;
-                        fn is_some(self: &#wrapper_name) -> bool;
-                    }
-                },
-                RustWrapperType::Vector => quote! {
-                    extern "Rust" {
-                        type #wrapper_name;
-                        fn at(self: &#wrapper_name) -> #return_original_type_name;
-                        fn size(self: &#wrapper_name) -> usize;
-                    }
-                },
-                RustWrapperType::Arc => quote! {
-                    extern "Rust" { type #wrapper_name; }
-                },
-                _ => quote! { extern "Rust" {} },
-            };
-            let generated_module_items: ItemForeignMod = parse_quote!(#tokens);
-            extern_module.items.extend(generated_module_items.items);
-        }
+        extern_module
+            .items
+            .extend(self.rust_types_wrappers.iter().flat_map(|wrapper| {
+                let original_type_name = &wrapper.original_type_name;
+                let return_original_type_name: Type = parse_quote! (#original_type_name);
+                let error_type_name: Type = parse_quote!(ErrorType);
+                generate_module_items(wrapper, return_original_type_name, error_type_name).items
+            }));
+
+        Ok(())
+    }
+
+    ///
+    /// TODO: add doc here
+    ///
+    fn add_boxed_wrappers_types_and_methods_to_extern_module(
+        &mut self,
+        extern_module: &mut ItemForeignMod,
+    ) -> Result<(), String> {
+        extern_module
+            .items
+            .extend(self.rust_types_wrappers.iter().flat_map(|wrapper| {
+                let original_type_name = &wrapper.original_type_name;
+                let return_original_type_name: Type = parse_quote! ( Box<#original_type_name> );
+                let error_type_name: Type = parse_quote!(Box<ErrorType>);
+                generate_module_items(wrapper, return_original_type_name, error_type_name).items
+            }));
+
         Ok(())
     }
 
@@ -367,4 +358,41 @@ impl ExternModuleTranslator {
         let path_segment = quote! { #original_type_name };
         parse_quote!(#path_segment)
     }
+}
+
+fn generate_module_items(
+    wrapper: &WrapperType,
+    return_original_type_name: Type,
+    error_type_name: Type,
+) -> ItemForeignMod {
+    let wrapper_name = &wrapper.wrapper_name;
+    let tokens = match wrapper.typ {
+        RustWrapperType::Result => quote! {
+            extern "Rust" {
+                type #wrapper_name;
+                fn unwrap(self: &#wrapper_name) -> #return_original_type_name;
+                fn unwrap_err(self: &#wrapper_name) -> #error_type_name;
+                fn is_ok(self: &#wrapper_name) -> bool;
+            }
+        },
+        RustWrapperType::Option => quote! {
+            extern "Rust" {
+                type #wrapper_name;
+                fn unwrap(self: &#wrapper_name) -> #return_original_type_name;
+                fn is_some(self: &#wrapper_name) -> bool;
+            }
+        },
+        RustWrapperType::Vector => quote! {
+            extern "Rust" {
+                type #wrapper_name;
+                fn at(self: &#wrapper_name) -> #return_original_type_name;
+                fn size(self: &#wrapper_name) -> usize;
+            }
+        },
+        RustWrapperType::Arc => quote! {
+            extern "Rust" { type #wrapper_name; }
+        },
+        _ => quote! { extern "Rust" {} },
+    };
+    parse_quote!(#tokens)
 }
