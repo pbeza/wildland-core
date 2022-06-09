@@ -21,11 +21,8 @@ mod ffi_cxx {
             seed: &Box<SeedPhrase>,
         ) -> Box<IdentityResult>;
         fn set_email(self: &mut AdminManager, email: String);
-        fn send_verification_code(self: &mut AdminManager) -> Box<EmptyResult>;
-        fn verify_email(
-            self: &mut AdminManager,
-            input_verification_code: String,
-        ) -> Box<EmptyResult>;
+        fn request_verification_email(self: &mut AdminManager) -> Box<EmptyResult>;
+        fn verify_email(self: &mut AdminManager, verification_code: String) -> Box<EmptyResult>;
 
         type EmptyResult;
         fn is_ok(self: &EmptyResult) -> bool;

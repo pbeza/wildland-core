@@ -37,14 +37,11 @@ impl AdminManager {
         self.0.set_email(email)
     }
 
-    pub fn send_verification_code(self: &mut AdminManager) -> Box<EmptyResult> {
-        Box::new(self.0.send_verification_code().into())
+    pub fn request_verification_email(self: &mut AdminManager) -> Box<EmptyResult> {
+        Box::new(self.0.request_verification_email().into())
     }
 
-    pub fn verify_email(
-        self: &mut AdminManager,
-        input_verification_code: String,
-    ) -> Box<EmptyResult> {
-        Box::new(self.0.verify_email(input_verification_code).into())
+    pub fn verify_email(self: &mut AdminManager, verification_code: String) -> Box<EmptyResult> {
+        Box::new(self.0.verify_email(verification_code).into())
     }
 }

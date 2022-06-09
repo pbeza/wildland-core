@@ -36,7 +36,7 @@ int main()
         }
 
         admin_manager->set_email(::rust::String("test@email.com"));
-        Box<EmptyResult> sending_result = admin_manager->send_verification_code(); // Code is hardcoded for now
+        Box<EmptyResult> sending_result = admin_manager->request_verification_email(); // Code is hardcoded for now
         if (sending_result->is_ok())
         {
             Box<EmptyResult> verification_result = admin_manager->verify_email(::rust::String("123456"));
