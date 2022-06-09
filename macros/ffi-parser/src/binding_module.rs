@@ -162,8 +162,7 @@ impl BindingModule {
                     let original_type_name = &wrapper.original_type_name;
                     let return_original_type_name: Type = parse_quote! ( Box<#original_type_name> );
                     let error_type_name: Type = parse_quote!(Box<ErrorType>);
-                    generated_module_items(wrapper, return_original_type_name, error_type_name)
-                        .items
+                    generate_module_items(wrapper, return_original_type_name, error_type_name).items
                 }),
         );
         Ok(())
@@ -178,8 +177,7 @@ impl BindingModule {
                     let original_type_name = &wrapper.original_type_name;
                     let return_original_type_name: Type = parse_quote! (#original_type_name);
                     let error_type_name: Type = parse_quote!(ErrorType);
-                    generated_module_items(wrapper, return_original_type_name, error_type_name)
-                        .items
+                    generate_module_items(wrapper, return_original_type_name, error_type_name).items
                 }),
         );
         Ok(())
@@ -416,7 +414,7 @@ fn generate_wrapper_definition(
     tokens
 }
 
-fn generated_module_items(
+fn generate_module_items(
     wrapper: &WrapperType,
     return_original_type_name: Type,
     error_type_name: Type,
