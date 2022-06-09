@@ -11,6 +11,10 @@ pub enum CoreXError {
     IdentityReadError(String),
     #[error("Too low entropy")]
     EntropyTooLow,
+    #[error("Seed phrase parsing error: {0}")]
+    ParseSeedPhraseError(String),
+    #[error("CoreX error: {0}")]
+    Generic(String),
 }
 
 impl From<CryptoError> for CoreXError {

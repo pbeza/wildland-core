@@ -18,6 +18,8 @@ wildland-catlib = { version = "0.3.0", path = "../wildland-catlib", registry = "
 wildland-crypto = { version = "0.4.4", path = "../wildland-crypto", registry = "wl-dev" }
 wildland-dfs = { version = "0.1.0", path = "../wildland-dfs", registry = "wl-dev" }
 thiserror = "1.0.31"
+sha2 = "0.10.2"
+hex = "0.4.3"
 
 [package.metadata.workspaces]
 independent = true

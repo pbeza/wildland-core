@@ -1,10 +1,9 @@
 mod admin_manager;
-mod identity;
 mod result;
-mod seed_phrase;
 
-pub use admin_manager::{AdminManager, AdminManagerIdentity};
-pub use identity::{Identity, IdentityType};
+pub use admin_manager::{AdminManager as AdminManagerApi, MasterIdentity, WildlandIdentity};
 pub use result::*;
-pub use seed_phrase::SeedPhrase;
-pub use wildland_corex::{SeedPhraseWords, SEED_PHRASE_LEN};
+pub use wildland_corex::{
+    MasterIdentityApi, SeedPhrase, SeedPhraseWords, WildlandIdentityApi, WildlandIdentityType,
+    SEED_PHRASE_LEN,
+};

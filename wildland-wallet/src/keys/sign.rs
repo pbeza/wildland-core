@@ -2,7 +2,7 @@ use anyhow::Result;
 use sha2::{Digest, Sha256};
 // use wildland_crypto::identity::keys::SigningKeyPair as CryptoSigningKeyPair;
 
-use crate::{SigningKeyType, SigningKeypair};
+use crate::{SigningKeyType, WalletKeypair};
 
 static EMPTY_KEY: [u8; 32] = [0u8; 32];
 
@@ -40,7 +40,7 @@ impl ManifestSigningKeypair {
     }
 }
 
-impl SigningKeypair for ManifestSigningKeypair {
+impl WalletKeypair for ManifestSigningKeypair {
     fn fingerprint(&self) -> String {
         let hash = Sha256::digest(&self.public_key);
 

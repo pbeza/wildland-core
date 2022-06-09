@@ -1,16 +1,13 @@
-mod identity;
-
-use crate::api::Identity;
-use crate::api::{self, AdminManagerError, AdminManagerIdentity, SeedPhrase};
-pub use identity::CryptoIdentity;
+use crate::api::{
+    self, AdminManagerApi, AdminManagerError, AdminManagerResult, MasterIdentityApi, SeedPhrase,
+    WildlandIdentityType,
+};
+pub use api::{MasterIdentity, WildlandIdentity};
 use std::sync::{Arc, Mutex};
-use wildland_corex::WalletType;
 
 #[derive(Default, Debug, Clone)]
 pub struct AdminManager {
-    // TODO do we want to store more than one master identity
-    // TODO do we want to keep mappings between a master identity and a set of device identities
-    master_identity: Option<AdminManagerIdentity>,
+    master_identity: Option<api::MasterIdentity>,
     email: Option<Email>,
 }
 
@@ -23,31 +20,48 @@ pub enum Email {
     Verified(String),
 }
 
-impl api::AdminManager for AdminManager {
+impl AdminManager {
+    fn create_forest_identity(
+        &self,
+        master_identity: Box<dyn MasterIdentityApi>,
+    ) -> AdminManagerResult<api::WildlandIdentity> {
+        let forest_id = master_identity.create_wildland_identity(WildlandIdentityType::Forest)?;
+
+        Ok(forest_id)
+    }
+
+    fn create_device_identity(&self) -> AdminManagerResult<api::WildlandIdentity> {
+        let master_identity = wildland_corex::MasterIdentity::default()?;
+        let forest_id = master_identity.create_wildland_identity(WildlandIdentityType::Device)?;
+
+        Ok(forest_id)
+    }
+
+    #[allow(dead_code)]
+    fn get_master_identity(&self) -> Option<api::MasterIdentity> {
+        self.master_identity.clone()
+    }
+
+    #[allow(dead_code)]
     fn create_master_identity_from_seed_phrase(
         &mut self,
         seed: &SeedPhrase,
-    ) -> api::AdminManagerResult<AdminManagerIdentity> {
-        let identity = CryptoIdentity::new(
-            api::IdentityType::Master,
-            wildland_corex::try_identity_from_seed(seed.as_ref())?,
-        );
+    ) -> AdminManagerResult<api::MasterIdentity> {
+        let identity = wildland_corex::MasterIdentity::new(wildland_corex::try_identity_from_seed(
+            seed.as_ref(),
+        )?);
 
-        identity.save(WalletType::File)?;
-
-        self.master_identity = Some(Arc::new(Mutex::new(identity))); // TODO Can user have multiple master identities? If not should it be overwritten?
+        self.master_identity = Some(Arc::new(Mutex::new(identity)));
 
         Ok(self.master_identity.as_ref().unwrap().clone())
     }
+}
 
-    fn create_seed_phrase() -> api::AdminManagerResult<SeedPhrase> {
+impl AdminManagerApi for AdminManager {
+    fn create_seed_phrase() -> AdminManagerResult<SeedPhrase> {
         wildland_corex::generate_random_seed_phrase()
             .map_err(AdminManagerError::from)
             .map(SeedPhrase::from)
-    }
-
-    fn get_master_identity(&self) -> Option<AdminManagerIdentity> {
-        self.master_identity.clone()
     }
 
     fn set_email(&mut self, email: String) {
@@ -59,12 +73,12 @@ impl api::AdminManager for AdminManager {
         });
     }
 
-    fn send_verification_code(&mut self) -> api::AdminManagerResult<()> {
+    fn send_verification_code(&mut self) -> AdminManagerResult<()> {
         // TODO actually send the code
         Ok(())
     }
 
-    fn verify_email(&mut self, input_verification_code: String) -> api::AdminManagerResult<()> {
+    fn verify_email(&mut self, input_verification_code: String) -> AdminManagerResult<()> {
         match self
             .email
             .as_ref()
@@ -85,12 +99,27 @@ impl api::AdminManager for AdminManager {
 
         Ok(())
     }
+
+    fn create_wildland_identities(
+        &self,
+        seed: &SeedPhrase,
+        _device_name: String,
+    ) -> AdminManagerResult<(api::WildlandIdentity, api::WildlandIdentity)> {
+        let master_identity = wildland_corex::MasterIdentity::new(
+            wildland_corex::try_identity_from_seed(seed.as_ref())?,
+        );
+
+        let forest_id = self.create_forest_identity(Box::new(master_identity))?;
+        let device_id = self.create_device_identity()?;
+
+        Ok((forest_id, device_id))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::AdminManager as AdminManagerApi;
+    use crate::api::AdminManagerApi;
 
     #[test]
     fn cannot_verify_email_when_not_set() {

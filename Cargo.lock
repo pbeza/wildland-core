@@ -1747,9 +1747,11 @@ dependencies = [
 name = "wildland-admin-manager"
 version = "0.5.1"
 dependencies = [
+ "anyhow",
  "cxx",
  "ffi-macro",
  "ffi-macro-build",
+ "sha2 0.10.2",
  "swift-bridge",
  "thiserror",
  "wildland-corex",
@@ -1776,6 +1778,8 @@ dependencies = [
 name = "wildland-corex"
 version = "0.1.10"
 dependencies = [
+ "hex",
+ "sha2 0.10.2",
  "thiserror",
  "wildland-catlib",
  "wildland-crypto",

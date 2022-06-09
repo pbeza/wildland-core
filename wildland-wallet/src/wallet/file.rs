@@ -5,7 +5,7 @@ use serde_json::json;
 use std::fs;
 use xdg::BaseDirectories;
 
-use crate::{ManifestSigningKeypair, SigningKeyType, SigningKeypair, Wallet};
+use crate::{ManifestSigningKeypair, SigningKeyType, Wallet, WalletKeypair};
 
 pub struct FileWallet {
     base_directory: BaseDirectories,
@@ -43,7 +43,7 @@ impl Wallet<ManifestSigningKeypair> for FileWallet {
             })
             .to_string(),
         )
-        .map_err(|err| anyhow::Error::msg(format!("Could not write to secret file. {}.", err)))
+        .map_err(|err| Error::msg(format!("Could not write to secret file. {}.", err)))
     }
 
     fn list_secrets(&self) -> Result<Vec<ManifestSigningKeypair>> {

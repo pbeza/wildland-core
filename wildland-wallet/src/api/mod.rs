@@ -3,11 +3,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum SigningKeyType {
-    Master,
+    Forest,
     Device,
 }
 
-pub trait SigningKeypair {
+pub trait WalletKeypair {
     fn can_sign(&self) -> bool;
     fn sign(&self, message: &[u8]) -> Result<()>;
     fn fingerprint(&self) -> String;
@@ -16,7 +16,7 @@ pub trait SigningKeypair {
     fn get_key_type(&self) -> SigningKeyType;
 }
 
-pub trait Wallet<T: SigningKeypair> {
+pub trait Wallet<T: WalletKeypair> {
     fn save_signing_secret(&self, keypair: T) -> Result<()>;
     fn list_secrets(&self) -> Result<Vec<T>>;
 }
