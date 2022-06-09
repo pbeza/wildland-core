@@ -3,27 +3,123 @@ use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
 use std::collections::{HashMap, HashSet};
 use syn::{
-    parse_quote, FnArg, ForeignItemFn, GenericArgument, Pat, PatIdent, PathArguments, PathSegment,
-    ReturnType, Type, TypeReference,
+    parse_quote, FnArg, ForeignItem, ForeignItemFn, ForeignItemType, GenericArgument,
+    ItemForeignMod, Pat, PatIdent, PathArguments, PathSegment, ReturnType, Type, TypeReference,
 };
 
 ///
 /// TODO: add doc here
 ///
 #[derive(Default)]
-pub struct ModuleTranslator {
+pub struct ExternModuleTranslator {
     pub rust_types_wrappers: HashSet<WrapperType>,
     pub structures_wrappers: HashMap<WrapperType, Vec<Function>>,
     pub global_functions: Vec<Function>,
 }
 
-impl ModuleTranslator {
+impl ExternModuleTranslator {
+    ///
+    /// TODO: add doc here
+    ///
+    pub fn translate_external_module(
+        extern_module: &mut ItemForeignMod,
+        boxed_wrappers: bool,
+    ) -> Result<Self, String> {
+        let mut result = ExternModuleTranslator::default();
+        result.replace_every_type_in_each_item_with_wrappers_in_module(
+            extern_module,
+            boxed_wrappers,
+        )?;
+        result.add_wrappers_types_and_methods_to_extern_module(extern_module, boxed_wrappers)?;
+        Ok(result)
+    }
+
+    ///
+    /// TODO: add doc here
+    ///
+    fn add_wrappers_types_and_methods_to_extern_module(
+        &mut self,
+        extern_module: &mut ItemForeignMod,
+        boxed_wrappers: bool,
+    ) -> Result<(), String> {
+        for wrapper in &self.rust_types_wrappers {
+            let wrapper_name = &wrapper.wrapper_name;
+            let original_type_name = &wrapper.original_type_name;
+            let return_original_type_name: Type = if boxed_wrappers {
+                parse_quote! ( Box<#original_type_name> )
+            } else {
+                parse_quote! (#original_type_name)
+            };
+            let error_type_name: Type = if boxed_wrappers {
+                parse_quote!(Box<ErrorType>)
+            } else {
+                parse_quote!(ErrorType)
+            };
+            let tokens = match wrapper.typ {
+                RustWrapperType::Result => quote! {
+                    extern "Rust" {
+                        type #wrapper_name;
+                        fn unwrap(self: &#wrapper_name) -> #return_original_type_name;
+                        fn unwrap_err(self: &#wrapper_name) -> #error_type_name;
+                        fn is_ok(self: &#wrapper_name) -> bool;
+                    }
+                },
+                RustWrapperType::Option => quote! {
+                    extern "Rust" {
+                        type #wrapper_name;
+                        fn unwrap(self: &#wrapper_name) -> #return_original_type_name;
+                        fn is_some(self: &#wrapper_name) -> bool;
+                    }
+                },
+                RustWrapperType::Vector => quote! {
+                    extern "Rust" {
+                        type #wrapper_name;
+                        fn at(self: &#wrapper_name) -> #return_original_type_name;
+                        fn size(self: &#wrapper_name) -> usize;
+                    }
+                },
+                RustWrapperType::Arc => quote! {
+                    extern "Rust" { type #wrapper_name; }
+                },
+                _ => quote! { extern "Rust" {} },
+            };
+            let generated_module_items: ItemForeignMod = parse_quote!(#tokens);
+            extern_module.items.extend(generated_module_items.items);
+        }
+        Ok(())
+    }
+
+    ///
+    /// TODO: add doc here
+    ///
+    fn replace_every_type_in_each_item_with_wrappers_in_module(
+        &mut self,
+        extern_module: &mut ItemForeignMod,
+        boxed_wrappers: bool,
+    ) -> Result<(), String> {
+        extern_module
+            .items
+            .iter_mut()
+            .try_for_each(|extern_item| match extern_item {
+                ForeignItem::Fn(function) => {
+                    self.replace_arg_types_with_wrappers(function, boxed_wrappers)
+                }
+                ForeignItem::Type(ForeignItemType { ident, .. }) => {
+                    let wrapper_type = self.register_custom_type(ident.clone());
+                    *ident = wrapper_type.wrapper_name;
+                    Ok(())
+                }
+                _ => Ok(()),
+            })
+    }
+
     /// Method stores a wrapper to some custom user's type.
     /// Can be used while parsing `type SomeUserType;` in
     /// order to register a new type `RustUserType` in
     /// the collection of intermediate-form wrappers.
-    pub fn register_custom_type(&mut self, original_type_name: Ident) -> WrapperType {
-        let new_name = ModuleTranslator::create_wrapper_name("", &original_type_name.to_string());
+    fn register_custom_type(&mut self, original_type_name: Ident) -> WrapperType {
+        let new_name =
+            ExternModuleTranslator::create_wrapper_name("", &original_type_name.to_string());
         let wrapper_name = Ident::new(&new_name.ident.to_string(), Span::call_site());
         let new_wrapper_type = WrapperType {
             original_type_name: parse_quote!( #original_type_name ),
@@ -36,11 +132,11 @@ impl ModuleTranslator {
     }
 
     /// Method takes a mutable reference to the parsed foreign function declaration
-    /// and replaces the arguments' types into wrapper types in place.
+    /// and replaces the arguments' types with wrapper types in place.
     ///
     /// Side effects: the method fills `rust_types_wrappers`, `structures_wrappers`
     ///               and `global_functions`.
-    pub fn replace_arg_types_with_wrappers(
+    fn replace_arg_types_with_wrappers(
         &mut self,
         function: &mut ForeignItemFn,
         boxed_wrappers: bool,
@@ -156,10 +252,10 @@ impl ModuleTranslator {
         match typ {
             Type::Path(path) => path.path.segments.first_mut().and_then(|path_segment| {
                 let new_wrapper_type = match path_segment.ident.to_string().as_str() {
-                    "Result" => ModuleTranslator::get_inner_generic_type(path_segment)
+                    "Result" => ExternModuleTranslator::get_inner_generic_type(path_segment)
                         .and_then(|inner_path| self.tansform_rust_type_into_wrapper(inner_path))
                         .map(|inner_type_name| {
-                            *path_segment = ModuleTranslator::create_wrapper_name(
+                            *path_segment = ExternModuleTranslator::create_wrapper_name(
                                 "Result",
                                 &inner_type_name.wrapper_name.to_string(),
                             );
@@ -170,10 +266,10 @@ impl ModuleTranslator {
                                 inner_type: Some(inner_type_name.into()),
                             }
                         }),
-                    "Option" => ModuleTranslator::get_inner_generic_type(path_segment)
+                    "Option" => ExternModuleTranslator::get_inner_generic_type(path_segment)
                         .and_then(|inner_path| self.tansform_rust_type_into_wrapper(inner_path))
                         .map(|inner_type_name| {
-                            *path_segment = ModuleTranslator::create_wrapper_name(
+                            *path_segment = ExternModuleTranslator::create_wrapper_name(
                                 "Optional",
                                 &inner_type_name.wrapper_name.to_string(),
                             );
@@ -184,11 +280,11 @@ impl ModuleTranslator {
                                 inner_type: Some(inner_type_name.into()),
                             }
                         }),
-                    "Vec" => ModuleTranslator::get_inner_generic_type(path_segment)
+                    "Vec" => ExternModuleTranslator::get_inner_generic_type(path_segment)
                         .and_then(|inner_path| self.tansform_rust_type_into_wrapper(inner_path))
                         .map(|inner_type_name| {
                             if inner_type_name.typ != RustWrapperType::Primitive {
-                                *path_segment = ModuleTranslator::create_wrapper_name(
+                                *path_segment = ExternModuleTranslator::create_wrapper_name(
                                     "Vec",
                                     &inner_type_name.wrapper_name.to_string(),
                                 );
@@ -204,7 +300,7 @@ impl ModuleTranslator {
                                 inner_type: Some(inner_type_name.into()),
                             }
                         }),
-                    "Arc" => ModuleTranslator::get_inner_generic_type(path_segment)
+                    "Arc" => ExternModuleTranslator::get_inner_generic_type(path_segment)
                         .cloned()
                         .map(|inner_path| {
                             let generated_inner_type_name = inner_path
@@ -214,7 +310,7 @@ impl ModuleTranslator {
                                 .replace('<', "")
                                 .replace('>', "")
                                 .replace(' ', "");
-                            *path_segment = ModuleTranslator::create_wrapper_name(
+                            *path_segment = ExternModuleTranslator::create_wrapper_name(
                                 "Shared",
                                 &generated_inner_type_name,
                             );
@@ -237,7 +333,8 @@ impl ModuleTranslator {
                         })
                     }
                     custom_type => {
-                        *path_segment = ModuleTranslator::create_wrapper_name("", custom_type);
+                        *path_segment =
+                            ExternModuleTranslator::create_wrapper_name("", custom_type);
                         let new_id = Ident::new(custom_type, Span::call_site());
                         Some(WrapperType {
                             original_type_name: parse_quote!( #new_id ),
