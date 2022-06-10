@@ -9,6 +9,9 @@ macro_rules! generate_files {
         } else {
             BindingModule::translate_module_for_swift($module.clone()).unwrap()
         };
+        if !std::path::Path::new($out_dir).exists() {
+            std::fs::create_dir($out_dir).unwrap();
+        }
         let mut output_rust = std::fs::File::create(format!("{}/{}", $out_dir, $filename)).unwrap();
         output_rust
             .write_all(parsed.get_module().to_token_stream().to_string().as_bytes())
