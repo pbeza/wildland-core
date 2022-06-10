@@ -9,6 +9,8 @@ pub enum CoreXError {
     IdentityGenerationError(String),
     #[error("Too low entropy")]
     EntropyTooLow,
+    #[error("Could not create a Forest: {0}")]
+    ForestCreateError(String),
 }
 
 impl From<CryptoError> for CoreXError {
