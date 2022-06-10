@@ -10,6 +10,7 @@ RUN apt-get -qy update && apt-get install -y g++ cargo swig
 RUN mkdir -p /wildland-core/crates/ /root/.cargo
 RUN printf '[registries]\nwl-dev = { index = "https://crates.wildland.dev/git/index" }\n' > /root/.cargo/config.toml
 
+# Cache dependencies
 WORKDIR /wildland-core/crates/
 RUN for crate in \
     wildland-admin-manager \
@@ -33,10 +34,11 @@ WORKDIR /wildland-core/
 RUN ls ./crates
 RUN cargo build --package wildland-admin-manager
 
+
+# Actual build
 COPY . /wildland-core
 WORKDIR /wildland-core/crates/wildland-admin-manager
 RUN cargo clean \
-    && rm -rf "${WLTMP}" \
     && mkdir -p "${WLTMP}" \
     && cargo build --features "bindings"
 RUN cp "${CXX_RUST}/cxx.h" "${CXX_OUT}/mod.rs.h" "${CXX_OUT}/mod.rs.cc" "${WLTMP}"
