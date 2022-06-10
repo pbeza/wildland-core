@@ -1,16 +1,17 @@
-FROM debian:testing
+FROM debian:testing-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get -qy update && apt-get install -y g++ cargo swig \
+    && mkdir -p /wildland-core/crates/ /root/.cargo \
+    && printf '[registries]\nwl-dev = { index = "https://crates.wildland.dev/git/index" }\n' > /root/.cargo/config.toml
 
 ENV WLTMP=_temporary
 ENV CXX_OUT=/wildland-core/target/cxxbridge/wildland-admin-manager/src/ffi/cxx
 ENV CXX_RUST=/wildland-core/target/cxxbridge/rust
 
-RUN apt-get -qy update && apt-get install -y g++ cargo swig
-RUN mkdir -p /wildland-core/crates/ /root/.cargo
-RUN printf '[registries]\nwl-dev = { index = "https://crates.wildland.dev/git/index" }\n' > /root/.cargo/config.toml
-
-# Cache dependencies
+# Build only dependencies to cache them in docker layer
+# TODO aggregate copies
 WORKDIR /wildland-core/crates/
 RUN for crate in \
     wildland-admin-manager \
