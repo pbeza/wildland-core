@@ -11,7 +11,6 @@ ENV CXX_OUT=/wildland-core/target/cxxbridge/wildland-admin-manager/src/ffi/cxx
 ENV CXX_RUST=/wildland-core/target/cxxbridge/rust
 
 # Build only dependencies to cache them in docker layer
-# TODO aggregate copies
 WORKDIR /wildland-core/crates/
 RUN for crate in \
     wildland-admin-manager \
