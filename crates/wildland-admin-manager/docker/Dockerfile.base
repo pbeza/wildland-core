@@ -7,11 +7,35 @@ ENV CXX_OUT=/wildland-core/target/cxxbridge/wildland-admin-manager/src/ffi/cxx
 ENV CXX_RUST=/wildland-core/target/cxxbridge/rust
 
 RUN apt-get -qy update && apt-get install -y g++ cargo swig
-RUN mkdir -p wildland-core/wildland-admin-manager /root/.cargo
-COPY . wildland-core
-WORKDIR /wildland-core/wildland-admin-manager
-RUN printf '[registries]\nwl-dev = { index = "https://crates.wildland.dev/git/index" }\n' > /root/.cargo/config.toml \
-    && cargo clean \
+RUN mkdir -p /wildland-core/crates/ /root/.cargo
+RUN printf '[registries]\nwl-dev = { index = "https://crates.wildland.dev/git/index" }\n' > /root/.cargo/config.toml
+
+WORKDIR /wildland-core/crates/
+RUN for crate in \
+    wildland-admin-manager \
+    wildland-corex \
+    wildland-catlib \
+    wildland-crypto \
+    wildland-dfs\
+    wildland-wallet\
+    ; do cargo new --lib $crate; done
+COPY Cargo.toml /wildland-core/
+COPY Cargo.lock /wildland-core/
+COPY crates/wildland-admin-manager/Cargo.toml wildland-admin-manager/
+COPY crates/wildland-admin-manager/build.rs wildland-admin-manager/
+COPY crates/wildland-corex/Cargo.toml wildland-corex/
+COPY crates/wildland-catlib/Cargo.toml wildland-catlib/
+COPY crates/wildland-crypto/Cargo.toml wildland-crypto/
+COPY crates/wildland-dfs/Cargo.toml wildland-dfs/
+COPY crates/wildland-wallet/Cargo.toml wildland-wallet/
+
+WORKDIR /wildland-core/
+RUN ls ./crates
+RUN cargo build --package wildland-admin-manager
+
+COPY . /wildland-core
+WORKDIR /wildland-core/crates/wildland-admin-manager
+RUN cargo clean \
     && rm -rf "${WLTMP}" \
     && mkdir -p "${WLTMP}" \
     && cargo build --features "bindings"

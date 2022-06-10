@@ -14,7 +14,7 @@ RUN mkdir -p wildland_python \
     && mv ../wildland_wrap.cxx . \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
     wildland_wrap.cxx mod.rs.cc \
-    -L../../target/debug \
+    -L../../../target/debug \
     -lwildland_admin_manager \
     $(python3-config --includes) \
     -o ../wildland_python/_wildland.so

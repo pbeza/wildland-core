@@ -15,7 +15,7 @@ RUN mkdir -p wildland_java \
     && mv ../wildland_wrap.cxx . \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
     wildland_wrap.cxx mod.rs.cc \
-    -L../../target/debug \
+    -L../../../target/debug \
     -lwildland_admin_manager \
     -I${JDK_INC_DIR} \
     -I${JDK_INC_DIR}/linux \
