@@ -1,4 +1,4 @@
-FROM wildland-sdk-base:latest
+FROM debian:testing-slim
 
 # Run with:
 #
@@ -9,7 +9,7 @@ ENV TARGET=/wildland-core/target/debug/
 ENV CC=g++
 ENV CSHARP_COMPILER=mcs
 
-RUN apt-get -qy update && apt-get install -y swig mono-mcs
+RUN apt-get -qy update && apt-get install -y swig mono-mcs g++
 
 RUN mkdir -p /wildland-core/
 WORKDIR /wildland-core

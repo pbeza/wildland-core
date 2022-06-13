@@ -1,4 +1,4 @@
-FROM wildland-sdk-base:latest
+FROM debian:testing-slim
 
 # Run with:
 #
@@ -8,7 +8,7 @@ ENV WLTMP=/wildland-core/crates/wildland-admin-manager/_temporary/
 ENV TARGET=/wildland-core/target/debug/
 ENV CC=g++
 
-RUN apt-get -qy update && apt-get install -y swig python3-dev
+RUN apt-get -qy update && apt-get install -y swig python3-dev g++
 
 RUN mkdir -p /wildland-core/
 WORKDIR /wildland-core
