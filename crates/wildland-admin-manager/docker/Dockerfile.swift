@@ -32,8 +32,17 @@ COPY crates/wildland-crypto/Cargo.toml wildland-crypto/
 COPY crates/wildland-dfs/Cargo.toml wildland-dfs/
 COPY crates/wildland-wallet/Cargo.toml wildland-wallet/
 
+WORKDIR /wildland-core/macros/
+RUN for macro_crate in \
+    ffi-macro \
+    ffi-macro-build \
+    ffi-parser \
+    ; do cargo new --lib $macro_crate; done
+COPY macros/ffi-macro/Cargo.toml ffi-macro/
+COPY macros/ffi-macro-build/Cargo.toml ffi-macro-build/
+COPY macros/ffi-parser/Cargo.toml ffi-parser/
+
 WORKDIR /wildland-core/
-RUN ls ./crates
 RUN cargo build --package wildland-admin-manager
 
 
