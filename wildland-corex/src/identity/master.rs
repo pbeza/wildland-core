@@ -54,10 +54,7 @@ impl MasterIdentityApi for MasterIdentity {
         identity_type: WildlandIdentityType,
     ) -> Result<Arc<Mutex<dyn WildlandIdentityApi>>, CoreXError> {
         let keypair = self.get_signing_keypair().into();
-        let identity = WildlandIdentity::new(
-            identity_type,
-            keypair,
-        );
+        let identity = WildlandIdentity::new(identity_type, keypair);
 
         identity.save(WalletType::File)?;
 

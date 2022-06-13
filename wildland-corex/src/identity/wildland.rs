@@ -38,10 +38,10 @@ pub struct WildlandIdentity {
 }
 
 impl WildlandIdentity {
-    pub fn new(identity_type: WildlandIdentityType, keypair: Rc<dyn CryptoSigningKeypair>,) -> Self {
+    pub fn new(identity_type: WildlandIdentityType, keypair: Rc<dyn CryptoSigningKeypair>) -> Self {
         Self {
             identity_type,
-            keypair
+            keypair,
         }
     }
 }
@@ -97,10 +97,6 @@ impl WildlandIdentityApi for WildlandIdentity {
 
 impl Display for WildlandIdentity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.get_fingerprint_string(),
-        )
+        write!(f, "{}", self.get_fingerprint_string(),)
     }
 }

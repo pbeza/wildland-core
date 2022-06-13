@@ -104,7 +104,7 @@ impl AdminManagerApi for AdminManager {
         &self,
         seed: &SeedPhrase,
         _device_name: String,
-    ) -> AdminManagerResult<(api::WildlandIdentity, api::WildlandIdentity)> {
+    ) -> AdminManagerResult<api::IdentityPair> {
         let master_identity = wildland_corex::MasterIdentity::new(
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
         );
@@ -112,7 +112,10 @@ impl AdminManagerApi for AdminManager {
         let forest_id = self.create_forest_identity(Box::new(master_identity))?;
         let device_id = self.create_device_identity()?;
 
-        Ok((forest_id, device_id))
+        Ok(api::IdentityPair {
+            forest_id,
+            device_id,
+        })
     }
 }
 

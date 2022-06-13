@@ -4,6 +4,11 @@ use std::sync::{Arc, Mutex};
 pub type MasterIdentity = Arc<Mutex<dyn MasterIdentityApi>>;
 pub type WildlandIdentity = Arc<Mutex<dyn WildlandIdentityApi>>;
 
+pub struct IdentityPair {
+    pub forest_id: WildlandIdentity,
+    pub device_id: WildlandIdentity,
+}
+
 pub trait AdminManager {
     /// Creates a randomly generated seed phrase
     fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
@@ -24,23 +29,5 @@ pub trait AdminManager {
         &self,
         seed: &SeedPhrase,
         device_name: String,
-    ) -> AdminManagerResult<(WildlandIdentity, WildlandIdentity)>;
-
-    // fn create_forest_identity(
-    //     &self,
-    //     master_identity: &MasterIdentity,
-    // ) -> AdminManagerResult<WildlandIdentity>;
-    //
-    // fn create_device_identity(&self) -> AdminManagerResult<WildlandIdentity>;
-    //
-    // /// Creates a master identity based on the provided seed phrase (whether it's a newly
-    // /// generated seed phrase or manually entered in the recovery flow.
-    // fn create_master_identity_from_seed_phrase(
-    //     &mut self,
-    //     seed: &SeedPhrase,
-    // ) -> AdminManagerResult<MasterIdentity>;
-    //
-    // /// Returns master identity generated using `create_master_identity_from_seed_phrase(seed)`
-    // /// otherwise returns `None`.
-    // fn get_master_identity(&self) -> Option<MasterIdentity>;
+    ) -> AdminManagerResult<IdentityPair>;
 }

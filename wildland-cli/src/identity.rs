@@ -45,11 +45,11 @@ impl IdentityCliOpts {
                     }
                     1 => {
                         println!("🔑 Found 1 identity");
-                        print_identities(ids);
+                        print_identities(&ids);
                     }
                     _ => {
                         println!("🔑 Found {} identities", ids.len());
-                        print_identities(ids);
+                        print_identities(&ids);
                     }
                 }
             }
@@ -70,17 +70,16 @@ fn restore_identity(
         .collect::<Vec<_>>()
         .try_into()?;
 
-    let (forest_id, device_id) =
-        admin_manager.create_wildland_identities(&seed, name.to_string())?;
+    let identities = admin_manager.create_wildland_identities(&seed, name.to_string())?;
 
     println!(
         "🎉 New {:?} identity has been restored and securely stored.",
-        Paint::blue(forest_id.lock().unwrap().get_identity_type()).bold()
+        Paint::blue(identities.forest_id.lock().unwrap().get_identity_type()).bold()
     );
 
     println!(
         "🎉 New {:?} identity has been restored and securely stored.",
-        Paint::blue(device_id.lock().unwrap().get_identity_type()).bold()
+        Paint::blue(identities.device_id.lock().unwrap().get_identity_type()).bold()
     );
 
     Ok(())
@@ -88,11 +87,10 @@ fn restore_identity(
 
 fn generate_identity(admin_manager: &mut AdminManager, name: &str) -> Result<(), anyhow::Error> {
     let seed = AdminManager::create_seed_phrase()?;
-    let (forest_id, device_id) =
-        admin_manager.create_wildland_identities(&seed, name.to_string())?;
+    let identities = admin_manager.create_wildland_identities(&seed, name.to_string())?;
 
-    let forest_id = forest_id.lock().unwrap();
-    let device_id = device_id.lock().unwrap();
+    let forest_id = identities.forest_id.lock().unwrap();
+    let device_id = identities.device_id.lock().unwrap();
 
     println!(
         "🎉 New {:?} identity {} has been created and securely stored.",
@@ -111,8 +109,8 @@ fn generate_identity(admin_manager: &mut AdminManager, name: &str) -> Result<(),
     Ok(())
 }
 
-fn print_identities(ids: Vec<ManifestSigningKeypair>) {
-    ids.into_iter().for_each(|kp| {
+fn print_identities(ids: &[ManifestSigningKeypair]) {
+    ids.iter().for_each(|kp| {
         println!();
         println!("\tType: {:?}", Paint::blue(kp.get_key_type()).bold());
         println!("\tFingerprint: {}", kp.fingerprint());
@@ -120,29 +118,18 @@ fn print_identities(ids: Vec<ManifestSigningKeypair>) {
 }
 
 fn print_seedphrase(seed_phrase: &SeedPhrase) {
-    println!("🔑 Seed phrase (write it down)");
+    let words: SeedPhraseWords = seed_phrase.into();
 
-    for i in 0..3 {
-        print!("\t");
-        for j in 0..4 {
-            let words: SeedPhraseWords = seed_phrase.into();
+    let string_repr = (1..=12)
+        .zip(words.iter())
+        .fold(String::new(), |mut acc, (idx, word)| {
+            if idx % 4 == 1 {
+                // add new line and starting tab
+                acc += "\n\t";
+            }
+            acc += &format!("{idx: >2}. {word: <8}");
+            acc
+        });
 
-            print!(
-                "{: >2}. {: <padding$}",
-                i * 4 + j + 1,
-                words[i * 4 + j],
-                padding = nasty_padding(&words, j)
-            );
-        }
-        println!();
-    }
-}
-
-fn nasty_padding(s: &SeedPhraseWords, idx: usize) -> usize {
-    [&s[idx], &s[4 + idx], &s[8 + idx]]
-        .iter()
-        .max_by_key(|p| p.len())
-        .unwrap()
-        .len()
-        + 2
+    println!("🔑 Seed phrase (write it down) {string_repr}");
 }
