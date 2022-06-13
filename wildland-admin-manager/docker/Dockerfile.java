@@ -14,7 +14,7 @@ RUN mkdir -p wildland_java \
     && swig -java -c++ -w516,503,476,302 -outdir ../wildland_java ../wildland.i \
     && mv ../wildland_wrap.cxx . \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
-    wildland_wrap.cxx mod.rs.cc \
+    wildland_wrap.cxx ffi_cxx.rs.cc \
     -L../../target/debug \
     -lwildland_admin_manager \
     -I${JDK_INC_DIR} \

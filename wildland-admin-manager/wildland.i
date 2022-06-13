@@ -2,7 +2,7 @@
 
 // The following lines will be added to generated wrapper file.
 %{
-#include "mod.rs.h"
+#include "ffi_cxx.rs.h"
 #include "cxx.h"
 %}
 
@@ -12,6 +12,8 @@
 %inline %{
 typedef long unsigned int size_t;
 typedef unsigned char uint8_t;
+typedef uint8_t u8;
+typedef rust::cxxbridge1::String String;
 %}
 
 
@@ -28,10 +30,6 @@ typedef unsigned char uint8_t;
 // String class in Java and C#
 %rename(RustString) String;
 
-// Rename boxed_unwrap to unwrap
-%rename(unwrap) boxed_unwrap;
-// Rename boxed_unwrap_err to unwrap_err
-%rename(unwrap_err) boxed_unwrap_err;
 
 // Ignore unused cxx.rs internal structs (that are actually
 // problematic during the parsing process for SWIG).
@@ -88,18 +86,5 @@ typedef unsigned char uint8_t;
 //////////////////////////////////
 // Inlcude the generated C++ API
 //////////////////////////////////
-%include "mod.rs.h"
-
-// There are two generic types that we use on the FFI layer: Box<T> and Vec<T>
-// Swig needs to have defined the concrete instances of templated types in
-// order to let the target languages users handle them properly.
-// In result each type added to cxx module that uses generics needs to
-// be declared here:
-%template(BoxedSeedPhraseResult) ::rust::cxxbridge1::Box<::wildland::SeedPhraseResult>;
-%template(BoxedSeedPhrase) ::rust::cxxbridge1::Box<::wildland::SeedPhrase>;
-%template(BoxedDynIdentity) ::rust::cxxbridge1::Box<::wildland::DynIdentity>;
-%template(BoxedIdentityResult) ::rust::cxxbridge1::Box<::wildland::IdentityResult>;
-%template(BoxedOptionalIdentity) ::rust::cxxbridge1::Box<::wildland::OptionalIdentity>;
-%template(BoxedAdminManager) ::rust::cxxbridge1::Box<::wildland::AdminManager>;
-%template(BoxedEmptyResult) ::rust::cxxbridge1::Box<::wildland::EmptyResult>;
-%template(BoxedAdminManagerError) ::rust::cxxbridge1::Box<::wildland::AdminManagerError>;
+%include "ffi_cxx.rs.h"
+%include "generated.i"

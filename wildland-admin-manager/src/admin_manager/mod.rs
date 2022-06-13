@@ -4,7 +4,7 @@ use crate::api::{self, AdminManagerError, AdminManagerIdentity, SeedPhrase};
 pub use identity::CryptoIdentity;
 use std::sync::{Arc, Mutex};
 
-#[derive(Default)]
+#[derive(Default, Debug, Clone)]
 pub struct AdminManager {
     // TODO do we want to store more than one master identity
     // TODO do we want to keep mappings between a master identity and a set of device identities
@@ -12,6 +12,7 @@ pub struct AdminManager {
     email: Option<Email>,
 }
 
+#[derive(Debug, Clone)]
 pub enum Email {
     Unverified {
         mailbox_address: String,
