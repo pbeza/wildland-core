@@ -1,8 +1,10 @@
 use crate::admin_manager::AdminManager;
-use crate::api::AdminManager as AdminManagerTrait;
-use crate::api::Identity;
-use crate::api::IdentityType;
-use crate::api::{AdminManagerError, SeedPhrase};
+use crate::api::AdminManagerApi;
+use crate::api::IdentityPair;
+use crate::api::MasterIdentityApi;
+use crate::api::WildlandIdentityApi;
+use crate::api::WildlandIdentityType;
+use crate::api::{AdminManagerError, FileWallet, SeedPhrase};
 use ffi_macro::binding_wrapper;
 use wildland_corex::SeedPhraseWords;
 
@@ -12,33 +14,33 @@ type VoidType = ();
 
 #[binding_wrapper]
 mod ffi_binding {
-    use super::{AdminManagerTrait, Identity};
+    use super::{AdminManagerApi, MasterIdentityApi, WildlandIdentityApi};
     extern "Rust" {
         type AdminManager;
-        fn create_master_identity_from_seed_phrase(
-            self: &mut AdminManager,
-            name: String,
-            seed: &SeedPhrase,
-        ) -> Result<Arc<Mutex<dyn Identity>>>;
-        fn create_admin_manager() -> AdminManager;
-        fn get_master_identity(self: &AdminManager) -> Option<Arc<Mutex<dyn Identity>>>;
+        type IdentityPair;
+        type AdminManager<FileWallet>;
+        fn create_file_wallet_admin_manager() -> Result<AdminManager<FileWallet>>;
         fn send_verification_code(self: &mut AdminManager) -> Result<VoidType>;
         fn set_email(self: &mut AdminManager, email: String);
         fn verify_email(self: &mut AdminManager, verification_code: String) -> Result<VoidType>;
+        fn create_wildland_identities(
+            self: &mut AdminManager,
+            seed: &SeedPhrase,
+            device_name: String,
+        ) -> Result<IdentityPair>;
 
         type SeedPhrase;
-        fn create_seed_phrase() -> Result<SeedPhrase>;
         fn get_string(self: &SeedPhrase) -> String;
         fn get_vec(self: &SeedPhrase) -> Vec<String>;
 
-        type IdentityType;
+        type WildlandIdentityType;
+        fn get_identity_type(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> WildlandIdentityType;
+        fn get_name(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> String;
+        fn set_name(self: &mut Arc<Mutex<dyn WildlandIdentityApi>>, name: String);
+        fn get_public_key(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> Vec<u8>;
+
         type SeedPhraseWords;
-        fn get_identity_type(self: &Arc<Mutex<dyn Identity>>) -> IdentityType;
-        fn get_name(self: &Arc<Mutex<dyn Identity>>) -> String;
-        fn set_name(self: &mut Arc<Mutex<dyn Identity>>, name: String);
-        fn get_pubkey(self: &Arc<Mutex<dyn Identity>>) -> Vec<u8>;
-        fn get_fingerprint(self: &Arc<Mutex<dyn Identity>>) -> Vec<u8>;
-        fn get_seed_phrase(self: &Arc<Mutex<dyn Identity>>) -> SeedPhraseWords;
+        fn get_seed_phrase(self: &Arc<Mutex<dyn MasterIdentityApi>>) -> SeedPhraseWords;
 
         type VoidType;
         type ErrorType;

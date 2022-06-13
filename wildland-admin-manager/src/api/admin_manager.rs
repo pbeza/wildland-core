@@ -1,9 +1,14 @@
-use super::{AdminManagerResult, MasterIdentityApi, SeedPhrase, WildlandIdentityApi};
+use super::{
+    AdminManagerResult, ManifestSigningKeypair, MasterIdentityApi, SeedPhrase, Wallet,
+    WildlandIdentityApi,
+};
 use std::sync::{Arc, Mutex};
 
 pub type MasterIdentity = Arc<Mutex<dyn MasterIdentityApi>>;
 pub type WildlandIdentity = Arc<Mutex<dyn WildlandIdentityApi>>;
+pub type WildlandWallet = Arc<Mutex<dyn Wallet<ManifestSigningKeypair>>>;
 
+#[derive(Clone)]
 pub struct IdentityPair {
     pub forest_id: WildlandIdentity,
     pub device_id: WildlandIdentity,
@@ -22,6 +27,9 @@ pub trait AdminManager {
     /// Checks whether verification code entered by a user is the same as generated one for a set email
     /// Returns error when email is not set
     fn verify_email(&mut self, verification_code: String) -> AdminManagerResult<()>;
+
+    /// Returns Wallet object
+    fn get_wallet(&self) -> AdminManagerResult<WildlandWallet>;
 
     /// Create Forest and Device identities from given seedphrase. Ensures that the Device's
     /// name is stored in the Catalog.

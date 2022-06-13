@@ -5,23 +5,26 @@ use serde_json::json;
 use std::fs;
 use xdg::BaseDirectories;
 
-use crate::{ManifestSigningKeypair, SigningKeyType, Wallet, WalletKeypair};
+use crate::{ManifestSigningKeypair, SigningKeyType, Wallet, WalletFactory, WalletKeypair};
 
+#[derive(Clone)]
 pub struct FileWallet {
     base_directory: BaseDirectories,
 }
 
 impl FileWallet {
-    pub fn new() -> Result<Self> {
-        Ok(FileWallet {
-            base_directory: BaseDirectories::with_prefix("wildland/wallet")?,
-        })
-    }
-
     fn write_secret_file(&self, name: String, contents: String) -> Result<()> {
         let file = self.base_directory.place_data_file(name)?;
 
         Ok(fs::write(&file, contents)?)
+    }
+}
+
+impl WalletFactory for FileWallet {
+    fn new() -> Result<FileWallet> {
+        Ok(FileWallet {
+            base_directory: BaseDirectories::with_prefix("wildland/wallet")?,
+        })
     }
 }
 

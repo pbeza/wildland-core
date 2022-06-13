@@ -1,22 +1,15 @@
+use crate::{SigningKeyType, WalletKeypair};
 use anyhow::Result;
 use sha2::{Digest, Sha256};
-// use wildland_crypto::identity::keys::SigningKeyPair as CryptoSigningKeyPair;
-
-use crate::{SigningKeyType, WalletKeypair};
 
 static EMPTY_KEY: [u8; 32] = [0u8; 32];
 
+#[derive(Debug)]
 pub struct ManifestSigningKeypair {
     private_key: [u8; 32],
     public_key: [u8; 32],
     key_type: SigningKeyType,
 }
-
-// impl<T: CryptoSigningKeyPair> From<T> for ManifestSigningKeypair {
-//     fn from(value: T) -> Self {
-//         ManifestSigningKeypair::from_keys(value.seckey_as_bytes(), value.pubkey_as_bytes())
-//     }
-// }
 
 impl ManifestSigningKeypair {
     pub fn from_keys(

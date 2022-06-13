@@ -1,26 +1,5 @@
 use crate::CoreXError;
 use wildland_crypto::identity::{self, Identity, SeedPhraseWords};
-use wildland_wallet::{FileWallet, ManifestSigningKeypair, Wallet};
-
-pub enum WalletType {
-    File,
-}
-
-pub fn list_keypairs(wallet: WalletType) -> Result<Vec<ManifestSigningKeypair>, CoreXError> {
-    match &wallet {
-        WalletType::File => {
-            let wallet = FileWallet::new().map_err(|e| {
-                CoreXError::IdentityGenerationError(format!("Could not instantiate Wallet. {}", e))
-            })?;
-
-            let manifest_keypairs = wallet
-                .list_secrets()
-                .map_err(|e| CoreXError::IdentityReadError(e.to_string()))?;
-
-            Ok(manifest_keypairs)
-        }
-    }
-}
 
 pub fn try_identity_from_seed(seed: &SeedPhraseWords) -> Result<Identity, CoreXError> {
     Identity::try_from(seed).map_err(CoreXError::from)

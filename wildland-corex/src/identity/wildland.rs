@@ -1,11 +1,7 @@
+use crate::{CoreXError, CryptoSigningKeypair, ManifestSigningKeypair, WalletFactory};
+use sha2::{Digest, Sha256};
 use std::{fmt::Display, rc::Rc};
 use wildland_wallet::SigningKeyType;
-
-use crate::crypto::WalletType;
-use crate::{CoreXError, CryptoSigningKeypair, FileWallet, ManifestSigningKeypair};
-
-use sha2::{Digest, Sha256};
-use wildland_wallet::Wallet;
 
 #[derive(Clone, Copy, Debug)]
 pub enum WildlandIdentityType {
@@ -28,25 +24,44 @@ pub trait WildlandIdentityApi: Display {
     fn get_private_key(&self) -> Vec<u8>;
     fn get_fingerprint(&self) -> Vec<u8>;
     fn get_fingerprint_string(&self) -> String;
-    fn save(&self, wallet: WalletType) -> Result<(), CoreXError>;
+    fn get_name(&self) -> String;
+    fn set_name(&mut self, name: String);
+    fn save(&self) -> Result<(), CoreXError>;
 }
 
 #[derive(Clone)]
-pub struct WildlandIdentity {
+pub struct WildlandIdentity<W: WalletFactory> {
     identity_type: WildlandIdentityType,
     keypair: Rc<dyn CryptoSigningKeypair>,
+    name: String,
+    wallet: W,
 }
 
-impl WildlandIdentity {
-    pub fn new(identity_type: WildlandIdentityType, keypair: Rc<dyn CryptoSigningKeypair>) -> Self {
+impl<W: WalletFactory> WildlandIdentity<W> {
+    pub fn new(
+        identity_type: WildlandIdentityType,
+        keypair: Rc<dyn CryptoSigningKeypair>,
+        name: String,
+        wallet: W,
+    ) -> Self {
         Self {
             identity_type,
             keypair,
+            name,
+            wallet,
         }
     }
 }
 
-impl WildlandIdentityApi for WildlandIdentity {
+impl<W: WalletFactory> WildlandIdentityApi for WildlandIdentity<W> {
+    fn get_name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
     fn get_public_key(&self) -> Vec<u8> {
         self.keypair.pubkey_as_bytes().into()
     }
@@ -69,33 +84,22 @@ impl WildlandIdentityApi for WildlandIdentity {
         self.identity_type
     }
 
-    fn save(&self, wallet: WalletType) -> Result<(), CoreXError> {
-        match &wallet {
-            WalletType::File => {
-                let wallet = FileWallet::new().map_err(|e| {
-                    CoreXError::IdentityGenerationError(format!(
-                        "Could not instantiate Wallet. {}",
-                        e
-                    ))
-                })?;
+    fn save(&self) -> Result<(), CoreXError> {
+        let wallet_keypair = ManifestSigningKeypair::from_keys(
+            self.get_identity_type().into(),
+            self.keypair.seckey_as_bytes(),
+            self.keypair.pubkey_as_bytes(),
+        );
 
-                let wallet_keypair = ManifestSigningKeypair::from_keys(
-                    self.get_identity_type().into(),
-                    self.keypair.seckey_as_bytes(),
-                    self.keypair.pubkey_as_bytes(),
-                );
-
-                wallet
-                    .save_signing_secret(wallet_keypair)
-                    .map_err(|e| CoreXError::IdentityGenerationError(e.to_string()))?
-            }
-        }
+        self.wallet
+            .save_signing_secret(wallet_keypair)
+            .map_err(|e| CoreXError::IdentityGenerationError(e.to_string()))?;
 
         Ok(())
     }
 }
 
-impl Display for WildlandIdentity {
+impl<W: WalletFactory> Display for WildlandIdentity<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.get_fingerprint_string(),)
     }

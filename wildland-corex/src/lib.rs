@@ -11,7 +11,7 @@ pub use wildland_crypto::identity::{
     SeedPhraseWords, SEED_PHRASE_LEN,
 };
 pub use wildland_wallet::{
-    FileWallet, ManifestSigningKeypair, SigningKeyType, Wallet, WalletKeypair,
+    FileWallet, ManifestSigningKeypair, SigningKeyType, Wallet, WalletFactory, WalletKeypair,
 };
 
 pub fn get_version() -> &'static str {
