@@ -20,7 +20,6 @@ WORKDIR /wildland-core
 COPY --from=wildland-sdk-base ${WLTMP} ./cpp/
 COPY --from=wildland-sdk-base ${TARGET}/libwildland_admin_manager.a ./lib/
 COPY crates/wildland-admin-manager/wildland.i ./
-COPY crates/wildland-admin-manager/test/ffi/test.java ./
 
 RUN mkdir -p wildland_java \
     && cd cpp \
@@ -34,8 +33,8 @@ RUN mkdir -p wildland_java \
     -I${JDK_INC_DIR}/linux \
     -o ../wildland_java/libwildland.so
 
-RUN cp test.java wildland_java/test.java \
-    && cd wildland_java \
+COPY crates/wildland-admin-manager/test/ffi/test.java ./wildland_java/
+RUN cd wildland_java \
     && javac test.java
 
 # Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.
