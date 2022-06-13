@@ -4,12 +4,41 @@ FROM swift:5.6.1-focal
 #
 # docker-compose -f wildland-admin-manager/docker/docker-compose.yml run --rm wildland-sdk-swift
 
-# need to upgrade Rust toolchain to be able to compile the latest swift-bridge (trigerred by `cargo build`)
-RUN apt-get -qy update && apt-get install -y curl g++ \
-    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y \ 
+
+RUN apt-get -qy update && apt-get install -y curl g++ cargo \
     && mkdir -p wildland-core/wildland-admin-manager /root/.cargo \
     && printf '[registries]\nwl-dev = { index = "https://crates.wildland.dev/git/index" }\n' > /root/.cargo/config.toml
-COPY . wildland-core
+# need to upgrade Rust toolchain to be able to compile the latest swift-bridge (trigerred by `cargo build`)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+
+
+# Build only dependencies to cache them in docker layer
+WORKDIR /wildland-core/crates/
+RUN for crate in \
+    wildland-admin-manager \
+    wildland-corex \
+    wildland-catlib \
+    wildland-crypto \
+    wildland-dfs\
+    wildland-wallet\
+    ; do cargo new --lib $crate; done
+COPY Cargo.toml /wildland-core/
+COPY Cargo.lock /wildland-core/
+COPY crates/wildland-admin-manager/Cargo.toml wildland-admin-manager/
+COPY crates/wildland-admin-manager/build.rs wildland-admin-manager/
+COPY crates/wildland-corex/Cargo.toml wildland-corex/
+COPY crates/wildland-catlib/Cargo.toml wildland-catlib/
+COPY crates/wildland-crypto/Cargo.toml wildland-crypto/
+COPY crates/wildland-dfs/Cargo.toml wildland-dfs/
+COPY crates/wildland-wallet/Cargo.toml wildland-wallet/
+
+WORKDIR /wildland-core/
+RUN ls ./crates
+RUN cargo build --package wildland-admin-manager
+
+
+# Actual build
+COPY . /wildland-core
 WORKDIR /wildland-core/crates/wildland-admin-manager
 RUN mkdir -p wildland_swift \
     && . $HOME/.cargo/env \
