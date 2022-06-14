@@ -25,7 +25,7 @@ class main {
     }
 
     admin_manager.set_email(new RustString("test@email.com"));
-    var sending_result = admin_manager.send_verification_code(); // Code is hardcoded for now
+    var sending_result = admin_manager.request_verification_email(); // Code is hardcoded for now
     if (sending_result.is_ok()) {
       var verification_result = admin_manager.verify_email(new RustString("123456"));
       if (verification_result.is_ok()) {
