@@ -22,7 +22,7 @@ mod ffi_binding {
         ) -> Result<Arc<Mutex<dyn Identity>>>;
         fn create_admin_manager() -> AdminManager;
         fn get_master_identity(self: &AdminManager) -> Option<Arc<Mutex<dyn Identity>>>;
-        fn send_verification_code(self: &mut AdminManager) -> Result<VoidType>;
+        fn request_verification_email(self: &mut AdminManager) -> Result<VoidType>;
         fn set_email(self: &mut AdminManager, email: String);
         fn verify_email(self: &mut AdminManager, verification_code: String) -> Result<VoidType>;
 
