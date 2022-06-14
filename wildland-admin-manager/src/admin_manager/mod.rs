@@ -9,10 +9,10 @@ pub struct AdminManager {
     // TODO do we want to store more than one master identity
     // TODO do we want to keep mappings between a master identity and a set of device identities
     master_identity: Option<AdminManagerIdentity>,
-    email: Option<Email>,
+    email: Option<EmailAddress>,
 }
 
-pub enum Email {
+enum EmailAddress {
     Unverified(String),
     Verified(String),
 }
@@ -43,7 +43,7 @@ impl api::AdminManager for AdminManager {
     }
 
     fn set_email(&mut self, email: String) {
-        self.email = Some(Email::Unverified(email));
+        self.email = Some(EmailAddress::Unverified(email));
     }
 
     fn request_verification_email(&mut self) -> api::AdminManagerResult<()> {
@@ -57,15 +57,15 @@ impl api::AdminManager for AdminManager {
             .as_ref()
             .ok_or(AdminManagerError::EmailCandidateNotSet)?
         {
-            Email::Unverified(email) => {
+            EmailAddress::Unverified(email) => {
                 let verified = true; // TODO send http request to verify email
                 if verified {
-                    self.email = Some(Email::Verified(email.clone()));
+                    self.email = Some(EmailAddress::Verified(email.clone()));
                 } else {
                     return Err(AdminManagerError::ValidationCodesDoNotMatch);
                 }
             }
-            Email::Verified(_) => return Err(AdminManagerError::EmailAlreadyVerified),
+            EmailAddress::Verified(_) => return Err(AdminManagerError::EmailAlreadyVerified),
         }
 
         Ok(())
