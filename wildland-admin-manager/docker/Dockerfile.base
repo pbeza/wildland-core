@@ -2,19 +2,20 @@ FROM debian:testing
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+ENV WLTMP=_temporary
+ENV CXX_OUT=/wildland-core/target/cxxbridge/wildland-admin-manager/_temporary
+ENV CXX_RUST=/wildland-core/target/cxxbridge/rust
+
+RUN apt-get -qy update && apt-get install -y g++ cargo swig
 RUN mkdir -p wildland-core/wildland-admin-manager /root/.cargo
 COPY . wildland-core
-ENV WLTMP=_temporary
-ENV CXX_OUT=/wildland-core/target/cxxbridge/wildland-admin-manager/src/ffi/cxx
-ENV CXX_RUST=/wildland-core/target/cxxbridge/rust
-RUN apt-get -qy update && apt-get install -y g++ cargo swig
 WORKDIR /wildland-core/wildland-admin-manager
 RUN printf '[registries]\nwl-dev = { index = "https://crates.wildland.dev/git/index" }\n' > /root/.cargo/config.toml \
     && cargo clean \
     && rm -rf "${WLTMP}" \
     && mkdir -p "${WLTMP}" \
     && cargo build --features "bindings"
-RUN cp "${CXX_RUST}/cxx.h" "${CXX_OUT}/mod.rs.h" "${CXX_OUT}/mod.rs.cc" "${WLTMP}"
+RUN cp "${CXX_RUST}/cxx.h" "${CXX_OUT}/ffi_cxx.rs.h" "${CXX_OUT}/ffi_cxx.rs.cc" "${WLTMP}"
 
 # SWIG Workarounds
 #
@@ -24,16 +25,16 @@ RUN cp "${CXX_RUST}/cxx.h" "${CXX_OUT}/mod.rs.h" "${CXX_OUT}/mod.rs.cc" "${WLTMP
 
 # Swig doesn't understand `final` keyword:
 
-RUN sed -i 's/final//g' "${WLTMP}/mod.rs.h"
+RUN sed -i 's/final//g' "${WLTMP}/ffi_cxx.rs.h"
 
 # Inline namespaces make problems:
 
-RUN sed -i 's/::rust/::rust::cxxbridge1/g' "${WLTMP}/mod.rs.h"
+RUN sed -i 's/::rust/::rust::cxxbridge1/g' "${WLTMP}/ffi_cxx.rs.h"
 
 # Every param between `[[`  `]]` is unparsable:
 
-RUN sed -i 's/\[\[noreturn\]\]//g' "${WLTMP}/mod.rs.h"
+RUN sed -i 's/\[\[noreturn\]\]//g' "${WLTMP}/ffi_cxx.rs.h"
 
 # Not all variadic `...` are supported:
 
-RUN sed -i 's/\.\.\.//g' "${WLTMP}/mod.rs.h"
+RUN sed -i 's/\.\.\.//g' "${WLTMP}/ffi_cxx.rs.h"

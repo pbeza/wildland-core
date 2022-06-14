@@ -13,7 +13,7 @@ RUN mkdir -p wildland_python \
     && swig -python -c++ -w516,503,476,302,383,509 -outdir ../wildland_python ../wildland.i \
     && mv ../wildland_wrap.cxx . \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
-    wildland_wrap.cxx mod.rs.cc \
+    wildland_wrap.cxx ffi_cxx.rs.cc \
     -L../../target/debug \
     -lwildland_admin_manager \
     $(python3-config --includes) \
