@@ -1,0 +1,72 @@
+use anyhow::{Error, Result};
+use hex::FromHex;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::fs;
+use xdg::BaseDirectories;
+
+use crate::{ManifestSigningKeypair, SigningKeyType, Wallet, WalletFactory, WalletKeypair};
+
+#[derive(Clone)]
+pub struct FileWallet {
+    base_directory: BaseDirectories,
+}
+
+impl FileWallet {
+    fn write_secret_file(&self, name: String, contents: String) -> Result<()> {
+        let file = self.base_directory.place_data_file(name)?;
+
+        Ok(fs::write(&file, contents)?)
+    }
+}
+
+impl WalletFactory for FileWallet {
+    fn new() -> Result<FileWallet> {
+        Ok(FileWallet {
+            base_directory: BaseDirectories::with_prefix("wildland/wallet")?,
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct WalletKeyFileContents {
+    privkey: String,
+    pubkey: String,
+    key_type: SigningKeyType,
+}
+
+impl Wallet<ManifestSigningKeypair> for FileWallet {
+    fn save_signing_secret(&self, keypair: ManifestSigningKeypair) -> Result<()> {
+        self.write_secret_file(
+            format!("{}.json", keypair.fingerprint()),
+            json!(WalletKeyFileContents {
+                privkey: hex::encode(keypair.get_private_key()),
+                pubkey: hex::encode(keypair.get_public_key()),
+                key_type: keypair.get_key_type(),
+            })
+            .to_string(),
+        )
+        .map_err(|err| Error::msg(format!("Could not write to secret file. {}.", err)))
+    }
+
+    fn list_secrets(&self) -> Result<Vec<ManifestSigningKeypair>> {
+        let secrets: Vec<ManifestSigningKeypair> = self
+            .base_directory
+            .list_data_files(".")
+            .into_iter()
+            .map(|f| {
+                let contents = fs::read_to_string(f).map_err(Error::msg)?;
+                let file_data: WalletKeyFileContents =
+                    serde_json::from_str(&contents).map_err(Error::msg)?;
+
+                Ok(ManifestSigningKeypair::from_keys(
+                    file_data.key_type,
+                    <[u8; 32]>::from_hex(file_data.privkey).map_err(Error::msg)?,
+                    <[u8; 32]>::from_hex(file_data.pubkey).map_err(Error::msg)?,
+                ))
+            })
+            .collect::<Result<_, Error>>()?;
+
+        Ok(secrets)
+    }
+}

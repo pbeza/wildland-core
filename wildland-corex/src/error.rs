@@ -7,8 +7,14 @@ pub enum CoreXError {
     SeedPhraseGenerationError(String),
     #[error("Identity generation error: {0}")]
     IdentityGenerationError(String),
+    #[error("Identity read error: {0}")]
+    IdentityReadError(String),
     #[error("Too low entropy")]
     EntropyTooLow,
+    #[error("Seed phrase parsing error: {0}")]
+    ParseSeedPhraseError(String),
+    #[error("CoreX error: {0}")]
+    Generic(String),
 }
 
 impl From<CryptoError> for CoreXError {

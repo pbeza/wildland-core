@@ -18,6 +18,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::fmt::Debug;
+
 use crate::identity::error::CryptoError::{
     self, CannotCreateKeyPairError, CannotDecryptMessageError, CannotEncryptMessageError,
 };
@@ -26,7 +28,7 @@ use cryptoxide::ed25519::{signature, verify, SIGNATURE_LENGTH};
 use hex::{encode, FromHex};
 use salsa20::XNonce;
 
-pub trait SigningKeyPair {
+pub trait SigningKeyPair: Debug {
     fn pubkey_as_bytes(&self) -> [u8; 32];
     fn seckey_as_bytes(&self) -> [u8; 32];
     fn sign(&self, message: &[u8]) -> [u8; SIGNATURE_LENGTH];
@@ -55,6 +57,7 @@ pub trait EncryptionKeyPair {
 ///
 /// Represents a keypair derived from seed. Can be used to sign or to encrypt,
 /// depending on the way it was derived.
+#[derive(Debug)]
 pub struct KeyPair {
     seckey: [u8; 32],
     pubkey: [u8; 32],

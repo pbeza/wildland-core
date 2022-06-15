@@ -1,43 +1,27 @@
 use anyhow::Result;
 use clap::StructOpt;
-use cli_args::{CliArgs, IdentitySubCommand, SubCommand};
-use wildland_admin_manager::{admin_manager::AdminManager, api::AdminManager as AdminManagerApi};
+use cli_args::{CliOpts, RootSubcommands};
+use wildland_corex::FileWallet;
 
+mod bridge;
 mod cli_args;
+mod container;
+mod forest;
+mod identity;
+mod storage;
 mod version;
 
 fn main() -> Result<()> {
-    let cli = CliArgs::parse();
+    let cli = CliOpts::parse();
 
-    if cli.version {
-        version::print_version();
-    } else {
-        let mut admin_manager = AdminManager::default();
-        match cli.sub_command_action {
-            SubCommand::Identity {
-                identity_action: IdentitySubCommand::Generate,
-            } => {
-                let seed_phrase = AdminManager::create_seed_phrase()?;
-                let identity = admin_manager
-                    .create_master_identity_from_seed_phrase("name".into(), &seed_phrase)?;
-                let identity = identity.lock().unwrap();
-                println!("{identity}")
-            }
-            SubCommand::Identity {
-                identity_action: IdentitySubCommand::Restore { seed_phrase },
-            } => {
-                let seed = seed_phrase
-                    .split(' ')
-                    .map(|elem| elem.to_string())
-                    .collect::<Vec<_>>()
-                    .try_into()?;
-                let identity =
-                    admin_manager.create_master_identity_from_seed_phrase("name".into(), &seed)?;
-                let identity = identity.lock().unwrap();
-                println!("{identity}")
-            }
-        }
-    }
+    match &cli.subcommand {
+        RootSubcommands::Identity(opts) => opts.handle_command::<FileWallet>(),
+        RootSubcommands::Forest(opts) => opts.handle_command(),
+        RootSubcommands::Container(opts) => opts.handle_command(),
+        RootSubcommands::Storage(opts) => opts.handle_command(),
+        RootSubcommands::Bridge(opts) => opts.handle_command(),
+        RootSubcommands::Version(opts) => opts.handle_command(),
+    }?;
 
     Ok(())
 }
