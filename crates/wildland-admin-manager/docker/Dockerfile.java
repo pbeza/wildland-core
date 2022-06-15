@@ -1,4 +1,4 @@
-FROM debian:testing-slim
+    FROM debian:testing-slim
 
 # Run with:
 #
@@ -22,15 +22,17 @@ COPY --from=wildland-sdk-base ${TARGET}/libwildland_admin_manager.a ./lib/
 COPY crates/wildland-admin-manager/wildland.i ./
 
 RUN mkdir -p wildland_java \
-    && cd cpp \
-    && swig -java -c++ -w516,503,476,302 -outdir ../wildland_java ../wildland.i \
+    && cd "${WLTMP}" \
+    && swig -java -c++ -outdir ../wildland_java ../wildland.i \
     && mv ../wildland_wrap.cxx . \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
-    wildland_wrap.cxx ffi_cxx.rs.cc \
-    -L ../lib \
+    wildland_wrap.cxx \
+    -L../../target/debug \
     -lwildland_admin_manager \
     -I${JDK_INC_DIR} \
     -I${JDK_INC_DIR}/linux \
+    -I../wildland_swift \
+    -I../wildland_swift/wildland \
     -o ../wildland_java/libwildland.so
 
 COPY test/ffi/test.java ./wildland_java/

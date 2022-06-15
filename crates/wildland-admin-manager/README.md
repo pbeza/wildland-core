@@ -41,7 +41,3 @@ Use `make` in order to generate bindings and run tests for them. The following c
 
 ### Output
 Once the given command is done, a `wildland-*` directory should be generated. It consists of a given target langugage glue code that is ready to be used (see `test/ffi` for example).
-
-
-### Contributing
-See examples of binding usage in `test/ffi`. Keep in mind that adding types with templates like `Vec<T>` and `Box<T>` in cxx bridge needs to be followed by adding templates declaration in `wildland.i` file at the bottom.

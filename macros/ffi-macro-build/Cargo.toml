@@ -8,5 +8,4 @@ edition = "2021"
 [dependencies]
 syn = { version = "1.0", features = ["full"] }
 ffi-parser = { version = "0.1.0", path = "../ffi-parser" }
-cxx-build = { version = "1.0" }
 swift-bridge-build = { version = "0.1" }
