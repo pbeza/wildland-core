@@ -2,14 +2,10 @@ FROM debian:testing
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-ENV WLTMP=_temporary
-
 RUN apt-get -qy update && apt-get install -y g++ cargo swig
 RUN mkdir -p wildland-core/wildland-admin-manager /root/.cargo
 COPY . wildland-core
 WORKDIR /wildland-core/wildland-admin-manager
 RUN printf '[registries]\nwl-dev = { index = "https://crates.wildland.dev/git/index" }\n' > /root/.cargo/config.toml \
     && cargo clean \
-    && rm -rf "${WLTMP}" \
-    && mkdir -p "${WLTMP}" \
     && cargo build --features "bindings"

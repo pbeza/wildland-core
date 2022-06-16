@@ -10,23 +10,22 @@ ENV CSHARP_RUN=mono
 
 RUN apt-get -qy update && apt-get install -y swig mono-mcs
 
-RUN mkdir -p wildland_csharp \
-    && cd "${WLTMP}" \
-    && swig -csharp -c++ -outdir ../wildland_csharp ../wildland.i \
-    && mv ../wildland_wrap.cxx . \
+RUN mkdir -p _generated_csharp \
+    && swig -csharp -c++ -outdir _generated_csharp wildland.i \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
     wildland_wrap.cxx \
-    -L../../target/debug \
+    -L../target/debug \
     -lwildland_admin_manager \
-    -I../wildland_swift \
-    -I../wildland_swift/wildland \
-    -o ../wildland_csharp/libwildland.so
+    -I_generated_cpp \
+    -I_generated_swift \
+    -I_generated_swift/ffi_swift \
+    -o _generated_csharp/libwildland.so
 
-RUN cp test/ffi/test.cs wildland_csharp/test.cs \
-    && cd wildland_csharp \
+RUN cp test/ffi/test.cs _generated_csharp/test.cs \
+    && cd _generated_csharp \
     && ${CSHARP_COMPILER} -out:test.exe *.cs \
     && ${CSHARP_RUN} test.exe
 
 # Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.
 
-ENTRYPOINT ["mono", "wildland_csharp/test.exe"]
+ENTRYPOINT ["mono", "_generated_csharp/test.exe"]

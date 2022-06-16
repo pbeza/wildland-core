@@ -361,6 +361,7 @@ name = "ffi-macro"
 version = "0.1.0"
 dependencies = [
  "ffi-parser",
+ "swift-bridge",
 ]
 
 [[package]]

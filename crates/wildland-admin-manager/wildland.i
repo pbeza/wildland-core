@@ -30,10 +30,10 @@
 //////////////////////////////////
 %{
   extern "C" {
-    #include "wildland.h"
+    #include "ffi_swift.h"
     #include "SwiftBridgeCore.h"
   }
-  #include "ffi.h"
+  #include "ffi_cxx.h"
 %}
-%include "ffi.h"
-%include "swig_ffi.i"
+%include "./_generated_cpp/ffi_cxx.h"
+%include "./_generated_cpp/ffi_swig.i"

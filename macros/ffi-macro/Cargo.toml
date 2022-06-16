@@ -10,3 +10,6 @@ proc-macro = true
 
 [dependencies]
 ffi-parser = { version = "0.1.0", path = "../ffi-parser" }
+
+[dev-dependencies]
+swift-bridge = { version = "0.1" }

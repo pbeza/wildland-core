@@ -18,21 +18,19 @@ COPY --from=wildland-sdk-base ${WLTMP} ./cpp/
 COPY --from=wildland-sdk-base ${TARGET}/libwildland_admin_manager.a ./lib/
 COPY crates/wildland-admin-manager/wildland.i ./
 
-RUN mkdir -p wildland_python \
-    && cd "${WLTMP}" \
-    && swig -python -c++ -outdir ../wildland_python ../wildland.i \
-    && mv ../wildland_wrap.cxx . \
+RUN mkdir -p _generated_python \
+    && swig -python -c++ -outdir _generated_python wildland.i \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
     wildland_wrap.cxx \
-    -L../../target/debug \
+    -L../target/debug \
     -lwildland_admin_manager \
     $(python3-config --includes) \
-    -I../wildland_swift \
-    -I../wildland_swift/wildland \
-    -o ../wildland_python/_wildland.so
+    -I_generated_swift \
+    -I_generated_swift/ffi_swift \
+    -o _generated_python/_wildland.so
 
 # Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.
 
-COPY test/ffi/test.py ./wildland_python/
+COPY test/ffi/test.py ./_generated_python/
 
-ENTRYPOINT ["python3", "wildland_python/test.py"]
+ENTRYPOINT ["python3", "_generated_python/test.py"]

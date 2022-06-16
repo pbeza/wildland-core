@@ -1,9 +1,9 @@
 #include <iostream>
 extern "C" {
-    #include "wildland.h"
+    #include "ffi_swift.h"
     #include "SwiftBridgeCore.h"
 }
-#include "ffi.h"
+#include "ffi_cxx.h"
 
 int main()
 {
@@ -18,7 +18,6 @@ int main()
         std::cout << "Generated seed: " << seed_str << std::endl;
 
         RustVec<String> words_vec = seed_ok.get_vec(); // String (starting with capital letter) is a rust type
-        // TODO: implement iterator for RustVec ;)
         for (uint i = 0; i < words_vec.size(); i++)
         {
             std::cout << words_vec.at(i).c_str() << std::endl;
