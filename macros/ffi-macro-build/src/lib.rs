@@ -1,5 +1,4 @@
 use ffi_parser::BindingModule;
-use rust_format::{Formatter, RustFmt};
 use std::io::Write;
 use std::path::PathBuf;
 use syn::{File, Item};
@@ -8,10 +7,10 @@ use syn::{File, Item};
 /// a version understandable by `swift-bridge-build` crate.
 /// It also generates two additional files: SWIG interface and C++
 /// glue code for the FFI. Those can be used by SWIG code generator.
-pub fn parse_ffi_module(path: &str, swift_dir: &str, cpp_dir: &str) -> Result<(), std::io::Error> {
-    let file = std::fs::read_to_string(path)?;
-    let mut file: File = syn::parse_str(&file).unwrap();
-    for item in file.items.iter_mut() {
+pub fn parse_ffi_module(path: &str, swift_dir: &str, cpp_dir: &str) {
+    let file = std::fs::read_to_string(path).unwrap();
+    let file: File = syn::parse_str(&file).unwrap();
+    for item in file.items.iter() {
         if let Item::Mod(module) = item {
             let parsed = BindingModule::translate_module(module.clone()).unwrap();
             if !std::path::Path::new(swift_dir).exists() {
@@ -24,12 +23,7 @@ pub fn parse_ffi_module(path: &str, swift_dir: &str, cpp_dir: &str) -> Result<()
             let mut output_rust =
                 std::fs::File::create(format!("{}/ffi_swift.rs", swift_dir)).unwrap();
             output_rust
-                .write_all(
-                    RustFmt::default()
-                        .format_str(parsed.get_module().to_string())
-                        .expect("This should be a valid rust code.")
-                        .as_bytes(),
-                )
+                .write_all(parsed.get_module().to_string().as_bytes())
                 .unwrap();
 
             let generated_code = parsed.generate_cpp_and_swig_file();
@@ -48,5 +42,4 @@ pub fn parse_ffi_module(path: &str, swift_dir: &str, cpp_dir: &str) -> Result<()
     let swift_out_dir = PathBuf::from(swift_dir);
     let bridges = vec![format!("{}/ffi_swift.rs", swift_dir)];
     swift_bridge_build::parse_bridges(bridges).write_all_concatenated(swift_out_dir, "ffi_swift");
-    Ok(())
 }

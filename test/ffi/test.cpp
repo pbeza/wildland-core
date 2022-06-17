@@ -14,7 +14,7 @@ int main()
     {
         SeedPhrase seed_ok = seed_result.unwrap(); // it is safe to unwrap after `is_ok` check
 
-        std::string seed_str = std::string(seed_ok.get_string().to_string());
+        std::string seed_str = seed_ok.get_string().to_string();
         std::cout << "Generated seed: " << seed_str << std::endl;
 
         RustVec<String> words_vec = seed_ok.get_vec(); // String (starting with capital letter) is a rust type
@@ -25,7 +25,7 @@ int main()
 
         String name = String("Some generic name");
         ResultSharedMutexIdentity identity_result = admin_manager.create_master_identity_from_seed_phrase(name, seed_ok);
-        std::cout << "Identity name: " << std::string(identity_result.unwrap().get_name().to_string()) << std::endl;
+        std::cout << "Identity name: " << identity_result.unwrap().get_name().to_string() << std::endl;
 
         OptionalSharedMutexIdentity optional_identity = admin_manager.get_master_identity(); // The same identity as inside the result above
         if (optional_identity.is_some())
@@ -59,7 +59,7 @@ int main()
     {
         ErrorType seed_err = seed_result.unwrap_err();
         // error interface is extendable but for now it exposes methods for getting message and code
-        std::string err_msg = std::string(seed_err.to_string().to_string());
+        std::string err_msg = seed_err.to_string().to_string();
         uint32_t code = seed_err.code();
 
         std::cout << "Error msg: " << err_msg << " \nError code: " << code << std::endl;
