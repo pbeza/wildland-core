@@ -1,12 +1,2 @@
 [workspace]
-
-members = [
-    "wildland-admin-manager",
-    "wildland-catlib",
-    "wildland-cli",
-    "wildland-corex",
-    "wildland-crypto",
-    "wildland-storage-controller-client",
-    "wildland-dfs",
-    "wildland-wallet",
-]
+members = ["crates/*"]
