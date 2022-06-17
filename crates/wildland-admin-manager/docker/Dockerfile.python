@@ -27,6 +27,7 @@ RUN mkdir -p _generated_python \
     $(python3-config --includes) \
     -I_generated_swift \
     -I_generated_swift/ffi_swift \
+    -I_generated_cpp \
     -o _generated_python/_wildland.so
 
 # Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.

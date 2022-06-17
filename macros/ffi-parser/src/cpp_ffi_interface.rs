@@ -26,7 +26,7 @@ pub struct GeneratedFilesContent {
 ///
 ///
 const PREDEFINED: &str = "
-#include <utility>
+#include <string>
 #include <cstring>
 
 typedef unsigned long u64;
@@ -44,11 +44,11 @@ class RustVec {
     void* self = nullptr;
 public:
     RustVec() = delete;
-    RustVec(RustVec&& a) : self(std::move(a.self)) {
+    RustVec(RustVec&& a) : self(a.self) {
         a.self = nullptr;
     };
     RustVec(void* self) : self(self) {{}}
-    ~RustVec();
+    virtual ~RustVec();
     operator void*() const { return this->self; }
 
     // TODO: Add a method that copies the given item.
@@ -60,34 +60,25 @@ public:
 
 class String {
     void* self = nullptr;
-    bool is_owned = false;
+    std::string str;
 public:
     String() = delete;
-    String(void* self, bool is_owned = false) : self(self), is_owned(is_owned) {{ }}
+    String(void* self, bool is_owned = true) : self(self) {{ }}
     String(const char* str) {
+        this->str = std::string(str);
         RustStr s = RustStr {
-            str,
-            strlen(str)
+            this->str.c_str(),
+            this->str.size()
         };
         this->self = __swift_bridge__$RustString$new_with_str(s);
-        this->is_owned = false;
     }
     String(String&& a)
-        : self(a.self),
-          is_owned(a.is_owned) { 
+        : self(a.self) { 
               a.self = nullptr; 
-              a.is_owned = false;
     }
-    ~String() {
-        if(this->self && is_owned) {
-            __swift_bridge__$RustString$_free(this->self);
-        }
-    }
-    char* c_str() {
+    std::string to_string() {
         RustStr s = __swift_bridge__$RustString$as_str(this->self);
-        char* new_string = new char[s.len+1];
-        strcpy(new_string, s.start);
-        return new_string;
+        return std::string((const char*)s.start);
     }
     operator void*() const { return this->self; }
 };
@@ -157,7 +148,7 @@ public:
     {0}() = delete;
     {0}(void* self, bool is_owned = false) : self(self), is_owned(is_owned) {{ }}
     {0}({0}&& a) : self(a.self), is_owned(a.is_owned) {{ a.self = nullptr; a.is_owned = false; }};
-    ~{0}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${0}$_free(this->self); }} }};
+    virtual ~{0}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${0}$_free(this->self); }} }};
     {1} unwrap() {{ return {1}(__swift_bridge__${0}$unwrap(this->self), true); }}
     bool is_some() {{ return __swift_bridge__${0}$is_some(this->self); }}
     operator void*() const {{ return this->self; }}
@@ -183,7 +174,7 @@ public:
     {0}() = delete;
     {0}({0}&& a) : self(a.self), is_owned(a.is_owned) {{ a.self = nullptr; a.is_owned = false; }};
     {0}(void* self, bool is_owned = false) : self(self), is_owned(is_owned) {{ }}
-    ~{0}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${0}$_free(this->self); }} }};
+    virtual ~{0}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${0}$_free(this->self); }} }};
     {1} unwrap() {{ return {1}(__swift_bridge__${0}$unwrap(this->self), true); }}
     ErrorType unwrap_err() {{ return ErrorType(__swift_bridge__${0}$unwrap_err(this->self), true); }}
     bool is_ok() {{ return __swift_bridge__${0}$is_ok(this->self); }}
@@ -211,7 +202,7 @@ public:
     {0}() = delete;
     {0}(void* self, bool is_owned = false) : self(self), is_owned(is_owned) {{ }}
     {0}({0}&& a) : self(a.self), is_owned(a.is_owned) {{ a.self = nullptr; a.is_owned = false; }};
-    ~{0}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${0}$_free(this->self); }} }};
+    virtual ~{0}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${0}$_free(this->self); }} }};
     operator void*() const {{ return this->self; }}
 {1}}};
 {2}
