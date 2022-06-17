@@ -1,4 +1,5 @@
 use ffi_parser::BindingModule;
+use rust_format::{Formatter, RustFmt};
 use std::io::Write;
 use std::path::PathBuf;
 use syn::{File, Item};
@@ -23,7 +24,12 @@ pub fn parse_ffi_module(path: &str, swift_dir: &str, cpp_dir: &str) -> Result<()
             let mut output_rust =
                 std::fs::File::create(format!("{}/ffi_swift.rs", swift_dir)).unwrap();
             output_rust
-                .write_all(parsed.get_module().to_string().as_bytes())
+                .write_all(
+                    RustFmt::default()
+                        .format_str(parsed.get_module().to_string())
+                        .expect("This should be a valid rust code.")
+                        .as_bytes(),
+                )
                 .unwrap();
 
             let generated_code = parsed.generate_cpp_and_swig_file();
