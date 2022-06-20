@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::StructOpt;
 use cli_args::{CliOpts, RootSubcommands};
-use wildland_corex::FileWallet;
 
 mod bridge;
 mod cli_args;
@@ -15,7 +14,7 @@ fn main() -> Result<()> {
     let cli = CliOpts::parse();
 
     match &cli.subcommand {
-        RootSubcommands::Identity(opts) => opts.handle_command::<FileWallet>(),
+        RootSubcommands::Identity(opts) => opts.handle_command(),
         RootSubcommands::Forest(opts) => opts.handle_command(),
         RootSubcommands::Container(opts) => opts.handle_command(),
         RootSubcommands::Storage(opts) => opts.handle_command(),

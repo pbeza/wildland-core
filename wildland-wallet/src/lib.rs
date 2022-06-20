@@ -8,4 +8,12 @@ pub fn get_version() -> &'static str {
 
 pub use api::*;
 pub use keys::sign::ManifestSigningKeypair;
-pub use wallet::file::FileWallet;
+pub use wallet::{
+    file::{file_wallet_factory, FileWallet},
+    WalletFactoryType,
+};
+
+#[derive(Debug)]
+pub enum WalletError {
+    TODOError(String),
+}

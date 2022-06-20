@@ -5,9 +5,9 @@ use serde_json::json;
 use std::fs;
 use xdg::BaseDirectories;
 
-use crate::{ManifestSigningKeypair, SigningKeyType, Wallet, WalletFactory, WalletKeypair};
+use crate::{ManifestSigningKeypair, SigningKeyType, Wallet, WalletError};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FileWallet {
     base_directory: BaseDirectories,
 }
@@ -20,12 +20,11 @@ impl FileWallet {
     }
 }
 
-impl WalletFactory for FileWallet {
-    fn new() -> Result<FileWallet> {
-        Ok(FileWallet {
-            base_directory: BaseDirectories::with_prefix("wildland/wallet")?,
-        })
-    }
+pub fn file_wallet_factory() -> Result<Box<dyn Wallet>, WalletError> {
+    Ok(Box::new(FileWallet {
+        base_directory: BaseDirectories::with_prefix("wildland/wallet")
+            .map_err(|e| WalletError::TODOError(e.to_string()))?,
+    }))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -35,7 +34,7 @@ struct WalletKeyFileContents {
     key_type: SigningKeyType,
 }
 
-impl Wallet<ManifestSigningKeypair> for FileWallet {
+impl Wallet for FileWallet {
     fn save_signing_secret(&self, keypair: ManifestSigningKeypair) -> Result<()> {
         self.write_secret_file(
             format!("{}.json", keypair.fingerprint()),

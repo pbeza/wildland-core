@@ -5,10 +5,9 @@ use std::{
 
 use super::wildland::{WildlandIdentity, WildlandIdentityApi, WildlandIdentityType};
 use wildland_crypto::identity::{Identity, SeedPhraseWords};
-use wildland_wallet::WalletFactory;
+use wildland_wallet::{wallet::WalletFactoryType, Wallet};
 
-use crate::crypto::SeedPhrase;
-use crate::{CoreXError, CryptoSigningKeypair};
+use crate::{crypto::SeedPhrase, CoreXError, CryptoSigningKeypair};
 
 pub trait MasterIdentityApi: Display {
     fn get_seed_phrase(&self) -> SeedPhraseWords;
@@ -20,14 +19,16 @@ pub trait MasterIdentityApi: Display {
     ) -> Result<Arc<Mutex<dyn WildlandIdentityApi>>, CoreXError>;
 }
 
-#[derive(Clone)]
-pub struct MasterIdentity<W: WalletFactory> {
+type MasterIdentityWallet = Box<dyn Wallet>;
+// #[derive(Clone)]
+pub struct MasterIdentity {
     inner_identity: Identity,
-    wallet: W,
+    _wallet: MasterIdentityWallet, // TODO save it
+    wallet_factory: WalletFactoryType,
 }
 
-impl<W: WalletFactory + 'static> MasterIdentity<W> {
-    pub fn default() -> Result<Self, CoreXError> {
+impl MasterIdentity {
+    pub fn new(wallet_factory: WalletFactoryType) -> Result<Self, CoreXError> {
         let seed = crate::generate_random_seed_phrase()
             .map_err(CoreXError::from)
             .map(SeedPhrase::from)?;
@@ -35,20 +36,20 @@ impl<W: WalletFactory + 'static> MasterIdentity<W> {
         let inner_identity =
             crate::try_identity_from_seed(seed.as_ref()).map_err(CoreXError::from)?;
 
-        Ok(MasterIdentity::<W>::new(inner_identity))
+        Ok(Self::with_identity(inner_identity, wallet_factory))
     }
 
-    pub fn new(inner_identity: Identity) -> Self {
-        let wallet = W::new().unwrap();
-
+    pub fn with_identity(inner_identity: Identity, wallet_factory: WalletFactoryType) -> Self {
+        let wallet = wallet_factory().unwrap();
         Self {
             inner_identity,
-            wallet,
+            _wallet: wallet,
+            wallet_factory,
         }
     }
 }
 
-impl<W: WalletFactory + 'static> MasterIdentityApi for MasterIdentity<W> {
+impl MasterIdentityApi for MasterIdentity {
     fn get_seed_phrase(&self) -> SeedPhraseWords {
         self.inner_identity.get_seed_phrase()
     }
@@ -63,8 +64,12 @@ impl<W: WalletFactory + 'static> MasterIdentityApi for MasterIdentity<W> {
         name: String,
     ) -> Result<Arc<Mutex<dyn WildlandIdentityApi>>, CoreXError> {
         let keypair = self.get_signing_keypair().into();
-        let identity =
-            WildlandIdentity::<W>::new(identity_type, keypair, name, self.wallet.clone());
+        let identity = WildlandIdentity::new(
+            identity_type,
+            keypair,
+            name,
+            (self.wallet_factory)().unwrap(),
+        );
 
         identity.save()?;
 
@@ -72,7 +77,7 @@ impl<W: WalletFactory + 'static> MasterIdentityApi for MasterIdentity<W> {
     }
 }
 
-impl<W: WalletFactory> Display for MasterIdentity<W> {
+impl Display for MasterIdentity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

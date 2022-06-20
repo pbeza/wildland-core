@@ -1,8 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use wildland_admin_manager::admin_manager::AdminManager;
-use wildland_admin_manager::api::AdminManagerApi;
-use wildland_corex::{ManifestSigningKeypair, WalletFactory, WalletKeypair};
+use wildland_admin_manager::{admin_manager::AdminManager, api::AdminManagerApi};
 use wildland_corex::{SeedPhrase, SeedPhraseWords};
 use yansi::Paint;
 
@@ -28,33 +26,31 @@ pub enum IdentitySubcommand {
 }
 
 impl IdentityCliOpts {
-    pub fn handle_command<W: WalletFactory + 'static>(&self) -> Result<()> {
-        let mut admin_manager = AdminManager::<W>::new().unwrap();
+    pub fn handle_command(&self) -> Result<()> {
+        let mut admin_manager = AdminManager::default();
 
         match &self.subcommand {
-            IdentitySubcommand::Generate { name } => {
-                generate_identity::<W>(&mut admin_manager, name)?
-            }
+            IdentitySubcommand::Generate { name } => generate_identity(&mut admin_manager, name)?,
             IdentitySubcommand::Restore { seed, name } => {
-                restore_identity::<W>(admin_manager, seed, name)?
+                restore_identity(admin_manager, seed, name)?
             }
             IdentitySubcommand::List => {
-                let wallet = admin_manager.get_wallet()?;
-                let ids = wallet.lock().unwrap().list_secrets()?;
+                // TODO
+                // let ids = wallet.lock().unwrap().list_secrets()?;
 
-                match ids.len() {
-                    0 => {
-                        println!("❌ No identities found");
-                    }
-                    1 => {
-                        println!("🔑 Found 1 identity");
-                        print_identities(&ids);
-                    }
-                    _ => {
-                        println!("🔑 Found {} identities", ids.len());
-                        print_identities(&ids);
-                    }
-                }
+                // match ids.len() {
+                //     0 => {
+                //         println!("❌ No identities found");
+                //     }
+                //     1 => {
+                //         println!("🔑 Found 1 identity");
+                //         print_identities(&ids);
+                //     }
+                //     _ => {
+                //         println!("🔑 Found {} identities", ids.len());
+                //         print_identities(&ids);
+                //     }
+                // }
             }
         }
 
@@ -62,8 +58,8 @@ impl IdentityCliOpts {
     }
 }
 
-fn restore_identity<W: WalletFactory + 'static>(
-    admin_manager: AdminManager<W>,
+fn restore_identity(
+    admin_manager: AdminManager,
     seed_phrase: &str,
     name: &str,
 ) -> Result<(), anyhow::Error> {
@@ -88,11 +84,8 @@ fn restore_identity<W: WalletFactory + 'static>(
     Ok(())
 }
 
-fn generate_identity<W: WalletFactory + 'static>(
-    admin_manager: &mut AdminManager<W>,
-    name: &str,
-) -> Result<(), anyhow::Error> {
-    let seed = AdminManager::<W>::create_seed_phrase()?;
+fn generate_identity(admin_manager: &mut AdminManager, name: &str) -> Result<(), anyhow::Error> {
+    let seed = AdminManager::create_seed_phrase()?;
     let identities = admin_manager.create_wildland_identities(&seed, name.to_string())?;
 
     let forest_id = identities.forest_id.lock().unwrap();
@@ -115,13 +108,14 @@ fn generate_identity<W: WalletFactory + 'static>(
     Ok(())
 }
 
-fn print_identities(ids: &[ManifestSigningKeypair]) {
-    ids.iter().for_each(|kp| {
-        println!();
-        println!("\tType: {:?}", Paint::blue(kp.get_key_type()).bold());
-        println!("\tFingerprint: {}", kp.fingerprint());
-    })
-}
+// TODO REMOVE OR WHAT?
+// fn print_identities(ids: &[ManifestSigningKeypair]) {
+//     ids.iter().for_each(|kp| {
+//         println!();
+//         println!("\tType: {:?}", Paint::blue(kp.get_key_type()).bold());
+//         println!("\tFingerprint: {}", kp.fingerprint());
+//     })
+// }
 
 fn print_seedphrase(seed_phrase: &SeedPhrase) {
     let words: SeedPhraseWords = seed_phrase.into();

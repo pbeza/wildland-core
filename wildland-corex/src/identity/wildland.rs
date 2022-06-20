@@ -1,7 +1,7 @@
-use crate::{CoreXError, CryptoSigningKeypair, ManifestSigningKeypair, WalletFactory};
+use crate::{CoreXError, CryptoSigningKeypair, ManifestSigningKeypair};
 use sha2::{Digest, Sha256};
 use std::{fmt::Display, rc::Rc};
-use wildland_wallet::SigningKeyType;
+use wildland_wallet::{SigningKeyType, Wallet};
 
 #[derive(Clone, Copy, Debug)]
 pub enum WildlandIdentityType {
@@ -29,20 +29,21 @@ pub trait WildlandIdentityApi: Display {
     fn save(&self) -> Result<(), CoreXError>;
 }
 
-#[derive(Clone)]
-pub struct WildlandIdentity<W: WalletFactory> {
+type IdentityWalletType = Box<dyn Wallet>;
+
+pub struct WildlandIdentity {
     identity_type: WildlandIdentityType,
     keypair: Rc<dyn CryptoSigningKeypair>,
     name: String,
-    wallet: W,
+    wallet: IdentityWalletType,
 }
 
-impl<W: WalletFactory> WildlandIdentity<W> {
+impl WildlandIdentity {
     pub fn new(
         identity_type: WildlandIdentityType,
         keypair: Rc<dyn CryptoSigningKeypair>,
         name: String,
-        wallet: W,
+        wallet: IdentityWalletType,
     ) -> Self {
         Self {
             identity_type,
@@ -53,7 +54,7 @@ impl<W: WalletFactory> WildlandIdentity<W> {
     }
 }
 
-impl<W: WalletFactory> WildlandIdentityApi for WildlandIdentity<W> {
+impl WildlandIdentityApi for WildlandIdentity {
     fn get_name(&self) -> String {
         self.name.clone()
     }
@@ -99,7 +100,7 @@ impl<W: WalletFactory> WildlandIdentityApi for WildlandIdentity<W> {
     }
 }
 
-impl<W: WalletFactory> Display for WildlandIdentity<W> {
+impl Display for WildlandIdentity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.get_fingerprint_string(),)
     }

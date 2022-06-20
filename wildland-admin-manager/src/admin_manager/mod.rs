@@ -1,21 +1,18 @@
-use std::{
-    fmt::Debug,
-    marker::PhantomData,
-    sync::{Arc, Mutex},
-};
+use std::fmt::Debug;
 
 use crate::api::{
     self, AdminManagerApi, AdminManagerError, AdminManagerResult, MasterIdentityApi, SeedPhrase,
-    WalletFactory, WildlandIdentityType, WildlandWallet,
+    WildlandIdentityType,
 };
 pub use api::{MasterIdentity, WildlandIdentity};
+use wildland_corex::{file_wallet_factory, WalletFactoryType};
 
-#[derive(Clone)]
-pub struct AdminManager<W: WalletFactory> {
-    phantom: PhantomData<W>,
+#[derive(Clone, Debug, Default)]
+pub struct AdminManager {
     email: Option<Email>,
-    wallet: WildlandWallet,
 }
+
+const WALLET_FACTORY: WalletFactoryType = &file_wallet_factory;
 
 #[derive(Debug, Clone)]
 pub enum Email {
@@ -26,17 +23,7 @@ pub enum Email {
     Verified(String),
 }
 
-impl<W: WalletFactory + 'static> AdminManager<W> {
-    pub fn new() -> AdminManagerResult<Self> {
-        let wallet = W::new().unwrap();
-
-        Ok(AdminManager {
-            phantom: PhantomData,
-            email: None,
-            wallet: Arc::new(Mutex::new(wallet)),
-        })
-    }
-
+impl AdminManager {
     fn create_forest_identity(
         &self,
         master_identity: Box<dyn MasterIdentityApi>,
@@ -49,19 +36,16 @@ impl<W: WalletFactory + 'static> AdminManager<W> {
     }
 
     fn create_device_identity(&self, name: String) -> AdminManagerResult<api::WildlandIdentity> {
-        let master_identity = wildland_corex::MasterIdentity::<W>::default()?;
-        let forest_id =
+        // TODO Control over wallet type should be realized by some method call or passing specific parameter rather than using Admin Manager type for it (generics)
+        let master_identity = wildland_corex::MasterIdentity::new(WALLET_FACTORY)?;
+        let device_id =
             master_identity.create_wildland_identity(WildlandIdentityType::Device, name)?;
 
-        Ok(forest_id)
+        Ok(device_id)
     }
 }
 
-impl<W: WalletFactory + 'static> AdminManagerApi for AdminManager<W> {
-    fn get_wallet(&self) -> AdminManagerResult<WildlandWallet> {
-        Ok(self.wallet.clone())
-    }
-
+impl AdminManagerApi for AdminManager {
     fn create_seed_phrase() -> AdminManagerResult<SeedPhrase> {
         wildland_corex::generate_random_seed_phrase()
             .map_err(AdminManagerError::from)
@@ -109,8 +93,9 @@ impl<W: WalletFactory + 'static> AdminManagerApi for AdminManager<W> {
         seed: &SeedPhrase,
         device_name: String,
     ) -> AdminManagerResult<api::IdentityPair> {
-        let master_identity = wildland_corex::MasterIdentity::<W>::new(
+        let master_identity = wildland_corex::MasterIdentity::with_identity(
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
+            WALLET_FACTORY,
         );
 
         let forest_id = self.create_forest_identity(Box::new(master_identity), String::from(""))?;
