@@ -45,7 +45,8 @@ RUN cargo build --package wildland-admin-manager
 
 
 # Actual build
-COPY . /wildland-core
+COPY crates/ /wildland-core/crates/
+COPY macros/ /wildland-core/macros/
 WORKDIR /wildland-core/crates/wildland-admin-manager
 RUN cargo clean \
     && mkdir -p "${WLTMP}" \

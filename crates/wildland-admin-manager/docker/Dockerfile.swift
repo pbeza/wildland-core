@@ -47,14 +47,16 @@ RUN cargo build --package wildland-admin-manager
 
 
 # Actual build
-COPY . /wildland-core
+COPY crates/ /wildland-core/crates/
+COPY macros/ /wildland-core/macros/
 WORKDIR /wildland-core/crates/wildland-admin-manager
 RUN mkdir -p wildland_swift \
     && . $HOME/.cargo/env \
     && cargo clean \
-    && SWIFT_BRIDGE_OUT_DIR="$PWD/wildland_swift" cargo build --features "bindings" \
-    && cp test/ffi/test.swift wildland_swift/main.swift \
-    && swiftc -L ../../target/debug -lwildland_admin_manager -lstdc++ \
+    && SWIFT_BRIDGE_OUT_DIR="$PWD/wildland_swift" cargo build --features "bindings"
+
+COPY test/ffi/test.swift wildland_swift/main.swift
+RUN swiftc -L ../../target/debug -lwildland_admin_manager -lstdc++ \
     -I wildland_swift -import-objc-header \
     swift_header.h \
     ./wildland_swift/SwiftBridgeCore.swift \

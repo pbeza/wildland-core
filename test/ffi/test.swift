@@ -1,4 +1,4 @@
-print("TODO: Swift FFI Test Suite");
+print("Swift FFI Test Suite");
 
 var seed_phrase_result = create_seed_phrase();
 var admin_manager = create_admin_manager();
