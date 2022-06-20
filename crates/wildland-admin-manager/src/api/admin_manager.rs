@@ -16,7 +16,7 @@ pub trait AdminManager {
     fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
 
     /// Sends a 6-digit verification code to provided email address.
-    fn send_verification_code(&mut self) -> AdminManagerResult<()>;
+    fn request_verification_email(&mut self) -> AdminManagerResult<()>;
 
     // Sets new unverified email
     fn set_email(&mut self, email: String);
