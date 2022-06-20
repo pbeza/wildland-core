@@ -1,3 +1,12 @@
-target/**
-.vscode/**
-ci/**
+target
+.vscode
+ci
+crates/wildland-admin-manager/docker
+crates/wildland-admin-manager/docker/**/*
+crates/wildland-admin-manager/_temporary
+.gitignore
+.gitlab-ci.yml
+bump.sh
+COPYING
+README.md
+release.toml
