@@ -31,6 +31,6 @@ RUN mkdir -p wildland_python \
 
 # Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.
 
-COPY crates/wildland-admin-manager/test/ffi/test.py ./wildland_python/
+COPY test/ffi/test.py ./wildland_python/
 
 ENTRYPOINT ["python3", "wildland_python/test.py"]
