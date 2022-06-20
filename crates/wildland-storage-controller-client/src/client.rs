@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use wildland_crypto::{
     identity::keys::{SigningKeypair, Keypair},
-    signature::encode_signature,
+    signature::{sign, encode_signature},
 };
 
 use crate::{
@@ -124,7 +124,7 @@ impl StorageControllerClient {
             self.get_credential_id(),
             self.get_credential_secret(),
         )?;
-        let signature = keypair.sign(&message);
+        let signature = sign(&message, &keypair);
         Ok(encode_signature(signature))
     }
 }

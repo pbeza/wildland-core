@@ -1,11 +1,9 @@
 #[cfg(test)]
 pub mod test_utilities {
+    use serde::{Deserialize, Serialize};
     use salsa20::XNonce;
+    use serde_json::Value;
 
-    pub fn generate_random_nonce() -> XNonce {
-        let mut rng = rand_core::OsRng;
-        crypto_box::generate_nonce(&mut rng)
-    }
     pub static MNEMONIC_PHRASE: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     pub static SIGNING_PUBLIC_KEY: &str =
         "1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f";
@@ -20,4 +18,35 @@ pub mod test_utilities {
     pub static ENCRYPTION_SECRET_KEY_2: &str =
         "c039f516d8f23bdf2c9ce2b9911fd8a0ef91f7bb012bd7f2695653ce5094fc57";
     pub static TIMESTAMP: &str = "1648541699814";
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct TestStruct {
+        #[serde(rename(serialize = "credentialID"))]
+        pub credential_id: String,
+        pub timestamp: String,
+    }
+
+    pub fn generate_random_nonce() -> XNonce {
+        let mut rng = rand_core::OsRng;
+        crypto_box::generate_nonce(&mut rng)
+    }
+
+    pub fn generate_message() -> Vec<u8> {
+        let request = TestStruct {
+            credential_id: SIGNING_PUBLIC_KEY.into(),
+            timestamp: TIMESTAMP.into(),
+        };
+        serde_json::to_vec(&request).unwrap()
+    }
+
+    pub fn get_expected_message() -> Vec<u8> {
+        let expected_json_str = r#"
+        {
+            "credentialID":"1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f",
+            "timestamp":"1648541699814"
+        }
+        "#;
+        let expected_json: Value = serde_json::from_str(expected_json_str).unwrap();
+        serde_json::to_vec(&expected_json).unwrap()
+    }
 }

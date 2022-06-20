@@ -21,7 +21,7 @@
 use crate::{
     error::CryptoError,
     identity::{
-        keys::{EncryptingKeypair, SigningKeypair, SigningKey, VerifyingKey, Keypair},
+        keys::{EncryptingKeypair, SigningKeypair, Keypair},
         seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN}
     },
 };
@@ -30,6 +30,7 @@ use bip39::{Language::English, Mnemonic, Seed};
 use ed25519_bip32::{DerivationScheme, XPrv};
 use sha2::{Digest, Sha256};
 use std::convert::TryFrom;
+use ed25519_dalek::SecretKey;
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
@@ -167,8 +168,8 @@ impl Identity {
 
         // drop both the chain-code from xprv and last 32 bytes
         let seckey_bytes: [u8; 32] = <[u8; 32]>::try_from(&private_key.as_ref()[..32]).unwrap();
-        let seckey: SigningKey = SigningKey::from_bytes(&seckey_bytes).unwrap();
-        let pubkey: VerifyingKey = (&seckey).into();
+        let seckey = SecretKey::from_bytes(&seckey_bytes).unwrap();
+        let pubkey = (&seckey).into();
         SigningKeypair{secret: seckey, public: pubkey}
     }
 
@@ -184,7 +185,7 @@ impl Identity {
         let curve25519_sk = &crypto_box::SecretKey::from(bytes);
         let curve25519_pk = curve25519_sk.public_key();
 
-        EncryptingKeypair::from_bytes(bytes, *curve25519_pk.as_bytes())
+        EncryptingKeypair::from_bytes_slices(bytes, *curve25519_pk.as_bytes())
     }
 
     fn derive_private_key_from_path(&self, path: &str) -> XPrv {
@@ -206,12 +207,12 @@ impl Identity {
 mod tests {
     use crate::common::test_utilities::{generate_random_nonce, MNEMONIC_PHRASE};
     use std::str::FromStr;
-    use crate::identity::keys::{PublicKey, SecretKey};
     use ed25519_bip32::XPrv;
     use ed25519_dalek::{Verifier, Signature, Signer};
     use crypto_box::{Box, aead::Aead};
     use hex::encode;
     use hex_literal::hex;
+    use crate::signature::{sign, verify};
 
     use super::*;
 
@@ -225,17 +226,18 @@ mod tests {
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
-        let skeypair = user.signing_keypair();
-        let signature: Signature = skeypair.sign(MSG);
-        assert!(skeypair.verify(MSG, &signature).is_ok());
+        let keypair = user.signing_keypair();
+        let signature: Signature = sign(MSG, &keypair);
+        assert!(verify(MSG, &signature, &keypair.public).is_ok());
     }
 
     #[test]
     fn cannot_verify_signature_for_other_message() {
         let user = user();
-        let skeypair = user.signing_keypair();
-        let signature: Signature = skeypair.sign(MSG);
-        assert!(skeypair.verify("invalid message".as_ref(), &signature).is_err());
+        let keypair = user.signing_keypair();
+        let signature: Signature = sign(MSG, &keypair);
+        assert!(verify("invalid message".as_ref(), &signature, &keypair.public)
+            .is_err());
     }
 
     #[test]
