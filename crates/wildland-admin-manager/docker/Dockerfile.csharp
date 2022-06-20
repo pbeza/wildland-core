@@ -29,7 +29,7 @@ RUN mkdir -p wildland_csharp \
     -lwildland_admin_manager \
     -o ../wildland_csharp/libwildland.so
 
-COPY crates/wildland-admin-manager/test/ffi/test.cs ./wildland_csharp
+COPY test/ffi/test.cs ./wildland_csharp
 RUN cd wildland_csharp \
     && ${CSHARP_COMPILER} -out:test.exe *.cs
 
