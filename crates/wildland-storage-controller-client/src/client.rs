@@ -1,10 +1,9 @@
 use reqwest::Client;
 use serde::Serialize;
 
-use wildland_crypto::{
-    identity::keys::{Keypair, SigningKeypair},
-    signature::{encode_signature, sign},
-};
+use wildland_crypto::identity::keys::Keypair;
+use wildland_crypto::signature::sign;
+use wildland_crypto::{identity::keys::SigningKeypair, signature::encode_signature};
 
 use crate::{
     credentials::{CreateCredentialsReq, CreateCredentialsRes, SCCredentialsClient},
