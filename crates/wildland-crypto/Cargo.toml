@@ -26,8 +26,8 @@ tiny-bip39 = "0.8.2"
 # (gap between bip39 output and ed25519-bip32 input)
 hkdf = "0.12.0"
 
-# ed25519-bip32 is used to generate the tree of keypairs used by WL
-ed25519-bip32 = "0.4.0"
+# ed25519-dalek-bip32 is used to generate the tree of keypairs used by WL
+ed25519-dalek-bip32 = "0.2.0"
 
 # used to derive ed25519 public keys and to generate curve25519 keypairs
 ed25519-dalek = "1.0.1"

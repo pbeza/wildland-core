@@ -22,8 +22,8 @@ use std::convert::TryFrom;
 
 use bip39::{Language::English, Mnemonic, Seed};
 use crypto_box::SecretKey as EncryptionSecretKey;
-use ed25519_bip32::{DerivationScheme, XPrv};
 use ed25519_dalek::SecretKey as SigningSecretKey;
+use ed25519_dalek_bip32::{DerivationPath, ExtendedSecretKey};
 use sha2::{Digest, Sha256};
 
 use crate::{
@@ -36,16 +36,16 @@ use crate::{
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
-    // "574c44" == b'WLD'.hex()
-    "/m/574c44/0/0".to_string()
+    // "5721156" == b'WLD'.hex() converted to decimal
+    "m/5721156'/0'/0'".to_string()
 }
 
 fn encryption_key_path(index: u64) -> String {
-    format!("/m/574c44/1/{}", index)
+    format!("m/5721156'/1'/{}'", index)
 }
 
 fn single_use_encryption_key_path(index: u64) -> String {
-    format!("/m/574c44/2/{}", index)
+    format!("m/5721156'/2'/{}'", index)
 }
 
 /// This structure represents Wildland cryptographic identity.
@@ -54,9 +54,9 @@ fn single_use_encryption_key_path(index: u64) -> String {
 /// - signing (not rotated, used to sign "user manifest")
 /// - encryption (used by other people to encrypt secrets to the user, rotated)
 /// - single-use-encryption - to transfer secrets in public
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug)]
 pub struct Identity {
-    xprv: XPrv,
+    extended_seckey: ExtendedSecretKey,
     words: SeedPhraseWords,
 }
 
@@ -93,11 +93,12 @@ impl TryFrom<Mnemonic> for Identity {
         let mut output_key_material = [0u8; 96];
         extend_seed(seed.as_bytes(), &mut output_key_material);
 
-        // Now we can use this randomness as bip32-ed25519 extended private key
-        let root_xprv = XPrv::normalize_bytes_ed25519(output_key_material);
+        // Now we can use this randomness as bip32-dalek-ed25519 extended private key
+        let extended_secret_key =
+            ExtendedSecretKey::from_seed(output_key_material.as_slice()).unwrap();
 
         Ok(Identity {
-            xprv: root_xprv,
+            extended_seckey: extended_secret_key,
             words: mnemonic
                 .phrase()
                 .split(' ')
@@ -116,8 +117,8 @@ impl TryFrom<Mnemonic> for Identity {
 }
 
 impl Identity {
-    pub fn get_xprv(&self) -> &XPrv {
-        &self.xprv
+    pub fn get_extended_seckey(&self) -> &ExtendedSecretKey {
+        &self.extended_seckey
     }
 
     pub fn get_seed_phrase(&self) -> SeedPhraseWords {
@@ -166,10 +167,10 @@ impl Identity {
     }
 
     fn derive_signing_keypair(&self, path: &str) -> SigningKeypair {
-        let private_key = self.derive_private_key_from_path(path);
+        let derived_extended_seckey = self.derive_private_key_from_path(path);
 
         // drop both the chain-code from xprv and last 32 bytes
-        let seckey_bytes: [u8; 32] = <[u8; 32]>::try_from(&private_key.as_ref()[..32]).unwrap();
+        let seckey_bytes = *derived_extended_seckey.secret_key.as_bytes();
         let seckey = SigningSecretKey::from_bytes(&seckey_bytes).unwrap();
         let pubkey = (&seckey).into();
         SigningKeypair {
@@ -179,15 +180,12 @@ impl Identity {
     }
 
     fn derive_encryption_keypair(&self, path: &str) -> EncryptingKeypair {
-        let private_key: XPrv = self.derive_private_key_from_path(path);
+        let derived_extended_seckey = self.derive_private_key_from_path(path);
 
-        // Drop the chain-code from xprv - it is no longer needed. This leaves 64 bytes.
-        // Encryption in libsodium works on 32 byte keys, while what we have is 64 bytes.
         // Curve25519 keys are created from random bytes. Here we just trim.
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(&private_key.as_ref()[..32]);
-        // As for the key clamping - it is handled by crypto_box::SecretKey
-        let curve25519_sk = EncryptionSecretKey::from(bytes);
+        // // As for the key clamping - it is handled by crypto_box::SecretKey
+        let curve25519_sk =
+            EncryptionSecretKey::from(*derived_extended_seckey.secret_key.as_bytes());
         let curve25519_pk = curve25519_sk.public_key();
 
         EncryptingKeypair {
@@ -196,25 +194,15 @@ impl Identity {
         }
     }
 
-    fn derive_private_key_from_path(&self, path: &str) -> XPrv {
-        let mut tokens = path.split('/');
-
-        match (tokens.next(), tokens.next()) {
-            (Some(""), Some("m")) => {
-                tokens.fold(self.xprv.clone(), |secret_xprv, derivation_index| {
-                    let di = u32::from_str_radix(derivation_index, 16).unwrap();
-                    (&secret_xprv).derive(DerivationScheme::V2, di)
-                })
-            }
-            _ => panic!("Derivation path must start with '/m/'"), // TODO replace panic with some error handling
-        }
+    fn derive_private_key_from_path(&self, path: &str) -> ExtendedSecretKey {
+        let derivation_path: DerivationPath = path.parse().unwrap();
+        self.extended_seckey.derive(&derivation_path).unwrap()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::signature::{sign, verify};
-    use ed25519_bip32::XPrv;
     use ed25519_dalek::Signature;
     use hex::encode;
     use hex_literal::hex;
@@ -327,7 +315,13 @@ mod tests {
             .unwrap();
         let user = Identity::try_from(&mnemonic_array).unwrap();
 
-        assert_eq!(user.get_xprv(), &XPrv::normalize_bytes_ed25519(ROOT_XPRV))
+        assert_eq!(
+            user.get_extended_seckey().secret_key.to_bytes(),
+            ExtendedSecretKey::from_seed(&ROOT_XPRV)
+                .unwrap()
+                .secret_key
+                .to_bytes()
+        )
     }
 
     #[test]
