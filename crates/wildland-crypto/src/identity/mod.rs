@@ -19,7 +19,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub use crate::identity::{derivation::Identity, keys::SigningKeypair, keys::EncryptingKeypair};
+pub use crate::identity::{derivation::Identity, keys::EncryptingKeypair, keys::SigningKeypair};
 pub use seed::{generate_random_seed_phrase, SeedPhraseWords, SEED_PHRASE_LEN};
 
 mod derivation;

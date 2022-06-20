@@ -15,8 +15,8 @@ crate-type = ["rlib"]
 
 [dependencies]
 serde = "1.0"
-rand_core = { version = "0.5.1", features = ["std"] }
-rand = "0.7.3"
+rand_core = { version = "0.6", features = ["std"] }
+rand = "0.8.4"
 thiserror = "1.0.31"
 
 # bip39 is used to handle mnemonics

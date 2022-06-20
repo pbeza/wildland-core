@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod test_utilities {
-    use serde::{Deserialize, Serialize};
     use salsa20::XNonce;
+    use serde::{Deserialize, Serialize};
     use serde_json::Value;
 
     pub static MNEMONIC_PHRASE: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";

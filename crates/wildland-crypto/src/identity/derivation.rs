@@ -21,16 +21,16 @@
 use crate::{
     error::CryptoError,
     identity::{
-        keys::{EncryptingKeypair, SigningKeypair, Keypair},
-        seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN}
+        keys::{EncryptingKeypair, Keypair, SigningKeypair},
+        seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN},
     },
 };
 
 use bip39::{Language::English, Mnemonic, Seed};
 use ed25519_bip32::{DerivationScheme, XPrv};
+use ed25519_dalek::SecretKey;
 use sha2::{Digest, Sha256};
 use std::convert::TryFrom;
-use ed25519_dalek::SecretKey;
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
@@ -170,7 +170,10 @@ impl Identity {
         let seckey_bytes: [u8; 32] = <[u8; 32]>::try_from(&private_key.as_ref()[..32]).unwrap();
         let seckey = SecretKey::from_bytes(&seckey_bytes).unwrap();
         let pubkey = (&seckey).into();
-        SigningKeypair{secret: seckey, public: pubkey}
+        SigningKeypair {
+            secret: seckey,
+            public: pubkey,
+        }
     }
 
     fn derive_encryption_keypair(&self, path: &str) -> EncryptingKeypair {
@@ -206,13 +209,13 @@ impl Identity {
 #[cfg(test)]
 mod tests {
     use crate::common::test_utilities::{generate_random_nonce, MNEMONIC_PHRASE};
-    use std::str::FromStr;
+    use crate::signature::{sign, verify};
+    use crypto_box::{aead::Aead, Box};
     use ed25519_bip32::XPrv;
-    use ed25519_dalek::{Verifier, Signature, Signer};
-    use crypto_box::{Box, aead::Aead};
+    use ed25519_dalek::{Signature, Signer, Verifier};
     use hex::encode;
     use hex_literal::hex;
-    use crate::signature::{sign, verify};
+    use std::str::FromStr;
 
     use super::*;
 
@@ -236,8 +239,7 @@ mod tests {
         let user = user();
         let keypair = user.signing_keypair();
         let signature: Signature = sign(MSG, &keypair);
-        assert!(verify("invalid message".as_ref(), &signature, &keypair.public)
-            .is_err());
+        assert!(verify("invalid message".as_ref(), &signature, &keypair.public).is_err());
     }
 
     #[test]

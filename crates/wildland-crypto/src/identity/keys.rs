@@ -75,7 +75,10 @@ mod tests {
     use serde::{Deserialize, Serialize};
     use serde_json::Value;
 
-    use crate::common::test_utilities::{generate_random_nonce, ENCRYPTION_PUBLIC_KEY_2, ENCRYPTION_SECRET_KEY_2, SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY, TIMESTAMP, generate_message, get_expected_message};
+    use crate::common::test_utilities::{
+        generate_message, generate_random_nonce, get_expected_message, ENCRYPTION_PUBLIC_KEY_2,
+        ENCRYPTION_SECRET_KEY_2, SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY, TIMESTAMP,
+    };
     use crate::identity::keys::{EncryptingKeypair, Keypair, SigningKeypair};
 
     #[test]
