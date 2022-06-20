@@ -25,20 +25,21 @@ use crate::identity::error::CryptoError::{self, CannotCreateKeyError};
 
 pub type SigningKeypair = ed25519_dalek::Keypair;
 
+#[derive(Debug)]
 pub struct EncryptingKeypair {
     pub secret: EncryptionSecretKey,
     pub public: EncryptionPublicKey,
 }
 
 pub trait Keypair {
-    fn from_bytes_slices(seckey: [u8; 32], pubkey: [u8; 32]) -> Self;
+    fn from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self;
     fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError>
     where
         Self: Sized;
 }
 
 impl Keypair for EncryptingKeypair {
-    fn from_bytes_slices(seckey: [u8; 32], pubkey: [u8; 32]) -> Self {
+    fn from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self {
         Self {
             secret: EncryptionSecretKey::from(seckey),
             public: EncryptionPublicKey::from(pubkey),
@@ -52,14 +53,14 @@ impl Keypair for EncryptingKeypair {
 }
 
 impl Keypair for SigningKeypair {
-    fn from_bytes_slices(seckey: [u8; 32], pubkey: [u8; 32]) -> Self {
+    fn from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self {
         SigningKeypair::from_bytes([seckey, pubkey].concat().as_slice()).unwrap()
     }
 
     fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
         let pubkey = bytes_key_from_str(public_key)?;
         let seckey = bytes_key_from_str(secret_key)?;
-        Ok(Self::from_bytes_slices(seckey, pubkey))
+        Ok(Self::from_bytes_slices(pubkey, seckey))
     }
 }
 
@@ -70,16 +71,8 @@ pub fn bytes_key_from_str(key: &str) -> Result<[u8; 32], CryptoError> {
 
 #[cfg(test)]
 mod tests {
-
-    use ed25519_dalek::Signer;
-    use serde::{Deserialize, Serialize};
-    use serde_json::Value;
-
-    use crate::common::test_utilities::{
-        generate_message, generate_random_nonce, get_expected_message, ENCRYPTION_PUBLIC_KEY_2,
-        ENCRYPTION_SECRET_KEY_2, SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY, TIMESTAMP,
-    };
-    use crate::identity::keys::{EncryptingKeypair, Keypair, SigningKeypair};
+    use crate::common::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
+    use crate::identity::keys::{Keypair, SigningKeypair};
 
     #[test]
     fn should_create_keypair_when_keys_have_proper_length() {

@@ -18,19 +18,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::convert::TryFrom;
+
+use bip39::{Language::English, Mnemonic, Seed};
+use crypto_box::SecretKey as EncryptionSecretKey;
+use ed25519_bip32::{DerivationScheme, XPrv};
+use ed25519_dalek::SecretKey as SigningSecretKey;
+use sha2::{Digest, Sha256};
+
 use crate::{
     error::CryptoError,
     identity::{
-        keys::{EncryptingKeypair, Keypair, SigningKeypair},
+        keys::{EncryptingKeypair, SigningKeypair},
         seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN},
     },
 };
-
-use bip39::{Language::English, Mnemonic, Seed};
-use ed25519_bip32::{DerivationScheme, XPrv};
-use ed25519_dalek::SecretKey;
-use sha2::{Digest, Sha256};
-use std::convert::TryFrom;
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
@@ -168,7 +170,7 @@ impl Identity {
 
         // drop both the chain-code from xprv and last 32 bytes
         let seckey_bytes: [u8; 32] = <[u8; 32]>::try_from(&private_key.as_ref()[..32]).unwrap();
-        let seckey = SecretKey::from_bytes(&seckey_bytes).unwrap();
+        let seckey = SigningSecretKey::from_bytes(&seckey_bytes).unwrap();
         let pubkey = (&seckey).into();
         SigningKeypair {
             secret: seckey,
@@ -185,10 +187,13 @@ impl Identity {
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(&private_key.as_ref()[..32]);
         // As for the key clamping - it is handled by crypto_box::SecretKey
-        let curve25519_sk = &crypto_box::SecretKey::from(bytes);
+        let curve25519_sk = EncryptionSecretKey::from(bytes);
         let curve25519_pk = curve25519_sk.public_key();
 
-        EncryptingKeypair::from_bytes_slices(bytes, *curve25519_pk.as_bytes())
+        EncryptingKeypair {
+            secret: curve25519_sk,
+            public: curve25519_pk,
+        }
     }
 
     fn derive_private_key_from_path(&self, path: &str) -> XPrv {
@@ -208,14 +213,13 @@ impl Identity {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::test_utilities::{generate_random_nonce, MNEMONIC_PHRASE};
     use crate::signature::{sign, verify};
-    use crypto_box::{aead::Aead, Box};
     use ed25519_bip32::XPrv;
-    use ed25519_dalek::{Signature, Signer, Verifier};
+    use ed25519_dalek::Signature;
     use hex::encode;
     use hex_literal::hex;
-    use std::str::FromStr;
+
+    use crate::common::test_utilities::MNEMONIC_PHRASE;
 
     use super::*;
 
