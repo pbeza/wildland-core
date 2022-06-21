@@ -33,6 +33,9 @@ class TestAdminManager(unittest.TestCase):
         device_id.set_name(wildland.RustString("name 2"))
         assert device_id.get_name().c_str() == "name 2"
 
+        if device_id.save().is_ok():
+            print("Device identity saved in a file")
+
     def test_successfully_verify_email(self):
         self.admin_manager.set_email(wildland.RustString("test@email.com"))
         sending_result = self.admin_manager.request_verification_email()

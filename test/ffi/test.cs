@@ -23,7 +23,12 @@ namespace Main
                 Console.WriteLine(device_id.to_string().c_str());
                 Console.WriteLine(device_id.get_fingerprint_string().c_str());
                 Console.WriteLine(device_id.get_private_key());
+                
+                if (device_id.save().is_ok()) {
+                    Console.WriteLine("Device identity saved in a file.");
+                }
             }
+
 
             admin_manager.set_email(new RustString("test@email.com"));
             var sending_result = admin_manager.request_verification_email();

@@ -19,6 +19,10 @@ class main {
       System.out.println(device_id.to_string().c_str());
       System.out.println(device_id.get_fingerprint_string().c_str());
       System.out.println(device_id.get_private_key());
+
+      if (device_id.save().is_ok()) {
+        System.out.println("Device identity saved in a file.");
+      }
     }
 
     admin_manager.set_email(new RustString("test@email.com"));

@@ -373,11 +373,6 @@ fn generate_wrapper_definition(
             quote! {
                 #[derive(Clone, Debug)]
                 pub struct #wrapper_name(super::#original_type_name);
-                impl From<super::#original_type_name> for #wrapper_name {
-                    fn from(w: super::#original_type_name) -> #wrapper_name {
-                        #wrapper_name(w)
-                    }
-                }
                 impl<'a> From<&'a Box<#wrapper_name>> for &'a super::#original_type_name {
                     fn from(w: &'a Box<#wrapper_name>) -> &'a super::#original_type_name {
                         &w.as_ref().0
@@ -386,6 +381,11 @@ fn generate_wrapper_definition(
                 impl<'a> From<&'a #wrapper_name> for &'a super::#original_type_name {
                     fn from(w: &'a #wrapper_name) -> &'a super::#original_type_name {
                         &w.0
+                    }
+                }
+                impl<T: Into<super::#original_type_name>> From<T> for #wrapper_name {
+                    fn from(w: T) -> #wrapper_name {
+                        #wrapper_name(w.into())
                     }
                 }
             }

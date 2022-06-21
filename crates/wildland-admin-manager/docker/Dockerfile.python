@@ -33,4 +33,4 @@ RUN mkdir -p wildland_python \
 
 COPY test/ffi/test.py ./wildland_python/
 
-ENTRYPOINT ["python3", "wildland_python/test.py"]
+CMD ["python3", "wildland_python/test.py"]

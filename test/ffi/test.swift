@@ -16,6 +16,10 @@ if seed_phrase_result.is_ok() {
     print(device_id.get_fingerprint_string().toString());
     print(device_id.get_private_key());
 
+    if (device_id.save().is_ok()) {
+      print("Device identity saved in a file.");
+    }
+
     admin_manager.set_email(RustString("test@email.com"));
     var sending_result = admin_manager.request_verification_email(); // Code is hardcoded for now
     if (sending_result.is_ok()) {

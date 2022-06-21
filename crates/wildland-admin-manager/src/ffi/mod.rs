@@ -41,7 +41,7 @@ mod ffi_binding {
         fn get_private_key(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> Vec<u8>;
         fn get_fingerprint_string(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> String;
         fn get_fingerprint(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> Vec<u8>;
-        // fn save(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> Result<VoidType>;
+        fn save(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> Result<VoidType>;
 
         type VoidType;
         type ErrorType;

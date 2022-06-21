@@ -39,4 +39,4 @@ RUN cd wildland_java \
 
 # Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.
 
-ENTRYPOINT ["java", "-cp", "wildland_java", "-Djava.library.path=./wildland_java", "main"]
+CMD ["java", "-cp", "wildland_java", "-Djava.library.path=./wildland_java", "main"]

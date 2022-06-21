@@ -66,4 +66,4 @@ RUN swiftc -L ../../target/debug -lwildland_admin_manager -lstdc++ \
 
 # Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.
 
-ENTRYPOINT ["./wildland_swift/swift_app"]
+CMD ["./wildland_swift/swift_app"]
