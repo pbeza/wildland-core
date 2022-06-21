@@ -33,7 +33,7 @@ RUN mkdir -p wildland_java \
     -I${JDK_INC_DIR}/linux \
     -o ../wildland_java/libwildland.so
 
-COPY crates/wildland-admin-manager/test/ffi/test.java ./wildland_java/
+COPY test/ffi/test.java ./wildland_java/
 RUN cd wildland_java \
     && javac test.java
 
