@@ -3,10 +3,25 @@ use sha2::{Digest, Sha256};
 use std::{fmt::Display, rc::Rc};
 use wildland_wallet::{SigningKeyType, Wallet};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum WildlandIdentityType {
     Forest,
     Device,
+}
+
+// TODO generate below block of code
+impl WildlandIdentityType {
+    pub fn is_forest(&self) -> bool {
+        *self == Self::Forest
+    }
+
+    pub fn is_device(&self) -> bool {
+        *self == Self::Device
+    }
+
+    pub fn is_same(&self, other: &Self) -> bool {
+        *self == *other
+    }
 }
 
 impl From<WildlandIdentityType> for SigningKeyType {
@@ -19,7 +34,7 @@ impl From<WildlandIdentityType> for SigningKeyType {
 }
 
 pub trait WildlandIdentityApi: Display + std::fmt::Debug {
-    fn get_identity_type(&self) -> WildlandIdentityType;
+    fn get_type(&self) -> WildlandIdentityType;
     fn get_public_key(&self) -> Vec<u8>;
     fn get_private_key(&self) -> Vec<u8>;
     fn get_fingerprint(&self) -> Vec<u8>;
@@ -82,13 +97,13 @@ impl WildlandIdentityApi for WildlandIdentity {
         hex::encode(self.get_fingerprint())
     }
 
-    fn get_identity_type(&self) -> WildlandIdentityType {
+    fn get_type(&self) -> WildlandIdentityType {
         self.identity_type
     }
 
     fn save(&self) -> Result<(), CoreXError> {
         let wallet_keypair = ManifestSigningKeypair::from_keys(
-            self.get_identity_type().into(),
+            self.get_type().into(),
             self.keypair.seckey_as_bytes(),
             self.keypair.pubkey_as_bytes(),
         );

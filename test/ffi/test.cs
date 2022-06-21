@@ -23,6 +23,22 @@ namespace Main
                 Console.WriteLine(device_id.to_string().c_str());
                 Console.WriteLine(device_id.get_fingerprint_string().c_str());
                 Console.WriteLine(device_id.get_private_key());
+
+                var device_id_type = device_id.get_type();
+                var another_device_id_type = device_id.get_type();
+                var forest_id_type = forest_id.get_type();
+                if (device_id_type.is_same(another_device_id_type)) {
+                    Console.WriteLine("Types are equal");
+                }
+                if (!forest_id_type.is_same(device_id_type)) {
+                    Console.WriteLine("Types are not equal");
+                }
+                if (!device_id_type.is_forest()) {
+                    Console.WriteLine("it is not a forest type");
+                }
+                if (device_id_type.is_device()) {
+                    Console.WriteLine("it is a device type");
+                }
                 
                 if (device_id.save().is_ok()) {
                     Console.WriteLine("Device identity saved in a file.");

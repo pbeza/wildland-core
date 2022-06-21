@@ -1,6 +1,9 @@
 use crate::{
     admin_manager::AdminManager,
-    api::{AdminManagerApi, AdminManagerError, IdentityPair, SeedPhrase, WildlandIdentityApi},
+    api::{
+        AdminManagerApi, AdminManagerError, IdentityPair, SeedPhrase, WildlandIdentityApi,
+        WildlandIdentityType,
+    },
 };
 use ffi_macro::binding_wrapper;
 
@@ -11,6 +14,7 @@ type VoidType = ();
 #[binding_wrapper]
 mod ffi_binding {
     use super::{AdminManagerApi, WildlandIdentityApi};
+
     extern "Rust" {
         type AdminManager;
         fn create_admin_manager() -> AdminManager;
@@ -32,8 +36,13 @@ mod ffi_binding {
         fn get_string(self: &SeedPhrase) -> String;
         fn get_vec(self: &SeedPhrase) -> Vec<String>;
 
-        // type WildlandIdentityType;
-        // fn get_identity_type(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> WildlandIdentityType;
+        type WildlandIdentityType;
+        // TODO generate below enum methods basing on provided variants names
+        fn is_same(self: &WildlandIdentityType, other: &WildlandIdentityType) -> bool;
+        fn is_forest(self: &WildlandIdentityType) -> bool;
+        fn is_device(self: &WildlandIdentityType) -> bool;
+
+        fn get_type(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> WildlandIdentityType;
         fn to_string(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> String;
         fn get_name(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> String;
         fn set_name(self: &mut Arc<Mutex<dyn WildlandIdentityApi>>, name: String);

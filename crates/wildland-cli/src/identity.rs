@@ -73,12 +73,12 @@ fn restore_identity(
 
     println!(
         "🎉 New {:?} identity has been restored and securely stored.",
-        Paint::blue(identities.forest_id.lock().unwrap().get_identity_type()).bold()
+        Paint::blue(identities.forest_id.lock().unwrap().get_type()).bold()
     );
 
     println!(
         "🎉 New {:?} identity has been restored and securely stored.",
-        Paint::blue(identities.device_id.lock().unwrap().get_identity_type()).bold()
+        Paint::blue(identities.device_id.lock().unwrap().get_type()).bold()
     );
 
     Ok(())
@@ -93,13 +93,13 @@ fn generate_identity(admin_manager: &mut AdminManager, name: &str) -> Result<(),
 
     println!(
         "🎉 New {:?} identity {} has been created and securely stored.",
-        Paint::blue(forest_id.get_identity_type()).bold(),
+        Paint::blue(forest_id.get_type()).bold(),
         Paint::yellow(format!("0x{}", forest_id.get_fingerprint_string())).bold(),
     );
 
     println!(
         "🎉 New {:?} identity {} has been created and securely stored.",
-        Paint::blue(device_id.get_identity_type()).bold(),
+        Paint::blue(device_id.get_type()).bold(),
         Paint::yellow(format!("0x{}", device_id.get_fingerprint_string())).bold(),
     );
 

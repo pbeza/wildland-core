@@ -16,6 +16,22 @@ if seed_phrase_result.is_ok() {
     print(device_id.get_fingerprint_string().toString());
     print(device_id.get_private_key());
 
+    var device_id_type = device_id.get_type();
+    var another_device_id_type = device_id.get_type();
+    var forest_id_type = forest_id.get_type();
+    if (device_id_type.is_same(another_device_id_type)) {
+      print("Types are equal");
+    }
+    if (!forest_id_type.is_same(device_id_type)) {
+      print("Types are not equal");
+    }
+    if (!device_id_type.is_forest()) {
+      print("it is not a forest type");
+    }
+    if (device_id_type.is_device()) {
+      print("it is a device type");
+    }
+
     if (device_id.save().is_ok()) {
       print("Device identity saved in a file.");
     }

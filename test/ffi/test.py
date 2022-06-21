@@ -33,6 +33,18 @@ class TestAdminManager(unittest.TestCase):
         device_id.set_name(wildland.RustString("name 2"))
         assert device_id.get_name().c_str() == "name 2"
 
+        device_id_type = device_id.get_type()
+        another_device_id_type = device_id.get_type()
+        forest_id_type = forest_id.get_type()
+        if device_id_type.is_same(another_device_id_type):
+            print("Types are equal")
+        if not forest_id_type.is_same(device_id_type):
+            print("Types are not equal")
+        if not device_id_type.is_forest():
+            print("it is not a forest type")
+        if device_id_type.is_device():
+            print("it is a device type")
+
         if device_id.save().is_ok():
             print("Device identity saved in a file")
 

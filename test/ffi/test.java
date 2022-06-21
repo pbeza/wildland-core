@@ -20,6 +20,22 @@ class main {
       System.out.println(device_id.get_fingerprint_string().c_str());
       System.out.println(device_id.get_private_key());
 
+      var device_id_type = device_id.get_type();
+      var another_device_id_type = device_id.get_type();
+      var forest_id_type = forest_id.get_type();
+      if (device_id_type.is_same(another_device_id_type)) {
+        System.out.println("Types are equal");
+      }
+      if (!forest_id_type.is_same(device_id_type)) {
+        System.out.println("Types are not equal");
+      }
+      if (!device_id_type.is_forest()) {
+        System.out.println("it is not a forest type");
+      }
+      if (device_id_type.is_device()) {
+        System.out.println("it is a device type");
+      }
+
       if (device_id.save().is_ok()) {
         System.out.println("Device identity saved in a file.");
       }
