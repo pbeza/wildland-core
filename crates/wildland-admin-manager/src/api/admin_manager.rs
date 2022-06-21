@@ -5,15 +5,25 @@ pub type MasterIdentity = Arc<Mutex<dyn MasterIdentityApi>>;
 pub type WildlandIdentity = Arc<Mutex<dyn WildlandIdentityApi>>;
 pub type WildlandWallet = Arc<Mutex<dyn Wallet>>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct IdentityPair {
     pub forest_id: WildlandIdentity,
     pub device_id: WildlandIdentity,
 }
 
-pub trait AdminManager {
+impl IdentityPair {
+    pub fn forest_id(&self) -> WildlandIdentity {
+        self.forest_id.clone()
+    }
+
+    pub fn device_id(&self) -> WildlandIdentity {
+        self.device_id.clone()
+    }
+}
+
+pub trait AdminManagerApi {
     /// Creates a randomly generated seed phrase
-    fn create_seed_phrase() -> AdminManagerResult<SeedPhrase>;
+    fn create_seed_phrase(&self) -> AdminManagerResult<SeedPhrase>;
 
     /// Sends a 6-digit verification code to provided email address.
     fn request_verification_email(&mut self) -> AdminManagerResult<()>;

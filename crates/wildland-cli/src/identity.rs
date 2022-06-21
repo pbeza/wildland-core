@@ -85,7 +85,7 @@ fn restore_identity(
 }
 
 fn generate_identity(admin_manager: &mut AdminManager, name: &str) -> Result<(), anyhow::Error> {
-    let seed = AdminManager::create_seed_phrase()?;
+    let seed = admin_manager.create_seed_phrase()?;
     let identities = admin_manager.create_wildland_identities(&seed, name.to_string())?;
 
     let forest_id = identities.forest_id.lock().unwrap();

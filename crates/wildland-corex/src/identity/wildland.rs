@@ -18,7 +18,7 @@ impl From<WildlandIdentityType> for SigningKeyType {
     }
 }
 
-pub trait WildlandIdentityApi: Display {
+pub trait WildlandIdentityApi: Display + std::fmt::Debug {
     fn get_identity_type(&self) -> WildlandIdentityType;
     fn get_public_key(&self) -> Vec<u8>;
     fn get_private_key(&self) -> Vec<u8>;
@@ -31,9 +31,10 @@ pub trait WildlandIdentityApi: Display {
 
 type IdentityWalletType = Box<dyn Wallet>;
 
+#[derive(Debug)]
 pub struct WildlandIdentity {
     identity_type: WildlandIdentityType,
-    keypair: Rc<dyn CryptoSigningKeypair>,
+    keypair: Rc<dyn CryptoSigningKeypair>, // TODO what is this Rc for?
     name: String,
     wallet: IdentityWalletType,
 }

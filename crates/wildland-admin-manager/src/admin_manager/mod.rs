@@ -43,7 +43,7 @@ impl AdminManager {
 }
 
 impl AdminManagerApi for AdminManager {
-    fn create_seed_phrase() -> AdminManagerResult<SeedPhrase> {
+    fn create_seed_phrase(&self) -> AdminManagerResult<SeedPhrase> {
         wildland_corex::generate_random_seed_phrase()
             .map_err(AdminManagerError::from)
             .map(SeedPhrase::from)
