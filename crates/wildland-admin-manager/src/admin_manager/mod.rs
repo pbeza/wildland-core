@@ -113,14 +113,14 @@ impl AdminManagerApi for AdminManager {
 
 #[cfg(test)]
 mod tests {
-    use wildland_corex::FileWallet;
+    use wildland_corex::file_wallet_factory;
 
     use super::*;
     use crate::api::AdminManagerApi;
 
     #[test]
     fn cannot_verify_email_when_not_set() {
-        let mut am = AdminManager::<FileWallet>::new().unwrap();
+        let mut am = AdminManager::with_wallet_factory(&file_wallet_factory);
         assert_eq!(
             am.verify_email("123456".to_owned()).unwrap_err(),
             AdminManagerError::EmailCandidateNotSet
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn verification_fails_if_email_is_already_verified() {
-        let mut am = AdminManager::<FileWallet>::new().unwrap();
+        let mut am = AdminManager::with_wallet_factory(&file_wallet_factory);
         am.set_email("email@email.com".to_string());
         am.request_verification_email().unwrap();
         assert!(am.verify_email("123456".to_owned()).is_ok());
