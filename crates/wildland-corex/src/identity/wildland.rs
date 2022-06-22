@@ -110,9 +110,7 @@ impl WildlandIdentityApi for WildlandIdentity {
 
         self.wallet
             .save_signing_secret(wallet_keypair)
-            .map_err(|e| CoreXError::IdentityGenerationError(e.to_string()))?;
-
-        Ok(())
+            .map_err(CoreXError::IdentitySaveError)
     }
 }
 

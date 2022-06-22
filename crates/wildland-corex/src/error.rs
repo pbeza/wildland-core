@@ -1,8 +1,11 @@
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
+use wildland_wallet::WalletError;
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
 pub enum CoreXError {
+    #[error("Saving identity error: {0}")]
+    IdentitySaveError(WalletError),
     #[error("Seed phrase generation error: {0}")]
     SeedPhraseGenerationError(String),
     #[error("Identity generation error: {0}")]

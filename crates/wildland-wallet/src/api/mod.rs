@@ -1,5 +1,4 @@
-use crate::keys::sign::ManifestSigningKeypair;
-use anyhow::Result;
+use crate::{keys::sign::ManifestSigningKeypair, WalletError};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -10,6 +9,6 @@ pub enum SigningKeyType {
 }
 
 pub trait Wallet: Debug {
-    fn save_signing_secret(&self, keypair: ManifestSigningKeypair) -> Result<()>;
-    fn list_secrets(&self) -> Result<Vec<ManifestSigningKeypair>>;
+    fn save_signing_secret(&self, keypair: ManifestSigningKeypair) -> Result<(), WalletError>;
+    fn list_secrets(&self) -> Result<Vec<ManifestSigningKeypair>, WalletError>;
 }

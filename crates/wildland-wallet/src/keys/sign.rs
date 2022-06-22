@@ -1,4 +1,4 @@
-use crate::SigningKeyType;
+use crate::{SigningKeyType, WalletError};
 use sha2::{Digest, Sha256};
 
 static EMPTY_KEY: [u8; 32] = [0u8; 32];
@@ -37,15 +37,13 @@ impl ManifestSigningKeypair {
         hex::encode(&hash[..16])
     }
 
-    // TODO not used
-    // fn can_sign(&self) -> bool {
-    //     !self.private_key.eq(&EMPTY_KEY)
-    // }
+    pub fn can_sign(&self) -> bool {
+        !self.private_key.eq(&EMPTY_KEY)
+    }
 
-    // TODO do not use anyhow in libs
-    // fn sign(&self, _message: &[u8]) -> Result<()> {
-    //     todo!()
-    // }
+    pub fn sign(&self, _message: &[u8]) -> Result<(), WalletError> {
+        todo!()
+    }
 
     pub fn get_public_key(&self) -> Vec<u8> {
         self.public_key.to_vec()

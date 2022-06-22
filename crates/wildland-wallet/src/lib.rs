@@ -8,12 +8,16 @@ pub fn get_version() -> &'static str {
 
 pub use api::*;
 pub use keys::sign::ManifestSigningKeypair;
+use thiserror::Error;
 pub use wallet::{
     file::{file_wallet_factory, FileWallet},
     WalletFactoryType,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Error, Eq, Clone)]
 pub enum WalletError {
-    TODOError(String),
+    #[error("File error: {0}")]
+    FileError(String),
+    #[error("Cryptographic key error: {0}")]
+    KeyError(String),
 }

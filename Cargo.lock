@@ -1747,7 +1747,6 @@ dependencies = [
 name = "wildland-admin-manager"
 version = "0.5.1"
 dependencies = [
- "anyhow",
  "cxx",
  "ffi-macro",
  "ffi-macro-build",
@@ -1831,13 +1830,13 @@ dependencies = [
 name = "wildland-wallet"
 version = "0.1.1"
 dependencies = [
- "anyhow",
  "base16ct",
  "hex",
  "hex-literal",
  "serde",
  "serde_json",
  "sha2 0.10.2",
+ "thiserror",
  "wildland-crypto",
  "xdg",
 ]
