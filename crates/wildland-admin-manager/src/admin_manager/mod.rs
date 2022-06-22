@@ -5,14 +5,13 @@ use crate::api::{
     WildlandIdentityType,
 };
 pub use api::{MasterIdentity, WildlandIdentity};
-use wildland_corex::{file_wallet_factory, WalletFactoryType};
+use wildland_corex::WalletFactoryType;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone)]
 pub struct AdminManager {
+    wallet_factory: WalletFactoryType,
     email: Option<EmailAddress>,
 }
-
-const WALLET_FACTORY: WalletFactoryType = &file_wallet_factory;
 
 #[derive(Debug, Clone)]
 enum EmailAddress {
@@ -20,7 +19,22 @@ enum EmailAddress {
     Verified(String),
 }
 
+impl std::fmt::Debug for AdminManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AdminManager")
+            .field("email", &self.email)
+            .finish()
+    }
+}
+
 impl AdminManager {
+    pub fn with_wallet_factory(wallet_factory: WalletFactoryType) -> Self {
+        Self {
+            wallet_factory,
+            email: Default::default(),
+        }
+    }
+
     fn create_forest_identity(
         &self,
         master_identity: Box<dyn MasterIdentityApi>,
@@ -33,8 +47,7 @@ impl AdminManager {
     }
 
     fn create_device_identity(&self, name: String) -> AdminManagerResult<api::WildlandIdentity> {
-        // TODO Control over wallet type should be realized by some method call or passing specific parameter rather than using Admin Manager type for it (generics)
-        let master_identity = wildland_corex::MasterIdentity::new(WALLET_FACTORY)?;
+        let master_identity = wildland_corex::MasterIdentity::new(self.wallet_factory)?;
         let device_id =
             master_identity.create_wildland_identity(WildlandIdentityType::Device, name)?;
 
@@ -85,7 +98,7 @@ impl AdminManagerApi for AdminManager {
     ) -> AdminManagerResult<api::IdentityPair> {
         let master_identity = wildland_corex::MasterIdentity::with_identity(
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
-            WALLET_FACTORY,
+            self.wallet_factory,
         );
 
         let forest_id = self.create_forest_identity(Box::new(master_identity), String::from(""))?;
