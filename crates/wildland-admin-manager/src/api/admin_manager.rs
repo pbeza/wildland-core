@@ -1,3 +1,5 @@
+use wildland_corex::ManifestSigningKeypair;
+
 use super::{AdminManagerResult, MasterIdentityApi, SeedPhrase, Wallet, WildlandIdentityApi};
 use std::sync::{Arc, Mutex};
 
@@ -42,4 +44,7 @@ pub trait AdminManagerApi {
         seed: &SeedPhrase,
         device_name: String,
     ) -> AdminManagerResult<IdentityPair>;
+
+    // List all keypairs stored in wallet that Admin Manager was created with
+    fn list_secrets(&self) -> AdminManagerResult<Vec<ManifestSigningKeypair>>;
 }

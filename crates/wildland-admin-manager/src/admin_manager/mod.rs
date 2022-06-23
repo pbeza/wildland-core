@@ -109,6 +109,13 @@ impl AdminManagerApi for AdminManager {
             device_id,
         })
     }
+
+    fn list_secrets(&self) -> AdminManagerResult<Vec<wildland_corex::ManifestSigningKeypair>> {
+        // TODO errors/unwraps remove all occurrences of  wallet_factory unwrap
+        let wallet = (self.wallet_factory)().unwrap();
+        let ids = wallet.list_secrets().unwrap();
+        Ok(ids)
+    }
 }
 
 #[cfg(test)]

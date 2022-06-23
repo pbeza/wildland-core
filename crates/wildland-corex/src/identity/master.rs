@@ -1,13 +1,11 @@
+use super::wildland::{WildlandIdentity, WildlandIdentityApi, WildlandIdentityType};
+use crate::{crypto::SeedPhrase, CoreXError, CryptoSigningKeypair, WalletFactoryType};
 use std::{
     fmt::Display,
     sync::{Arc, Mutex},
 };
-
-use super::wildland::{WildlandIdentity, WildlandIdentityApi, WildlandIdentityType};
 use wildland_crypto::identity::{Identity, SeedPhraseWords};
-use wildland_wallet::{wallet::WalletFactoryType, Wallet};
-
-use crate::{crypto::SeedPhrase, CoreXError, CryptoSigningKeypair};
+use wildland_wallet::Wallet;
 
 pub trait MasterIdentityApi: Display {
     fn get_seed_phrase(&self) -> SeedPhraseWords;

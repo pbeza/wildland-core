@@ -1,19 +1,17 @@
 mod crypto;
 mod error;
 mod identity;
+mod wallet;
 
 pub use crypto::*;
 pub use error::*;
-pub use identity::master::*;
-pub use identity::wildland::*;
+pub use identity::{master::*, wildland::*};
+pub use wallet::{file_wallet_factory, WalletFactoryType};
 pub use wildland_crypto::identity::{
     keys::KeyPair as CryptoKeypair, keys::SigningKeyPair as CryptoSigningKeypair, Identity,
     SeedPhraseWords, SEED_PHRASE_LEN,
 };
-pub use wildland_wallet::{
-    file_wallet_factory, FileWallet, ManifestSigningKeypair, SigningKeyType, Wallet,
-    WalletFactoryType,
-};
+pub use wildland_wallet::{ManifestSigningKeypair, Wallet};
 
 pub fn get_version() -> &'static str {
     env!("CARGO_PKG_VERSION")

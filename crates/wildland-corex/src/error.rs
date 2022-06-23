@@ -6,6 +6,8 @@ use wildland_wallet::WalletError;
 pub enum CoreXError {
     #[error("Saving identity error: {0}")]
     IdentitySaveError(WalletError),
+    #[error("Could not create a wallet: {0}")]
+    WalletCreationError(WalletError),
     #[error("Seed phrase generation error: {0}")]
     SeedPhraseGenerationError(String),
     #[error("Identity generation error: {0}")]

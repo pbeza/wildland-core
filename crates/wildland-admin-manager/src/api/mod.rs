@@ -6,6 +6,6 @@ pub use admin_manager::{
 };
 pub use result::*;
 pub use wildland_corex::{
-    FileWallet, ManifestSigningKeypair, MasterIdentityApi, SeedPhrase, SeedPhraseWords, Wallet,
+    ManifestSigningKeypair, MasterIdentityApi, SeedPhrase, SeedPhraseWords, Wallet,
     WildlandIdentityApi, WildlandIdentityType, SEED_PHRASE_LEN,
 };

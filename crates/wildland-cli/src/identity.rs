@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use wildland_admin_manager::{admin_manager::AdminManager, api::AdminManagerApi};
-use wildland_corex::{file_wallet_factory, SeedPhrase, SeedPhraseWords};
+use wildland_corex::{file_wallet_factory, ManifestSigningKeypair, SeedPhrase, SeedPhraseWords};
 use yansi::Paint;
 
 #[derive(Parser, Debug)]
@@ -35,22 +35,21 @@ impl IdentityCliOpts {
                 restore_identity(admin_manager, seed, name)?
             }
             IdentitySubcommand::List => {
-                // TODO
-                // let ids = wallet.lock().unwrap().list_secrets()?;
+                let ids = admin_manager.list_secrets().unwrap();
 
-                // match ids.len() {
-                //     0 => {
-                //         println!("❌ No identities found");
-                //     }
-                //     1 => {
-                //         println!("🔑 Found 1 identity");
-                //         print_identities(&ids);
-                //     }
-                //     _ => {
-                //         println!("🔑 Found {} identities", ids.len());
-                //         print_identities(&ids);
-                //     }
-                // }
+                match ids.len() {
+                    0 => {
+                        println!("❌ No identities found");
+                    }
+                    1 => {
+                        println!("🔑 Found 1 identity");
+                        print_identities(&ids);
+                    }
+                    _ => {
+                        println!("🔑 Found {} identities", ids.len());
+                        print_identities(&ids);
+                    }
+                }
             }
         }
 
@@ -108,14 +107,13 @@ fn generate_identity(admin_manager: &mut AdminManager, name: &str) -> Result<(),
     Ok(())
 }
 
-// TODO REMOVE OR WHAT?
-// fn print_identities(ids: &[ManifestSigningKeypair]) {
-//     ids.iter().for_each(|kp| {
-//         println!();
-//         println!("\tType: {:?}", Paint::blue(kp.get_key_type()).bold());
-//         println!("\tFingerprint: {}", kp.fingerprint());
-//     })
-// }
+fn print_identities(ids: &[ManifestSigningKeypair]) {
+    ids.iter().for_each(|kp| {
+        println!();
+        println!("\tType: {:?}", Paint::blue(kp.get_key_type()).bold());
+        println!("\tFingerprint: {}", kp.fingerprint());
+    })
+}
 
 fn print_seedphrase(seed_phrase: &SeedPhrase) {
     let words: SeedPhraseWords = seed_phrase.into();
