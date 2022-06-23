@@ -49,7 +49,7 @@ type IdentityWalletType = Box<dyn Wallet>;
 #[derive(Debug)]
 pub struct WildlandIdentity {
     identity_type: WildlandIdentityType,
-    keypair: Rc<dyn CryptoSigningKeypair>, // TODO what is this Rc for?
+    keypair: Rc<dyn CryptoSigningKeypair>,
     name: String,
     wallet: IdentityWalletType,
 }
