@@ -1,7 +1,8 @@
 use super::wildland::{WildlandIdentity, WildlandIdentityApi, WildlandIdentityType};
-use crate::{crypto::SeedPhrase, CoreXError, CryptoSigningKeypair, WalletFactoryType};
+use crate::{crypto::SeedPhrase, CoreXError, CryptoSigningKeypair};
 use std::{
     fmt::Display,
+    rc::Rc,
     sync::{Arc, Mutex},
 };
 use wildland_crypto::identity::{Identity, SeedPhraseWords};
@@ -17,16 +18,15 @@ pub trait MasterIdentityApi: Display {
     ) -> Result<Arc<Mutex<dyn WildlandIdentityApi>>, CoreXError>;
 }
 
-type MasterIdentityWallet = Box<dyn Wallet>;
-// #[derive(Clone)]
+type MasterIdentityWalletType = Rc<dyn Wallet>;
+#[derive(Clone)]
 pub struct MasterIdentity {
     inner_identity: Identity,
-    _wallet: MasterIdentityWallet, // TODO save it
-    wallet_factory: WalletFactoryType,
+    wallet: MasterIdentityWalletType,
 }
 
 impl MasterIdentity {
-    pub fn new(wallet_factory: WalletFactoryType) -> Result<Self, CoreXError> {
+    pub fn new(wallet: MasterIdentityWalletType) -> Result<Self, CoreXError> {
         let seed = crate::generate_random_seed_phrase()
             .map_err(CoreXError::from)
             .map(SeedPhrase::from)?;
@@ -34,15 +34,13 @@ impl MasterIdentity {
         let inner_identity =
             crate::try_identity_from_seed(seed.as_ref()).map_err(CoreXError::from)?;
 
-        Ok(Self::with_identity(inner_identity, wallet_factory))
+        Ok(Self::with_identity(inner_identity, wallet))
     }
 
-    pub fn with_identity(inner_identity: Identity, wallet_factory: WalletFactoryType) -> Self {
-        let wallet = wallet_factory().unwrap();
+    pub fn with_identity(inner_identity: Identity, wallet: MasterIdentityWalletType) -> Self {
         Self {
             inner_identity,
-            _wallet: wallet,
-            wallet_factory,
+            wallet,
         }
     }
 }
@@ -62,12 +60,7 @@ impl MasterIdentityApi for MasterIdentity {
         name: String,
     ) -> Result<Arc<Mutex<dyn WildlandIdentityApi>>, CoreXError> {
         let keypair = self.get_signing_keypair().into();
-        let identity = WildlandIdentity::new(
-            identity_type,
-            keypair,
-            name,
-            (self.wallet_factory)().unwrap(),
-        );
+        let identity = WildlandIdentity::new(identity_type, keypair, name, self.wallet.clone());
 
         identity.save()?;
 

@@ -6,7 +6,7 @@ mod wallet;
 pub use crypto::*;
 pub use error::*;
 pub use identity::{master::*, wildland::*};
-pub use wallet::{file_wallet_factory, WalletFactoryType};
+pub use wallet::{create_file_wallet, WalletFactoryType};
 pub use wildland_crypto::identity::{
     keys::KeyPair as CryptoKeypair, keys::SigningKeyPair as CryptoSigningKeypair, Identity,
     SeedPhraseWords, SEED_PHRASE_LEN,

@@ -44,7 +44,7 @@ pub trait WildlandIdentityApi: Display + std::fmt::Debug {
     fn save(&self) -> Result<(), CoreXError>;
 }
 
-type IdentityWalletType = Box<dyn Wallet>;
+type IdentityWalletType = Rc<dyn Wallet>;
 
 #[derive(Debug)]
 pub struct WildlandIdentity {

@@ -22,7 +22,7 @@ impl FileWallet {
     }
 }
 
-pub fn file_wallet_factory() -> Result<Box<dyn Wallet>, WalletError> {
+pub fn create_file_wallet() -> Result<Box<dyn Wallet>, WalletError> {
     Ok(Box::new(FileWallet {
         base_directory: BaseDirectories::with_prefix("wildland/wallet")
             .map_err(|e| WalletError::FileError(e.to_string()))?,

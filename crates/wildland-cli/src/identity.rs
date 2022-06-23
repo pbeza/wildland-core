@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use wildland_admin_manager::{admin_manager::AdminManager, api::AdminManagerApi};
-use wildland_corex::{file_wallet_factory, ManifestSigningKeypair, SeedPhrase, SeedPhraseWords};
+use wildland_corex::{create_file_wallet, ManifestSigningKeypair, SeedPhrase, SeedPhraseWords};
 use yansi::Paint;
 
 #[derive(Parser, Debug)]
@@ -27,7 +27,7 @@ pub enum IdentitySubcommand {
 
 impl IdentityCliOpts {
     pub fn handle_command(&self) -> Result<()> {
-        let mut admin_manager = AdminManager::with_wallet_factory(&file_wallet_factory);
+        let mut admin_manager = AdminManager::with_wallet(create_file_wallet().unwrap());
 
         match &self.subcommand {
             IdentitySubcommand::Generate { name } => generate_identity(&mut admin_manager, name)?,

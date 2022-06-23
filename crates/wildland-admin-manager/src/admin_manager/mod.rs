@@ -1,15 +1,15 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, rc::Rc};
 
 use crate::api::{
     self, AdminManagerApi, AdminManagerError, AdminManagerResult, MasterIdentityApi, SeedPhrase,
     WildlandIdentityType,
 };
 pub use api::{MasterIdentity, WildlandIdentity};
-use wildland_corex::WalletFactoryType;
+use wildland_corex::Wallet;
 
 #[derive(Clone)]
 pub struct AdminManager {
-    wallet_factory: WalletFactoryType,
+    wallet: Rc<dyn Wallet>,
     email: Option<EmailAddress>,
 }
 
@@ -28,9 +28,9 @@ impl std::fmt::Debug for AdminManager {
 }
 
 impl AdminManager {
-    pub fn with_wallet_factory(wallet_factory: WalletFactoryType) -> Self {
+    pub fn with_wallet(wallet: Box<dyn Wallet>) -> Self {
         Self {
-            wallet_factory,
+            wallet: wallet.into(),
             email: Default::default(),
         }
     }
@@ -47,7 +47,7 @@ impl AdminManager {
     }
 
     fn create_device_identity(&self, name: String) -> AdminManagerResult<api::WildlandIdentity> {
-        let master_identity = wildland_corex::MasterIdentity::new(self.wallet_factory)?;
+        let master_identity = wildland_corex::MasterIdentity::new(self.wallet.clone())?;
         let device_id =
             master_identity.create_wildland_identity(WildlandIdentityType::Device, name)?;
 
@@ -98,7 +98,7 @@ impl AdminManagerApi for AdminManager {
     ) -> AdminManagerResult<api::IdentityPair> {
         let master_identity = wildland_corex::MasterIdentity::with_identity(
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
-            self.wallet_factory,
+            self.wallet.clone(),
         );
 
         let forest_id = self.create_forest_identity(Box::new(master_identity), String::from(""))?;
@@ -111,8 +111,7 @@ impl AdminManagerApi for AdminManager {
     }
 
     fn list_secrets(&self) -> AdminManagerResult<Vec<wildland_corex::ManifestSigningKeypair>> {
-        // TODO errors/unwraps remove all occurrences of  wallet_factory unwrap
-        let wallet = (self.wallet_factory)().unwrap();
+        let wallet = self.wallet.clone();
         let ids = wallet.list_secrets().unwrap();
         Ok(ids)
     }
@@ -120,14 +119,14 @@ impl AdminManagerApi for AdminManager {
 
 #[cfg(test)]
 mod tests {
-    use wildland_corex::file_wallet_factory;
+    use wildland_corex::create_file_wallet;
 
     use super::*;
     use crate::api::AdminManagerApi;
 
     #[test]
     fn cannot_verify_email_when_not_set() {
-        let mut am = AdminManager::with_wallet_factory(&file_wallet_factory);
+        let mut am = AdminManager::with_wallet(create_file_wallet().unwrap());
         assert_eq!(
             am.verify_email("123456".to_owned()).unwrap_err(),
             AdminManagerError::EmailCandidateNotSet
@@ -136,7 +135,7 @@ mod tests {
 
     #[test]
     fn verification_fails_if_email_is_already_verified() {
-        let mut am = AdminManager::with_wallet_factory(&file_wallet_factory);
+        let mut am = AdminManager::with_wallet(create_file_wallet().unwrap());
         am.set_email("email@email.com".to_string());
         am.request_verification_email().unwrap();
         assert!(am.verify_email("123456".to_owned()).is_ok());
