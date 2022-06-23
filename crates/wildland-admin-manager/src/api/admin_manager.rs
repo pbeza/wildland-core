@@ -1,11 +1,9 @@
 use wildland_corex::ManifestSigningKeypair;
 
-use super::{AdminManagerResult, MasterIdentityApi, SeedPhrase, Wallet, WildlandIdentityApi};
+use super::{AdminManagerResult, SeedPhrase, WildlandIdentityApi};
 use std::sync::{Arc, Mutex};
 
-pub type MasterIdentity = Arc<Mutex<dyn MasterIdentityApi>>;
 pub type WildlandIdentity = Arc<Mutex<dyn WildlandIdentityApi>>;
-pub type WildlandWallet = Arc<Mutex<dyn Wallet>>;
 
 #[derive(Clone, Debug)]
 pub struct IdentityPair {

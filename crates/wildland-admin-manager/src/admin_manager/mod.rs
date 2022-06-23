@@ -4,7 +4,7 @@ use crate::api::{
     self, AdminManagerApi, AdminManagerError, AdminManagerResult, MasterIdentityApi, SeedPhrase,
     WildlandIdentityType,
 };
-pub use api::{MasterIdentity, WildlandIdentity};
+pub use api::WildlandIdentity;
 use wildland_corex::Wallet;
 
 #[derive(Clone)]
