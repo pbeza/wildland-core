@@ -18,33 +18,34 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::convert::TryFrom;
+
+use bip39::{Language::English, Mnemonic, Seed};
+use crypto_box::SecretKey as EncryptionSecretKey;
+use ed25519_dalek::SecretKey as SigningSecretKey;
+use ed25519_dalek_bip32::{DerivationPath, ExtendedSecretKey};
+use sha2::{Digest, Sha256};
+
 use crate::{
     error::CryptoError,
     identity::{
-        keys::{EncryptionKeyPair, SigningKeyPair},
+        keys::{EncryptingKeypair, SigningKeypair},
         seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN},
-        KeyPair,
     },
 };
 
-use bip39::{Language::English, Mnemonic, Seed};
-use cryptoxide::ed25519::keypair;
-use ed25519_bip32::{DerivationScheme, XPrv};
-use sha2::{Digest, Sha256};
-use std::convert::TryFrom;
-
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
-    // "574c44" == b'WLD'.hex()
-    "/m/574c44/0/0".to_string()
+    // "5721156" == b'WLD'.hex() converted to decimal
+    "m/5721156'/0'/0'".to_string()
 }
 
 fn encryption_key_path(index: u64) -> String {
-    format!("/m/574c44/1/{}", index)
+    format!("m/5721156'/1'/{}'", index)
 }
 
 fn single_use_encryption_key_path(index: u64) -> String {
-    format!("/m/574c44/2/{}", index)
+    format!("m/5721156'/2'/{}'", index)
 }
 
 /// This structure represents Wildland cryptographic identity.
@@ -53,9 +54,9 @@ fn single_use_encryption_key_path(index: u64) -> String {
 /// - signing (not rotated, used to sign "user manifest")
 /// - encryption (used by other people to encrypt secrets to the user, rotated)
 /// - single-use-encryption - to transfer secrets in public
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug)]
 pub struct Identity {
-    xprv: XPrv,
+    extended_seckey: ExtendedSecretKey,
     words: SeedPhraseWords,
 }
 
@@ -92,11 +93,12 @@ impl TryFrom<Mnemonic> for Identity {
         let mut output_key_material = [0u8; 96];
         extend_seed(seed.as_bytes(), &mut output_key_material);
 
-        // Now we can use this randomness as bip32-ed25519 extended private key
-        let root_xprv = XPrv::normalize_bytes_ed25519(output_key_material);
+        // Now we can use this randomness as bip32-dalek-ed25519 extended private key
+        let extended_secret_key =
+            ExtendedSecretKey::from_seed(output_key_material.as_slice()).unwrap();
 
         Ok(Identity {
-            xprv: root_xprv,
+            extended_seckey: extended_secret_key,
             words: mnemonic
                 .phrase()
                 .split(' ')
@@ -115,8 +117,8 @@ impl TryFrom<Mnemonic> for Identity {
 }
 
 impl Identity {
-    pub fn get_xprv(&self) -> &XPrv {
-        &self.xprv
+    pub fn get_extended_seckey(&self) -> &ExtendedSecretKey {
+        &self.extended_seckey
     }
 
     pub fn get_seed_phrase(&self) -> SeedPhraseWords {
@@ -141,8 +143,8 @@ impl Identity {
 
     /// Derive the key that can be used to sign user manifest.
     /// Pubkey represents user to the world.
-    pub fn signing_key(&self) -> impl SigningKeyPair {
-        self.derive_signing_key(&signing_key_path())
+    pub fn signing_keypair(&self) -> SigningKeypair {
+        self.derive_signing_keypair(&signing_key_path())
     }
 
     /// Derive current encryption key, used to encrypt secrets to the user.
@@ -150,68 +152,62 @@ impl Identity {
     /// is compromised / stolen / lost.
     /// Current encryption pubkey should be accessible to anyone
     /// willing to communicate with the user.
-    pub fn encryption_key(&self, index: u64) -> impl EncryptionKeyPair {
-        self.derive_encryption_key(&encryption_key_path(index))
+    pub fn encryption_keypair(&self, index: u64) -> EncryptingKeypair {
+        self.derive_encryption_keypair(&encryption_key_path(index))
     }
 
     /// Deterministically derive single-use encryption key. Send it to
     /// the seller of storage, so it can use it to encrypt your storage
     /// credentials.
     /// By bumping index, one can create multiple keys to be used
-    /// with different on-chain identities, making linking the purchaces
+    /// with different on-chain identities, making linking the purchases
     /// harder.
-    pub fn single_use_encryption_key(&self, index: u64) -> impl EncryptionKeyPair {
-        self.derive_encryption_key(&single_use_encryption_key_path(index))
+    pub fn single_use_encryption_keypair(&self, index: u64) -> EncryptingKeypair {
+        self.derive_encryption_keypair(&single_use_encryption_key_path(index))
     }
 
-    fn derive_signing_key(&self, path: &str) -> impl SigningKeyPair {
-        let private_key = self.derive_private_key_from_path(path);
+    fn derive_signing_keypair(&self, path: &str) -> SigningKeypair {
+        let derived_extended_seckey = self.derive_private_key_from_path(path);
 
         // drop both the chain-code from xprv and last 32 bytes
-        let seckey: [u8; 32] = <[u8; 32]>::try_from(&private_key.as_ref()[..32]).unwrap();
-
-        // drop the chain-code from xprv and generate public key from the secret key
-        let (_, pubkey) = keypair(&seckey);
-
-        KeyPair::from_bytes(seckey, pubkey)
+        let seckey_bytes = *derived_extended_seckey.secret_key.as_bytes();
+        let seckey = SigningSecretKey::from_bytes(&seckey_bytes).unwrap();
+        let pubkey = (&seckey).into();
+        SigningKeypair {
+            secret: seckey,
+            public: pubkey,
+        }
     }
 
-    fn derive_encryption_key(&self, path: &str) -> impl EncryptionKeyPair {
-        let private_key: XPrv = self.derive_private_key_from_path(path);
+    fn derive_encryption_keypair(&self, path: &str) -> EncryptingKeypair {
+        let derived_extended_seckey = self.derive_private_key_from_path(path);
 
-        // Drop the chain-code from xprv - it is no longer needed. This leaves 64 bytes.
-        // Encryption in libsodium works on 32 byte keys, while what we have is 64 bytes.
         // Curve25519 keys are created from random bytes. Here we just trim.
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(&private_key.as_ref()[..32]);
-        // As for the key clamping - it is handled by crypto_box::SecretKey
-        let curve25519_sk = &crypto_box::SecretKey::from(bytes);
+        // // As for the key clamping - it is handled by crypto_box::SecretKey
+        let curve25519_sk =
+            EncryptionSecretKey::from(*derived_extended_seckey.secret_key.as_bytes());
         let curve25519_pk = curve25519_sk.public_key();
 
-        KeyPair::from_bytes(*curve25519_sk.as_bytes(), *curve25519_pk.as_bytes())
+        EncryptingKeypair {
+            secret: curve25519_sk,
+            public: curve25519_pk,
+        }
     }
 
-    fn derive_private_key_from_path(&self, path: &str) -> XPrv {
-        let mut tokens = path.split('/');
-
-        match (tokens.next(), tokens.next()) {
-            (Some(""), Some("m")) => {
-                tokens.fold(self.xprv.clone(), |secret_xprv, derivation_index| {
-                    let di = u32::from_str_radix(derivation_index, 16).unwrap();
-                    (&secret_xprv).derive(DerivationScheme::V2, di)
-                })
-            }
-            _ => panic!("Derivation path must start with '/m/'"), // TODO replace panic with some error handling
-        }
+    fn derive_private_key_from_path(&self, path: &str) -> ExtendedSecretKey {
+        let derivation_path: DerivationPath = path.parse().unwrap();
+        self.extended_seckey.derive(&derivation_path).unwrap()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::common::test_utilities::{generate_random_nonce, MNEMONIC_PHRASE};
-    use ed25519_bip32::XPrv;
+    use crate::signature::{sign, verify};
+    use ed25519_dalek::Signature;
     use hex::encode;
     use hex_literal::hex;
+
+    use crate::common::test_utilities::MNEMONIC_PHRASE;
 
     use super::*;
 
@@ -225,115 +221,34 @@ mod tests {
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
-        let skey = user.signing_key();
-        let signature = skey.sign(MSG);
-        assert!(skey.verify(MSG, &signature));
+        let keypair = user.signing_keypair();
+        let signature: Signature = sign(MSG, &keypair);
+        assert!(verify(MSG, &signature, &keypair.public).is_ok());
     }
 
     #[test]
     fn cannot_verify_signature_for_other_message() {
         let user = user();
-        let skey = user.signing_key();
-        let signature = skey.sign(MSG);
-
-        assert!(!skey.verify("invalid message".as_ref(), &signature));
-    }
-
-    #[test]
-    fn can_encrypt_and_decrypt_message_with_encryption_key() {
-        let user = user();
-        let alice_keypair = user.encryption_key(0);
-        let bob_keypair = user.encryption_key(1);
-        let nonce = generate_random_nonce();
-
-        let ciphertext = alice_keypair
-            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
-            .unwrap();
-        let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
-
-        assert_eq!(MSG, result.unwrap().as_slice())
-    }
-
-    #[test]
-    fn can_encrypt_and_decrypt_message_with_single_use_encryption_key() {
-        let user = user();
-        let alice_keypair = user.single_use_encryption_key(0);
-        let bob_keypair = user.single_use_encryption_key(1);
-        let nonce = generate_random_nonce();
-
-        let ciphertext = alice_keypair
-            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
-            .unwrap();
-        let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
-
-        assert_eq!(MSG, result.unwrap().as_slice())
-    }
-
-    #[test]
-    fn cannot_decrypt_message_when_invalid_encryption_key_is_used() {
-        let user = user();
-        let alice_keypair = user.encryption_key(0);
-        let bob_keypair = user.encryption_key(1);
-        let charlie_keypair = user.encryption_key(2);
-        let nonce = generate_random_nonce();
-
-        let ciphertext = alice_keypair
-            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
-            .unwrap();
-        let result =
-            charlie_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
-
-        assert!(result.is_err())
-    }
-
-    #[test]
-    fn cannot_decrypt_message_when_invalid_single_use_encryption_key_is_used() {
-        let user = user();
-        let alice_keypair = user.single_use_encryption_key(0);
-        let bob_keypair = user.single_use_encryption_key(1);
-        let charlie_keypair = user.single_use_encryption_key(2);
-        let nonce = generate_random_nonce();
-
-        let ciphertext = alice_keypair
-            .encrypt(MSG, &nonce, &bob_keypair.pubkey())
-            .unwrap();
-        let result =
-            charlie_keypair.decrypt(ciphertext.as_slice(), &nonce, &alice_keypair.pubkey());
-
-        assert!(result.is_err())
-    }
-
-    #[test]
-    fn cannot_decrypt_message_with_different_nonce() {
-        let user = user();
-        let alice_keypair = user.single_use_encryption_key(0);
-        let bob_keypair = user.single_use_encryption_key(1);
-        let nonce1 = generate_random_nonce();
-        let nonce2 = generate_random_nonce();
-
-        let ciphertext = alice_keypair
-            .encrypt(MSG, &nonce1, &bob_keypair.pubkey())
-            .unwrap();
-        let result = bob_keypair.decrypt(ciphertext.as_slice(), &nonce2, &bob_keypair.pubkey());
-
-        assert!(result.is_err())
+        let keypair = user.signing_keypair();
+        let signature: Signature = sign(MSG, &keypair);
+        assert!(verify("invalid message".as_ref(), &signature, &keypair.public).is_err());
     }
 
     #[test]
     fn can_generate_distinct_keypairs() {
         let user = user();
-        let skey = user.signing_key();
-        println!("signing key, sec {}", encode(skey.seckey_as_bytes()));
-        println!("signing key, pub {}", encode(skey.pubkey_as_bytes()));
-        let e0key = user.encryption_key(0);
-        println!("encryp0 key, sec: {}", encode(e0key.seckey().as_bytes()));
-        println!("encryp0 key, pub: {}", encode(e0key.pubkey().as_bytes()));
-        let e1key = user.encryption_key(1);
-        assert_ne!(skey.seckey_as_bytes(), *e0key.seckey().as_bytes());
-        assert_ne!(e0key.seckey().as_bytes(), e1key.seckey().as_bytes());
+        let skeypair = user.signing_keypair();
+        println!("signing key, sec {}", encode(skeypair.secret.as_bytes()));
+        println!("signing key, pub {}", encode(skeypair.public.as_bytes()));
+        let e0key = user.encryption_keypair(0);
+        println!("encryp0 key, sec: {}", encode(e0key.secret.as_bytes()));
+        println!("encryp0 key, pub: {}", encode(e0key.public.as_bytes()));
+        let e1key = user.encryption_keypair(1);
+        assert_ne!(skeypair.secret.as_bytes(), e0key.secret.as_bytes());
+        assert_ne!(e0key.secret.as_bytes(), e1key.secret.as_bytes());
 
-        assert_eq!(encode(skey.seckey_as_bytes()).len(), 64);
-        assert_eq!(encode(skey.pubkey_as_bytes()).len(), 64);
+        assert_eq!(encode(skeypair.secret.as_bytes()).len(), 64);
+        assert_eq!(encode(skeypair.public.as_bytes()).len(), 64);
     }
 
     const TEST_MNEMONIC_12: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -400,7 +315,13 @@ mod tests {
             .unwrap();
         let user = Identity::try_from(&mnemonic_array).unwrap();
 
-        assert_eq!(user.get_xprv(), &XPrv::normalize_bytes_ed25519(ROOT_XPRV))
+        assert_eq!(
+            user.get_extended_seckey().secret_key.to_bytes(),
+            ExtendedSecretKey::from_seed(&ROOT_XPRV)
+                .unwrap()
+                .secret_key
+                .to_bytes()
+        )
     }
 
     #[test]

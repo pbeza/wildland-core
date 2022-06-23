@@ -3,7 +3,7 @@ use std::fmt::Display;
 use wildland_corex::Identity;
 pub use wildland_corex::{SeedPhraseWords, SEED_PHRASE_LEN};
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct CryptoIdentity {
     identity_type: api::IdentityType,
     name: String,
@@ -16,12 +16,12 @@ impl Display for CryptoIdentity {
             "
 Name: {}
 Type: {:?}
-Private key: {}
+Private key: {:?}
 Seed phrase: {}
 ",
             self.name,
             self.identity_type,
-            self.inner_identity.get_xprv(),
+            self.inner_identity.get_extended_seckey(),
             self.inner_identity.get_seed_phrase().join(" ")
         )
     }
