@@ -7,7 +7,7 @@ use crate::api::{
 pub use api::WildlandIdentity;
 use wildland_corex::Wallet;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AdminManager {
     wallet: Rc<dyn Wallet>,
     email: Option<EmailAddress>,
@@ -17,14 +17,6 @@ pub struct AdminManager {
 enum EmailAddress {
     Unverified(String),
     Verified(String),
-}
-
-impl std::fmt::Debug for AdminManager {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AdminManager")
-            .field("email", &self.email)
-            .finish()
-    }
 }
 
 impl AdminManager {
@@ -111,8 +103,10 @@ impl AdminManagerApi for AdminManager {
     }
 
     fn list_secrets(&self) -> AdminManagerResult<Vec<wildland_corex::ManifestSigningKeypair>> {
-        let wallet = self.wallet.clone();
-        let ids = wallet.list_secrets().unwrap();
+        let ids = self
+            .wallet
+            .list_secrets()
+            .map_err(AdminManagerError::Wallet)?;
         Ok(ids)
     }
 }

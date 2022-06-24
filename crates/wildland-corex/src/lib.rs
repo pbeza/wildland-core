@@ -11,7 +11,7 @@ pub use wildland_crypto::identity::{
     keys::KeyPair as CryptoKeypair, keys::SigningKeyPair as CryptoSigningKeypair, Identity,
     SeedPhraseWords, SEED_PHRASE_LEN,
 };
-pub use wildland_wallet::{ManifestSigningKeypair, Wallet};
+pub use wildland_wallet::{ManifestSigningKeypair, Wallet, WalletError};
 
 pub fn get_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
