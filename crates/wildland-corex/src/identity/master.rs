@@ -1,10 +1,6 @@
 use super::wildland::{WildlandIdentity, WildlandIdentityApi, WildlandIdentityType};
 use crate::{crypto::SeedPhrase, CoreXError, CryptoSigningKeypair};
-use std::{
-    fmt::Display,
-    rc::Rc,
-    sync::{Arc, Mutex},
-};
+use std::{fmt::Display, rc::Rc};
 use wildland_crypto::identity::{Identity, SeedPhraseWords};
 use wildland_wallet::Wallet;
 
@@ -15,7 +11,7 @@ pub trait MasterIdentityApi: Display {
         &self,
         identity_type: WildlandIdentityType,
         name: String,
-    ) -> Result<Arc<Mutex<dyn WildlandIdentityApi>>, CoreXError>;
+    ) -> Result<WildlandIdentity, CoreXError>;
 }
 
 type MasterIdentityWalletType = Rc<dyn Wallet>;
@@ -58,13 +54,13 @@ impl MasterIdentityApi for MasterIdentity {
         &self,
         identity_type: WildlandIdentityType,
         name: String,
-    ) -> Result<Arc<Mutex<dyn WildlandIdentityApi>>, CoreXError> {
+    ) -> Result<WildlandIdentity, CoreXError> {
         let keypair = self.get_signing_keypair().into();
         let identity = WildlandIdentity::new(identity_type, keypair, name, self.wallet.clone());
 
         identity.save()?;
 
-        Ok(Arc::new(Mutex::new(identity)))
+        Ok(identity)
     }
 }
 

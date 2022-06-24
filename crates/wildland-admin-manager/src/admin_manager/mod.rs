@@ -1,4 +1,8 @@
-use std::{fmt::Debug, rc::Rc};
+use std::{
+    fmt::Debug,
+    rc::Rc,
+    sync::{Arc, Mutex},
+};
 
 use crate::api::{
     self, AdminManagerApi, AdminManagerError, AdminManagerResult, MasterIdentityApi, SeedPhrase,
@@ -35,7 +39,7 @@ impl AdminManager {
         let forest_id =
             master_identity.create_wildland_identity(WildlandIdentityType::Forest, name)?;
 
-        Ok(forest_id)
+        Ok(Arc::new(Mutex::new(forest_id)))
     }
 
     fn create_device_identity(&self, name: String) -> AdminManagerResult<api::WildlandIdentity> {
@@ -43,7 +47,7 @@ impl AdminManager {
         let device_id =
             master_identity.create_wildland_identity(WildlandIdentityType::Device, name)?;
 
-        Ok(device_id)
+        Ok(Arc::new(Mutex::new(device_id)))
     }
 }
 
