@@ -31,4 +31,6 @@ pub enum CryptoError {
     CannotDecryptMessageError(String),
     #[error("Cannot verify message: {0}")]
     CannotVerifyMessageError(String),
+    #[error("Invalid key signature: {0}")]
+    SignatureError(String),
 }
