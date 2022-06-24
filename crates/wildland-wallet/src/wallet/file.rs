@@ -1,7 +1,7 @@
-use hex::FromHex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fs;
+use wildland_crypto::identity::SigningKeypair;
 use xdg::BaseDirectories;
 
 use crate::{ManifestSigningKeypair, SigningKeyType, Wallet, WalletError};
@@ -59,12 +59,9 @@ impl Wallet for FileWallet {
                 let file_data: WalletKeyFileContents = serde_json::from_str(&contents)
                     .map_err(|e| WalletError::FileError(e.to_string()))?;
 
-                Ok(ManifestSigningKeypair::from_keys(
+                Ok(ManifestSigningKeypair::from_keypair(
                     file_data.key_type,
-                    <[u8; 32]>::from_hex(file_data.privkey)
-                        .map_err(|e| WalletError::KeyError(e.to_string()))?,
-                    <[u8; 32]>::from_hex(file_data.pubkey)
-                        .map_err(|e| WalletError::KeyError(e.to_string()))?,
+                    SigningKeypair::try_from_str(&file_data.privkey, &file_data.pubkey).unwrap(), // TODO get rid off unwrap
                 ))
             })
             .collect()

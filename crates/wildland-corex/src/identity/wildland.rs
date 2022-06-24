@@ -1,6 +1,7 @@
-use crate::{CoreXError, CryptoSigningKeypair, ManifestSigningKeypair};
+use crate::{CoreXError, ManifestSigningKeypair};
 use sha2::{Digest, Sha256};
 use std::{fmt::Display, rc::Rc};
+use wildland_crypto::identity::SigningKeypair;
 use wildland_wallet::{SigningKeyType, Wallet};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -35,8 +36,8 @@ impl From<WildlandIdentityType> for SigningKeyType {
 
 pub trait WildlandIdentityApi: Display + std::fmt::Debug {
     fn get_type(&self) -> WildlandIdentityType;
-    fn get_public_key(&self) -> Vec<u8>;
-    fn get_private_key(&self) -> Vec<u8>;
+    fn get_public_key(&self) -> [u8; 32];
+    fn get_private_key(&self) -> [u8; 32];
     fn get_fingerprint(&self) -> Vec<u8>;
     fn get_fingerprint_string(&self) -> String;
     fn get_name(&self) -> String;
@@ -49,7 +50,7 @@ type IdentityWalletType = Rc<dyn Wallet>;
 #[derive(Debug)]
 pub struct WildlandIdentity {
     identity_type: WildlandIdentityType,
-    keypair: Rc<dyn CryptoSigningKeypair>,
+    keypair: SigningKeypair,
     name: String,
     wallet: IdentityWalletType,
 }
@@ -57,7 +58,7 @@ pub struct WildlandIdentity {
 impl WildlandIdentity {
     pub fn new(
         identity_type: WildlandIdentityType,
-        keypair: Rc<dyn CryptoSigningKeypair>,
+        keypair: SigningKeypair,
         name: String,
         wallet: IdentityWalletType,
     ) -> Self {
@@ -79,12 +80,12 @@ impl WildlandIdentityApi for WildlandIdentity {
         self.name = name;
     }
 
-    fn get_public_key(&self) -> Vec<u8> {
-        self.keypair.pubkey_as_bytes().into()
+    fn get_public_key(&self) -> [u8; 32] {
+        self.keypair.public()
     }
 
-    fn get_private_key(&self) -> Vec<u8> {
-        self.keypair.seckey_as_bytes().into()
+    fn get_private_key(&self) -> [u8; 32] {
+        self.keypair.secret()
     }
 
     fn get_fingerprint(&self) -> Vec<u8> {
@@ -102,10 +103,10 @@ impl WildlandIdentityApi for WildlandIdentity {
     }
 
     fn save(&self) -> Result<(), CoreXError> {
-        let wallet_keypair = ManifestSigningKeypair::from_keys(
+        let wallet_keypair = ManifestSigningKeypair::from_keypair(
             self.get_type().into(),
-            self.keypair.seckey_as_bytes(),
-            self.keypair.pubkey_as_bytes(),
+            SigningKeypair::try_from_bytes_slices(self.keypair.public(), self.keypair.secret())
+                .unwrap(),
         );
 
         self.wallet
