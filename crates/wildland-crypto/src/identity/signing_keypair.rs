@@ -20,7 +20,8 @@
 
 use crate::{error::CryptoError, signature::Signature};
 use ed25519_dalek::Signer;
-use hex::FromHex;
+
+use super::bytes_key_from_str;
 
 #[derive(Debug)]
 pub struct SigningKeypair(ed25519_dalek::Keypair);
@@ -29,7 +30,7 @@ impl SigningKeypair {
     pub fn try_from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Result<Self, CryptoError> {
         Ok(Self(
             ed25519_dalek::Keypair::from_bytes([seckey, pubkey].concat().as_slice())
-                .map_err(|e| CryptoError::SignatureError(e.to_string()))?,
+                .map_err(|e| CryptoError::InvalidSignatureBytesError(e.to_string()))?,
         ))
     }
 
@@ -59,12 +60,6 @@ impl SigningKeypair {
     pub fn sign(&self, msg: &[u8]) -> Signature {
         Signature(self.0.sign(msg))
     }
-}
-
-pub fn bytes_key_from_str(key: &str) -> Result<[u8; 32], CryptoError> {
-    let key =
-        <[u8; 32]>::from_hex(key).map_err(|_| CryptoError::CannotCreateKeyError(key.len()))?;
-    Ok(key)
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use super::signing_keypair::bytes_key_from_str;
+use super::bytes_key_from_str;
 use crate::error::CryptoError;
 use crypto_box::{PublicKey as EncryptionPublicKey, SecretKey as EncryptionSecretKey};
 

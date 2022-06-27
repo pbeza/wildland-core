@@ -130,7 +130,7 @@ impl Identity {
     /// signature (or any random bits). Assumes high quality entropy
     /// and does not perform any checks.
     #[allow(clippy::ptr_arg)]
-    pub fn from_entropy(entropy: &Vec<u8>) -> Result<Self, CryptoError> {
+    pub fn from_entropy(entropy: &[u8]) -> Result<Self, CryptoError> {
         // assume high quality entropy of arbitrary length (>= 32 bytes)
         if (entropy.len() * 8) < 128 {
             return Err(CryptoError::EntropyTooLow);

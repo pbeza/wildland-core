@@ -23,15 +23,11 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum CryptoError {
     #[error("Key has incorrect length - should be 32 bytes long. Key length = {0}")]
-    CannotCreateKeyError(usize),
-    #[error("Cannot encrypt message: {0}")]
-    CannotEncryptMessageError(String),
-    #[error("Cannot decrypt message from ciphertext: {0}")]
-    CannotDecryptMessageError(String),
+    KeyParsingError(usize),
     #[error("Cannot verify message: {0}")]
-    CannotVerifyMessageError(String),
+    MessageVerificationError(String),
     #[error("Invalid key signature: {0}")]
-    SignatureError(String),
+    InvalidSignatureBytesError(String),
     #[error("Failed to create a seed phrase: {0}")]
     SeedPhraseGenerationError(String),
     #[error("Identity generation failed: {0}")]

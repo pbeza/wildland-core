@@ -34,7 +34,7 @@ impl Signature {
         PublicKey::from_bytes(public_key)
             .unwrap() // TODO remove unwrap
             .verify(msg, &self.0)
-            .map_err(|_| CryptoError::CannotVerifyMessageError(encode(msg)))
+            .map_err(|_| CryptoError::MessageVerificationError(encode(msg)))
     }
 }
 
