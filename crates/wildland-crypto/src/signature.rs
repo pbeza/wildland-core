@@ -31,7 +31,6 @@ impl Signature {
         self.0.encode_hex::<String>()
     }
 
-    // abstract from PublickKey
     pub fn verify(&self, msg: &[u8], public_key: &[u8; 32]) -> Result<(), CryptoError> {
         PublicKey::from_bytes(public_key)
             .unwrap() // TODO remove unwrap
