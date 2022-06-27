@@ -1,5 +1,5 @@
 use thiserror::Error;
-use wildland_crypto::identity::error::CryptoError;
+use wildland_crypto::error::CryptoError;
 
 #[derive(Error, Debug)]
 pub enum StorageControllerClientError {

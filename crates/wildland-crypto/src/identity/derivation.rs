@@ -28,10 +28,12 @@ use sha2::{Digest, Sha256};
 use crate::{
     error::CryptoError,
     identity::{
-        keys::{EncryptingKeypair, SigningKeypair},
         seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN},
+        signing_keypair::SigningKeypair,
     },
 };
+
+use super::encrypting_keypair::EncryptingKeypair;
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"

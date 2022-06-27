@@ -2,7 +2,8 @@
 // Wildland Project
 //
 // Copyright © 2021 Golem Foundation,
-// 	    	     Piotr K. Isajew <piotr@wildland.io>
+// 	    	     Lukasz Kujawski <leon@wildland.io>
+// 	    	     Pawel Peregud <pepesza@wildland.io>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,12 +18,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Generic error wrapper for Rust errors that need to propagate into
-// the native bridge.
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum CryptoError {
+    #[error("Key has incorrect length - should be 32 bytes long. Key length = {0}")]
+    CannotCreateKeyError(usize),
+    #[error("Cannot encrypt message: {0}")]
+    CannotEncryptMessageError(String),
+    #[error("Cannot decrypt message from ciphertext: {0}")]
+    CannotDecryptMessageError(String),
+    #[error("Cannot verify message: {0}")]
+    CannotVerifyMessageError(String),
+    #[error("Invalid key signature: {0}")]
+    SignatureError(String),
+    #[error("Failed to create a seed phrase: {0}")]
     SeedPhraseGenerationError(String),
+    #[error("Identity generation failed: {0}")]
     IdentityGenerationError(String),
+    #[error("Too low entropy")]
     EntropyTooLow,
 }

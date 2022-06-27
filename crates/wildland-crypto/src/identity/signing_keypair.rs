@@ -18,39 +18,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    identity::error::CryptoError::{self, CannotCreateKeyError},
-    signature::Signature,
-};
-use crypto_box::{PublicKey as EncryptionPublicKey, SecretKey as EncryptionSecretKey};
+use crate::{error::CryptoError, signature::Signature};
 use ed25519_dalek::Signer;
 use hex::FromHex;
 
 #[derive(Debug)]
 pub struct SigningKeypair(ed25519_dalek::Keypair);
-
-#[derive(Debug)]
-pub struct EncryptingKeypair {
-    pub secret: EncryptionSecretKey,
-    pub public: EncryptionPublicKey,
-}
-
-impl EncryptingKeypair {
-    // TODO unused method
-    fn _from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self {
-        Self {
-            secret: EncryptionSecretKey::from(seckey),
-            public: EncryptionPublicKey::from(pubkey),
-        }
-    }
-
-    // TODO unused method
-    fn _from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
-        let pubkey = bytes_key_from_str(public_key)?;
-        let seckey = bytes_key_from_str(secret_key)?;
-        Ok(Self::_from_bytes_slices(pubkey, seckey))
-    }
-}
 
 impl SigningKeypair {
     pub fn try_from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Result<Self, CryptoError> {
@@ -89,14 +62,15 @@ impl SigningKeypair {
 }
 
 pub fn bytes_key_from_str(key: &str) -> Result<[u8; 32], CryptoError> {
-    let key = <[u8; 32]>::from_hex(key).map_err(|_| CannotCreateKeyError(key.len()))?;
+    let key =
+        <[u8; 32]>::from_hex(key).map_err(|_| CryptoError::CannotCreateKeyError(key.len()))?;
     Ok(key)
 }
 
 #[cfg(test)]
 mod tests {
     use crate::common::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
-    use crate::identity::keys::SigningKeypair;
+    use crate::identity::signing_keypair::SigningKeypair;
 
     #[test]
     fn should_create_keypair_when_keys_have_proper_length() {
