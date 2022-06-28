@@ -18,29 +18,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use ed25519_dalek::{PublicKey, Signature, Signer, Verifier};
+use ed25519_dalek::{PublicKey, Verifier};
 use hex::{encode, ToHex};
 
-use crate::identity::error::CryptoError;
-use crate::identity::error::CryptoError::CannotVerifyMessageError;
-use crate::identity::SigningKeypair;
+use crate::error::CryptoError;
 
-pub fn encode_signature(signature: Signature) -> String {
-    signature.encode_hex::<String>()
-}
+pub struct Signature(pub ed25519_dalek::Signature);
 
-pub fn sign(msg: &[u8], keypair: &SigningKeypair) -> Signature {
-    keypair.sign(msg)
-}
+impl Signature {
+    pub fn encode_signature(self) -> String {
+        self.0.encode_hex::<String>()
+    }
 
-pub fn verify(
-    msg: &[u8],
-    signature: &Signature,
-    public_key: &PublicKey,
-) -> Result<(), CryptoError> {
-    public_key
-        .verify(msg, signature)
-        .map_err(|_| CannotVerifyMessageError(encode(msg)))
+    pub fn verify(&self, msg: &[u8], public_key: &[u8; 32]) -> Result<(), CryptoError> {
+        PublicKey::from_bytes(public_key)
+            .unwrap() // TODO remove unwrap
+            .verify(msg, &self.0)
+            .map_err(|_| CryptoError::MessageVerificationError(encode(msg)))
+    }
 }
 
 #[cfg(test)]
@@ -48,21 +43,21 @@ mod tests {
     use crate::common::test_utilities::{
         generate_message, get_expected_message, SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY,
     };
-    use crate::identity::keys::Keypair;
     use crate::identity::SigningKeypair;
-    use crate::signature::{sign, verify};
 
     #[test]
     fn should_sign_custom_struct() {
         // given
-        let keypair = SigningKeypair::from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap();
+        let keypair = SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap();
         let message_to_sign = generate_message();
         let expected_message = get_expected_message();
 
         // when
-        let signature = sign(&message_to_sign, &keypair);
+        let signature = keypair.sign(&message_to_sign);
 
         // then
-        verify(&expected_message, &signature, &keypair.public).expect("OK");
+        signature
+            .verify(&expected_message, &keypair.public())
+            .expect("OK");
     }
 }

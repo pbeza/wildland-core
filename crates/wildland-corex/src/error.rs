@@ -19,6 +19,9 @@ impl From<CryptoError> for CoreXError {
             }
             CryptoError::IdentityGenerationError(msg) => CoreXError::IdentityGenerationError(msg),
             CryptoError::EntropyTooLow => CoreXError::EntropyTooLow,
+            CryptoError::KeyParsingError(_) => todo!(),
+            CryptoError::MessageVerificationError(_) => todo!(),
+            CryptoError::InvalidSignatureBytesError(_) => todo!(),
         }
     }
 }
