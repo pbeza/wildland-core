@@ -43,7 +43,7 @@ impl From<CoreXError> for AdminManagerError {
 }
 
 impl From<WalletError> for AdminManagerError {
-    fn from(corex_err: WalletError) -> Self {
-        AdminManagerError::Wallet(corex_err)
+    fn from(wallet_err: WalletError) -> Self {
+        AdminManagerError::Wallet(wallet_err)
     }
 }

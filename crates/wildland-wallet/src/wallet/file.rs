@@ -61,7 +61,8 @@ impl Wallet for FileWallet {
 
                 Ok(ManifestSigningKeypair::from_keypair(
                     file_data.key_type,
-                    SigningKeypair::try_from_str(&file_data.privkey, &file_data.pubkey).unwrap(), // TODO get rid off unwrap
+                    SigningKeypair::try_from_str(&file_data.privkey, &file_data.pubkey)
+                        .map_err(WalletError::Crypto)?,
                 ))
             })
             .collect()

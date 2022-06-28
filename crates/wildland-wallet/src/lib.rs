@@ -9,6 +9,7 @@ pub fn get_version() -> &'static str {
 pub use api::*;
 pub use keys::sign::ManifestSigningKeypair;
 use thiserror::Error;
+use wildland_crypto::error::CryptoError;
 
 #[derive(Debug, PartialEq, Error, Eq, Clone)]
 pub enum WalletError {
@@ -16,4 +17,6 @@ pub enum WalletError {
     FileError(String),
     #[error("Cryptographic key error: {0}")]
     KeyError(String),
+    #[error("Crypto error: {0}")]
+    Crypto(CryptoError),
 }
