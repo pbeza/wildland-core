@@ -8,7 +8,7 @@ use crate::api::{
     self, AdminManagerApi, AdminManagerError, AdminManagerResult, MasterIdentityApi, SeedPhrase,
     WildlandIdentityType,
 };
-pub use api::WildlandIdentity;
+pub use api::WrappedWildlandIdentity;
 use wildland_corex::Wallet;
 
 #[derive(Clone, Debug)]
@@ -35,14 +35,17 @@ impl AdminManager {
         &self,
         master_identity: Box<dyn MasterIdentityApi>,
         name: String,
-    ) -> AdminManagerResult<api::WildlandIdentity> {
+    ) -> AdminManagerResult<api::WrappedWildlandIdentity> {
         let forest_id =
             master_identity.create_wildland_identity(WildlandIdentityType::Forest, name)?;
 
         Ok(Arc::new(Mutex::new(forest_id)))
     }
 
-    fn create_device_identity(&self, name: String) -> AdminManagerResult<api::WildlandIdentity> {
+    fn create_device_identity(
+        &self,
+        name: String,
+    ) -> AdminManagerResult<api::WrappedWildlandIdentity> {
         let master_identity = wildland_corex::MasterIdentity::new(self.wallet.clone())?;
         let device_id =
             master_identity.create_wildland_identity(WildlandIdentityType::Device, name)?;

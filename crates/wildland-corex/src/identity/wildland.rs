@@ -34,17 +34,6 @@ impl From<WildlandIdentityType> for SigningKeyType {
     }
 }
 
-pub trait WildlandIdentityApi: Display + std::fmt::Debug {
-    fn get_type(&self) -> WildlandIdentityType;
-    fn get_public_key(&self) -> Vec<u8>;
-    fn get_private_key(&self) -> Vec<u8>;
-    fn get_fingerprint(&self) -> Vec<u8>;
-    fn get_fingerprint_string(&self) -> String;
-    fn get_name(&self) -> String;
-    fn set_name(&mut self, name: String);
-    fn save(&self) -> Result<(), CoreXError>;
-}
-
 type IdentityWalletType = Rc<dyn Wallet>;
 
 #[derive(Debug)]
@@ -69,40 +58,38 @@ impl WildlandIdentity {
             wallet,
         }
     }
-}
 
-impl WildlandIdentityApi for WildlandIdentity {
-    fn get_name(&self) -> String {
+    pub fn get_name(&self) -> String {
         self.name.clone()
     }
 
-    fn set_name(&mut self, name: String) {
+    pub fn set_name(&mut self, name: String) {
         self.name = name;
     }
 
-    fn get_public_key(&self) -> Vec<u8> {
+    pub fn get_public_key(&self) -> Vec<u8> {
         self.keypair.public().into()
     }
 
-    fn get_private_key(&self) -> Vec<u8> {
+    pub fn get_private_key(&self) -> Vec<u8> {
         self.keypair.secret().into()
     }
 
-    fn get_fingerprint(&self) -> Vec<u8> {
+    pub fn get_fingerprint(&self) -> Vec<u8> {
         let hash = Sha256::digest(&self.get_public_key());
 
         hash[..16].into()
     }
 
-    fn get_fingerprint_string(&self) -> String {
+    pub fn get_fingerprint_string(&self) -> String {
         hex::encode(self.get_fingerprint())
     }
 
-    fn get_type(&self) -> WildlandIdentityType {
+    pub fn get_type(&self) -> WildlandIdentityType {
         self.identity_type
     }
 
-    fn save(&self) -> Result<(), CoreXError> {
+    pub fn save(&self) -> Result<(), CoreXError> {
         let wallet_keypair = ManifestSigningKeypair::from_keypair(
             self.get_type().into(),
             SigningKeypair::try_from_bytes_slices(self.keypair.public(), self.keypair.secret())

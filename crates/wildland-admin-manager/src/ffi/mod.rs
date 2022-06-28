@@ -1,7 +1,7 @@
 use crate::{
     admin_manager::AdminManager,
     api::{
-        AdminManagerApi, AdminManagerError, IdentityPair, SeedPhrase, WildlandIdentityApi,
+        AdminManagerApi, AdminManagerError, IdentityPair, SeedPhrase, WildlandIdentity,
         WildlandIdentityType,
     },
 };
@@ -13,7 +13,7 @@ type VoidType = ();
 
 #[binding_wrapper]
 mod ffi_binding {
-    use super::{AdminManagerApi, WildlandIdentityApi};
+    use super::*;
 
     extern "Rust" {
         type AdminManager;
@@ -29,8 +29,8 @@ mod ffi_binding {
         ) -> Result<IdentityPair>;
 
         type IdentityPair;
-        fn forest_id(self: &IdentityPair) -> Arc<Mutex<dyn WildlandIdentityApi>>;
-        fn device_id(self: &IdentityPair) -> Arc<Mutex<dyn WildlandIdentityApi>>;
+        fn forest_id(self: &IdentityPair) -> Arc<Mutex<WildlandIdentity>>;
+        fn device_id(self: &IdentityPair) -> Arc<Mutex<WildlandIdentity>>;
 
         type SeedPhrase;
         fn get_string(self: &SeedPhrase) -> String;
@@ -42,15 +42,15 @@ mod ffi_binding {
         fn is_forest(self: &WildlandIdentityType) -> bool;
         fn is_device(self: &WildlandIdentityType) -> bool;
 
-        fn get_type(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> WildlandIdentityType;
-        fn to_string(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> String;
-        fn get_name(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> String;
-        fn set_name(self: &mut Arc<Mutex<dyn WildlandIdentityApi>>, name: String);
-        fn get_public_key(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> Vec<u8>;
-        fn get_private_key(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> Vec<u8>;
-        fn get_fingerprint_string(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> String;
-        fn get_fingerprint(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> Vec<u8>;
-        fn save(self: &Arc<Mutex<dyn WildlandIdentityApi>>) -> Result<VoidType>;
+        fn get_type(self: &Arc<Mutex<WildlandIdentity>>) -> WildlandIdentityType;
+        fn to_string(self: &Arc<Mutex<WildlandIdentity>>) -> String;
+        fn get_name(self: &Arc<Mutex<WildlandIdentity>>) -> String;
+        fn set_name(self: &mut Arc<Mutex<WildlandIdentity>>, name: String);
+        fn get_public_key(self: &Arc<Mutex<WildlandIdentity>>) -> Vec<u8>;
+        fn get_private_key(self: &Arc<Mutex<WildlandIdentity>>) -> Vec<u8>;
+        fn get_fingerprint_string(self: &Arc<Mutex<WildlandIdentity>>) -> String;
+        fn get_fingerprint(self: &Arc<Mutex<WildlandIdentity>>) -> Vec<u8>;
+        fn save(self: &Arc<Mutex<WildlandIdentity>>) -> Result<VoidType>;
 
         type VoidType;
         type ErrorType;

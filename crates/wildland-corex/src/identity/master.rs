@@ -1,4 +1,4 @@
-use super::wildland::{WildlandIdentity, WildlandIdentityApi, WildlandIdentityType};
+use super::wildland::{WildlandIdentity, WildlandIdentityType};
 use crate::{crypto::SeedPhrase, CoreXError};
 use std::{fmt::Display, rc::Rc};
 use wildland_crypto::identity::{Identity, SeedPhraseWords, SigningKeypair};

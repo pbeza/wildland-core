@@ -1,9 +1,9 @@
 mod admin_manager;
 mod result;
 
-pub use admin_manager::{AdminManagerApi, IdentityPair, WildlandIdentity};
+pub use admin_manager::{AdminManagerApi, IdentityPair, WildlandIdentity, WrappedWildlandIdentity};
 pub use result::*;
 pub use wildland_corex::{
     ManifestSigningKeypair, MasterIdentityApi, SeedPhrase, SeedPhraseWords, Wallet,
-    WildlandIdentityApi, WildlandIdentityType, SEED_PHRASE_LEN,
+    WildlandIdentityType, SEED_PHRASE_LEN,
 };

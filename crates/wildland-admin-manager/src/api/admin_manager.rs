@@ -1,22 +1,23 @@
 use wildland_corex::ManifestSigningKeypair;
 
-use super::{AdminManagerResult, SeedPhrase, WildlandIdentityApi};
+use super::{AdminManagerResult, SeedPhrase};
 use std::sync::{Arc, Mutex};
+pub use wildland_corex::WildlandIdentity;
 
-pub type WildlandIdentity = Arc<Mutex<dyn WildlandIdentityApi>>;
+pub type WrappedWildlandIdentity = Arc<Mutex<WildlandIdentity>>;
 
 #[derive(Clone, Debug)]
 pub struct IdentityPair {
-    pub forest_id: WildlandIdentity,
-    pub device_id: WildlandIdentity,
+    pub forest_id: WrappedWildlandIdentity,
+    pub device_id: WrappedWildlandIdentity,
 }
 
 impl IdentityPair {
-    pub fn forest_id(&self) -> WildlandIdentity {
+    pub fn forest_id(&self) -> WrappedWildlandIdentity {
         self.forest_id.clone()
     }
 
-    pub fn device_id(&self) -> WildlandIdentity {
+    pub fn device_id(&self) -> WrappedWildlandIdentity {
         self.device_id.clone()
     }
 }
