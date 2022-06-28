@@ -6,7 +6,6 @@ pub enum RustWrapperType {
     Result,
     Option,
     Vector,
-    VectorPrimitive,
     Arc,
     Custom,
     Primitive,

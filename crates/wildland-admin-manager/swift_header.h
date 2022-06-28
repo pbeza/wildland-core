@@ -2,7 +2,7 @@
 #define BridgingHeader_h
 
 #include "SwiftBridgeCore.h"
-#include "wildland/wildland.h"
+#include "ffi_swift/ffi_swift.h"
 
 #endif /* BridgingHeader_h */
 

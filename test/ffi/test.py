@@ -10,7 +10,7 @@ class TestAdminManager(unittest.TestCase):
         seed_result = wildland.create_seed_phrase()
         seed_result.is_ok()
         seed = seed_result.unwrap()
-        print(seed.get_string().c_str())
+        print(seed.get_string().to_string())
 
     def test_create_identity_from_seed(self):
         seed = wildland.create_seed_phrase().unwrap()
@@ -43,11 +43,11 @@ class TestIdentity(unittest.TestCase):
             wildland.RustString("name 1"), seed_result.unwrap())
 
     def test_get_identity_name(self):
-        assert self.identity_result.unwrap().get_name().c_str() == "name 1"
+        assert self.identity_result.unwrap().get_name().to_string() == "name 1"
 
     def test_set_identity_name(self):
         self.identity_result.unwrap().set_name(wildland.RustString("name 2"))
-        assert self.identity_result.unwrap().get_name().c_str() == "name 2"
+        assert self.identity_result.unwrap().get_name().to_string() == "name 2"
 
 
 if __name__ == '__main__':

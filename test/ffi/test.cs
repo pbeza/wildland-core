@@ -14,18 +14,18 @@ namespace Main
                 var seed = seed_result.unwrap();
                 var identity_result = admin_manager.create_master_identity_from_seed_phrase(new RustString("name 1"), seed);
                 var identity = identity_result.unwrap();
-                Console.WriteLine(identity.get_name().c_str());
+                Console.WriteLine(identity.get_name().to_string());
                 identity.set_name(new RustString("name 2"));
-                Console.WriteLine(identity.get_name().c_str());
+                Console.WriteLine(identity.get_name().to_string());
 
                 var identity_opt = admin_manager.get_master_identity(); // second ref to the same identity
                 if (identity_opt.is_some()) {
                     var identity_second_ref = identity_opt.unwrap();
                     identity_second_ref.set_name(new RustString("name 3"));
-                    Console.WriteLine(identity_second_ref.get_name().c_str());
+                    Console.WriteLine(identity_second_ref.get_name().to_string());
                 }
 
-                Console.WriteLine(identity.get_name().c_str()); // first ref is still valid
+                Console.WriteLine(identity.get_name().to_string()); // first ref is still valid
             }
 
             admin_manager.set_email(new RustString("test@email.com"));
@@ -35,7 +35,7 @@ namespace Main
                 if (verification_result.is_ok()) {
                     Console.WriteLine("Verification successful");
                 } else {
-                    Console.WriteLine(verification_result.unwrap_err().to_string().c_str());
+                    Console.WriteLine(verification_result.unwrap_err().to_string().to_string());
                 }
             }
         }
