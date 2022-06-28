@@ -36,8 +36,8 @@ impl From<WildlandIdentityType> for SigningKeyType {
 
 pub trait WildlandIdentityApi: Display + std::fmt::Debug {
     fn get_type(&self) -> WildlandIdentityType;
-    fn get_public_key(&self) -> [u8; 32];
-    fn get_private_key(&self) -> [u8; 32];
+    fn get_public_key(&self) -> Vec<u8>;
+    fn get_private_key(&self) -> Vec<u8>;
     fn get_fingerprint(&self) -> Vec<u8>;
     fn get_fingerprint_string(&self) -> String;
     fn get_name(&self) -> String;
@@ -80,12 +80,12 @@ impl WildlandIdentityApi for WildlandIdentity {
         self.name = name;
     }
 
-    fn get_public_key(&self) -> [u8; 32] {
-        self.keypair.public()
+    fn get_public_key(&self) -> Vec<u8> {
+        self.keypair.public().into()
     }
 
-    fn get_private_key(&self) -> [u8; 32] {
-        self.keypair.secret()
+    fn get_private_key(&self) -> Vec<u8> {
+        self.keypair.secret().into()
     }
 
     fn get_fingerprint(&self) -> Vec<u8> {

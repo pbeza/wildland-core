@@ -13,11 +13,11 @@ class main {
       var forest_id = identity_pair.forest_id();
       var device_id = identity_pair.device_id();
 
-      System.out.println(device_id.get_name().c_str());
+      System.out.println(device_id.get_name().to_string());
       device_id.set_name(new RustString("name 2"));
-      System.out.println(device_id.get_name().c_str());
-      System.out.println(device_id.to_string().c_str());
-      System.out.println(device_id.get_fingerprint_string().c_str());
+      System.out.println(device_id.get_name().to_string());
+      System.out.println(device_id.to_string().to_string());
+      System.out.println(device_id.get_fingerprint_string().to_string());
       System.out.println(device_id.get_private_key());
 
       var device_id_type = device_id.get_type();
@@ -48,7 +48,7 @@ class main {
       if (verification_result.is_ok()) {
         System.out.println("Verification successful");
       } else {
-        System.out.println(verification_result.unwrap_err().to_string().c_str());
+        System.out.println(verification_result.unwrap_err().to_string().to_string());
       }
     }
   }

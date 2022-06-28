@@ -25,27 +25,15 @@ impl ExternModuleTranslator {
         extern_module: &mut ItemForeignMod,
     ) -> Result<Self, String> {
         let mut result = ExternModuleTranslator::default();
-        result.replace_every_type_in_each_item_with_wrappers_in_module(extern_module, false)?;
-        result.add_wrappers_types_and_methods_to_extern_module(extern_module)?;
+        result.replace_every_type_in_each_item_with_wrappers_in_module(extern_module)?;
+        result.add_types_and_methods_wrappers_to_extern_module(extern_module)?;
         Ok(result)
     }
 
     ///
     /// TODO: add doc here
     ///
-    pub fn translate_external_module_for_cxx(
-        extern_module: &mut ItemForeignMod,
-    ) -> Result<Self, String> {
-        let mut result = ExternModuleTranslator::default();
-        result.replace_every_type_in_each_item_with_wrappers_in_module(extern_module, true)?;
-        result.add_boxed_wrappers_types_and_methods_to_extern_module(extern_module)?;
-        Ok(result)
-    }
-
-    ///
-    /// TODO: add doc here
-    ///
-    fn add_wrappers_types_and_methods_to_extern_module(
+    fn add_types_and_methods_wrappers_to_extern_module(
         &mut self,
         extern_module: &mut ItemForeignMod,
     ) -> Result<(), String> {
@@ -57,26 +45,6 @@ impl ExternModuleTranslator {
                 let error_type_name: Type = parse_quote!(ErrorType);
                 generate_module_items(wrapper, return_original_type_name, error_type_name).items
             }));
-
-        Ok(())
-    }
-
-    ///
-    /// TODO: add doc here
-    ///
-    fn add_boxed_wrappers_types_and_methods_to_extern_module(
-        &mut self,
-        extern_module: &mut ItemForeignMod,
-    ) -> Result<(), String> {
-        extern_module
-            .items
-            .extend(self.rust_types_wrappers.iter().flat_map(|wrapper| {
-                let original_type_name = &wrapper.original_type_name;
-                let return_original_type_name: Type = parse_quote! ( Box<#original_type_name> );
-                let error_type_name: Type = parse_quote!(Box<ErrorType>);
-                generate_module_items(wrapper, return_original_type_name, error_type_name).items
-            }));
-
         Ok(())
     }
 
@@ -86,15 +54,12 @@ impl ExternModuleTranslator {
     fn replace_every_type_in_each_item_with_wrappers_in_module(
         &mut self,
         extern_module: &mut ItemForeignMod,
-        boxed_wrappers: bool,
     ) -> Result<(), String> {
         extern_module
             .items
             .iter_mut()
             .try_for_each(|extern_item| match extern_item {
-                ForeignItem::Fn(function) => {
-                    self.replace_arg_types_with_wrappers(function, boxed_wrappers)
-                }
+                ForeignItem::Fn(function) => self.replace_arg_types_with_wrappers(function),
                 ForeignItem::Type(ForeignItemType { ident, .. }) => {
                     let wrapper_type = self.register_custom_type(ident.clone());
                     *ident = wrapper_type.wrapper_name;
@@ -130,7 +95,6 @@ impl ExternModuleTranslator {
     fn replace_arg_types_with_wrappers(
         &mut self,
         function: &mut ForeignItemFn,
-        boxed_wrappers: bool,
     ) -> Result<(), String> {
         let mut arguments = vec![];
         let mut associated_structure = None;
@@ -156,17 +120,6 @@ impl ExternModuleTranslator {
                         });
                         if *ident == "self" {
                             associated_structure = Some(new_wrapper_type);
-                        } else if boxed_wrappers
-                            && new_wrapper_type.typ != RustWrapperType::Primitive
-                            && new_wrapper_type.typ != RustWrapperType::VectorPrimitive
-                        {
-                            let wrapper_name = &new_wrapper_type.wrapper_name;
-                            match &mut argument.ty.as_mut() {
-                                Type::Reference(typ) => *typ = parse_quote!( &Box<#wrapper_name>),
-                                Type::Path(typ) => *typ = parse_quote!( Box<#wrapper_name>),
-                                _ => {}
-                            }
-                            argument.ty = parse_quote!( &Box<#wrapper_name>);
                         }
                     }
                     Ok(())
@@ -181,13 +134,6 @@ impl ExternModuleTranslator {
             let new_wrapper_type = self
                 .tansform_rust_type_into_wrapper(typ.as_mut())
                 .ok_or("At least one type should be present in return type")?;
-            if boxed_wrappers
-                && new_wrapper_type.typ != RustWrapperType::Primitive
-                && new_wrapper_type.typ != RustWrapperType::VectorPrimitive
-            {
-                let wrapper_name = &new_wrapper_type.wrapper_name;
-                function.sig.output = parse_quote!( -> Box<#wrapper_name>);
-            }
             return_type = Some(new_wrapper_type);
         }
 
@@ -273,23 +219,11 @@ impl ExternModuleTranslator {
                         }),
                     "Vec" => ExternModuleTranslator::get_inner_generic_type(path_segment)
                         .and_then(|inner_path| self.tansform_rust_type_into_wrapper(inner_path))
-                        .map(|inner_type_name| {
-                            if inner_type_name.typ != RustWrapperType::Primitive {
-                                *path_segment = ExternModuleTranslator::create_wrapper_name(
-                                    "Vec",
-                                    &inner_type_name.wrapper_name.to_string(),
-                                );
-                            }
-                            WrapperType {
-                                original_type_name: inner_type_name.get_new_type(),
-                                wrapper_name: path_segment.ident.clone(),
-                                typ: if inner_type_name.typ == RustWrapperType::Primitive {
-                                    RustWrapperType::VectorPrimitive
-                                } else {
-                                    RustWrapperType::Vector
-                                },
-                                inner_type: Some(inner_type_name.into()),
-                            }
+                        .map(|inner_type_name| WrapperType {
+                            original_type_name: inner_type_name.get_new_type(),
+                            wrapper_name: path_segment.ident.clone(),
+                            typ: RustWrapperType::Vector,
+                            inner_type: Some(inner_type_name.into()),
                         }),
                     "Arc" => ExternModuleTranslator::get_inner_generic_type(path_segment)
                         .cloned()
@@ -380,13 +314,6 @@ fn generate_module_items(
                 type #wrapper_name;
                 fn unwrap(self: &#wrapper_name) -> #return_original_type_name;
                 fn is_some(self: &#wrapper_name) -> bool;
-            }
-        },
-        RustWrapperType::Vector => quote! {
-            extern "Rust" {
-                type #wrapper_name;
-                fn at(self: &#wrapper_name) -> #return_original_type_name;
-                fn size(self: &#wrapper_name) -> usize;
             }
         },
         RustWrapperType::Arc => quote! {

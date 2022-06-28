@@ -17,11 +17,11 @@ namespace Main
                 var forest_id = identity_pair.forest_id();
                 var device_id = identity_pair.device_id();
 
-                Console.WriteLine(device_id.get_name().c_str());
+                Console.WriteLine(device_id.get_name().to_string());
                 device_id.set_name(new RustString("name 2"));
-                Console.WriteLine(device_id.get_name().c_str());
-                Console.WriteLine(device_id.to_string().c_str());
-                Console.WriteLine(device_id.get_fingerprint_string().c_str());
+                Console.WriteLine(device_id.get_name().to_string());
+                Console.WriteLine(device_id.to_string());
+                Console.WriteLine(device_id.get_fingerprint_string().to_string());
                 Console.WriteLine(device_id.get_private_key());
 
                 var device_id_type = device_id.get_type();
@@ -53,7 +53,7 @@ namespace Main
                 if (verification_result.is_ok()) {
                     Console.WriteLine("Verification successful");
                 } else {
-                    Console.WriteLine(verification_result.unwrap_err().to_string().c_str());
+                    Console.WriteLine(verification_result.unwrap_err().to_string().to_string());
                 }
             }
         }

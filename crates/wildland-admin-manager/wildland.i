@@ -1,74 +1,16 @@
 %module wildland
 
-// The following lines will be added to generated wrapper file.
-%{
-#include "ffi_cxx.rs.h"
-#include "cxx.h"
-%}
 
-
-// Translate C++ specific numeric types to something more common 
-// to other langs in order to start using vectors
-%inline %{
-typedef long unsigned int size_t;
-typedef unsigned char uint8_t;
-typedef uint8_t u8;
-typedef rust::cxxbridge1::String String;
-%}
-
-
-// The is_complete structure can't be parsed by SWIG - this line 
-// tells SWIG to omit this during the process
-%define CXXBRIDGE1_IS_COMPLETE; %enddef
-
-// We don't want to have default constructors in our FFI API,
-// since CXX generated `Opaque` types cannot be created using
-// on the target language side.
-%nodefaultctor;
-
-// Rename String to RustString, since there's already defined
-// String class in Java and C#
+// // Rename String to RustString, since there's already defined
+// // String class in Java and C#
 %rename(RustString) String;
 
-
-// Ignore unused cxx.rs internal structs (that are actually
-// problematic during the parsing process for SWIG).
-%ignore unsafe_bitcopy_t;
-%ignore Opaque;
-%ignore layout;
-
-// The following methods cannot be used in a convinient form
-// in the target languages, hence it is worth to ignore them
-// so that SWIG will not create unnecessary unused boilerplate code.
-// NOTE: The first methods comes from Iterator definition.
-//       It's not clear how to provide end users with iterators
-//       using SWIG yet.
-%ignore cbegin;    
-%ignore cend;
-%ignore begin;
-%ignore end;
-%ignore data;
-%ignore Vec(unsafe_bitcopy_t, const Vec &);
-%ignore Vec(std::initializer_list<T>);
-%ignore String(unsafe_bitcopy_t, const String &);
-%ignore String(const char *, std::size_t);
-%ignore String(const char16_t *, std::size_t);
-
-// We cannot copy Opaque types in CXX.RS generated code, but we want to
-// return Box<T>, where T is an Opaque type. Hence we have to ignore
-// the Box copy and move constructors in order to use Boxes in 
-// the target languages.
-%ignore Box(const T &);
-%ignore Box(T &&);
-
-// For Rust Box support:
 // The problem:
 // Swig by default do some copying of the objects coming from the source
-// language. Unfortunately Box<T>, where T is an Opaque type originated in CXX
-// cannot be copied. Technically all rust custom types inherence from Opaque
-// type in cxx generated code. The mentioned parent type has deleted destructor
-// and constructors which means that no Opaque object can be copied, created or
-// detroyed in the target language.
+// language. Since swift-bridge creates each opaque type inside a Box<T>, those
+// cannot be copied. If we try to for e.g. return such an element by a copy
+// then the desctructor is called on the source object - the second one becomes
+// invalidated immadietely.
 // The following SWIG typemaps introduces move semantics in the generated code
 // instead of copying objects.
 %typemap(java, out, optimal="1") SWIGTYPE %{
@@ -86,5 +28,13 @@ typedef rust::cxxbridge1::String String;
 //////////////////////////////////
 // Inlcude the generated C++ API
 //////////////////////////////////
-%include "ffi_cxx.rs.h"
-%include "generated.i"
+%{
+  extern "C" {
+    #include "ffi_swift.h"
+    #include "SwiftBridgeCore.h"
+  }
+  #include "ffi_cxx.h"
+%}
+%include "std_string.i"
+%include "./_generated_cpp/ffi_cxx.h"
+%include "./_generated_cpp/ffi_swig.i"

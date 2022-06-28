@@ -10,7 +10,7 @@ class TestAdminManager(unittest.TestCase):
         seed_result = self.admin_manager.create_seed_phrase()
         seed_result.is_ok()
         seed = seed_result.unwrap()
-        print(seed.get_string().c_str())
+        print(seed.get_string().to_string())
 
     def test_create_identities_from_seed(self):
         seed = self.admin_manager.create_seed_phrase().unwrap()
@@ -24,14 +24,14 @@ class TestAdminManager(unittest.TestCase):
         forest_id = identities.forest_id()
         device_id = identities.device_id()
 
-        print(forest_id.to_string().c_str())
-        print(forest_id.get_fingerprint_string().c_str())
+        print(forest_id.to_string().to_string())
+        print(forest_id.get_fingerprint_string().to_string())
         print(forest_id.get_private_key())
 
-        print(device_id.get_name().c_str())
-        assert device_id.get_name().c_str() == "name 1"
+        print(device_id.get_name().to_string())
+        assert device_id.get_name().to_string() == "name 1"
         device_id.set_name(wildland.RustString("name 2"))
-        assert device_id.get_name().c_str() == "name 2"
+        assert device_id.get_name().to_string() == "name 2"
 
         device_id_type = device_id.get_type()
         another_device_id_type = device_id.get_type()
