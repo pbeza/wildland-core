@@ -5,8 +5,7 @@ use std::{
 };
 
 use crate::api::{
-    self, AdminManagerApi, AdminManagerError, AdminManagerResult, MasterIdentityApi, SeedPhrase,
-    WildlandIdentityType,
+    self, AdminManagerApi, AdminManagerError, AdminManagerResult, SeedPhrase, WildlandIdentityType,
 };
 pub use api::WrappedWildlandIdentity;
 use wildland_corex::Wallet;
@@ -33,9 +32,13 @@ impl AdminManager {
 
     fn create_forest_identity(
         &self,
-        master_identity: Box<dyn MasterIdentityApi>,
+        seed: &SeedPhrase,
         name: String,
     ) -> AdminManagerResult<api::WrappedWildlandIdentity> {
+        let master_identity = wildland_corex::MasterIdentity::with_identity(
+            wildland_corex::try_identity_from_seed(seed.as_ref())?,
+            self.wallet.clone(),
+        );
         let forest_id =
             master_identity.create_wildland_identity(WildlandIdentityType::Forest, name)?;
 
@@ -95,12 +98,7 @@ impl AdminManagerApi for AdminManager {
         seed: &SeedPhrase,
         device_name: String,
     ) -> AdminManagerResult<api::IdentityPair> {
-        let master_identity = wildland_corex::MasterIdentity::with_identity(
-            wildland_corex::try_identity_from_seed(seed.as_ref())?,
-            self.wallet.clone(),
-        );
-
-        let forest_id = self.create_forest_identity(Box::new(master_identity), String::from(""))?;
+        let forest_id = self.create_forest_identity(seed, String::from(""))?;
         let device_id = self.create_device_identity(device_name)?;
 
         Ok(api::IdentityPair {

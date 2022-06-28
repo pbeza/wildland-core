@@ -4,16 +4,6 @@ use std::{fmt::Display, rc::Rc};
 use wildland_crypto::identity::{Identity, SeedPhraseWords, SigningKeypair};
 use wildland_wallet::Wallet;
 
-pub trait MasterIdentityApi: Display {
-    fn get_seed_phrase(&self) -> SeedPhraseWords;
-    fn get_signing_keypair(&self) -> SigningKeypair;
-    fn create_wildland_identity(
-        &self,
-        identity_type: WildlandIdentityType,
-        name: String,
-    ) -> Result<WildlandIdentity, CoreXError>;
-}
-
 type MasterIdentityWalletType = Rc<dyn Wallet>;
 pub struct MasterIdentity {
     inner_identity: Identity,
@@ -38,18 +28,16 @@ impl MasterIdentity {
             wallet,
         }
     }
-}
 
-impl MasterIdentityApi for MasterIdentity {
-    fn get_seed_phrase(&self) -> SeedPhraseWords {
+    pub fn get_seed_phrase(&self) -> SeedPhraseWords {
         self.inner_identity.get_seed_phrase()
     }
 
-    fn get_signing_keypair(&self) -> SigningKeypair {
+    pub fn get_signing_keypair(&self) -> SigningKeypair {
         self.inner_identity.signing_keypair()
     }
 
-    fn create_wildland_identity(
+    pub fn create_wildland_identity(
         &self,
         identity_type: WildlandIdentityType,
         name: String,
