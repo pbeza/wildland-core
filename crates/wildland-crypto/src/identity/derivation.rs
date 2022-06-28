@@ -265,7 +265,7 @@ mod tests {
             12
         "
         );
-        let user = Identity::from_entropy(&entropy.to_vec()).ok().unwrap();
+        let user = Identity::from_entropy(entropy.as_ref()).ok().unwrap();
         assert_eq!(
             [
                 "expect".to_owned(),
@@ -292,7 +292,7 @@ mod tests {
             65426aa1176159d1929caea10514
         "
         );
-        assert!(Identity::from_entropy(&entropy.to_vec()).is_err());
+        assert!(Identity::from_entropy(entropy.as_ref()).is_err());
     }
 
     #[test]
