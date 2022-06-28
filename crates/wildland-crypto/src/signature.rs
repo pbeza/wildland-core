@@ -21,8 +21,7 @@
 use ed25519_dalek::{PublicKey, Verifier};
 use hex::{encode, ToHex};
 
-use crate::identity::error::CryptoError;
-use crate::identity::error::CryptoError::CannotVerifyMessageError;
+use crate::error::CryptoError;
 
 pub struct Signature(pub ed25519_dalek::Signature);
 
@@ -35,7 +34,7 @@ impl Signature {
         PublicKey::from_bytes(public_key)
             .unwrap() // TODO remove unwrap
             .verify(msg, &self.0)
-            .map_err(|_| CannotVerifyMessageError(encode(msg)))
+            .map_err(|_| CryptoError::MessageVerificationError(encode(msg)))
     }
 }
 

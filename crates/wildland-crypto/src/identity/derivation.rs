@@ -28,10 +28,12 @@ use sha2::{Digest, Sha256};
 use crate::{
     error::CryptoError,
     identity::{
-        keys::{EncryptingKeypair, SigningKeypair},
         seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN},
+        signing_keypair::SigningKeypair,
     },
 };
+
+use super::encrypting_keypair::EncryptingKeypair;
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
@@ -128,7 +130,7 @@ impl Identity {
     /// signature (or any random bits). Assumes high quality entropy
     /// and does not perform any checks.
     #[allow(clippy::ptr_arg)]
-    pub fn from_entropy(entropy: &Vec<u8>) -> Result<Self, CryptoError> {
+    pub fn from_entropy(entropy: &[u8]) -> Result<Self, CryptoError> {
         // assume high quality entropy of arbitrary length (>= 32 bytes)
         if (entropy.len() * 8) < 128 {
             return Err(CryptoError::EntropyTooLow);
@@ -263,7 +265,7 @@ mod tests {
             12
         "
         );
-        let user = Identity::from_entropy(&entropy.to_vec()).ok().unwrap();
+        let user = Identity::from_entropy(entropy.as_ref()).ok().unwrap();
         assert_eq!(
             [
                 "expect".to_owned(),
@@ -290,7 +292,7 @@ mod tests {
             65426aa1176159d1929caea10514
         "
         );
-        assert!(Identity::from_entropy(&entropy.to_vec()).is_err());
+        assert!(Identity::from_entropy(entropy.as_ref()).is_err());
     }
 
     #[test]
