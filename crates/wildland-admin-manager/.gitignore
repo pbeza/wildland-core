@@ -1,7 +1,6 @@
-wildland_java
-wildland_csharp
-wildland_python
-wildland_swift
-wildland_cpp
-_temporary
+_generated_java
+_generated_csharp
+_generated_python
+_generated_swift
+_generated_cpp
 wildland_wrap.cxx
