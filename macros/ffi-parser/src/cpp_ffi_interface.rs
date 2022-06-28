@@ -133,7 +133,7 @@ size_t RustVec<{0}>::size() {{ return (size_t)  __swift_bridge__$Vec_{1}$len(thi
     };
 }
 
-/// Creates a class that maps onto the Rust Result<T, ErrorType> object.
+/// Creates a class that maps onto the Rust Option<T> object.
 /// The ownership depends on the source from which the object is created.
 ///
 macro_rules! option_class {
@@ -159,7 +159,7 @@ public:
     }};
 }
 
-/// Creates a class that maps onto the Rust Option<T> object.
+/// Creates a class that maps onto the Rust Result<T, ErrorType> object.
 /// The ownership depends on the source from which the object is created.
 ///
 macro_rules! result_class {
