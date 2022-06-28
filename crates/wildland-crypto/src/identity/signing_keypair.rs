@@ -18,66 +18,60 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crypto_box::{PublicKey as EncryptionPublicKey, SecretKey as EncryptionSecretKey};
-use hex::FromHex;
+use crate::{error::CryptoError, signature::Signature};
+use ed25519_dalek::Signer;
 
-use crate::identity::error::CryptoError::{self, CannotCreateKeyError};
-
-pub type SigningKeypair = ed25519_dalek::Keypair;
+use super::bytes_key_from_str;
 
 #[derive(Debug)]
-pub struct EncryptingKeypair {
-    pub secret: EncryptionSecretKey,
-    pub public: EncryptionPublicKey,
-}
+pub struct SigningKeypair(ed25519_dalek::Keypair);
 
-pub trait Keypair {
-    fn from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self;
-    fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError>
-    where
-        Self: Sized;
-}
-
-impl Keypair for EncryptingKeypair {
-    fn from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self {
-        Self {
-            secret: EncryptionSecretKey::from(seckey),
-            public: EncryptionPublicKey::from(pubkey),
-        }
+impl SigningKeypair {
+    pub fn try_from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Result<Self, CryptoError> {
+        Ok(Self(
+            ed25519_dalek::Keypair::from_bytes([seckey, pubkey].concat().as_slice())
+                .map_err(|e| CryptoError::InvalidSignatureBytesError(e.to_string()))?,
+        ))
     }
-    fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
+
+    pub fn try_from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
         let pubkey = bytes_key_from_str(public_key)?;
         let seckey = bytes_key_from_str(secret_key)?;
-        Ok(Self::from_bytes_slices(pubkey, seckey))
-    }
-}
-
-impl Keypair for SigningKeypair {
-    fn from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self {
-        SigningKeypair::from_bytes([seckey, pubkey].concat().as_slice()).unwrap()
+        Self::try_from_bytes_slices(pubkey, seckey)
     }
 
-    fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
-        let pubkey = bytes_key_from_str(public_key)?;
-        let seckey = bytes_key_from_str(secret_key)?;
-        Ok(Self::from_bytes_slices(pubkey, seckey))
+    pub fn try_from_secret_bytes(secret_key_bytes: &[u8; 32]) -> Result<Self, CryptoError> {
+        let sec_key = ed25519_dalek::SecretKey::from_bytes(secret_key_bytes)
+            .map_err(|e| CryptoError::InvalidSignatureBytesError(e.to_string()))?;
+        let pub_key = ed25519_dalek::PublicKey::from(&sec_key);
+        Ok(Self(ed25519_dalek::Keypair {
+            secret: sec_key,
+            public: pub_key,
+        }))
     }
-}
 
-pub fn bytes_key_from_str(key: &str) -> Result<[u8; 32], CryptoError> {
-    let key = <[u8; 32]>::from_hex(key).map_err(|_| CannotCreateKeyError(key.len()))?;
-    Ok(key)
+    pub fn public(&self) -> [u8; 32] {
+        self.0.public.to_bytes()
+    }
+
+    pub fn secret(&self) -> [u8; 32] {
+        self.0.secret.to_bytes()
+    }
+
+    pub fn sign(&self, msg: &[u8]) -> Signature {
+        Signature(self.0.sign(msg))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::common::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
-    use crate::identity::keys::{Keypair, SigningKeypair};
+    use crate::identity::signing_keypair::SigningKeypair;
 
     #[test]
     fn should_create_keypair_when_keys_have_proper_length() {
         // when
-        let keypair = SigningKeypair::from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY);
+        let keypair = SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY);
 
         // then
         assert!(keypair.is_ok());
@@ -86,7 +80,7 @@ mod tests {
     #[test]
     fn should_not_create_keypair_when_pub_key_is_too_short() {
         // when
-        let keypair = SigningKeypair::from_str("", SIGNING_SECRET_KEY);
+        let keypair = SigningKeypair::try_from_str("", SIGNING_SECRET_KEY);
 
         // then
         assert!(keypair.is_err());
@@ -95,7 +89,7 @@ mod tests {
     #[test]
     fn should_not_create_keypair_when_pub_key_is_too_long() {
         // when
-        let keypair = SigningKeypair::from_str(
+        let keypair = SigningKeypair::try_from_str(
             "1234567890123456789012345678901234567890123456789012345678901234567890",
             SIGNING_SECRET_KEY,
         );
@@ -107,7 +101,7 @@ mod tests {
     #[test]
     fn should_not_create_keypair_when_sec_key_is_too_short() {
         // when
-        let keypair = SigningKeypair::from_str(SIGNING_PUBLIC_KEY, "");
+        let keypair = SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, "");
 
         // then
         assert!(keypair.is_err());
@@ -116,7 +110,7 @@ mod tests {
     #[test]
     fn should_not_create_keypair_when_sec_key_is_too_long() {
         // when
-        let keypair = SigningKeypair::from_str(
+        let keypair = SigningKeypair::try_from_str(
             SIGNING_PUBLIC_KEY,
             "1234567890123456789012345678901234567890123456789012345678901234567890",
         );

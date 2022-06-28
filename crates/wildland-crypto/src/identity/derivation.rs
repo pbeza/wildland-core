@@ -22,17 +22,18 @@ use std::convert::TryFrom;
 
 use bip39::{Language::English, Mnemonic, Seed};
 use crypto_box::SecretKey as EncryptionSecretKey;
-use ed25519_dalek::SecretKey as SigningSecretKey;
 use ed25519_dalek_bip32::{DerivationPath, ExtendedSecretKey};
 use sha2::{Digest, Sha256};
 
 use crate::{
     error::CryptoError,
     identity::{
-        keys::{EncryptingKeypair, SigningKeypair},
         seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN},
+        signing_keypair::SigningKeypair,
     },
 };
+
+use super::encrypting_keypair::EncryptingKeypair;
 
 fn signing_key_path() -> String {
     // "master/WLD/purpose/index"
@@ -129,7 +130,7 @@ impl Identity {
     /// signature (or any random bits). Assumes high quality entropy
     /// and does not perform any checks.
     #[allow(clippy::ptr_arg)]
-    pub fn from_entropy(entropy: &Vec<u8>) -> Result<Self, CryptoError> {
+    pub fn from_entropy(entropy: &[u8]) -> Result<Self, CryptoError> {
         // assume high quality entropy of arbitrary length (>= 32 bytes)
         if (entropy.len() * 8) < 128 {
             return Err(CryptoError::EntropyTooLow);
@@ -170,13 +171,8 @@ impl Identity {
         let derived_extended_seckey = self.derive_private_key_from_path(path);
 
         // drop both the chain-code from xprv and last 32 bytes
-        let seckey_bytes = *derived_extended_seckey.secret_key.as_bytes();
-        let seckey = SigningSecretKey::from_bytes(&seckey_bytes).unwrap();
-        let pubkey = (&seckey).into();
-        SigningKeypair {
-            secret: seckey,
-            public: pubkey,
-        }
+        let sec_key = *derived_extended_seckey.secret_key.as_bytes();
+        SigningKeypair::try_from_secret_bytes(&sec_key).unwrap() // TODO handle unwrap
     }
 
     fn derive_encryption_keypair(&self, path: &str) -> EncryptingKeypair {
@@ -202,8 +198,6 @@ impl Identity {
 
 #[cfg(test)]
 mod tests {
-    use crate::signature::{sign, verify};
-    use ed25519_dalek::Signature;
     use hex::encode;
     use hex_literal::hex;
 
@@ -222,33 +216,29 @@ mod tests {
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
         let keypair = user.signing_keypair();
-        let signature: Signature = sign(MSG, &keypair);
-        assert!(verify(MSG, &signature, &keypair.public).is_ok());
+        let signature = keypair.sign(MSG);
+        assert!(signature.verify(MSG, &keypair.public()).is_ok());
     }
 
     #[test]
     fn cannot_verify_signature_for_other_message() {
         let user = user();
         let keypair = user.signing_keypair();
-        let signature: Signature = sign(MSG, &keypair);
-        assert!(verify("invalid message".as_ref(), &signature, &keypair.public).is_err());
+        let signature = keypair.sign(MSG);
+        assert!(signature.verify(MSG, &keypair.public()).is_ok());
     }
 
     #[test]
     fn can_generate_distinct_keypairs() {
         let user = user();
         let skeypair = user.signing_keypair();
-        println!("signing key, sec {}", encode(skeypair.secret.as_bytes()));
-        println!("signing key, pub {}", encode(skeypair.public.as_bytes()));
         let e0key = user.encryption_keypair(0);
-        println!("encryp0 key, sec: {}", encode(e0key.secret.as_bytes()));
-        println!("encryp0 key, pub: {}", encode(e0key.public.as_bytes()));
         let e1key = user.encryption_keypair(1);
-        assert_ne!(skeypair.secret.as_bytes(), e0key.secret.as_bytes());
+        assert_ne!(&skeypair.secret(), e0key.secret.as_bytes());
         assert_ne!(e0key.secret.as_bytes(), e1key.secret.as_bytes());
 
-        assert_eq!(encode(skeypair.secret.as_bytes()).len(), 64);
-        assert_eq!(encode(skeypair.public.as_bytes()).len(), 64);
+        assert_eq!(encode(skeypair.secret()).len(), 64);
+        assert_eq!(encode(skeypair.public()).len(), 64);
     }
 
     const TEST_MNEMONIC_12: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -275,7 +265,7 @@ mod tests {
             12
         "
         );
-        let user = Identity::from_entropy(&entropy.to_vec()).ok().unwrap();
+        let user = Identity::from_entropy(entropy.as_ref()).ok().unwrap();
         assert_eq!(
             [
                 "expect".to_owned(),
@@ -302,7 +292,7 @@ mod tests {
             65426aa1176159d1929caea10514
         "
         );
-        assert!(Identity::from_entropy(&entropy.to_vec()).is_err());
+        assert!(Identity::from_entropy(entropy.as_ref()).is_err());
     }
 
     #[test]

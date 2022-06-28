@@ -19,10 +19,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub use crate::identity::{derivation::Identity, keys::EncryptingKeypair, keys::SigningKeypair};
+use crate::error::CryptoError;
+pub use crate::identity::{derivation::Identity, signing_keypair::SigningKeypair};
+use hex::FromHex;
 pub use seed::{generate_random_seed_phrase, SeedPhraseWords, SEED_PHRASE_LEN};
 
 mod derivation;
-pub mod error;
-pub mod keys;
+pub mod encrypting_keypair;
 mod seed;
+pub mod signing_keypair;
+
+fn bytes_key_from_str(key: &str) -> Result<[u8; 32], CryptoError> {
+    <[u8; 32]>::from_hex(key).map_err(|_| CryptoError::KeyParsingError(key.len()))
+}
