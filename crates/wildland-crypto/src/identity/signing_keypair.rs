@@ -41,7 +41,8 @@ impl SigningKeypair {
     }
 
     pub fn try_from_secret_bytes(secret_key_bytes: &[u8; 32]) -> Result<Self, CryptoError> {
-        let sec_key = ed25519_dalek::SecretKey::from_bytes(secret_key_bytes).unwrap();
+        let sec_key = ed25519_dalek::SecretKey::from_bytes(secret_key_bytes)
+            .map_err(|e| CryptoError::InvalidSignatureBytesError(e.to_string()))?;
         let pub_key = ed25519_dalek::PublicKey::from(&sec_key);
         Ok(Self(ed25519_dalek::Keypair {
             secret: sec_key,
