@@ -1,7 +1,7 @@
 use super::wildland::{WildlandIdentity, WildlandIdentityType};
 use crate::{crypto::SeedPhrase, CoreXError};
 use std::{fmt::Display, rc::Rc};
-use wildland_crypto::identity::{Identity, SeedPhraseWords, SigningKeypair};
+use wildland_crypto::identity::{Identity, SeedPhraseWordsArray, SigningKeypair};
 use wildland_wallet::Wallet;
 
 type MasterIdentityWalletType = Rc<dyn Wallet>;
@@ -29,7 +29,7 @@ impl MasterIdentity {
         }
     }
 
-    pub fn get_seed_phrase(&self) -> SeedPhraseWords {
+    pub fn get_seed_phrase(&self) -> SeedPhraseWordsArray {
         self.inner_identity.get_seed_phrase()
     }
 

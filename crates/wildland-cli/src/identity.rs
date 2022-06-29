@@ -1,7 +1,9 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use wildland_admin_manager::{admin_manager::AdminManager, api::AdminManagerApi};
-use wildland_corex::{create_file_wallet, ManifestSigningKeypair, SeedPhrase, SeedPhraseWords};
+use wildland_corex::{
+    create_file_wallet, ManifestSigningKeypair, SeedPhrase, SeedPhraseWordsArray,
+};
 use yansi::Paint;
 
 #[derive(Parser, Debug)]
@@ -116,7 +118,7 @@ fn print_identities(ids: &[ManifestSigningKeypair]) {
 }
 
 fn print_seedphrase(seed_phrase: &SeedPhrase) {
-    let words: SeedPhraseWords = seed_phrase.into();
+    let words: SeedPhraseWordsArray = seed_phrase.into();
 
     let string_repr = (1..=12)
         .zip(words.iter())

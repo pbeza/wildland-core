@@ -1,16 +1,16 @@
 use crate::CoreXError;
-use wildland_crypto::identity::{self, Identity, SeedPhraseWords};
+use wildland_crypto::identity::{self, Identity, SeedPhraseWordsArray};
 
-pub fn try_identity_from_seed(seed: &SeedPhraseWords) -> Result<Identity, CoreXError> {
+pub fn try_identity_from_seed(seed: &SeedPhraseWordsArray) -> Result<Identity, CoreXError> {
     Identity::try_from(seed).map_err(CoreXError::from)
 }
 
-pub fn generate_random_seed_phrase() -> Result<SeedPhraseWords, CoreXError> {
+pub fn generate_random_seed_phrase() -> Result<SeedPhraseWordsArray, CoreXError> {
     identity::generate_random_seed_phrase().map_err(CoreXError::from)
 }
 
 #[derive(Debug, Clone)]
-pub struct SeedPhrase([String; 12]);
+pub struct SeedPhrase(SeedPhraseWordsArray);
 
 impl SeedPhrase {
     pub fn get_string(&self) -> String {
@@ -22,19 +22,19 @@ impl SeedPhrase {
     }
 }
 
-impl From<SeedPhraseWords> for SeedPhrase {
-    fn from(seed: SeedPhraseWords) -> Self {
+impl From<SeedPhraseWordsArray> for SeedPhrase {
+    fn from(seed: SeedPhraseWordsArray) -> Self {
         Self(seed)
     }
 }
 
-impl From<SeedPhrase> for SeedPhraseWords {
+impl From<SeedPhrase> for SeedPhraseWordsArray {
     fn from(seed: SeedPhrase) -> Self {
         seed.0
     }
 }
 
-impl From<&SeedPhrase> for SeedPhraseWords {
+impl From<&SeedPhrase> for SeedPhraseWordsArray {
     fn from(seed: &SeedPhrase) -> Self {
         seed.0.clone()
     }
@@ -50,8 +50,8 @@ impl TryFrom<Vec<String>> for SeedPhrase {
     }
 }
 
-impl AsRef<[String; 12]> for SeedPhrase {
-    fn as_ref(&self) -> &[String; 12] {
+impl AsRef<SeedPhraseWordsArray> for SeedPhrase {
+    fn as_ref(&self) -> &SeedPhraseWordsArray {
         &self.0
     }
 }
