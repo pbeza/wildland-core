@@ -36,5 +36,5 @@
   #include "ffi_cxx.h"
 %}
 %include "std_string.i"
-%include "./_generated_cpp/ffi_cxx.h"
-%include "./_generated_cpp/ffi_swig.i"
+%include "ffi_cxx.h"
+%include "ffi_swig.i"
