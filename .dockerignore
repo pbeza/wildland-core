@@ -1,8 +1,6 @@
 target
 .vscode
 ci
-crates/wildland-admin-manager/_temporary
-crates/wildland-admin-manager/wildland_swift
 .gitignore
 .gitlab-ci.yml
 bump.sh

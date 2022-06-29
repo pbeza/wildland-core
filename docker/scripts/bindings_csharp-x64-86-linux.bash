@@ -18,7 +18,7 @@ ${CC} -fpermissive \
       -std=c++14 \
       -w \
       -L . \
-      wildland_wrap.cxx ffi_cxx.rs.cc \
+      wildland_wrap.cxx \
       -lwildland_admin_manager \
       -o /bindings_test/lib${DLLIMPORT}.so
 
