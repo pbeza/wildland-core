@@ -111,11 +111,12 @@ x86_64 linux:
       --build-arg BUILD_TARGET=x86_64-unknown-linux-gnu
     - mv /ffi_build ${CI_PROJECT_DIR}
     - mv /ffi_tests ${CI_PROJECT_DIR}
-  artifacts:
+  cache:
+    key: lib-x86_64-linux-gnu-$CI_PIPELINE_ID
     paths:
       - ffi_build/
       - ffi_tests/
-    expire_in: 1 day
+    policy: push
   tags:
     - docker
     - linux
@@ -146,9 +147,11 @@ csharp x86_64 windows-msvc:
     - $ProgressPreference = 'SilentlyContinue'
     - Powershell.exe -File "$env:CI_PROJECT_DIR/docker/scripts/bindings_csharp-win64.ps1"
   artifacts:
+    expose_as: 'csharp-x86_64-windows-msvc'
+    name: csharp-x86_64-windows-msvc
     paths:
-      - build/*
-    expire_in: 1 day
+      - build/
+    expire_in: 1 week
   tags:
     - docker
     - windows
@@ -167,12 +170,18 @@ csharp x86_64 linux:
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
     - bash docker/scripts/bindings_csharp-x64-86-linux.bash
     - mv /out ${CI_PROJECT_DIR}/build
-  dependencies:
-    - x86_64 linux
   artifacts:
+    expose_as: 'csharp-x86_64-linux-gnu'
+    name: csharp-x86_64-linux-gnu
     paths:
-      - build/*
-    expire_in: 1 day
+      - build/
+    expire_in: 1 week
+  cache:
+    key: lib-x86_64-linux-gnu-$CI_PIPELINE_ID
+    paths:
+      - ffi_build/
+      - ffi_tests/
+    policy: pull
   tags:
     - docker
     - linux
