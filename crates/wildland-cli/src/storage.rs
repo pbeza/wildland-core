@@ -16,10 +16,8 @@ pub enum StorageSubcommands {
 impl StorageCliOpts {
     pub fn handle_command(&self) -> Result<()> {
         match &self.subcommand {
-            StorageSubcommands::Create => {}
-            StorageSubcommands::List {} => {}
+            StorageSubcommands::Create => todo!(),
+            StorageSubcommands::List => todo!(),
         }
-
-        Ok(())
     }
 }

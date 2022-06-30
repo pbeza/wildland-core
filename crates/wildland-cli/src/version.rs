@@ -16,10 +16,12 @@ pub struct VersionCliOpts {
 
 impl VersionCliOpts {
     pub fn handle_command(&self) -> Result<()> {
-        match self.json {
-            true => print_version_json(),
-            false => print_version(),
+        if self.json {
+            print_version_json();
+        } else {
+            print_version();
         }
+
         Ok(())
     }
 }

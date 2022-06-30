@@ -16,10 +16,8 @@ pub enum ForestSubcommands {
 impl ForestCliOpts {
     pub fn handle_command(&self) -> Result<()> {
         match &self.subcommand {
-            ForestSubcommands::Create => {}
-            ForestSubcommands::List {} => {}
+            ForestSubcommands::Create => todo!(),
+            ForestSubcommands::List => todo!(),
         }
-
-        Ok(())
     }
 }
