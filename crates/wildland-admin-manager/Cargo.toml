@@ -24,6 +24,7 @@ wildland-corex = { version = "0.1.9", path = "../wildland-corex", registry = "wl
 ffi-macro = { version = "0.1.0", path = "../../macros/ffi-macro", registry = "wl-dev", optional = true }
 thiserror = "1.0.31"
 swift-bridge = { version = "0.1", optional = true }
+sha2 = "0.10.2"
 
 
 [package.metadata.workspaces]

@@ -25,15 +25,15 @@ COPY crates/wildland-admin-manager/wildland.i ./
 RUN mkdir -p _generated_java \
     && swig -java -c++ -outdir _generated_java wildland.i \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
-        wildland_wrap.cxx \
-        -Llib \
-        -lwildland_admin_manager \
-        -I${JDK_INC_DIR} \
-        -I${JDK_INC_DIR}/linux \
-        -I_generated_cpp \
-        -I_generated_swift \
-        -I_generated_swift/ffi_swift \
-        -o _generated_java/libwildland.so
+    wildland_wrap.cxx \
+    -Llib \
+    -lwildland_admin_manager \
+    -I${JDK_INC_DIR} \
+    -I${JDK_INC_DIR}/linux \
+    -I_generated_cpp \
+    -I_generated_swift \
+    -I_generated_swift/ffi_swift \
+    -o _generated_java/libwildland.so
 
 COPY test/ffi/test.java ./_generated_java/
 RUN cd _generated_java \
@@ -41,4 +41,4 @@ RUN cd _generated_java \
 
 # Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.
 
-ENTRYPOINT ["java", "-cp", "_generated_java", "-Djava.library.path=./_generated_java", "main"]
+CMD ["java", "-cp", "_generated_java", "-Djava.library.path=./_generated_java", "main"]

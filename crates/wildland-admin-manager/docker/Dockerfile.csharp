@@ -23,13 +23,13 @@ COPY crates/wildland-admin-manager/wildland.i ./
 RUN mkdir -p _generated_csharp \
     && swig -csharp -c++ -w516,503,476,302 -outdir _generated_csharp wildland.i \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
-        wildland_wrap.cxx \
-        -L lib \
-        -I_generated_cpp \
-        -I_generated_swift \
-        -I_generated_swift/ffi_swift \
-        -lwildland_admin_manager \
-        -o _generated_csharp/libwildland.so
+    wildland_wrap.cxx \
+    -L lib \
+    -I_generated_cpp \
+    -I_generated_swift \
+    -I_generated_swift/ffi_swift \
+    -lwildland_admin_manager \
+    -o _generated_csharp/libwildland.so
 
 COPY test/ffi/test.cs ./_generated_csharp
 RUN cd _generated_csharp \
@@ -37,4 +37,4 @@ RUN cd _generated_csharp \
 
 # Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.
 
-ENTRYPOINT ["mono", "_generated_csharp/test.exe"]
+CMD ["mono", "_generated_csharp/test.exe"]

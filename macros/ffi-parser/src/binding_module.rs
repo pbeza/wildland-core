@@ -176,7 +176,7 @@ impl BindingModule {
                         RustWrapperType::Result => quote! {{
                             #wrapper_name(#struct_name #fn_name( #(#args),* )
                                 .map(|ok| unsafe { std::mem::transmute(ok) })
-                                .map_err(|err| unsafe { std::mem::transmute(err) })).into()
+                                .map_err(|err| err.into())).into()
                         }},
                         RustWrapperType::Option => quote! {{
                             #wrapper_name(#struct_name #fn_name( #(#args),* )
@@ -292,6 +292,21 @@ fn generate_wrapper_definition(
             quote! {
                 #[derive(Clone, Debug)]
                 pub struct #wrapper_name(super::#original_type_name);
+                impl<'a> From<&'a Box<#wrapper_name>> for &'a super::#original_type_name {
+                    fn from(w: &'a Box<#wrapper_name>) -> &'a super::#original_type_name {
+                        &w.as_ref().0
+                    }
+                }
+                impl<'a> From<&'a #wrapper_name> for &'a super::#original_type_name {
+                    fn from(w: &'a #wrapper_name) -> &'a super::#original_type_name {
+                        &w.0
+                    }
+                }
+                impl<T: Into<super::#original_type_name>> From<T> for #wrapper_name {
+                    fn from(w: T) -> #wrapper_name {
+                        #wrapper_name(w.into())
+                    }
+                }
             }
         }
         RustWrapperType::Arc => {
