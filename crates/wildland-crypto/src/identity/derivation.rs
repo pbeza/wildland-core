@@ -28,7 +28,7 @@ use sha2::{Digest, Sha256};
 use crate::{
     error::CryptoError,
     identity::{
-        seed::{extend_seed, SeedPhraseWords, SEED_PHRASE_LEN},
+        seed::{extend_seed, SeedPhraseWordsArray, SEED_PHRASE_LEN},
         signing_keypair::SigningKeypair,
     },
 };
@@ -58,13 +58,13 @@ fn single_use_encryption_key_path(index: u64) -> String {
 #[derive(Debug)]
 pub struct Identity {
     extended_seckey: ExtendedSecretKey,
-    words: SeedPhraseWords,
+    words: SeedPhraseWordsArray,
 }
 
-impl TryFrom<&SeedPhraseWords> for Identity {
+impl TryFrom<&SeedPhraseWordsArray> for Identity {
     type Error = CryptoError;
 
-    fn try_from(seed_phrase: &SeedPhraseWords) -> Result<Self, Self::Error> {
+    fn try_from(seed_phrase: &SeedPhraseWordsArray) -> Result<Self, Self::Error> {
         let mnemonic = Mnemonic::from_phrase(&seed_phrase.join(" "), English)
             .map_err(|e| CryptoError::IdentityGenerationError(e.to_string()))?;
         Self::try_from(mnemonic)
@@ -122,7 +122,7 @@ impl Identity {
         &self.extended_seckey
     }
 
-    pub fn get_seed_phrase(&self) -> SeedPhraseWords {
+    pub fn get_seed_phrase(&self) -> SeedPhraseWordsArray {
         self.words.clone()
     }
 
@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn can_generate_from_mnemonic() {
-        let mnemonic_array: [String; 12] = TEST_MNEMONIC_12
+        let mnemonic_array: SeedPhraseWordsArray = TEST_MNEMONIC_12
             .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>()
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn should_fail_on_not_english_mnemonic() {
-        let mnemonic_array: [String; 12] = TEST_MNEMONIC_ITALIAN
+        let mnemonic_array: SeedPhraseWordsArray = TEST_MNEMONIC_ITALIAN
             .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>()
@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn can_recover_seed() {
-        let mnemonic_array: [String; 12] = TEST_MNEMONIC_12
+        let mnemonic_array: SeedPhraseWordsArray = TEST_MNEMONIC_12
             .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>()
