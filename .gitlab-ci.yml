@@ -1,5 +1,8 @@
 image: registry.gitlab.com/wildland/corex/wildland-core/builder:latest
 
+variables:
+  CARGO_FLAGS: ""
+
 stages:
   - test
   - build
@@ -13,7 +16,7 @@ test:
     - main
     - merge_requests
   script:
-    - cargo test --verbose
+    - cargo $CARGO_FLAGS test --verbose
 
 lint:
   stage: test
@@ -24,7 +27,7 @@ lint:
     - merge_requests
   script:
     - rustup component add clippy
-    - cargo clippy --all-targets -- -D warnings
+    - cargo $CARGO_FLAGS clippy --all-targets -- -D warnings
 
 format:
   stage: test
@@ -35,7 +38,7 @@ format:
     - merge_requests
   script:
     - rustup component add rustfmt
-    - cargo fmt -- --check
+    - cargo $CARGO_FLAGS fmt -- --check
 
 audit:
   stage: test
@@ -45,8 +48,8 @@ audit:
     - main
     - merge_requests
   script:
-    - cargo install cargo-audit
-    - cargo audit
+    - cargo $CARGO_FLAGS install cargo-audit
+    - cargo $CARGO_FLAGS audit
 
 build:
   stage: build
@@ -56,7 +59,7 @@ build:
     - main
     - merge_requests
   script:
-    - cargo build
+    - cargo $CARGO_FLAGS build
 
 publish:
   stage: deploy
@@ -73,7 +76,7 @@ publish:
     - git checkout -b $CI_COMMIT_BRANCH origin/$CI_COMMIT_BRANCH
     - git reset --hard origin/$CI_COMMIT_BRANCH
     # Seriously those diff and grep exit codes...
-    - EXCLUDES=$((diff <(cargo workspaces list) <(cargo workspaces changed) || true) | (grep '< ' || true) | sed 's/< //' | xargs -I@ echo -n "--exclude @ ")
+    - EXCLUDES=$((diff <(cargo $CARGO_FLAGS workspaces list) <(cargo $CARGO_FLAGS workspaces changed) || true) | (grep '< ' || true) | sed 's/< //' | xargs -I@ echo -n "--exclude @ ")
     - echo $EXCLUDES
     # Specifying registry is required (bug: https://github.com/crate-ci/cargo-release/issues/429)
-    - RUST_LOG=debug cargo release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release
+    - RUST_LOG=debug cargo $CARGO_FLAGS release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release

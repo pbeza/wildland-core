@@ -25,10 +25,10 @@ use sha2::Sha256;
 use crate::error::CryptoError;
 
 pub const SEED_PHRASE_LEN: usize = 12;
-pub type SeedPhraseWords = [String; SEED_PHRASE_LEN];
+pub type SeedPhraseWordsArray = [String; SEED_PHRASE_LEN];
 
 /// Create a new random seed phrase
-pub fn generate_random_seed_phrase() -> Result<SeedPhraseWords, CryptoError> {
+pub fn generate_random_seed_phrase() -> Result<SeedPhraseWordsArray, CryptoError> {
     Mnemonic::new(
         MnemonicType::for_word_count(SEED_PHRASE_LEN)
             .map_err(|e| CryptoError::SeedPhraseGenerationError(e.to_string()))?,

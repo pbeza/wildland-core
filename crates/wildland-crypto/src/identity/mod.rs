@@ -22,7 +22,7 @@
 use crate::error::CryptoError;
 pub use crate::identity::{derivation::Identity, signing_keypair::SigningKeypair};
 use hex::FromHex;
-pub use seed::{generate_random_seed_phrase, SeedPhraseWords, SEED_PHRASE_LEN};
+pub use seed::{generate_random_seed_phrase, SeedPhraseWordsArray, SEED_PHRASE_LEN};
 
 mod derivation;
 pub mod encrypting_keypair;

@@ -1,5 +1,5 @@
 use thiserror::Error;
-use wildland_corex::CoreXError;
+use wildland_corex::{CoreXError, WalletError};
 
 pub type AdminManagerResult<T> = std::result::Result<T, AdminManagerError>;
 
@@ -17,6 +17,9 @@ pub enum AdminManagerError {
 
     #[error("CoreX error: {0}")]
     CoreX(CoreXError),
+
+    #[error("CoreX error: {0}")]
+    Wallet(WalletError),
 }
 
 impl AdminManagerError {
@@ -27,7 +30,8 @@ impl AdminManagerError {
             AdminManagerError::ParseSeedPhraseError(_) => 101,
             AdminManagerError::EmailAlreadyVerified => todo!(),
             AdminManagerError::ValidationCodesDoNotMatch => todo!(),
-            AdminManagerError::EmailCandidateNotSet => todo!(), // TODO codes
+            AdminManagerError::EmailCandidateNotSet => todo!(),
+            AdminManagerError::Wallet(_inner) => todo!(), // TODO codes
         }
     }
 }
@@ -35,5 +39,11 @@ impl AdminManagerError {
 impl From<CoreXError> for AdminManagerError {
     fn from(corex_err: CoreXError) -> Self {
         AdminManagerError::CoreX(corex_err)
+    }
+}
+
+impl From<WalletError> for AdminManagerError {
+    fn from(wallet_err: WalletError) -> Self {
+        AdminManagerError::Wallet(wallet_err)
     }
 }
