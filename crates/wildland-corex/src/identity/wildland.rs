@@ -10,7 +10,7 @@ pub enum WildlandIdentityType {
     Device,
 }
 
-// TODO generate below block of code
+// TODO generate code for handling enums with binding_wrapper macro
 impl WildlandIdentityType {
     pub fn is_forest(&self) -> bool {
         *self == Self::Forest
