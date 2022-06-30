@@ -37,7 +37,7 @@ mod ffi_binding {
         fn get_vec(self: &SeedPhrase) -> Vec<String>;
 
         type WildlandIdentityType;
-        // TODO generate code for handling enums with binding_wrapper macro
+        // TODO WILX-95 generate code for handling enums with binding_wrapper macro
         fn is_same(self: &WildlandIdentityType, other: &WildlandIdentityType) -> bool;
         fn is_forest(self: &WildlandIdentityType) -> bool;
         fn is_device(self: &WildlandIdentityType) -> bool;
