@@ -35,6 +35,7 @@ cargo clippy (lint):
   script:
     - rustup component add clippy
     - cargo $CARGO_FLAGS clippy --all-targets -- -D warnings
+  allow_failure: true
 
 cargo fmt (format):
   stage: Test
@@ -210,7 +211,6 @@ publish crates:
   script:
     - git remote set-url origin "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"
     - git pull "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git" $CI_COMMIT_BRANCH --rebase --autostash
-    - git checkout -b $CI_COMMIT_BRANCH origin/$CI_COMMIT_BRANCH
     - git reset --hard origin/$CI_COMMIT_BRANCH
     # Seriously those diff and grep exit codes...
     - EXCLUDES=$((diff <(cargo $CARGO_FLAGS workspaces list) <(cargo $CARGO_FLAGS workspaces changed) || true) | (grep '< ' || true) | sed 's/< //' | xargs -I@ echo -n "--exclude @ ")

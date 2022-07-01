@@ -72,3 +72,4 @@ COPY tests/ffi/ /ffi_tests/
 COPY /docker/scripts/ /scripts/
 
 WORKDIR /
+ENTRYPOINT ["bash", "/scripts/entrypoint.bash"]

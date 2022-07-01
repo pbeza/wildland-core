@@ -15,6 +15,7 @@ RUN apt-get -qy update \
 		less \
 		mingw-w64 \
 		libssl-dev \
+		git \
 	&& apt-get clean autoclean \
 	&& apt-get autoremove --yes \
 	&& rm -rf /var/lib/{apt,dpkg,cache,log}/
@@ -33,5 +34,8 @@ RUN mkdir -p \
 RUN curl https://sh.rustup.rs -sSf | \
     sh -s -- --default-toolchain stable -y
 
+RUN cargo install \
+	cargo-release \
+	cargo-workspaces
+
 WORKDIR /
-ENTRYPOINT ["bash", "/scripts/entrypoint.bash"]
