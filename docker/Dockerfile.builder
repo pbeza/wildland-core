@@ -16,6 +16,8 @@ RUN apt-get -qy update \
 		mingw-w64 \
 		libssl-dev \
 		git \
+		jq \
+		ruby \
 	&& apt-get clean autoclean \
 	&& apt-get autoremove --yes \
 	&& rm -rf /var/lib/{apt,dpkg,cache,log}/
