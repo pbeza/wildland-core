@@ -384,7 +384,7 @@ dependencies = [
 
 [[package]]
 name = "ffi-macro"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ffi-parser",
  "swift-bridge",
@@ -392,7 +392,7 @@ dependencies = [
 
 [[package]]
 name = "ffi-macro-build"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ffi-parser",
  "swift-bridge-build",
@@ -401,7 +401,7 @@ dependencies = [
 
 [[package]]
 name = "ffi-parser"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1685,7 +1685,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "ffi-macro",
  "ffi-macro-build",
@@ -1697,11 +1697,11 @@ dependencies = [
 
 [[package]]
 name = "wildland-catlib"
-version = "0.3.0"
+version = "0.3.1"
 
 [[package]]
 name = "wildland-cli"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "anyhow",
  "clap",
@@ -1714,7 +1714,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-corex"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "hex",
  "sha2 0.10.2",
@@ -1727,7 +1727,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.4.5"
+version = "0.4.6"
 dependencies = [
  "crypto_box",
  "ed25519-dalek",
@@ -1747,11 +1747,11 @@ dependencies = [
 
 [[package]]
 name = "wildland-dfs"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "wildland-storage-controller-client"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "dotenv",
  "http",
@@ -1767,7 +1767,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-wallet"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base16ct",
  "directories",
