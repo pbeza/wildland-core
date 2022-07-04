@@ -1,31 +1,42 @@
+use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::fs;
+use std::{fs, path::PathBuf};
 use wildland_crypto::identity::SigningKeypair;
-use xdg::BaseDirectories;
 
 use crate::{ManifestSigningKeypair, SigningKeyType, Wallet, WalletError};
 
 #[derive(Clone, Debug)]
 pub struct FileWallet {
-    base_directory: BaseDirectories,
+    wallet_directory: PathBuf,
 }
 
 impl FileWallet {
     fn write_secret_file(&self, name: String, contents: String) -> Result<(), WalletError> {
-        let file = self
-            .base_directory
-            .place_data_file(name)
-            .map_err(|e| WalletError::FileError(e.to_string()))?;
+        if !self.wallet_directory.exists() {
+            fs::create_dir_all(&self.wallet_directory)
+                .map_err(|e| WalletError::FileError(e.to_string()))?;
+        }
+
+        let file = self.wallet_directory.join(name);
 
         fs::write(&file, contents).map_err(|e| WalletError::FileError(e.to_string()))
     }
 }
 
 pub fn create_file_wallet() -> Result<Box<dyn Wallet>, WalletError> {
+    let project_dirs = ProjectDirs::from("com", "wildland", "Cargo");
+
+    if project_dirs.is_none() {
+        return Err(WalletError::FileError(
+            "Could not instantiate Wallet project directory".to_string(),
+        ));
+    }
+
+    let wallet_dir = project_dirs.unwrap().data_local_dir().join("wallet");
+
     Ok(Box::new(FileWallet {
-        base_directory: BaseDirectories::with_prefix("wildland/wallet")
-            .map_err(|e| WalletError::FileError(e.to_string()))?,
+        wallet_directory: wallet_dir,
     }))
 }
 
@@ -50,12 +61,20 @@ impl Wallet for FileWallet {
     }
 
     fn list_secrets(&self) -> Result<Vec<ManifestSigningKeypair>, WalletError> {
-        self.base_directory
-            .list_data_files(".")
+        if !self.wallet_directory.exists() {
+            return Ok(vec![]);
+        }
+
+        let files = fs::read_dir(&self.wallet_directory)
+            .map_err(|e| WalletError::FileError(e.to_string()))?;
+
+        files
             .into_iter()
             .map(|f| {
-                let contents =
-                    fs::read_to_string(f).map_err(|e| WalletError::FileError(e.to_string()))?;
+                let dir_entry = f.map_err(|e| WalletError::FileError(e.to_string()))?;
+
+                let contents = fs::read_to_string(dir_entry.path())
+                    .map_err(|e| WalletError::FileError(e.to_string()))?;
                 let file_data: WalletKeyFileContents = serde_json::from_str(&contents)
                     .map_err(|e| WalletError::FileError(e.to_string()))?;
 
