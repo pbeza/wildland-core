@@ -1,6 +1,6 @@
 [package]
 name = "wildland-wallet"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -19,9 +19,9 @@ hex-literal = "0.3.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0.81"
 sha2 = "0.10.2"
-xdg = "2.4.1"
 wildland-crypto = { version = "0.4.4", path = "../wildland-crypto", registry = "wl-dev" }
 thiserror = "1.0.31"
+directories = "4.0.1"
 
 [package.metadata.workspaces]
 independent = true

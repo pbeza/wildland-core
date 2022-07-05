@@ -1,0 +1,75 @@
+FROM registry.gitlab.com/wildland/corex/wildland-core/builder:latest
+
+ARG BUILD_TARGET=x86_64-unknown-linux-gnu
+
+ARG FFI_BUILD_DIR=/ffi_build
+ARG TARGET_DIR=/app/target/${BUILD_TARGET}
+ARG CXX_LIB=$TARGET_DIR/debug/libwildland_admin_manager.a
+
+ENV CARGO_REGISTRIES_WL_DEV_INDEX="https://crates.wildland.dev/git/index"
+ENV SWIFT_BRIDGE_OUT_DIR=$TARGET_DIR
+
+RUN mkdir -p \
+    /app/crates/ \
+    /app/macros/
+
+RUN rustup target add ${BUILD_TARGET}
+
+# Build only dependencies to cache them in the docker layer
+WORKDIR /app/crates/
+RUN for crate in \
+    wildland-admin-manager \
+    wildland-corex \
+    wildland-catlib \
+    wildland-crypto \
+    wildland-dfs\
+    wildland-wallet\
+    ; do cargo new --lib $crate; done
+COPY Cargo.toml /app/
+COPY Cargo.lock /app/
+COPY crates/wildland-admin-manager/Cargo.toml wildland-admin-manager/
+COPY crates/wildland-admin-manager/build.rs wildland-admin-manager/
+COPY crates/wildland-corex/Cargo.toml wildland-corex/
+COPY crates/wildland-catlib/Cargo.toml wildland-catlib/
+COPY crates/wildland-crypto/Cargo.toml wildland-crypto/
+COPY crates/wildland-dfs/Cargo.toml wildland-dfs/
+COPY crates/wildland-wallet/Cargo.toml wildland-wallet/
+
+WORKDIR /app/macros/
+RUN for macro_crate in \
+    ffi-macro \
+    ffi-macro-build \
+    ffi-parser \
+    ; do cargo new --lib $macro_crate; done
+COPY macros/ffi-macro/Cargo.toml ffi-macro/
+COPY macros/ffi-macro-build/Cargo.toml ffi-macro-build/
+COPY macros/ffi-parser/Cargo.toml ffi-parser/
+
+WORKDIR /app/
+RUN cargo build \
+        --package wildland-admin-manager \
+        --target ${BUILD_TARGET}
+
+# Actual build
+COPY crates/ /app/crates/
+COPY macros/ /app/macros/
+WORKDIR /app/crates/wildland-admin-manager
+RUN cargo clean \
+    && cargo build \
+        --features "bindings" \
+        --target ${BUILD_TARGET}
+
+RUN cp \
+    "${SWIFT_BRIDGE_OUT_DIR}/SwiftBridgeCore.h" \
+    "./_generated_cpp/ffi_cxx.h" \
+    "./_generated_cpp/ffi_swig.i" \
+    "./_generated_swift/ffi_swift/ffi_swift.h" \
+    "wildland.i" \
+    "${CXX_LIB}" \
+  "${FFI_BUILD_DIR}"
+
+COPY tests/ffi/ /ffi_tests/
+COPY /docker/scripts/ /scripts/
+
+WORKDIR /
+ENTRYPOINT ["bash", "/scripts/entrypoint.bash"]

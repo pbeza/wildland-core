@@ -4,12 +4,32 @@ variables:
   CARGO_FLAGS: ""
 
 stages:
-  - test
-  - build
-  - deploy
+  - Test
+  - Build
+  - Bridges
+  - Bindings
+  - Deploy
 
-test:
-  stage: test
+###############
+# STAGE: Test
+#
+# This stage contains code sanity checks as well as automated tests.
+
+publish versions:
+  stage: Test
+  script:
+    # Check if cargo workspaced changed returns an empty list.
+    # If it doesn't, it means that most likely you forgot to run ./bump.sh
+    - gem install semantic
+    - ruby docker/scripts/check_cargo_versions.rb
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - if: $CI_COMMIT_BRANCH == "main"
+  allow_failure:
+    exit_codes: 42
+
+cargo test:
+  stage: Test
   except:
     - tags
   only:
@@ -18,8 +38,8 @@ test:
   script:
     - cargo $CARGO_FLAGS test --verbose
 
-lint:
-  stage: test
+cargo clippy (lint):
+  stage: Test
   except:
     - tags
   only:
@@ -28,9 +48,10 @@ lint:
   script:
     - rustup component add clippy
     - cargo $CARGO_FLAGS clippy --all-targets -- -D warnings
+  allow_failure: true
 
-format:
-  stage: test
+cargo fmt (format):
+  stage: Test
   except:
     - tags
   only:
@@ -40,8 +61,8 @@ format:
     - rustup component add rustfmt
     - cargo $CARGO_FLAGS fmt -- --check
 
-audit:
-  stage: test
+cargo audit:
+  stage: Test
   except:
     - tags
   only:
@@ -51,8 +72,16 @@ audit:
     - cargo $CARGO_FLAGS install cargo-audit
     - cargo $CARGO_FLAGS audit
 
-build:
-  stage: build
+###############
+# STAGE: Build
+#
+# This stage is a sanity check for cargo build commands.
+# Although this stage does not generate any artifacts, its purpose is to ensure that the project
+# compiles before moving to the next, much more resource intensive (due to parallel execution)
+# stage.
+
+pre-build:
+  stage: Build
   except:
     - tags
   only:
@@ -61,8 +90,130 @@ build:
   script:
     - cargo $CARGO_FLAGS build
 
-publish:
-  stage: deploy
+pre-build bindings:
+  stage: Build
+  except:
+    - tags
+  only:
+    - main
+    - merge_requests
+  script:
+    - cargo build --features "bindings"
+
+###############
+# STAGE: Bridges
+#
+# This stage generates static libraries and wrappers for specific target *platform*. Those artifacts
+# are then passed to the Bindings stage.
+#
+# Windows libraries are not generated in this stage as we do not plan to support more than one
+# (ie. C#) binding for pc-windows target and thus, the libraries would not be reusable.
+
+x86_64 linux:
+  stage: Bridges
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - >-
+      /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/docker/Dockerfile.base"
+      --no-push
+      --build-arg BUILD_TARGET=x86_64-unknown-linux-gnu
+    - mv /ffi_build ${CI_PROJECT_DIR}
+    - mv /ffi_tests ${CI_PROJECT_DIR}
+  cache:
+    key: lib-x86_64-linux-gnu-$CI_PIPELINE_ID
+    paths:
+      - ffi_build/
+      - ffi_tests/
+    policy: push
+  tags:
+    - docker
+    - linux
+    - x64
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+      when: manual
+      allow_failure: true
+
+
+###############
+# STAGE: Bindings
+#
+# This stage generates bindings for target language *and* platform. The jobs in this stage (apart
+# from Windows builds) use artifacts from the Bridges stage to generate the forementioned bindings.
+#
+# Artifacts from this stage are used as the pipeline artifacts and/or release assets.
+
+csharp x86_64 windows-msvc:
+  stage: Bindings
+  image:
+    name: registry.gitlab.com/wildland/corex/wildland-core/builder:win32-ltsc2022
+  script:
+    - echo $env:CI_PROJECT_DIR
+    - $ErrorActionPreference = 'Stop'
+    - $ProgressPreference = 'SilentlyContinue'
+    - Powershell.exe -File "$env:CI_PROJECT_DIR/docker/scripts/bindings_csharp-win64.ps1"
+  artifacts:
+    expose_as: 'csharp-x86_64-windows-msvc'
+    name: csharp-x86_64-windows-msvc
+    paths:
+      - build/
+    expire_in: 1 week
+  tags:
+    - docker
+    - windows
+    - x64
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+      when: manual
+      allow_failure: true
+
+csharp x86_64 linux:
+  stage: Bindings
+  script:
+    - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
+    - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
+    - bash docker/scripts/bindings_csharp-x64-86-linux.bash
+    - mv /out ${CI_PROJECT_DIR}/build
+  artifacts:
+    expose_as: 'csharp-x86_64-linux-gnu'
+    name: csharp-x86_64-linux-gnu
+    paths:
+      - build/
+    expire_in: 1 week
+  cache:
+    key: lib-x86_64-linux-gnu-$CI_PIPELINE_ID
+    paths:
+      - ffi_build/
+      - ffi_tests/
+    policy: pull
+  tags:
+    - docker
+    - linux
+    - x64
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+      when: manual
+      allow_failure: true
+
+###############
+# STAGE: Deploy
+#
+# This stage is the last stage in which the crates are published to the registry.
+
+publish crates:
+  stage: Deploy
   except:
     - tags
   only:
@@ -73,7 +224,6 @@ publish:
   script:
     - git remote set-url origin "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"
     - git pull "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git" $CI_COMMIT_BRANCH --rebase --autostash
-    - git checkout -b $CI_COMMIT_BRANCH origin/$CI_COMMIT_BRANCH
     - git reset --hard origin/$CI_COMMIT_BRANCH
     # Seriously those diff and grep exit codes...
     - EXCLUDES=$((diff <(cargo $CARGO_FLAGS workspaces list) <(cargo $CARGO_FLAGS workspaces changed) || true) | (grep '< ' || true) | sed 's/< //' | xargs -I@ echo -n "--exclude @ ")
