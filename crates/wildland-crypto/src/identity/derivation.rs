@@ -49,6 +49,10 @@ fn single_use_encryption_key_path(index: u64) -> String {
     format!("m/5721156'/2'/{}'", index)
 }
 
+fn backup_key_path() -> String {
+    "m/5721156'/3'".to_string()
+}
+
 /// This structure represents Wildland cryptographic identity.
 ///
 /// It uses BIP39 and BIP32 processes to derive keypairs of three purposes:
@@ -167,6 +171,13 @@ impl Identity {
     /// since they are supposed to be used only once anyway.
     pub fn single_use_encryption_keypair(&self, index: u64) -> EncryptingKeypair {
         self.derive_encryption_keypair(&single_use_encryption_key_path(index))
+    }
+
+    /// Deterministically derive encryption keypair that can be used
+    /// to backup secrets with intent of using them later, during recovery process.
+    /// This keypair is not scoped to the forest. It should be used only internally.
+    pub fn backup_keypair(&self) -> EncryptingKeypair {
+        self.derive_encryption_keypair(&backup_key_path())
     }
 
     fn derive_forest_keypair(&self, path: &str) -> SigningKeypair {
