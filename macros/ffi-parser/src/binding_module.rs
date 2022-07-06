@@ -1,5 +1,5 @@
 /// An implementation of a translator that can parse some specific Rust modules and adjust
-/// them to the form understandable for `swift-bridge` crates.
+/// them to the form understandable for `swift-bridge` crate.
 ///
 use crate::{
     binding_types::*,
@@ -25,10 +25,11 @@ pub struct BindingModule {
 
 impl BindingModule {
     /// The method tranlates Rust module containing `extern "Rust"` section into form usable
-    /// for `swift-bridge`.
+    /// for `swift-bridge`. It generates all needed wrappers and translates methods signatures
+    /// into form that `swift-bridge` can handle.
     ///
     pub fn translate_module(mut module: ItemMod) -> Result<Self, String> {
-        let extern_module_translator = ExternModuleTranslator::translate_external_module_for_swift(
+        let extern_module_translator = ExternModuleTranslator::translate_external_module(
             BindingModule::get_extern_mod_from_module(&mut module)?,
         )?;
         let mut result = Self {
@@ -40,13 +41,13 @@ impl BindingModule {
         result.module.attrs = vec![parse_quote!( #[swift_bridge::bridge] )];
         result.take_out_all_use_occurences()?;
         result.generate_wrappers_definitions();
-        result.generate_impl_blocks_for_wrappers_with_methods();
+        result.generate_impl_blocks_for_user_defined_types_wrappers();
         result.generate_wrappers_of_global_functions();
         Ok(result)
     }
 
     /// Returns only a translated Rust module. In particular this is useful for the build script
-    /// to feed the module compilers of `swift-bridge-build` crates.
+    /// to feed the module parser of `swift-bridge-build` crate.
     ///
     pub fn get_module(&self) -> TokenStream {
         let module = &self.module;
@@ -68,12 +69,12 @@ impl BindingModule {
         generate_cpp_and_swig_file(&self.extern_module_translator)
     }
 
-    /// Returns the whole generated code in the form of token stream.
+    /// Returns the whole generated code in the form of a token stream.
     /// It wrapps the derived module into another one in order to avoid custom types
-    /// and wrappers types names collisions.
+    /// and wrappers types names collision.
     ///
-    pub fn get_tokens(&self, module_name: &str) -> TokenStream {
-        let module_name = Ident::new(module_name, Span::call_site());
+    pub fn get_tokens(&self, outside_module_name: &str) -> TokenStream {
+        let module_name = Ident::new(outside_module_name, Span::call_site());
         let module = &self.module;
         let wrappers_impls = &self.wrappers_impls;
         let custom_uses = &self.custom_uses;
@@ -88,7 +89,7 @@ impl BindingModule {
         }
     }
 
-    /// Helper method - returns a foreign module from within the standard module.
+    /// Helper method - returns a foreign module from within the Rust module.
     ///
     fn get_extern_mod_from_module(module: &mut ItemMod) -> Result<&mut ItemForeignMod, String> {
         module
@@ -140,12 +141,17 @@ impl BindingModule {
                 let original_type_name = &wrapper.original_type_name;
                 let return_original_type_name: Type = parse_quote! (#original_type_name);
                 let error_type_name: Type = parse_quote!(ErrorType);
-                generate_wrapper_definition(wrapper, return_original_type_name, error_type_name)
+                generate_default_wrappers_definitions(
+                    wrapper,
+                    return_original_type_name,
+                    error_type_name,
+                )
             });
         self.wrappers_impls.extend(tokens);
     }
 
-    /// TODO: add doc here
+    /// Generates a wrapped function declaration for each method in each user's
+    /// struct impl and for Rust types `Result` and `Option`.
     ///
     fn generate_function_based_on_its_signature(
         functions: &[Function],
@@ -197,11 +203,13 @@ impl BindingModule {
             .collect()
     }
 
-    /// TODO: add doc here
+    /// Generates impl blocks for each custom user's type and Rust types that are
+    /// supported by this macro.
+    ///
     /// Note: Only Arc<Mutex<>> is supported,
     ///       Arc<T> without Mutex will cause an error.
     ///
-    fn generate_impl_blocks_for_wrappers_with_methods(&mut self) {
+    fn generate_impl_blocks_for_user_defined_types_wrappers(&mut self) {
         for (custom_type, functions) in &self.extern_module_translator.structures_wrappers {
             let wrapper_name = &custom_type.wrapper_name;
             match custom_type.typ {
@@ -236,8 +244,7 @@ impl BindingModule {
         }
     }
 
-    ///
-    /// TODO: add doc here
+    /// Generates wrappers for the declared global functions.
     ///
     fn generate_wrappers_of_global_functions(&mut self) {
         let generated_functions = BindingModule::generate_function_based_on_its_signature(
@@ -250,17 +257,20 @@ impl BindingModule {
     }
 }
 
+/// The function generates declaration and implementation of the wrapper
+/// structure for a given Rust or user's type. Types `Result`, `Option`,
+/// `Arc` and `CustomUserType` need to be wrapped in order to rewrite their
+/// methods signatures and provide FFI with types (for e.g. Result) that are
+/// not supported by `swift-bridge` yet.
 ///
-/// TODO: add doc here
-///
-fn generate_wrapper_definition(
+fn generate_default_wrappers_definitions(
     wrapper: &WrapperType,
     return_original_type_name: Type,
     error_type_name: Type,
 ) -> TokenStream {
     let original_type_name = &wrapper.original_type_name;
     let wrapper_name = &wrapper.wrapper_name;
-    let tokens: TokenStream = match &wrapper.typ {
+    match &wrapper.typ {
         RustWrapperType::Result => {
             quote! {
                 pub struct #wrapper_name(Result<#original_type_name, ErrorType>);
@@ -321,6 +331,5 @@ fn generate_wrapper_definition(
             }
         }
         _ => quote! {},
-    };
-    tokens
+    }
 }

@@ -7,6 +7,7 @@ use syn::{File, Item};
 /// a version understandable by `swift-bridge-build` crate.
 /// It also generates two additional files: SWIG interface and C++
 /// glue code for the FFI. Those can be used by SWIG code generator.
+///
 pub fn parse_ffi_module(path: &str, swift_dir: &str, cpp_dir: &str) {
     let file = std::fs::read_to_string(path).unwrap();
     let file: File = syn::parse_str(&file).unwrap();

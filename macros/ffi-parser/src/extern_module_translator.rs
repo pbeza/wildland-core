@@ -7,8 +7,13 @@ use syn::{
     ItemForeignMod, Pat, PatIdent, PathArguments, PathSegment, ReturnType, Type, TypeReference,
 };
 
-///
-/// TODO: add doc here
+/// The structure keeps the Rust types wrappers,
+/// user structures wrappers and global functions
+/// signatures. Stucture_wrappers is a subset
+/// of Rust_types_wrappers, since the latter collection
+/// keeps all the wrappers that will be handled, and the
+/// first one keeps only a user defined types wrappers
+/// along with their methods.
 ///
 #[derive(Default)]
 pub struct ExternModuleTranslator {
@@ -18,25 +23,23 @@ pub struct ExternModuleTranslator {
 }
 
 impl ExternModuleTranslator {
-    ///
-    /// TODO: add doc here
-    ///
-    pub fn translate_external_module_for_swift(
-        extern_module: &mut ItemForeignMod,
-    ) -> Result<Self, String> {
+    /// Parses an `extern "Rust"` module, keeps it modified version and stores
+    /// the information about types that need to be wrapped later.
+    ///  
+    pub fn translate_external_module(extern_module: &mut ItemForeignMod) -> Result<Self, String> {
         let mut result = ExternModuleTranslator::default();
-        result.replace_every_type_in_each_item_with_wrappers_in_module(extern_module)?;
-        result.add_types_and_methods_wrappers_to_extern_module(extern_module)?;
+        result.replace_every_function_with_wrapper(extern_module)?;
+        result.add_types_and_methods_wrappers_to_extern_module(extern_module);
         Ok(result)
     }
 
-    ///
-    /// TODO: add doc here
+    /// Helper method adds a wrapper methods of the `Result`, `Option` etc.
+    /// types to the `extern "Rust"` module.
     ///
     fn add_types_and_methods_wrappers_to_extern_module(
         &mut self,
         extern_module: &mut ItemForeignMod,
-    ) -> Result<(), String> {
+    ) {
         extern_module
             .items
             .extend(self.rust_types_wrappers.iter().flat_map(|wrapper| {
@@ -45,13 +48,13 @@ impl ExternModuleTranslator {
                 let error_type_name: Type = parse_quote!(ErrorType);
                 generate_module_items(wrapper, return_original_type_name, error_type_name).items
             }));
-        Ok(())
     }
 
+    /// Example:
+    /// `fn foo(self: &SomeType) -> Result<AnotherType>` ==>
+    ///     `fn foo(self: &SomeType) -> ResultAnotherType`.
     ///
-    /// TODO: add doc here
-    ///
-    fn replace_every_type_in_each_item_with_wrappers_in_module(
+    fn replace_every_function_with_wrapper(
         &mut self,
         extern_module: &mut ItemForeignMod,
     ) -> Result<(), String> {
@@ -73,6 +76,7 @@ impl ExternModuleTranslator {
     /// Can be used while parsing `type SomeUserType;` in
     /// order to register a new type `RustUserType` in
     /// the collection of intermediate-form wrappers.
+    ///
     fn register_custom_type(&mut self, original_type_name: Ident) -> WrapperType {
         let new_name =
             ExternModuleTranslator::create_wrapper_name("", &original_type_name.to_string());
@@ -84,6 +88,8 @@ impl ExternModuleTranslator {
             inner_type: None,
         };
         self.rust_types_wrappers.insert(new_wrapper_type.clone());
+        self.structures_wrappers
+            .insert(new_wrapper_type.clone(), vec![]);
         new_wrapper_type
     }
 
@@ -125,15 +131,18 @@ impl ExternModuleTranslator {
                     Ok(())
                 }
                 _ => Err(format!(
-                    "Only typed arguments are supported (no bare `self`): {}",
+                    "Only typed arguments are supported (no bare `self`) in function: `{}`",
                     function.sig.ident
                 )),
             })?;
 
         if let ReturnType::Type(_, typ) = &mut function.sig.output {
-            let new_wrapper_type = self
-                .tansform_rust_type_into_wrapper(typ.as_mut())
-                .ok_or("At least one type should be present in return type")?;
+            let new_wrapper_type =
+                self.tansform_rust_type_into_wrapper(typ.as_mut())
+                    .ok_or(format!(
+                        "Unsupported return type in function `{}`",
+                        function.sig.ident
+                    ))?;
             return_type = Some(new_wrapper_type);
         }
 
@@ -294,6 +303,9 @@ impl ExternModuleTranslator {
     }
 }
 
+/// Generates Rust types wrappers declarations in `extern "Rust"`
+/// as well as adds new methods to operate on those wrappers.
+///
 fn generate_module_items(
     wrapper: &WrapperType,
     return_original_type_name: Type,
