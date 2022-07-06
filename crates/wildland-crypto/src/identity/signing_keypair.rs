@@ -20,6 +20,7 @@
 
 use crate::{error::CryptoError, signature::Signature};
 use ed25519_dalek::Signer;
+use rand_7::{CryptoRng, RngCore};
 
 use super::bytes_key_from_str;
 
@@ -27,6 +28,13 @@ use super::bytes_key_from_str;
 pub struct SigningKeypair(ed25519_dalek::Keypair);
 
 impl SigningKeypair {
+    pub fn generate<R>(csprng: &mut R) -> Self
+    where
+        R: CryptoRng + RngCore,
+    {
+        Self(ed25519_dalek::Keypair::generate(csprng))
+    }
+
     pub fn try_from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Result<Self, CryptoError> {
         Ok(Self(
             ed25519_dalek::Keypair::from_bytes([seckey, pubkey].concat().as_slice())
