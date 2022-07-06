@@ -35,14 +35,14 @@ use crate::{
 
 use super::encrypting_keypair::EncryptingKeypair;
 
-fn signing_key_path() -> String {
+fn signing_key_path(forest_index: u64) -> String {
     // "master/WLD/purpose/index"
     // "5721156" == b'WLD'.hex() converted to decimal
-    "m/5721156'/0'/0'".to_string()
+    format!("m/5721156'/0'/{}'", forest_index)
 }
 
-fn encryption_key_path(index: u64) -> String {
-    format!("m/5721156'/1'/{}'", index)
+fn encryption_key_path(forest_index: u64, index: u64) -> String {
+    format!("m/5721156'/1'/{}'/{}'", forest_index, index)
 }
 
 fn single_use_encryption_key_path(index: u64) -> String {
@@ -142,19 +142,19 @@ impl Identity {
         Self::try_from(mnemonic)
     }
 
-    /// Derive the key that can be used to sign user manifest.
-    /// Pubkey represents user to the world.
-    pub fn signing_keypair(&self) -> SigningKeypair {
-        self.derive_signing_keypair(&signing_key_path())
+    /// Derive the key that represents a forest.
+    /// Pubkey represents forest to the world.
+    pub fn forest_keypair(&self, forest_index: u64) -> SigningKeypair {
+        self.derive_forest_keypair(&signing_key_path(forest_index))
     }
 
-    /// Derive current encryption key, used to encrypt secrets to the user.
+    /// Derive current encryption key, used to encrypt secrets to the owner of the forest.
     /// This keypair should be rotated whenever any of user's devices
     /// is compromised / stolen / lost.
     /// Current encryption pubkey should be accessible to anyone
     /// willing to communicate with the user.
-    pub fn encryption_keypair(&self, index: u64) -> EncryptingKeypair {
-        self.derive_encryption_keypair(&encryption_key_path(index))
+    pub fn encryption_keypair(&self, forest_index: u64, index: u64) -> EncryptingKeypair {
+        self.derive_encryption_keypair(&encryption_key_path(forest_index, index))
     }
 
     /// Deterministically derive single-use encryption key. Send it to
@@ -163,11 +163,13 @@ impl Identity {
     /// By bumping index, one can create multiple keys to be used
     /// with different on-chain identities, making linking the purchases
     /// harder.
+    /// Please note that this keys are not scoped to particular forest,
+    /// since they are supposed to be used only once anyway.
     pub fn single_use_encryption_keypair(&self, index: u64) -> EncryptingKeypair {
         self.derive_encryption_keypair(&single_use_encryption_key_path(index))
     }
 
-    fn derive_signing_keypair(&self, path: &str) -> SigningKeypair {
+    fn derive_forest_keypair(&self, path: &str) -> SigningKeypair {
         let derived_extended_seckey = self.derive_private_key_from_path(path);
 
         // drop both the chain-code from xprv and last 32 bytes
@@ -215,7 +217,7 @@ mod tests {
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
-        let keypair = user.signing_keypair();
+        let keypair = user.forest_keypair(0);
         let signature = keypair.sign(MSG);
         assert!(signature.verify(MSG, &keypair.public()).is_ok());
     }
@@ -223,7 +225,7 @@ mod tests {
     #[test]
     fn cannot_verify_signature_for_other_message() {
         let user = user();
-        let keypair = user.signing_keypair();
+        let keypair = user.forest_keypair(0);
         let signature = keypair.sign(MSG);
         assert!(signature.verify(MSG, &keypair.public()).is_ok());
     }
@@ -231,9 +233,9 @@ mod tests {
     #[test]
     fn can_generate_distinct_keypairs() {
         let user = user();
-        let skeypair = user.signing_keypair();
-        let e0key = user.encryption_keypair(0);
-        let e1key = user.encryption_keypair(1);
+        let skeypair = user.forest_keypair(0);
+        let e0key = user.encryption_keypair(0, 0);
+        let e1key = user.encryption_keypair(0, 1);
         assert_ne!(&skeypair.secret(), e0key.secret.as_bytes());
         assert_ne!(e0key.secret.as_bytes(), e1key.secret.as_bytes());
 
