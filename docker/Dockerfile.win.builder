@@ -35,5 +35,6 @@ RUN choco install --yes swig
 RUN choco install --yes rustup.install
 RUN choco install --yes sed
 RUN choco install --yes nano
+RUN choco install --yes ruby
 
 ENTRYPOINT ["C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat", "-host_arch=amd64", "-arch=amd64", "&&", "powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
