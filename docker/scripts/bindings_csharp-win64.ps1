@@ -55,6 +55,12 @@ cp "$env:ADMIN_MGR_PROJECT_DIR/_generated_swift/ffi_swift/ffi_swift.h" "$env:FFI
 cp "$env:ADMIN_MGR_PROJECT_DIR/wildland.i" "$env:FFI_BUILD_DIR"
 cp "$env:CXX_LIB" "$env:FFI_BUILD_DIR"
 
+Write-Host "---------- Fix CXX headers for MSVC ----------"
+$p = (Start-Process -PassThru -WorkingDirectory /ffi_build -FilePath "ruby" -Wait -NoNewWindow -ArgumentList "$env:PROJECT_ROOT/docker/scripts/fix_cxx_headers_for_msvc.rb")
+if ($p.ExitCode -ne 0) {
+    exit $p.ExitCode
+}
+
 Write-Host "---------- Create SWIG-Generated C# Bindings ----------"
 $p = (Start-Process -PassThru -WorkingDirectory /ffi_build -FilePath "swig" -Wait -NoNewWindow -ArgumentList "-dllimport $env:DLLIMPORT -csharp -c++ -w'516,503,476,302,124' -outdir /bindings wildland.i")
 if ($p.ExitCode -ne 0) {
@@ -62,7 +68,7 @@ if ($p.ExitCode -ne 0) {
 }
 
 Write-Host "---------- BUILD /bindings_test/Wildland.dll ----------"
-$p = (Start-Process -PassThru -WorkingDirectory /ffi_build -FilePath $env:CC -Wait -NoNewWindow -ArgumentList "/LD", "/MD", "/std:c++14", "wildland_wrap.cxx", "/link", "wildland_admin_manager.lib", "ws2_32.lib", "bcrypt.lib", "userenv.lib", "advapi32.lib", "/out:/bindings_test/Wildland.dll")
+$p = (Start-Process -PassThru -WorkingDirectory /ffi_build -FilePath $env:CC -Wait -NoNewWindow -ArgumentList "/LD", "/MD", "/std:c++14", "wildland_wrap.cxx", "/link", "wildland_admin_manager.lib", "ws2_32.lib", "bcrypt.lib", "userenv.lib", "advapi32.lib", "shell32.lib", "Ole32.lib", "/out:/bindings_test/Wildland.dll")
 if ($p.ExitCode -ne 0) {
     exit $p.ExitCode
 }
