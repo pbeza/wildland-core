@@ -211,8 +211,10 @@ impl Identity {
 
 #[cfg(test)]
 mod tests {
+    use crypto_box::aead::Aead;
     use hex::encode;
     use hex_literal::hex;
+    use salsa20::XNonce;
 
     use crate::common::test_utilities::MNEMONIC_PHRASE;
 
@@ -223,6 +225,45 @@ mod tests {
     fn user() -> Identity {
         let mnemonic = Mnemonic::from_phrase(MNEMONIC_PHRASE, English).unwrap();
         Identity::try_from(mnemonic).unwrap()
+    }
+
+    // please note that this helper is for TESTS ONLY!
+    fn encrypt(
+        nonce: &XNonce,
+        alice_keypair: &EncryptingKeypair,
+        bob_keypair: &EncryptingKeypair,
+    ) -> Vec<u8> {
+        let salsa_box =
+            crypto_box::Box::new(&alice_keypair.public.clone(), &bob_keypair.secret.clone());
+
+        salsa_box.encrypt(nonce, MSG).unwrap()
+    }
+
+    // please note that this helper is for TESTS ONLY!
+    fn decrypt(
+        ciphertext: &[u8],
+        nonce: &XNonce,
+        alice_keypair: &EncryptingKeypair,
+        bob_keypair: &EncryptingKeypair,
+    ) -> crypto_box::aead::Result<Vec<u8>> {
+        let salsa_box =
+            crypto_box::Box::new(&bob_keypair.public.clone(), &alice_keypair.secret.clone());
+
+        salsa_box.decrypt(nonce, ciphertext)
+    }
+
+    #[test]
+    fn can_encrypt_and_decrypt_message_with_encryption_key() {
+        let user = user();
+        let alice_keypair: EncryptingKeypair = user.encryption_keypair(0, 0);
+        let bob_keypair: EncryptingKeypair = user.encryption_keypair(1, 0);
+        let mut rng = crypto_box::rand_core::OsRng;
+        let nonce = crypto_box::generate_nonce(&mut rng);
+
+        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
+        let result = decrypt(ciphertext.as_slice(), &nonce, &bob_keypair, &alice_keypair);
+
+        assert_eq!(MSG, result.unwrap().as_slice())
     }
 
     #[test]
