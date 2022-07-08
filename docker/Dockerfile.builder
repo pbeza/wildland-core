@@ -30,8 +30,7 @@ RUN mkdir -p \
     /ffi_build \
     /ffi_tests \
     /scripts \
-    /app/crates/ \
-    /app/macros/
+    /app/crates/
 
 RUN curl https://sh.rustup.rs -sSf | \
     sh -s -- --default-toolchain stable -y
