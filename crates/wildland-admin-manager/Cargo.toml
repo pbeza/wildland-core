@@ -21,7 +21,7 @@ crate-type = ["staticlib", "lib"]
 
 [dependencies]
 wildland-corex = { version = "0.1.9", path = "../wildland-corex", registry = "wl-dev" }
-ffi-macro = { version = "0.1.0", path = "../../macros/ffi-macro", registry = "wl-dev", optional = true }
+ffi-macro = { version = "0.1.0", registry = "wl-dev", optional = true }
 thiserror = "1.0.31"
 swift-bridge = { version = "0.1", optional = true }
 sha2 = "0.10.2"
@@ -32,4 +32,4 @@ independent = true
 
 
 [build-dependencies]
-ffi-macro-build = { version = "0.1.0", path = "../../macros/ffi-macro-build", registry = "wl-dev", optional = true }
+ffi-macro-build = { version = "0.1.0", registry = "wl-dev", optional = true }
