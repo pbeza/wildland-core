@@ -6,7 +6,6 @@ use crate::{
     binding_types::{Function, RustWrapperType, WrapperType},
     extern_module_translator::ExternModuleTranslator,
 };
-use std::collections::HashSet;
 
 /// Helper structure that consists of a generated C++ glue code
 /// and SWIG interface file with templates.
@@ -16,6 +15,29 @@ pub struct GeneratedFilesContent {
     pub swig_interface: String,
 }
 
+impl GeneratedFilesContent {
+    pub fn new(
+        vector_defs_for_rust_primitives: &str,
+        classes_declaration: &str,
+        rust_types_wrappers: &str,
+        global_functions_definition: &str,
+        classes_definition: &str,
+        swig_templates: &str,
+    ) -> GeneratedFilesContent {
+        GeneratedFilesContent {
+            cpp_header: format!(
+                "{PREDEFINED}
+{vector_defs_for_rust_primitives}
+{classes_declaration}
+{rust_types_wrappers}
+{global_functions_definition}
+{classes_definition}"
+            ),
+            swig_interface: swig_templates.to_owned(),
+        }
+    }
+}
+
 /// Predefined C++ classes and primitive types typedefs useful
 /// during the standard work on FFI basic structures. It
 /// consists of a custom RustVector and String implementations
@@ -23,7 +45,6 @@ pub struct GeneratedFilesContent {
 /// returned by `RustVec::at(x)` method should be treated as
 /// references, since the underlying objects are owned by
 /// the vector.
-///
 ///
 const PREDEFINED: &str = "
 #include <string>
@@ -50,9 +71,6 @@ public:
     RustVec(void* self) : self(self) {{}}
     virtual ~RustVec();
     operator void*() const { return this->self; }
-
-    // TODO: Add a method that copies the given item.
-    // TODO: implement iterator for RustVec.
     void push(T& item);
     T at(uintptr_t index);
     size_t size();
@@ -86,130 +104,124 @@ public:
 
 /// Creates an implementation of RustVec<T> for a given T that maps to the Rust Vec<T> object.
 ///
-macro_rules! vector_impl {
-    ($inner_type:expr, $inner_function_name:expr) => {
-        format!(
-            "
+fn vector_impl(inner_type: &str, inner_function_name: &str) -> String {
+    format!(
+        "
 template<>
-RustVec<{0}>::~RustVec() 
+RustVec<{inner_type}>::~RustVec()
 {{
     if(this->self) {{
-        __swift_bridge__$Vec_{1}$drop(this->self);
+        __swift_bridge__$Vec_{inner_function_name}$drop(this->self);
     }}
 }}
 template<>
-void RustVec<{0}>::push({0}& item) {{ __swift_bridge__$Vec_{1}$push(this->self, item); }}
+void RustVec<{inner_type}>::push({inner_type}& item) {{
+    __swift_bridge__$Vec_{inner_function_name}$push(this->self, item);
+}}
 template<>
-{0} RustVec<{0}>::at(uintptr_t index) {{ return {0}(__swift_bridge__$Vec_{1}$get(this->self, index)); }}
+{inner_type} RustVec<{inner_type}>::at(uintptr_t index) {{ 
+    return {inner_type}(__swift_bridge__$Vec_{inner_function_name}$get(this->self, index));
+}}
 template<>
-size_t RustVec<{0}>::size() {{ return (size_t)  __swift_bridge__$Vec_{1}$len(this->self); }}",
-        $inner_type, $inner_function_name
-        )
-    };
+size_t RustVec<{inner_type}>::size() {{
+    return (size_t)  __swift_bridge__$Vec_{inner_function_name}$len(this->self);
+}}"
+    )
 }
 
 /// Creates an implementation of RustVec<T> for a given primitive type T that maps
 /// to the Rust Vec<T> object.
 ///
-macro_rules! vector_primitive_impl {
-    ($inner_type:expr, $inner_function_name:expr) => {
-        format!(
-            "
+fn vector_primitive_impl(inner_type: &str, inner_function_name: &str) -> String {
+    format!(
+        "
 template<>
-RustVec<{0}>::~RustVec() 
+RustVec<{inner_type}>::~RustVec()
 {{
     if(this->self) {{
-        __swift_bridge__$Vec_{1}$_free(this->self);
+        __swift_bridge__$Vec_{inner_function_name}$_free(this->self);
     }}
 }}
 template<>
-void RustVec<{0}>::push({0}& item) {{ __swift_bridge__$Vec_{1}$push(this->self, item); }}
+void RustVec<{inner_type}>::push({inner_type}& item) {{
+    __swift_bridge__$Vec_{inner_function_name}$push(this->self, item);
+}}
 template<>
-{0} RustVec<{0}>::at(uintptr_t index) {{ return __swift_bridge__$Vec_{1}$get(this->self, index).val; }}
+{inner_type} RustVec<{inner_type}>::at(uintptr_t index) {{
+    return __swift_bridge__$Vec_{inner_function_name}$get(this->self, index).val;
+}}
 template<>
-size_t RustVec<{0}>::size() {{ return (size_t)  __swift_bridge__$Vec_{1}$len(this->self); }}",
-        $inner_type, $inner_function_name
-        )
-    };
+size_t RustVec<{inner_type}>::size() {{
+    return (size_t)  __swift_bridge__$Vec_{inner_function_name}$len(this->self);
+}}"
+    )
 }
 
 /// Creates a class that maps onto the Rust Option<T> object.
 /// The ownership depends on the source from which the object is created.
 ///
-macro_rules! option_class {
-    ($name:ident, $inner_type:ident) => {{
-        let vec = vector_impl!($name, $name);
-        format!(
+fn option_class(name: &str, inner_type: &str) -> String {
+    let vector_implementation = vector_impl(name, name);
+    format!(
             "
-class {0} {{
+class {name} {{
     void* self = nullptr;
     bool is_owned = false;
 public:
-    {0}() = delete;
-    {0}(void* self, bool is_owned = false) : self(self), is_owned(is_owned) {{ }}
-    {0}({0}&& a) : self(a.self), is_owned(a.is_owned) {{ a.self = nullptr; a.is_owned = false; }};
-    virtual ~{0}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${0}$_free(this->self); }} }};
-    {1} unwrap() {{ return {1}(__swift_bridge__${0}$unwrap(this->self), true); }}
-    bool is_some() {{ return __swift_bridge__${0}$is_some(this->self); }}
+    {name}() = delete;
+    {name}(void* self, bool is_owned = false) : self(self), is_owned(is_owned) {{ }}
+    {name}({name}&& a) : self(a.self), is_owned(a.is_owned) {{ a.self = nullptr; a.is_owned = false; }};
+    virtual ~{name}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${name}$_free(this->self); }} }};
+    {inner_type} unwrap() {{ return {inner_type}(__swift_bridge__${name}$unwrap(this->self), true); }}
+    bool is_some() {{ return __swift_bridge__${name}$is_some(this->self); }}
     operator void*() const {{ return this->self; }}
 }};
-{2}\n",
-            $name, $inner_type, vec
-        )
-    }};
+{vector_implementation}\n")
 }
 
 /// Creates a class that maps onto the Rust Result<T, ErrorType> object.
 /// The ownership depends on the source from which the object is created.
 ///
-macro_rules! result_class {
-    ($name:ident, $inner_type:ident) => {{
-        let vec = vector_impl!($name, $name);
-        format!(
+fn result_class(name: &str, inner_type: &str) -> String {
+    let vector_implementation = vector_impl(name, name);
+    format!(
             "
-class {0} {{
+class {name} {{
     void* self = nullptr;
     bool is_owned = false;
 public:
-    {0}() = delete;
-    {0}({0}&& a) : self(a.self), is_owned(a.is_owned) {{ a.self = nullptr; a.is_owned = false; }};
-    {0}(void* self, bool is_owned = false) : self(self), is_owned(is_owned) {{ }}
-    virtual ~{0}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${0}$_free(this->self); }} }};
-    {1} unwrap() {{ return {1}(__swift_bridge__${0}$unwrap(this->self), true); }}
-    ErrorType unwrap_err() {{ return ErrorType(__swift_bridge__${0}$unwrap_err(this->self), true); }}
-    bool is_ok() {{ return __swift_bridge__${0}$is_ok(this->self); }}
+    {name}() = delete;
+    {name}({name}&& a) : self(a.self), is_owned(a.is_owned) {{ a.self = nullptr; a.is_owned = false; }};
+    {name}(void* self, bool is_owned = false) : self(self), is_owned(is_owned) {{ }}
+    virtual ~{name}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${name}$_free(this->self); }} }};
+    {inner_type} unwrap() {{ return {inner_type}(__swift_bridge__${name}$unwrap(this->self), true); }}
+    ErrorType unwrap_err() {{ return ErrorType(__swift_bridge__${name}$unwrap_err(this->self), true); }}
+    bool is_ok() {{ return __swift_bridge__${name}$is_ok(this->self); }}
     operator void*() const {{ return this->self; }}
 }};
-{2}\n",
-            $name, $inner_type, vec
-        )
-    }};
+{vector_implementation}\n")
 }
 
 /// Creates a class that maps onto the custom structures with methods
 /// that are available in the FFI.
 /// The ownership depends on the source from which the object is created.
 ///
-macro_rules! custom_class_declaration {
-    ($name:ident, $functions_declaration:ident) => {{
-        let vec = vector_impl!($name, $name);
-        format!(
+fn custom_class_declaration(name: &str, functions_declaration: &str) -> String {
+    let vec = vector_impl(name, name);
+    format!(
             "
-class {0} {{
+class {name} {{
     void* self = nullptr;
     bool is_owned = false;
 public:
-    {0}() = delete;
-    {0}(void* self, bool is_owned = false) : self(self), is_owned(is_owned) {{ }}
-    {0}({0}&& a) : self(a.self), is_owned(a.is_owned) {{ a.self = nullptr; a.is_owned = false; }};
-    virtual ~{0}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${0}$_free(this->self); }} }};
+    {name}() = delete;
+    {name}(void* self, bool is_owned = false) : self(self), is_owned(is_owned) {{ }}
+    {name}({name}&& a) : self(a.self), is_owned(a.is_owned) {{ a.self = nullptr; a.is_owned = false; }};
+    virtual ~{name}() {{ if(this->self && this->is_owned) {{ __swift_bridge__${name}$_free(this->self); }} }};
     operator void*() const {{ return this->self; }}
-{1}}};
-{2}
-\n",
-            $name, $functions_declaration, vec
-        )
-    }};
+{functions_declaration}}};
+{vec}
+\n")
 }
 
 /// The structure contains already translated elements of a function.
@@ -222,41 +234,50 @@ struct FunctionHelper {
     pub generated_function_body: String,
     pub return_type_string: String,
     pub return_type: Option<WrapperType>,
+    class_name: Option<String>,
 }
 
 impl FunctionHelper {
+    /// Translates class method into the C++ intermediate form.
+    ///
+    pub fn from_class_method(function: &Function, class_name: &str) -> Self {
+        FunctionHelper::from_function(function, Some(class_name.to_owned()))
+    }
+
+    /// Translates global function into the C++ intermediate form.
+    ///
+    pub fn from_global_function(function: &Function) -> Self {
+        FunctionHelper::from_function(function, None)
+    }
+
     /// Translates the intermediate form of a parsed function into
     /// the elements ready-to-use in the C++ code generation process.
     ///
-    pub fn from_function(function: &Function, skip_first: bool) -> Self {
-        let generated_args = function
+    fn from_function(function: &Function, class_name: Option<String>) -> Self {
+        let generated_args: String = function
             .arguments
             .iter()
-            .skip(skip_first as usize)
+            .skip(class_name.is_some() as usize)
             .map(|arg| match &arg.typ {
                 WrapperType {
                     typ: RustWrapperType::Vector,
                     inner_type: Some(inner_type),
                     ..
-                } => {
-                    format!("RustVec<{}>& {}, ", inner_type.wrapper_name, arg.arg_name)
-                }
-                _ => {
-                    format!("{}& {}, ", arg.typ.wrapper_name, arg.arg_name)
-                }
+                } => format!("RustVec<{}>& {}", inner_type.wrapper_name, arg.arg_name),
+                _ => format!("{}& {}", arg.typ.wrapper_name, arg.arg_name),
             })
-            .collect::<String>();
-        let generated_function_body = function
+            .collect::<Vec<String>>()
+            .join(", ");
+        let mut generated_function_body: Vec<String> = function
             .arguments
             .iter()
-            .skip(skip_first as usize)
-            .map(|arg| format!("{}, ", arg.arg_name))
-            .collect::<String>();
-        let generated_function_body = if skip_first {
-            format!("self, {}", generated_function_body)
-        } else {
-            generated_function_body
-        };
+            .skip(class_name.is_some() as usize)
+            .map(|arg| arg.arg_name.to_string())
+            .collect();
+        if class_name.is_some() {
+            generated_function_body.insert(0, "this->self".to_owned());
+        }
+        let generated_function_body = generated_function_body.join(", ");
         let return_type_string = function
             .return_type
             .as_ref()
@@ -269,19 +290,21 @@ impl FunctionHelper {
             generated_function_body,
             return_type_string,
             return_type: function.return_type.clone(),
+            class_name,
         }
     }
 
     /// Generates a function declaration that can be used
     /// within a class declaration or for global functions.
     ///
-    pub fn generate_declaration(&self) -> String {
+    pub fn generate_declaration(self) -> String {
         let FunctionHelper {
             function_name,
             generated_args,
             generated_function_body: _,
             return_type_string,
             return_type,
+            ..
         } = self;
         match return_type {
             Some(WrapperType {
@@ -292,33 +315,32 @@ impl FunctionHelper {
                 let inner_name = &inner.wrapper_name;
                 format!("    RustVec<{inner_name}> {function_name}({generated_args});\n")
             }
-            _ => {
-                format!("    {return_type_string} {function_name}({generated_args});\n")
-            }
+            _ => format!("    {return_type_string} {function_name}({generated_args});\n"),
         }
     }
 
+    /// Generates a method or global function definition.
     ///
-    /// TODO: add doc here
-    ///
-    pub fn generate_definition(&self, class_name: Option<&String>) -> String {
-        let class_name_path = if let Some(ref class_name) = class_name {
-            format!("{class_name}::")
-        } else {
-            "".to_owned()
-        };
-        let class_function_name = if let Some(class_name) = class_name {
-            format!("{class_name}$")
-        } else {
-            "".to_owned()
-        };
+    pub fn generate_definition(self) -> String {
         let FunctionHelper {
             function_name,
             generated_args,
             generated_function_body,
             return_type_string,
             return_type,
+            class_name,
         } = self;
+
+        let class_name_path = if let Some(class_name) = &class_name {
+            format!("{class_name}::")
+        } else {
+            "".to_owned()
+        };
+        let class_function_name = if let Some(class_name) = &class_name {
+            format!("{class_name}$")
+        } else {
+            "".to_owned()
+        };
         match return_type {
             Some(WrapperType {
                 typ: RustWrapperType::Vector,
@@ -342,82 +364,38 @@ impl FunctionHelper {
     }
 }
 
-///
-/// TODO: add doc here
-///
-fn generate_functions_declaration(vec_of_functions_elems: &[FunctionHelper]) -> String {
-    vec_of_functions_elems
-        .iter()
-        .map(|function_helper| function_helper.generate_declaration())
-        .collect::<String>()
-}
-
-///
-/// TODO: add doc here
-///
-fn generate_functions_definition(
-    vec_of_functions_elems: &[FunctionHelper],
-    class_name: Option<String>,
-) -> String {
-    vec_of_functions_elems
-        .iter()
-        .map(|function_helper| function_helper.generate_definition(class_name.as_ref()))
-        .collect::<String>()
-}
-
-///
-/// TODO: add doc here
+/// Results of this function can be written in the `*.hpp` and `*.i` files.
+/// The generated C++ header file + header generated by `swift-bridge` can
+/// be used in C++ application. Those files + `*.i` file can be included
+/// to the SWIG interface file and used to generate glue code for Java, C# etc.
 ///
 pub fn generate_cpp_and_swig_file(
     extern_module_translator: &ExternModuleTranslator,
 ) -> GeneratedFilesContent {
-    let classes_with_functions: HashSet<_> = extern_module_translator
-        .structures_wrappers
-        .keys()
-        .cloned()
-        .collect();
-    let empty_types: String = extern_module_translator
-        .rust_types_wrappers
-        .difference(&classes_with_functions)
-        .map(|wrapper| match wrapper {
-            WrapperType {
-                typ: RustWrapperType::Custom,
-                ..
-            } => {
-                let class_name = wrapper.wrapper_name.to_string();
-                let functions = "";
-                custom_class_declaration!(class_name, functions)
-            }
-            _ => "".to_owned(),
-        })
-        .collect();
-
-    let class_elements = extern_module_translator
-        .structures_wrappers
+    let classes_declaration = extern_module_translator
+        .user_custom_types_wrappers
         .iter()
         .map(|(wrapper_type, vec_of_functions)| {
-            let function_elements = vec_of_functions
-                .iter()
-                .map(|f| FunctionHelper::from_function(f, true))
-                .collect::<Vec<_>>();
-            (wrapper_type, function_elements)
-        })
-        .collect::<Vec<_>>();
-
-    let classes_declaration = class_elements
-        .iter()
-        .map(|(wrapper_type, vec_of_functions_elems)| {
-            let functions_declaration = generate_functions_declaration(vec_of_functions_elems);
             let class_name = wrapper_type.wrapper_name.to_string();
-            custom_class_declaration!(class_name, functions_declaration)
+            let functions_declaration: String = vec_of_functions
+                .iter()
+                .map(|f| FunctionHelper::from_class_method(f, &class_name))
+                .map(FunctionHelper::generate_declaration)
+                .collect();
+            custom_class_declaration(&class_name, &functions_declaration)
         })
         .collect::<String>();
 
-    let classes_definition = class_elements
+    let classes_definition = extern_module_translator
+        .user_custom_types_wrappers
         .iter()
-        .map(|(wrapper_type, vec_of_functions_elems)| {
+        .map(|(wrapper_type, vec_of_functions)| {
             let class_name = wrapper_type.wrapper_name.to_string();
-            generate_functions_definition(vec_of_functions_elems, Some(class_name))
+            vec_of_functions
+                .iter()
+                .map(|f| FunctionHelper::from_class_method(f, &class_name))
+                .map(FunctionHelper::generate_definition)
+                .collect::<String>()
         })
         .collect::<String>();
 
@@ -433,7 +411,7 @@ pub fn generate_cpp_and_swig_file(
                     ..
                 } => {
                     let inner_type = inner.as_ref().wrapper_name.to_string();
-                    option_class!(class_name, inner_type)
+                    option_class(&class_name.to_string(), &inner_type)
                 }
                 WrapperType {
                     typ: RustWrapperType::Result,
@@ -441,19 +419,19 @@ pub fn generate_cpp_and_swig_file(
                     ..
                 } => {
                     let inner_type = inner.as_ref().wrapper_name.to_string();
-                    result_class!(class_name, inner_type)
+                    result_class(&class_name.to_string(), &inner_type)
                 }
                 _ => "".to_owned(),
             }
         })
         .collect();
 
-    let global_functions_elems = extern_module_translator
+    let global_functions_definition: String = extern_module_translator
         .global_functions
         .iter()
-        .map(|f| FunctionHelper::from_function(f, false))
-        .collect::<Vec<_>>();
-    let global_functions_definition = generate_functions_definition(&global_functions_elems, None);
+        .map(FunctionHelper::from_global_function)
+        .map(FunctionHelper::generate_definition)
+        .collect();
 
     let swig_templates: String = extern_module_translator
         .rust_types_wrappers
@@ -470,35 +448,26 @@ pub fn generate_cpp_and_swig_file(
         })
         .collect();
 
-    let vector_rust_primitives: String = vec![
-        vector_impl!("String", "RustString"),
-        vector_primitive_impl!("u8", "u8"),
-        vector_primitive_impl!("u16", "u16"),
-        vector_primitive_impl!("u32", "u32"),
-        vector_primitive_impl!("u64", "u64"),
-        vector_primitive_impl!("i8", "i8"),
-        vector_primitive_impl!("i16", "i16"),
-        vector_primitive_impl!("i32", "i32"),
-        vector_primitive_impl!("i64", "i64"),
-        vector_primitive_impl!("bool", "bool"),
+    let vector_defs_for_rust_primitives: String = vec![
+        vector_impl("String", "RustString"),
+        vector_primitive_impl("u8", "u8"),
+        vector_primitive_impl("u16", "u16"),
+        vector_primitive_impl("u32", "u32"),
+        vector_primitive_impl("u64", "u64"),
+        vector_primitive_impl("i8", "i8"),
+        vector_primitive_impl("i16", "i16"),
+        vector_primitive_impl("i32", "i32"),
+        vector_primitive_impl("i64", "i64"),
+        vector_primitive_impl("bool", "bool"),
     ]
-    .iter()
-    .cloned()
-    .collect();
+    .join("");
 
-    GeneratedFilesContent {
-        // The order of definitions and declarations matters:
-        cpp_header: format!(
-            "{0}\n{1}\n{2}\n{3}\n{4}\n{5}\n{6}\n",
-            PREDEFINED,
-            vector_rust_primitives,
-            empty_types,
-            classes_declaration,
-            rust_types_wrappers,
-            global_functions_definition,
-            classes_definition
-        )
-        .replace(", )", ")"), // remove trailing commas.
-        swig_interface: swig_templates,
-    }
+    GeneratedFilesContent::new(
+        &vector_defs_for_rust_primitives,
+        &classes_declaration,
+        &rust_types_wrappers,
+        &global_functions_definition,
+        &classes_definition,
+        &swig_templates,
+    )
 }
