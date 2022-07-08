@@ -18,7 +18,7 @@ use syn::{
 #[derive(Default)]
 pub struct ExternModuleTranslator {
     pub rust_types_wrappers: HashSet<WrapperType>,
-    pub structures_wrappers: HashMap<WrapperType, Vec<Function>>,
+    pub user_custom_types_wrappers: HashMap<WrapperType, Vec<Function>>,
     pub global_functions: Vec<Function>,
 }
 
@@ -88,7 +88,7 @@ impl ExternModuleTranslator {
             inner_type: None,
         };
         self.rust_types_wrappers.insert(new_wrapper_type.clone());
-        self.structures_wrappers
+        self.user_custom_types_wrappers
             .insert(new_wrapper_type.clone(), vec![]);
         new_wrapper_type
     }
@@ -96,7 +96,7 @@ impl ExternModuleTranslator {
     /// Method takes a mutable reference to the parsed foreign function declaration
     /// and replaces the arguments' types with wrapper types in place.
     ///
-    /// Side effects: the method fills `rust_types_wrappers`, `structures_wrappers`
+    /// Side effects: the method fills `rust_types_wrappers`, `user_custom_types_wrappers`
     ///               and `global_functions`.
     fn replace_arg_types_with_wrappers(
         &mut self,
@@ -147,7 +147,7 @@ impl ExternModuleTranslator {
         }
 
         if let Some(custom_type) = associated_structure {
-            self.structures_wrappers
+            self.user_custom_types_wrappers
                 .entry(custom_type)
                 .or_insert(vec![])
                 .push(Function {

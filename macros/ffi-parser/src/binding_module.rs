@@ -210,7 +210,7 @@ impl BindingModule {
     ///       Arc<T> without Mutex will cause an error.
     ///
     fn generate_impl_blocks_for_user_defined_types_wrappers(&mut self) {
-        for (custom_type, functions) in &self.extern_module_translator.structures_wrappers {
+        for (custom_type, functions) in &self.extern_module_translator.user_custom_types_wrappers {
             let wrapper_name = &custom_type.wrapper_name;
             match custom_type.typ {
                 RustWrapperType::Custom => {
