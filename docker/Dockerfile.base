@@ -10,8 +10,7 @@ ENV CARGO_REGISTRIES_WL_DEV_INDEX="https://crates.wildland.dev/git/index"
 ENV SWIFT_BRIDGE_OUT_DIR=$TARGET_DIR
 
 RUN mkdir -p \
-    /app/crates/ \
-    /app/macros/
+    /app/crates/
 
 RUN rustup target add ${BUILD_TARGET}
 
@@ -35,16 +34,6 @@ COPY crates/wildland-crypto/Cargo.toml wildland-crypto/
 COPY crates/wildland-dfs/Cargo.toml wildland-dfs/
 COPY crates/wildland-wallet/Cargo.toml wildland-wallet/
 
-WORKDIR /app/macros/
-RUN for macro_crate in \
-    ffi-macro \
-    ffi-macro-build \
-    ffi-parser \
-    ; do cargo new --lib $macro_crate; done
-COPY macros/ffi-macro/Cargo.toml ffi-macro/
-COPY macros/ffi-macro-build/Cargo.toml ffi-macro-build/
-COPY macros/ffi-parser/Cargo.toml ffi-parser/
-
 WORKDIR /app/
 RUN cargo build \
         --package wildland-admin-manager \
@@ -52,7 +41,6 @@ RUN cargo build \
 
 # Actual build
 COPY crates/ /app/crates/
-COPY macros/ /app/macros/
 WORKDIR /app/crates/wildland-admin-manager
 RUN cargo clean \
     && cargo build \

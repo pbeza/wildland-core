@@ -384,15 +384,18 @@ dependencies = [
 
 [[package]]
 name = "ffi-macro"
-version = "0.1.2"
+version = "0.1.3"
+source = "registry+https://crates.wildland.dev/git/index"
+checksum = "fa6207f9ddab0eaa66bca7b79cc4b9b520f225b512a0742209ae78164aaeb054"
 dependencies = [
  "ffi-parser",
- "swift-bridge",
 ]
 
 [[package]]
 name = "ffi-macro-build"
-version = "0.1.3"
+version = "0.1.4"
+source = "registry+https://crates.wildland.dev/git/index"
+checksum = "627c568eba4198af4b870d9deba8b9bd627666003d7c1827b6cad4ae36ea7b2d"
 dependencies = [
  "ffi-parser",
  "swift-bridge-build",
@@ -401,7 +404,9 @@ dependencies = [
 
 [[package]]
 name = "ffi-parser"
-version = "0.1.3"
+version = "0.1.4"
+source = "registry+https://crates.wildland.dev/git/index"
+checksum = "392bed039f31c53b5a08125137a1708d36fd2dae6b57779d49810f68dfe86851"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1685,7 +1690,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager"
-version = "0.5.4"
+version = "0.5.5"
 dependencies = [
  "ffi-macro",
  "ffi-macro-build",
