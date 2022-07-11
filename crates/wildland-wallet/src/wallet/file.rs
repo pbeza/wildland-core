@@ -25,9 +25,9 @@ impl FileWallet {
 }
 
 pub fn create_file_wallet() -> Result<Box<dyn Wallet>, WalletError> {
-    let project_dirs = ProjectDirs::from("com", "wildland", "Cargo").ok_or(
-        WalletError::FileError("Could not instantiate Wallet project directory".to_string()),
-    )?;
+    let project_dirs = ProjectDirs::from("com", "wildland", "Cargo").ok_or_else(|| {
+        WalletError::FileError("Could not instantiate Wallet project directory".to_string())
+    })?;
 
     let wallet_dir = project_dirs.data_local_dir().join("wallet");
 
