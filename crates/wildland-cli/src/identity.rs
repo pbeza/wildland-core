@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use std::fmt::Write;
 use wildland_admin_manager::{admin_manager::AdminManager, api::AdminManagerApi};
 use wildland_corex::{
     create_file_wallet, ManifestSigningKeypair, SeedPhrase, SeedPhraseWordsArray,
@@ -127,7 +128,7 @@ fn print_seedphrase(seed_phrase: &SeedPhrase) {
                 // add new line and starting tab
                 acc += "\n\t";
             }
-            acc += &format!("{idx: >2}. {word: <8}");
+            let _ = write!(&mut acc, "{idx: >2}. {word: <8}");
             acc
         });
 
