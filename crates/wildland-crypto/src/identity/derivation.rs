@@ -35,18 +35,22 @@ use crate::{
 
 use super::encrypting_keypair::EncryptingKeypair;
 
-fn signing_key_path() -> String {
+fn signing_key_path(forest_index: u64) -> String {
     // "master/WLD/purpose/index"
     // "5721156" == b'WLD'.hex() converted to decimal
-    "m/5721156'/0'/0'".to_string()
+    format!("m/5721156'/0'/{}'", forest_index)
 }
 
-fn encryption_key_path(index: u64) -> String {
-    format!("m/5721156'/1'/{}'", index)
+fn encryption_key_path(forest_index: u64, index: u64) -> String {
+    format!("m/5721156'/1'/{}'/{}'", forest_index, index)
 }
 
 fn single_use_encryption_key_path(index: u64) -> String {
     format!("m/5721156'/2'/{}'", index)
+}
+
+fn backup_key_path() -> String {
+    "m/5721156'/3'".to_string()
 }
 
 /// This structure represents Wildland cryptographic identity.
@@ -142,19 +146,19 @@ impl Identity {
         Self::try_from(mnemonic)
     }
 
-    /// Derive the key that can be used to sign user manifest.
-    /// Pubkey represents user to the world.
-    pub fn signing_keypair(&self) -> SigningKeypair {
-        self.derive_signing_keypair(&signing_key_path())
+    /// Derive the key that represents a forest.
+    /// Pubkey represents forest to the world.
+    pub fn forest_keypair(&self, forest_index: u64) -> SigningKeypair {
+        self.derive_forest_keypair(&signing_key_path(forest_index))
     }
 
-    /// Derive current encryption key, used to encrypt secrets to the user.
+    /// Derive current encryption key, used to encrypt secrets to the owner of the forest.
     /// This keypair should be rotated whenever any of user's devices
     /// is compromised / stolen / lost.
     /// Current encryption pubkey should be accessible to anyone
     /// willing to communicate with the user.
-    pub fn encryption_keypair(&self, index: u64) -> EncryptingKeypair {
-        self.derive_encryption_keypair(&encryption_key_path(index))
+    pub fn encryption_keypair(&self, forest_index: u64, index: u64) -> EncryptingKeypair {
+        self.derive_encryption_keypair(&encryption_key_path(forest_index, index))
     }
 
     /// Deterministically derive single-use encryption key. Send it to
@@ -163,11 +167,20 @@ impl Identity {
     /// By bumping index, one can create multiple keys to be used
     /// with different on-chain identities, making linking the purchases
     /// harder.
+    /// Please note that this keys are not scoped to particular forest,
+    /// since they are supposed to be used only once anyway.
     pub fn single_use_encryption_keypair(&self, index: u64) -> EncryptingKeypair {
         self.derive_encryption_keypair(&single_use_encryption_key_path(index))
     }
 
-    fn derive_signing_keypair(&self, path: &str) -> SigningKeypair {
+    /// Deterministically derive encryption keypair that can be used
+    /// to backup secrets with intent of using them later, during recovery process.
+    /// This keypair is not scoped to the forest. It should be used only internally.
+    pub fn backup_keypair(&self) -> EncryptingKeypair {
+        self.derive_encryption_keypair(&backup_key_path())
+    }
+
+    fn derive_forest_keypair(&self, path: &str) -> SigningKeypair {
         let derived_extended_seckey = self.derive_private_key_from_path(path);
 
         // drop both the chain-code from xprv and last 32 bytes
@@ -198,8 +211,10 @@ impl Identity {
 
 #[cfg(test)]
 mod tests {
+    use crypto_box::aead::Aead;
     use hex::encode;
     use hex_literal::hex;
+    use salsa20::XNonce;
 
     use crate::common::test_utilities::MNEMONIC_PHRASE;
 
@@ -212,10 +227,49 @@ mod tests {
         Identity::try_from(mnemonic).unwrap()
     }
 
+    // please note that this helper is for TESTS ONLY!
+    fn encrypt(
+        nonce: &XNonce,
+        alice_keypair: &EncryptingKeypair,
+        bob_keypair: &EncryptingKeypair,
+    ) -> Vec<u8> {
+        let salsa_box =
+            crypto_box::Box::new(&alice_keypair.public.clone(), &bob_keypair.secret.clone());
+
+        salsa_box.encrypt(nonce, MSG).unwrap()
+    }
+
+    // please note that this helper is for TESTS ONLY!
+    fn decrypt(
+        ciphertext: &[u8],
+        nonce: &XNonce,
+        alice_keypair: &EncryptingKeypair,
+        bob_keypair: &EncryptingKeypair,
+    ) -> crypto_box::aead::Result<Vec<u8>> {
+        let salsa_box =
+            crypto_box::Box::new(&bob_keypair.public.clone(), &alice_keypair.secret.clone());
+
+        salsa_box.decrypt(nonce, ciphertext)
+    }
+
+    #[test]
+    fn can_encrypt_and_decrypt_message_with_encryption_key() {
+        let user = user();
+        let alice_keypair: EncryptingKeypair = user.encryption_keypair(0, 0);
+        let bob_keypair: EncryptingKeypair = user.encryption_keypair(1, 0);
+        let mut rng = crypto_box::rand_core::OsRng;
+        let nonce = crypto_box::generate_nonce(&mut rng);
+
+        let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
+        let result = decrypt(ciphertext.as_slice(), &nonce, &bob_keypair, &alice_keypair);
+
+        assert_eq!(MSG, result.unwrap().as_slice())
+    }
+
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
-        let keypair = user.signing_keypair();
+        let keypair = user.forest_keypair(0);
         let signature = keypair.sign(MSG);
         assert!(signature.verify(MSG, &keypair.public()).is_ok());
     }
@@ -223,7 +277,7 @@ mod tests {
     #[test]
     fn cannot_verify_signature_for_other_message() {
         let user = user();
-        let keypair = user.signing_keypair();
+        let keypair = user.forest_keypair(0);
         let signature = keypair.sign(MSG);
         assert!(signature.verify(MSG, &keypair.public()).is_ok());
     }
@@ -231,9 +285,9 @@ mod tests {
     #[test]
     fn can_generate_distinct_keypairs() {
         let user = user();
-        let skeypair = user.signing_keypair();
-        let e0key = user.encryption_keypair(0);
-        let e1key = user.encryption_keypair(1);
+        let skeypair = user.forest_keypair(0);
+        let e0key = user.encryption_keypair(0, 0);
+        let e1key = user.encryption_keypair(0, 1);
         assert_ne!(&skeypair.secret(), e0key.secret.as_bytes());
         assert_ne!(e0key.secret.as_bytes(), e1key.secret.as_bytes());
 

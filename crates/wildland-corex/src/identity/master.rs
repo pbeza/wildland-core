@@ -33,8 +33,8 @@ impl MasterIdentity {
         self.inner_identity.get_seed_phrase()
     }
 
-    pub fn get_signing_keypair(&self) -> SigningKeypair {
-        self.inner_identity.signing_keypair()
+    pub fn get_forest_keypair(&self) -> SigningKeypair {
+        self.inner_identity.forest_keypair(0)
     }
 
     pub fn create_wildland_identity(
@@ -42,7 +42,7 @@ impl MasterIdentity {
         identity_type: WildlandIdentityType,
         name: String,
     ) -> Result<WildlandIdentity, CoreXError> {
-        let keypair = self.get_signing_keypair();
+        let keypair = self.get_forest_keypair();
         let identity = WildlandIdentity::new(identity_type, keypair, name, self.wallet.clone());
 
         identity.save()?;

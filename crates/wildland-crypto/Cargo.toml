@@ -1,6 +1,6 @@
 [package]
 name = "wildland-crypto"
-version = "0.4.7"
+version = "0.4.8"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -16,7 +16,8 @@ crate-type = ["rlib"]
 [dependencies]
 serde = "1.0"
 rand_core = { version = "0.6", features = ["std"] }
-rand = "0.8.4"
+rand-8 = { package = "rand", version = "0.8.4"}
+rand-7 = { package = "rand", version = "0.7.3"}
 thiserror = "1.0.31"
 
 # bip39 is used to handle mnemonics
