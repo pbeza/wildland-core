@@ -25,6 +25,7 @@ use hex::FromHex;
 pub use seed::{generate_random_seed_phrase, SeedPhraseWordsArray, SEED_PHRASE_LEN};
 
 mod derivation;
+pub mod device;
 pub mod encrypting_keypair;
 mod seed;
 pub mod signing_keypair;
