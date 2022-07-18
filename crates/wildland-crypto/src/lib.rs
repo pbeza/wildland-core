@@ -17,10 +17,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! Wildland cryto crate: derivation of keys from mnemonic, signing and encryption
+//! Wildland crypto crate: derivation of keys from mnemonic, signing and encryption
 //!
 //! This crate provides tools to derive keypairs (for signing and encryption)
-//! from 12 seed words or Ethereum signature.
+//! from 12 mnemonic words or Ethereum signature.
 
 mod common;
 pub mod error;

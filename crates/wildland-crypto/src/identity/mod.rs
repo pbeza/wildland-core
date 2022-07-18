@@ -22,13 +22,15 @@
 use crate::error::CryptoError;
 pub use crate::identity::{derivation::Identity, signing_keypair::SigningKeypair};
 use hex::FromHex;
-pub use seed::{generate_random_seed_phrase, SeedPhraseWordsArray, SEED_PHRASE_LEN};
 
 mod derivation;
 pub mod device;
 pub mod encrypting_keypair;
 mod seed;
 pub mod signing_keypair;
+
+pub const MNEMONIC_PHRASE_LEN: usize = 12;
+pub type MnemonicPhrase = [String; MNEMONIC_PHRASE_LEN];
 
 fn bytes_key_from_str(key: &str) -> Result<[u8; 32], CryptoError> {
     <[u8; 32]>::from_hex(key).map_err(|_| CryptoError::KeyParsingError(key.len()))

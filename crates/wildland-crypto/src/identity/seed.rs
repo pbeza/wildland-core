@@ -18,35 +18,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use bip39::{Language::English, Mnemonic, MnemonicType};
 use hkdf::Hkdf;
 use sha2::Sha256;
-
-use crate::error::CryptoError;
-
-pub const SEED_PHRASE_LEN: usize = 12;
-pub type SeedPhraseWordsArray = [String; SEED_PHRASE_LEN];
-
-/// Create a new random seed phrase
-pub fn generate_random_seed_phrase() -> Result<SeedPhraseWordsArray, CryptoError> {
-    Mnemonic::new(
-        MnemonicType::for_word_count(SEED_PHRASE_LEN)
-            .map_err(|e| CryptoError::SeedPhraseGenerationError(e.to_string()))?,
-        English,
-    )
-    .phrase()
-    .split(' ')
-    .map(|word| word.to_owned())
-    .collect::<Vec<String>>()
-    .try_into()
-    .map_err(|e: Vec<_>| {
-        CryptoError::SeedPhraseGenerationError(format!(
-            "Invalid seed phrase length: {} - expected {}",
-            e.len(),
-            SEED_PHRASE_LEN
-        ))
-    })
-}
 
 pub fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
     let input_key_material = seed;
@@ -58,7 +31,8 @@ pub fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
 
 #[cfg(test)]
 mod tests {
-    use bip39::Seed;
+    use bip39::Language::English;
+    use bip39::{Mnemonic, Seed};
     use hex_literal::hex;
 
     use crate::common::test_utilities::MNEMONIC_PHRASE;

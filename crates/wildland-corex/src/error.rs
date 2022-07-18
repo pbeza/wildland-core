@@ -25,7 +25,7 @@ pub enum CoreXError {
 impl From<CryptoError> for CoreXError {
     fn from(crypto_err: CryptoError) -> Self {
         match crypto_err {
-            CryptoError::SeedPhraseGenerationError(msg) => {
+            CryptoError::MnemonicPhraseGenerationError(msg) => {
                 CoreXError::SeedPhraseGenerationError(msg)
             }
             CryptoError::IdentityGenerationError(msg) => CoreXError::IdentityGenerationError(msg),

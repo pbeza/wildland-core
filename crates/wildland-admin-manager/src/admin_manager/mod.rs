@@ -1,13 +1,6 @@
-use std::{
-    fmt::Debug,
-    rc::Rc,
-    sync::{Arc, Mutex},
-};
+use std::{fmt::Debug, rc::Rc};
 
-use crate::api::{
-    self, AdminManagerApi, AdminManagerError, AdminManagerResult, SeedPhrase, WildlandIdentityType,
-};
-pub use api::WrappedWildlandIdentity;
+use crate::api::{self, AdminManagerApi, AdminManagerError, AdminManagerResult};
 use wildland_corex::Wallet;
 
 #[derive(Clone, Debug)]
@@ -29,41 +22,9 @@ impl AdminManager {
             email: Default::default(),
         }
     }
-
-    fn create_forest_identity(
-        &self,
-        seed: &SeedPhrase,
-        name: String,
-    ) -> AdminManagerResult<api::WrappedWildlandIdentity> {
-        let master_identity = wildland_corex::MasterIdentity::with_identity(
-            wildland_corex::try_identity_from_seed(seed.as_ref())?,
-            self.wallet.clone(),
-        );
-        let forest_id =
-            master_identity.create_wildland_identity(WildlandIdentityType::Forest, name)?;
-
-        Ok(Arc::new(Mutex::new(forest_id)))
-    }
-
-    fn create_device_identity(
-        &self,
-        name: String,
-    ) -> AdminManagerResult<api::WrappedWildlandIdentity> {
-        let master_identity = wildland_corex::MasterIdentity::new(self.wallet.clone())?;
-        let device_id =
-            master_identity.create_wildland_identity(WildlandIdentityType::Device, name)?;
-
-        Ok(Arc::new(Mutex::new(device_id)))
-    }
 }
 
 impl AdminManagerApi for AdminManager {
-    fn create_seed_phrase(&self) -> AdminManagerResult<SeedPhrase> {
-        wildland_corex::generate_random_seed_phrase()
-            .map_err(AdminManagerError::from)
-            .map(SeedPhrase::from)
-    }
-
     fn set_email(&mut self, email: String) {
         self.email = Some(EmailAddress::Unverified(email));
     }
@@ -91,20 +52,6 @@ impl AdminManagerApi for AdminManager {
         }
 
         Ok(())
-    }
-
-    fn create_wildland_identities(
-        &self,
-        seed: &SeedPhrase,
-        device_name: String,
-    ) -> AdminManagerResult<api::IdentityPair> {
-        let forest_id = self.create_forest_identity(seed, String::from(""))?;
-        let device_id = self.create_device_identity(device_name)?;
-
-        Ok(api::IdentityPair {
-            forest_id,
-            device_id,
-        })
     }
 
     fn list_secrets(&self) -> AdminManagerResult<Vec<wildland_corex::ManifestSigningKeypair>> {
