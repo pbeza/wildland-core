@@ -1,11 +1,10 @@
+use crate::create_admin_manager;
 use crate::{
-    admin_manager::AdminManager,
-    api::{
-        AdminManagerApi, AdminManagerError, IdentityPair, SeedPhrase, WildlandIdentity,
-        WildlandIdentityType,
-    },
+    admin_manager::{AdminManager, IdentityPair, WildlandIdentity},
+    api::{AdminManagerError, SeedPhrase, WildlandIdentityType},
 };
 use ffi_macro::binding_wrapper;
+use std::sync::{Arc, Mutex};
 
 // Define Error type and `()` type.
 type ErrorType = AdminManagerError;
@@ -13,8 +12,6 @@ type VoidType = ();
 
 #[binding_wrapper]
 mod ffi_binding {
-    use super::*;
-
     extern "Rust" {
         type AdminManager;
         fn create_admin_manager() -> AdminManager;
