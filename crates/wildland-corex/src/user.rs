@@ -13,13 +13,16 @@ pub fn generate_random_mnemonic() -> CoreXResult<MnemonicPhrase> {
 }
 
 pub fn create_user(payload: CreateUserPayload) -> CoreXResult<()> {
+    // TODO check if user already exists
     match payload {
         CreateUserPayload::Entropy(entropy) => {
             Identity::try_from(entropy.as_slice())?;
+            // TODO derive forest and device id and store it in LSS
             Ok(())
         }
         CreateUserPayload::Mnemonic(mnemonic) => {
             Identity::try_from(mnemonic)?;
+            // TODO derive forest and device id and store it in LSS
             Ok(())
         }
     }
