@@ -1,13 +1,13 @@
+use crate::api::AdminManagerError;
 use admin_manager::AdminManager;
 use wildland_corex::create_file_wallet;
-use crate::api::AdminManagerError;
 
 pub mod admin_manager;
 pub mod api;
 
+mod error;
 #[cfg(feature = "bindings")]
 pub mod ffi;
-mod error;
 
 pub type AdminManagerResult<T> = Result<T, AdminManagerError>;
 

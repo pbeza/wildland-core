@@ -1,7 +1,7 @@
 use wildland_corex::ManifestSigningKeypair;
 
-pub use wildland_corex::WildlandIdentity;
 use crate::AdminManagerResult;
+pub use wildland_corex::WildlandIdentity;
 
 pub trait AdminManagerApi {
     /// Sends a 6-digit verification code to provided email address.

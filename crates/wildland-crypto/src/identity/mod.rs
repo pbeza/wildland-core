@@ -20,7 +20,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::error::CryptoError;
-pub use crate::identity::{derivation::Identity, signing_keypair::SigningKeypair};
+pub use crate::identity::{
+    derivation::Identity, seed::generate_random_mnemonic_phrase, signing_keypair::SigningKeypair,
+};
 use hex::FromHex;
 
 mod derivation;

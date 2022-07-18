@@ -18,10 +18,35 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::error::CryptoError;
+use crate::identity::{MnemonicPhrase, MNEMONIC_PHRASE_LEN};
+use bip39::Language::English;
+use bip39::{Mnemonic, MnemonicType};
 use hkdf::Hkdf;
 use sha2::Sha256;
 
-pub fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
+/// Generate a new random mnemonic phrase
+pub fn generate_random_mnemonic_phrase() -> Result<MnemonicPhrase, CryptoError> {
+    Mnemonic::new(
+        MnemonicType::for_word_count(MNEMONIC_PHRASE_LEN)
+            .map_err(|e| CryptoError::MnemonicPhraseGenerationError(e.to_string()))?,
+        English,
+    )
+    .phrase()
+    .split(' ')
+    .map(|word| word.to_owned())
+    .collect::<Vec<String>>()
+    .try_into()
+    .map_err(|e: Vec<_>| {
+        CryptoError::MnemonicPhraseGenerationError(format!(
+            "Invalid mnemonic phrase length: {} - expected {}",
+            e.len(),
+            MNEMONIC_PHRASE_LEN
+        ))
+    })
+}
+
+pub(crate) fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
     let input_key_material = seed;
     let info = [87, 105, 108, 100, 108, 97, 110, 100]; // list(b'Wildland')
     let hk = Hkdf::<Sha256>::new(None, input_key_material);

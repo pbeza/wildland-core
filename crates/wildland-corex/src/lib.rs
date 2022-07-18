@@ -1,12 +1,12 @@
 mod error;
 mod identity;
-mod wallet;
 mod user;
+mod wallet;
 
 pub use error::*;
 pub use identity::{master::*, wildland::*};
+pub use user::{create_user, generate_random_mnemonic, CreateUserPayload};
 pub use wallet::create_file_wallet;
-pub use user::{create_user,WildlandUser, CreateUserPayload};
 pub use wildland_crypto::identity::{MnemonicPhrase, MNEMONIC_PHRASE_LEN};
 pub use wildland_wallet::{ManifestSigningKeypair, Wallet, WalletError};
 

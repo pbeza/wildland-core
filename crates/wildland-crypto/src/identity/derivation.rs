@@ -75,7 +75,7 @@ impl TryFrom<MnemonicPhrase> for Identity {
         let mnemonic = Mnemonic::from_phrase(&mnemonic_phrase.join(" "), English)
             .map_err(|e| CryptoError::MnemonicPhraseGenerationError(e.to_string()))?;
 
-        Self::new_from_mnemonic(mnemonic)
+        Self::from_mnemonic(mnemonic)
     }
 }
 
@@ -95,21 +95,11 @@ impl TryFrom<&[u8]> for Identity {
         let hashed_entropy = hasher.finalize();
         let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16], English)
             .map_err(|e| CryptoError::MnemonicPhraseGenerationError(e.to_string()))?;
-        Self::new_from_mnemonic(mnemonic)
+        Self::from_mnemonic(mnemonic)
     }
 }
 
 impl Identity {
-    /// Generate new, random identity
-    pub fn create_random() -> Result<Self, CryptoError> {
-        let mnemonic = Mnemonic::new(
-            MnemonicType::for_word_count(MNEMONIC_PHRASE_LEN)
-                .map_err(|e| CryptoError::MnemonicPhraseGenerationError(e.to_string()))?,
-            English,
-        );
-        Self::new_from_mnemonic(mnemonic)
-    }
-
     /// Derive the key that represents a forest.
     /// Pubkey represents forest to the world.
     pub fn forest_keypair(&self, forest_index: u64) -> SigningKeypair {
@@ -152,7 +142,7 @@ impl Identity {
         self.words.clone()
     }
 
-    fn new_from_mnemonic(mnemonic: Mnemonic) -> Result<Self, CryptoError> {
+    fn from_mnemonic(mnemonic: Mnemonic) -> Result<Self, CryptoError> {
         // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
         // We don't need them here.
         let passphrase = "";
@@ -234,7 +224,7 @@ mod tests {
 
     fn user() -> Identity {
         let mnemonic = Mnemonic::from_phrase(MNEMONIC_PHRASE, English).unwrap();
-        Identity::new_from_mnemonic(mnemonic).unwrap()
+        Identity::from_mnemonic(mnemonic).unwrap()
     }
 
     // please note that this helper is for TESTS ONLY!

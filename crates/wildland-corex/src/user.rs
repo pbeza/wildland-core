@@ -1,44 +1,26 @@
-use wildland_crypto::identity::{Identity, MnemonicPhrase};
 use crate::CoreXResult;
-
-pub struct WildlandUser {
-    mnemonic: MnemonicPhrase
-}
-
-impl WildlandUser {
-    fn mnemonic(&self) -> &MnemonicPhrase {
-        &self.mnemonic
-    }
-}
-
-impl From<Identity> for WildlandUser {
-    fn from(identity: Identity) -> Self {
-        WildlandUser {
-            mnemonic: identity.get_mnemonic_phrase()
-        }
-    }
-}
+use wildland_crypto::identity::{generate_random_mnemonic_phrase, Identity, MnemonicPhrase};
 
 #[derive(Debug, Clone)]
 pub enum CreateUserPayload {
-    Random,
     Entropy(Vec<u8>),
-    Mnemonic(MnemonicPhrase)
+    Mnemonic(MnemonicPhrase),
 }
 
-pub fn create_user(payload: CreateUserPayload) -> CoreXResult<WildlandUser> {
+pub fn generate_random_mnemonic() -> CoreXResult<MnemonicPhrase> {
+    let mnemonic = generate_random_mnemonic_phrase()?;
+    Ok(mnemonic)
+}
+
+pub fn create_user(payload: CreateUserPayload) -> CoreXResult<()> {
     match payload {
-        CreateUserPayload::Random => {
-            let user = Identity::create_random()?.into();
-            Ok(user)
-        },
         CreateUserPayload::Entropy(entropy) => {
-            let user = Identity::try_from(entropy.as_slice())?.into();
-            Ok(user)
+            Identity::try_from(entropy.as_slice())?;
+            Ok(())
         }
         CreateUserPayload::Mnemonic(mnemonic) => {
-            let user = Identity::try_from(mnemonic)?.into();
-            Ok(user)
+            Identity::try_from(mnemonic)?;
+            Ok(())
         }
     }
 }

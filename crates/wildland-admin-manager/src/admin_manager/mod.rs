@@ -1,9 +1,9 @@
 use std::{fmt::Debug, rc::Rc};
 
-use wildland_corex::{create_user, CreateUserPayload, MnemonicPhrase, Wallet, WildlandUser};
+use wildland_corex::{create_user, generate_random_mnemonic, CreateUserPayload, MnemonicPhrase, Wallet};
 
+use crate::api::{AdminManagerApi, GenerateMnemonicResponse, UserApi};
 use crate::{AdminManagerError, AdminManagerResult};
-use crate::api::{AdminManagerApi, UserApi};
 
 #[derive(Clone, Debug)]
 pub struct AdminManager {
@@ -27,9 +27,9 @@ impl AdminManager {
 }
 
 impl UserApi for AdminManager {
-    fn create_random_user(&self) -> AdminManagerResult<WildlandUser> {
-        let user = create_user(CreateUserPayload::Random)?;
-        Ok(user)
+    fn generate_random_mnemonic(&self) -> AdminManagerResult<GenerateMnemonicResponse> {
+        let mnemonic = generate_random_mnemonic()?;
+        Ok(GenerateMnemonicResponse(mnemonic))
     }
 
     fn create_user_from_entropy(&self, entropy: &[u8]) -> AdminManagerResult<()> {
