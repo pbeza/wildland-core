@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::fmt::Write;
-use wildland_admin_manager::{admin_manager::AdminManager, api::AdminManagerApi};
+use wildland_admin_manager::admin_manager::AdminManager;
 use wildland_corex::{
     create_file_wallet, ManifestSigningKeypair, SeedPhrase, SeedPhraseWordsArray,
 };
