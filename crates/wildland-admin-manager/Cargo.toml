@@ -1,6 +1,6 @@
 [package]
 name = "wildland-admin-manager"
-version = "0.5.5"
+version = "0.5.6"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"

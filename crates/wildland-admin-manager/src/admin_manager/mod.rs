@@ -4,11 +4,27 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::api::{
-    self, AdminManagerApi, AdminManagerError, AdminManagerResult, SeedPhrase, WildlandIdentityType,
-};
-pub use api::WrappedWildlandIdentity;
+use crate::api::{self, AdminManagerError, AdminManagerResult, SeedPhrase};
 use wildland_corex::Wallet;
+pub use wildland_corex::WildlandIdentity;
+
+pub type WrappedWildlandIdentity = Arc<Mutex<WildlandIdentity>>;
+
+#[derive(Clone, Debug)]
+pub struct IdentityPair {
+    pub forest_id: WrappedWildlandIdentity,
+    pub device_id: WrappedWildlandIdentity,
+}
+
+impl IdentityPair {
+    pub fn forest_id(&self) -> WrappedWildlandIdentity {
+        self.forest_id.clone()
+    }
+
+    pub fn device_id(&self) -> WrappedWildlandIdentity {
+        self.device_id.clone()
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct AdminManager {
@@ -30,50 +46,48 @@ impl AdminManager {
         }
     }
 
-    fn create_forest_identity(
+    pub fn create_forest_identity(
         &self,
         seed: &SeedPhrase,
         name: String,
-    ) -> AdminManagerResult<api::WrappedWildlandIdentity> {
+    ) -> AdminManagerResult<WrappedWildlandIdentity> {
         let master_identity = wildland_corex::MasterIdentity::with_identity(
             wildland_corex::try_identity_from_seed(seed.as_ref())?,
             self.wallet.clone(),
         );
         let forest_id =
-            master_identity.create_wildland_identity(WildlandIdentityType::Forest, name)?;
+            master_identity.create_wildland_identity(api::WildlandIdentityType::Forest, name)?;
 
         Ok(Arc::new(Mutex::new(forest_id)))
     }
 
-    fn create_device_identity(
+    pub fn create_device_identity(
         &self,
         name: String,
-    ) -> AdminManagerResult<api::WrappedWildlandIdentity> {
+    ) -> AdminManagerResult<WrappedWildlandIdentity> {
         let master_identity = wildland_corex::MasterIdentity::new(self.wallet.clone())?;
         let device_id =
-            master_identity.create_wildland_identity(WildlandIdentityType::Device, name)?;
+            master_identity.create_wildland_identity(api::WildlandIdentityType::Device, name)?;
 
         Ok(Arc::new(Mutex::new(device_id)))
     }
-}
 
-impl AdminManagerApi for AdminManager {
-    fn create_seed_phrase(&self) -> AdminManagerResult<SeedPhrase> {
+    pub fn create_seed_phrase(&self) -> AdminManagerResult<SeedPhrase> {
         wildland_corex::generate_random_seed_phrase()
             .map_err(AdminManagerError::from)
             .map(SeedPhrase::from)
     }
 
-    fn set_email(&mut self, email: String) {
+    pub fn set_email(&mut self, email: String) {
         self.email = Some(EmailAddress::Unverified(email));
     }
 
-    fn request_verification_email(&mut self) -> api::AdminManagerResult<()> {
+    pub fn request_verification_email(&mut self) -> api::AdminManagerResult<()> {
         // TODO send http request
         Ok(())
     }
 
-    fn verify_email(&mut self, _verification_code: String) -> api::AdminManagerResult<()> {
+    pub fn verify_email(&mut self, _verification_code: String) -> api::AdminManagerResult<()> {
         match self
             .email
             .as_ref()
@@ -93,21 +107,21 @@ impl AdminManagerApi for AdminManager {
         Ok(())
     }
 
-    fn create_wildland_identities(
+    pub fn create_wildland_identities(
         &self,
         seed: &SeedPhrase,
         device_name: String,
-    ) -> AdminManagerResult<api::IdentityPair> {
+    ) -> AdminManagerResult<IdentityPair> {
         let forest_id = self.create_forest_identity(seed, String::from(""))?;
         let device_id = self.create_device_identity(device_name)?;
 
-        Ok(api::IdentityPair {
+        Ok(IdentityPair {
             forest_id,
             device_id,
         })
     }
 
-    fn list_secrets(&self) -> AdminManagerResult<Vec<wildland_corex::ManifestSigningKeypair>> {
+    pub fn list_secrets(&self) -> AdminManagerResult<Vec<wildland_corex::ManifestSigningKeypair>> {
         let ids = self
             .wallet
             .list_secrets()
@@ -118,10 +132,8 @@ impl AdminManagerApi for AdminManager {
 
 #[cfg(test)]
 mod tests {
-    use wildland_corex::create_file_wallet;
-
     use super::*;
-    use crate::api::AdminManagerApi;
+    use wildland_corex::create_file_wallet;
 
     #[test]
     fn cannot_verify_email_when_not_set() {
