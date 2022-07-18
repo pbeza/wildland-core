@@ -101,7 +101,7 @@ impl TryFrom<&[u8]> for Identity {
 
 impl Identity {
     /// Generate new, random identity
-    pub fn new_random() -> Result<Self, CryptoError> {
+    pub fn create_random() -> Result<Self, CryptoError> {
         let mnemonic = Mnemonic::new(
             MnemonicType::for_word_count(MNEMONIC_PHRASE_LEN)
                 .map_err(|e| CryptoError::MnemonicPhraseGenerationError(e.to_string()))?,

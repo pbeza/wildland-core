@@ -1,7 +1,9 @@
 use std::{fmt::Debug, rc::Rc};
 
-use crate::api::{self, AdminManagerApi, AdminManagerError, AdminManagerResult};
-use wildland_corex::Wallet;
+use wildland_corex::{create_user, CreateUserPayload, MnemonicPhrase, Wallet, WildlandUser};
+
+use crate::{AdminManagerError, AdminManagerResult};
+use crate::api::{AdminManagerApi, UserApi};
 
 #[derive(Clone, Debug)]
 pub struct AdminManager {
@@ -24,17 +26,34 @@ impl AdminManager {
     }
 }
 
-impl AdminManagerApi for AdminManager {
-    fn set_email(&mut self, email: String) {
-        self.email = Some(EmailAddress::Unverified(email));
+impl UserApi for AdminManager {
+    fn create_random_user(&self) -> AdminManagerResult<WildlandUser> {
+        let user = create_user(CreateUserPayload::Random)?;
+        Ok(user)
     }
 
-    fn request_verification_email(&mut self) -> api::AdminManagerResult<()> {
+    fn create_user_from_entropy(&self, entropy: &[u8]) -> AdminManagerResult<()> {
+        create_user(CreateUserPayload::Entropy(entropy.to_vec()))?;
+        Ok(())
+    }
+
+    fn create_user_from_mnemonic(&self, mnemonic: MnemonicPhrase) -> AdminManagerResult<()> {
+        create_user(CreateUserPayload::Mnemonic(mnemonic))?;
+        Ok(())
+    }
+}
+
+impl AdminManagerApi for AdminManager {
+    fn request_verification_email(&mut self) -> AdminManagerResult<()> {
         // TODO send http request
         Ok(())
     }
 
-    fn verify_email(&mut self, _verification_code: String) -> api::AdminManagerResult<()> {
+    fn set_email(&mut self, email: String) {
+        self.email = Some(EmailAddress::Unverified(email));
+    }
+
+    fn verify_email(&mut self, _verification_code: String) -> AdminManagerResult<()> {
         match self
             .email
             .as_ref()
@@ -67,8 +86,9 @@ impl AdminManagerApi for AdminManager {
 mod tests {
     use wildland_corex::create_file_wallet;
 
-    use super::*;
     use crate::api::AdminManagerApi;
+
+    use super::*;
 
     #[test]
     fn cannot_verify_email_when_not_set() {

@@ -1,8 +1,6 @@
 use thiserror::Error;
 use wildland_corex::{CoreXError, WalletError};
 
-pub type AdminManagerResult<T> = std::result::Result<T, AdminManagerError>;
-
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum AdminManagerError {
     #[error("Email has been already verified")]
@@ -11,13 +9,10 @@ pub enum AdminManagerError {
     ValidationCodesDoNotMatch,
     #[error("Email candidate not set")]
     EmailCandidateNotSet,
-
     #[error("Error while parsing seed phrase: {0}")]
     ParseSeedPhraseError(String),
-
     #[error("CoreX error: {0}")]
     CoreX(CoreXError),
-
     #[error("CoreX error: {0}")]
     Wallet(WalletError),
 }
