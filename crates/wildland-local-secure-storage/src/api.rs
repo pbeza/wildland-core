@@ -1,6 +1,6 @@
+use crate::LSSResult;
 #[cfg(test)]
 use mockall::automock;
-use crate::LSSResult;
 
 #[cfg_attr(test, automock)]
 pub trait LocalSecureStorage {

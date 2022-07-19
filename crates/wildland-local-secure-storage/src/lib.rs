@@ -1,7 +1,7 @@
 use crate::error::LSSError;
 
 mod api;
-mod file;
 mod error;
+mod file;
 
 pub type LSSResult<T> = Result<T, LSSError>;

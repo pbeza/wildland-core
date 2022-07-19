@@ -1,35 +1,33 @@
-use std::path::PathBuf;
-use rustbreak::deser::Yaml;
-use rustbreak::PathDatabase;
 use crate::api::LocalSecureStorage;
 use crate::LSSResult;
+use rustbreak::deser::Yaml;
+use rustbreak::PathDatabase;
+use std::path::PathBuf;
 
 type FileLSSData = std::collections::HashMap<String, Vec<u8>>;
 
 struct FileLSS {
-    db: PathDatabase<FileLSSData, Yaml>
+    db: PathDatabase<FileLSSData, Yaml>,
 }
 
 impl FileLSS {
     fn new(path: PathBuf) -> Self {
         Self {
             db: PathDatabase::load_from_path_or_default(path)
-                .expect("Could not create FileLSS from path")
+                .expect("Could not create FileLSS from path"),
         }
     }
 }
 
 impl LocalSecureStorage for FileLSS {
     fn insert(&mut self, key: String, value: Vec<u8>) -> LSSResult<Option<Vec<u8>>> {
-        let prev_value = self.db.read(|db| db.get(&key)
-            .map(|v| v.to_vec()))?;
+        let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
         self.db.write(|db| db.insert(key, value))?;
         Ok(prev_value)
     }
 
     fn get(&self, key: String) -> LSSResult<Option<Vec<u8>>> {
-        let result = self.db.read(|db| db.get(&key)
-            .map(|v| v.to_vec()))?;
+        let result = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
         Ok(result)
     }
 
@@ -39,16 +37,15 @@ impl LocalSecureStorage for FileLSS {
     }
 
     fn keys(&self) -> LSSResult<Vec<String>> {
-        let mut result: Vec<String> = self.db.read(|db| db.keys()
-            .map(|k| k.to_string())
-            .collect())?;
+        let mut result: Vec<String> = self
+            .db
+            .read(|db| db.keys().map(|k| k.to_string()).collect())?;
         result.sort();
         Ok(result)
     }
 
     fn remove(&mut self, key: String) -> LSSResult<Option<Vec<u8>>> {
-        let prev_value = self.db.read(|db| db.get(&key)
-            .map(|v| v.to_vec()))?;
+        let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
         self.db.write(|db| db.remove(&key))?;
         Ok(prev_value)
     }
@@ -66,9 +63,9 @@ impl LocalSecureStorage for FileLSS {
 
 #[cfg(test)]
 mod tests {
-    use tempfile::tempdir;
     use crate::api::LocalSecureStorage;
     use crate::file::FileLSS;
+    use tempfile::tempdir;
 
     fn create_file_lss() -> FileLSS {
         let dir = tempdir().expect("Could not create temporary dir");
@@ -134,7 +131,9 @@ mod tests {
         lss.insert("baz".to_string(), b"bar".to_vec()).unwrap();
         let result = lss.keys().unwrap();
 
-        assert!(result.iter().eq(vec!["baz".to_string(), "foo".to_string()].iter()));
+        assert!(result
+            .iter()
+            .eq(vec!["baz".to_string(), "foo".to_string()].iter()));
     }
 
     #[test]
