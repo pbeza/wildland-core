@@ -1,10 +1,11 @@
 use crate::CoreXResult;
+use std::ops::Deref;
 use wildland_crypto::identity::{generate_random_mnemonic_phrase, Identity, MnemonicPhrase};
 
 #[derive(Debug, Clone)]
 pub enum CreateUserPayload {
     Entropy(Vec<u8>),
-    Mnemonic(MnemonicPhrase),
+    Mnemonic(Box<MnemonicPhrase>),
 }
 
 pub fn generate_random_mnemonic() -> CoreXResult<MnemonicPhrase> {
@@ -21,7 +22,7 @@ pub fn create_user(payload: CreateUserPayload) -> CoreXResult<()> {
             Ok(())
         }
         CreateUserPayload::Mnemonic(mnemonic) => {
-            Identity::try_from(mnemonic)?;
+            Identity::try_from(mnemonic.deref())?;
             // TODO derive forest and device id and store it in LSS
             Ok(())
         }

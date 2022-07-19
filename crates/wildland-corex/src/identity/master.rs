@@ -11,10 +11,6 @@ pub struct MasterIdentity {
 }
 
 impl MasterIdentity {
-    pub fn new(wallet: MasterIdentityWalletType) -> Result<(), CoreXError> {
-        Ok(())
-    }
-
     pub fn with_identity(inner_identity: Identity, wallet: MasterIdentityWalletType) -> Self {
         Self {
             inner_identity,

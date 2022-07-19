@@ -20,7 +20,7 @@
 
 use std::convert::TryFrom;
 
-use bip39::{Language::English, Mnemonic, MnemonicType, Seed};
+use bip39::{Language::English, Mnemonic, Seed};
 use crypto_box::SecretKey as EncryptionSecretKey;
 use ed25519_dalek_bip32::{DerivationPath, ExtendedSecretKey};
 use sha2::{Digest, Sha256};
@@ -63,7 +63,7 @@ pub struct Identity {
     words: MnemonicPhrase,
 }
 
-impl TryFrom<MnemonicPhrase> for Identity {
+impl TryFrom<&MnemonicPhrase> for Identity {
     type Error = CryptoError;
 
     /// Derive identity from mnemonic phrase.
@@ -71,7 +71,7 @@ impl TryFrom<MnemonicPhrase> for Identity {
     /// Derived identity is bound to Wildland project - same 12 words will
     /// produce different seed (number) in other project.
     /// Only English language is accepted.
-    fn try_from(mnemonic_phrase: MnemonicPhrase) -> Result<Self, Self::Error> {
+    fn try_from(mnemonic_phrase: &MnemonicPhrase) -> Result<Self, Self::Error> {
         let mnemonic = Mnemonic::from_phrase(&mnemonic_phrase.join(" "), English)
             .map_err(|e| CryptoError::MnemonicPhraseGenerationError(e.to_string()))?;
 
@@ -257,7 +257,7 @@ mod tests {
         let user = user();
         let alice_keypair: EncryptingKeypair = user.encryption_keypair(0, 0);
         let bob_keypair: EncryptingKeypair = user.encryption_keypair(1, 0);
-        let mut rng = crypto_box::rand_core::OsRng;
+        let mut rng = rand_core::OsRng;
         let nonce = crypto_box::generate_nonce(&mut rng);
 
         let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
@@ -357,7 +357,7 @@ mod tests {
             .collect::<Vec<String>>()
             .try_into()
             .unwrap();
-        let user = Identity::try_from(mnemonic_array).unwrap();
+        let user = Identity::try_from(&mnemonic_array).unwrap();
 
         assert_eq!(
             user.get_extended_seckey().secret_key.to_bytes(),
@@ -377,7 +377,7 @@ mod tests {
             .try_into()
             .unwrap();
 
-        assert!(Identity::try_from(mnemonic_array).is_err());
+        assert!(Identity::try_from(&mnemonic_array).is_err());
     }
 
     #[test]
@@ -388,7 +388,7 @@ mod tests {
             .collect::<Vec<String>>()
             .try_into()
             .unwrap();
-        let user = Identity::try_from(mnemonic).unwrap();
+        let user = Identity::try_from(&mnemonic).unwrap();
         assert_eq!(user.get_mnemonic_phrase().join(" "), TEST_MNEMONIC_12);
     }
 }

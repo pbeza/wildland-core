@@ -1,6 +1,8 @@
 use std::{fmt::Debug, rc::Rc};
 
-use wildland_corex::{create_user, generate_random_mnemonic, CreateUserPayload, MnemonicPhrase, Wallet};
+use wildland_corex::{
+    create_user, generate_random_mnemonic, CreateUserPayload, MnemonicPhrase, Wallet,
+};
 
 use crate::api::{AdminManagerApi, GenerateMnemonicResponse, UserApi};
 use crate::{AdminManagerError, AdminManagerResult};
@@ -38,7 +40,7 @@ impl UserApi for AdminManager {
     }
 
     fn create_user_from_mnemonic(&self, mnemonic: MnemonicPhrase) -> AdminManagerResult<()> {
-        create_user(CreateUserPayload::Mnemonic(mnemonic))?;
+        create_user(CreateUserPayload::Mnemonic(Box::new(mnemonic)))?;
         Ok(())
     }
 }
