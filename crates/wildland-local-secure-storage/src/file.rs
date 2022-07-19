@@ -26,8 +26,9 @@ impl LocalSecureStorage for FileLSS {
         Ok(prev_value)
     }
 
-    fn get(&self, key: String) -> Option<Vec<u8>> {
-        todo!()
+    fn get(&self, key: String) -> LSSResult<Option<Vec<u8>>> {
+        let result = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
+        Ok(result)
     }
 
     fn contains_key(&self, key: String) -> bool {
@@ -64,9 +65,35 @@ mod tests {
     }
 
     #[test]
-    fn should_insert_new_value() {
+    fn should_insert_new_value_and_return_none() {
         let mut lss = create_file_lss();
         let result = lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
+
+        assert!(result.is_none())
+    }
+
+    #[test]
+    fn should_update_value_and_return_previous() {
+        let mut lss = create_file_lss();
+        lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
+        let result = lss.insert("foo".to_string(), b"baz".to_vec()).unwrap();
+
+        assert_eq!(result.unwrap(), b"bar".to_vec())
+    }
+
+    #[test]
+    fn should_get_inserted_value() {
+        let mut lss = create_file_lss();
+        lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
+        let result = lss.get("foo".to_string()).unwrap();
+
+        assert_eq!(result.unwrap(), b"bar".to_vec())
+    }
+
+    #[test]
+    fn should_get_none_when_no_value_presented() {
+        let lss = create_file_lss();
+        let result = lss.get("foo".to_string()).unwrap();
 
         assert!(result.is_none())
     }

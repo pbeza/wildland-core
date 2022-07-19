@@ -10,7 +10,7 @@ pub trait LocalSecureStorage {
     fn insert(&mut self, key: String, value: Vec<u8>) -> LSSResult<Option<Vec<u8>>>;
 
     /// Returns a copy of the value corresponding to the key.
-    fn get(&self, key: String) -> Option<Vec<u8>>;
+    fn get(&self, key: String) -> LSSResult<Option<Vec<u8>>>;
 
     /// Returns true if the map contains a value for the specified key.
     fn contains_key(&self, key: String) -> bool;
