@@ -13,17 +13,17 @@ pub trait LocalSecureStorage {
     fn get(&self, key: String) -> LSSResult<Option<Vec<u8>>>;
 
     /// Returns true if the map contains a value for the specified key.
-    fn contains_key(&self, key: String) -> bool;
+    fn contains_key(&self, key: String) -> LSSResult<bool>;
 
     /// Returns all keys in arbitrary order.
-    fn keys(&self) -> Vec<String>;
+    fn keys(&self) -> LSSResult<Vec<String>>;
 
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
     fn remove(&mut self, key: String) -> LSSResult<Option<Vec<u8>>>;
 
     /// Returns the number of elements in the map.
-    fn len(&self) -> usize;
+    fn len(&self) -> LSSResult<usize>;
 
     /// Returns true if the map contains no elements, false otherwise.
-    fn is_empty(&self) -> bool;
+    fn is_empty(&self) -> LSSResult<bool>;
 }

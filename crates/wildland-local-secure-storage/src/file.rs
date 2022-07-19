@@ -21,33 +21,40 @@ impl FileLSS {
 
 impl LocalSecureStorage for FileLSS {
     fn insert(&mut self, key: String, value: Vec<u8>) -> LSSResult<Option<Vec<u8>>> {
-        let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
+        let prev_value = self.db.read(|db| db.get(&key)
+            .map(|v| v.to_vec()))?;
         self.db.write(|db| db.insert(key, value))?;
         Ok(prev_value)
     }
 
     fn get(&self, key: String) -> LSSResult<Option<Vec<u8>>> {
-        let result = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
+        let result = self.db.read(|db| db.get(&key)
+            .map(|v| v.to_vec()))?;
         Ok(result)
     }
 
-    fn contains_key(&self, key: String) -> bool {
-        todo!()
+    fn contains_key(&self, key: String) -> LSSResult<bool> {
+        let result = self.db.read(|db| db.contains_key(&key))?;
+        Ok(result)
     }
 
-    fn keys(&self) -> Vec<String> {
-        todo!()
+    fn keys(&self) -> LSSResult<Vec<String>> {
+        let mut result: Vec<String> = self.db.read(|db| db.keys()
+            .map(|k| k.to_string())
+            .collect())?;
+        result.sort();
+        Ok(result)
     }
 
     fn remove(&mut self, key: String) -> LSSResult<Option<Vec<u8>>> {
         todo!()
     }
 
-    fn len(&self) -> usize {
+    fn len(&self) -> LSSResult<usize> {
         todo!()
     }
 
-    fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> LSSResult<bool> {
         todo!()
     }
 }
@@ -96,5 +103,40 @@ mod tests {
         let result = lss.get("foo".to_string()).unwrap();
 
         assert!(result.is_none())
+    }
+
+    #[test]
+    fn should_return_true_when_contains_key() {
+        let mut lss = create_file_lss();
+        lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
+        let result = lss.contains_key("foo".to_string()).unwrap();
+
+        assert!(result)
+    }
+
+    #[test]
+    fn should_return_false_when_does_not_contain_key() {
+        let lss = create_file_lss();
+        let result = lss.contains_key("foo".to_string()).unwrap();
+
+        assert!(!result)
+    }
+
+    #[test]
+    fn should_return_sorted_list_of_keys() {
+        let mut lss = create_file_lss();
+        lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
+        lss.insert("baz".to_string(), b"bar".to_vec()).unwrap();
+        let result = lss.keys().unwrap();
+
+        assert!(result.iter().eq(vec!["baz".to_string(), "foo".to_string()].iter()));
+    }
+
+    #[test]
+    fn should_return_empty_list_of_keys_when_db_is_empty() {
+        let lss = create_file_lss();
+        let result = lss.keys().unwrap();
+
+        assert!(result.is_empty())
     }
 }
