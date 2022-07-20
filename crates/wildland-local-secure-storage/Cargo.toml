@@ -1,0 +1,24 @@
+[package]
+name = "wildland-local-secure-storage"
+version = "0.0.1"
+authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
+edition = "2021"
+license = "GPL-3.0-only"
+repository = "https://gitlab.com/wildland/corex/wildland-core"
+homepage = "https://wildland.io/"
+description = "Wildland keystore library"
+keywords = ["storage", "keystore"]
+publish = ["wl-dev"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rustbreak = { version = "2.0.0", features = ["yaml_enc"] }
+thiserror = "1.0.31"
+
+[dev-dependencies]
+mockall = "0.11.1"
+tempfile = "3.3.0"
+
+[package.metadata.workspaces]
+independent = true
