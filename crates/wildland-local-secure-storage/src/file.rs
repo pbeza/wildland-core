@@ -11,11 +11,9 @@ struct FileLSS {
 }
 
 impl FileLSS {
-    fn new(path: PathBuf) -> Self {
-        Self {
-            db: PathDatabase::load_from_path_or_default(path)
-                .expect("Could not create FileLSS from path"),
-        }
+    fn new(path: PathBuf) -> LSSResult<Self> {
+        let db = PathDatabase::load_from_path_or_default(path)?;
+        Ok(Self { db })
     }
 }
 
@@ -37,10 +35,9 @@ impl LocalSecureStorage for FileLSS {
     }
 
     fn keys(&self) -> LSSResult<Vec<String>> {
-        let mut result: Vec<String> = self
+        let result: Vec<String> = self
             .db
             .read(|db| db.keys().map(|k| k.to_string()).collect())?;
-        result.sort();
         Ok(result)
     }
 
@@ -70,7 +67,7 @@ mod tests {
     fn create_file_lss() -> FileLSS {
         let dir = tempdir().expect("Could not create temporary dir");
         let file_path = dir.path().join("lss-test.yaml");
-        FileLSS::new(file_path)
+        FileLSS::new(file_path).unwrap()
     }
 
     #[test]
@@ -125,15 +122,16 @@ mod tests {
     }
 
     #[test]
-    fn should_return_sorted_list_of_keys() {
+    fn should_return_list_of_keys() {
         let mut lss = create_file_lss();
         lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
         lss.insert("baz".to_string(), b"bar".to_vec()).unwrap();
         let result = lss.keys().unwrap();
 
+        assert_eq!(result.len(), 2);
         assert!(result
             .iter()
-            .eq(vec!["baz".to_string(), "foo".to_string()].iter()));
+            .all(|item| item.as_str() == "foo" || item.as_str() == "baz"))
     }
 
     #[test]
