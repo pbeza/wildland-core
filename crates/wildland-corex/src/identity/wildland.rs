@@ -1,8 +1,7 @@
-use crate::{CoreXError, ManifestSigningKeypair};
+use crate::CoreXError;
 use sha2::{Digest, Sha256};
 use std::{fmt::Display, rc::Rc};
 use wildland_crypto::identity::SigningKeypair;
-use wildland_wallet::{SigningKeyType, Wallet};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum WildlandIdentityType {
@@ -25,37 +24,19 @@ impl WildlandIdentityType {
     }
 }
 
-impl From<WildlandIdentityType> for SigningKeyType {
-    fn from(identity_type: WildlandIdentityType) -> Self {
-        match identity_type {
-            WildlandIdentityType::Forest => SigningKeyType::Forest,
-            WildlandIdentityType::Device => SigningKeyType::Device,
-        }
-    }
-}
-
-type IdentityWalletType = Rc<dyn Wallet>;
-
 #[derive(Debug)]
 pub struct WildlandIdentity {
     identity_type: WildlandIdentityType,
     keypair: SigningKeypair,
     name: String,
-    wallet: IdentityWalletType,
 }
 
 impl WildlandIdentity {
-    pub fn new(
-        identity_type: WildlandIdentityType,
-        keypair: SigningKeypair,
-        name: String,
-        wallet: IdentityWalletType,
-    ) -> Self {
+    pub fn new(identity_type: WildlandIdentityType, keypair: SigningKeypair, name: String) -> Self {
         Self {
             identity_type,
             keypair,
             name,
-            wallet,
         }
     }
 
@@ -87,18 +68,6 @@ impl WildlandIdentity {
 
     pub fn get_type(&self) -> WildlandIdentityType {
         self.identity_type
-    }
-
-    pub fn save(&self) -> Result<(), CoreXError> {
-        let wallet_keypair = ManifestSigningKeypair::from_keypair(
-            self.get_type().into(),
-            SigningKeypair::try_from_bytes_slices(self.keypair.public(), self.keypair.secret())
-                .unwrap(),
-        );
-
-        self.wallet
-            .save_signing_secret(wallet_keypair)
-            .map_err(CoreXError::IdentitySaveError)
     }
 }
 
