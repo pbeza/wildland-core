@@ -5,51 +5,10 @@ class main {
     System.loadLibrary("wildland");
 
     var admin_manager = wildland.create_admin_manager();
-    var seed_result = admin_manager.create_seed_phrase();
-    if (seed_result.is_ok()) {
-      var seed = seed_result.unwrap();
-      var identities_result = admin_manager.create_wildland_identities(seed, new RustString("device name 1"));
-      var identity_pair = identities_result.unwrap();
-      var forest_id = identity_pair.forest_id();
-      var device_id = identity_pair.device_id();
-
-      System.out.println(device_id.get_name().to_string());
-      device_id.set_name(new RustString("name 2"));
-      System.out.println(device_id.get_name().to_string());
-      System.out.println(device_id.to_string().to_string());
-      System.out.println(device_id.get_fingerprint_string().to_string());
-      System.out.println(device_id.get_private_key());
-
-      var device_id_type = device_id.get_type();
-      var another_device_id_type = device_id.get_type();
-      var forest_id_type = forest_id.get_type();
-      if (device_id_type.is_same(another_device_id_type)) {
-        System.out.println("Types are equal");
-      }
-      if (!forest_id_type.is_same(device_id_type)) {
-        System.out.println("Types are not equal");
-      }
-      if (!device_id_type.is_forest()) {
-        System.out.println("it is not a forest type");
-      }
-      if (device_id_type.is_device()) {
-        System.out.println("it is a device type");
-      }
-
-      if (device_id.save().is_ok()) {
-        System.out.println("Device identity saved in a file.");
-      }
-    }
-
-    admin_manager.set_email(new RustString("test@email.com"));
-    var sending_result = admin_manager.request_verification_email();
-    if (sending_result.is_ok()) {
-      var verification_result = admin_manager.verify_email(new RustString("123456"));
-      if (verification_result.is_ok()) {
-        System.out.println("Verification successful");
-      } else {
-        System.out.println(verification_result.unwrap_err().to_string().to_string());
-      }
+    var mnemonic_result = admin_manager.user_api().generate_mnemonic();
+    if (mnemonic_result.is_ok()) {
+      var mnemonic = mnemonic_result.unwrap();
+      System.out.println(mnemonic.get_string().to_string());
     }
   }
 }
