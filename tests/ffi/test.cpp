@@ -7,7 +7,8 @@ extern "C" {
 
 int main()
 {
-    AdminManager admin_manager = create_admin_manager();
+    String lss_path = String("/tmp/lss.yaml");
+    AdminManager admin_manager = create_admin_manager(lss_path);
 
     ResultSeedPhrase mnemonic_result = admin_manager.user_api().generate_mnemonic();
     if (mnemonic_result.is_ok())

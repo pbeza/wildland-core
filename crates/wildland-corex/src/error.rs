@@ -20,6 +20,9 @@ pub enum CoreXError {
     Generic(String),
 }
 
+/// Workaround for error types which don't implement `Clone` trait.
+/// The error object needs to be cloned from the result object to be safely propagated through ffi bindings.
+// TODO Remove it if https://wildlandio.atlassian.net/browse/WILX-135 is finished and exceptions are thrown in native platforms (Clone not needed anymore)
 impl From<LSSError> for CoreXError {
     fn from(lss_err: LSSError) -> Self {
         match lss_err {

@@ -11,16 +11,13 @@ pub mod ffi;
 pub use admin_manager::AdminManager;
 pub use api::user::UserApi;
 
-use wildland_corex::FileLSS;
+use wildland_corex::create_file_lss;
 pub use wildland_corex::SeedPhrase;
 
 pub type AdminManagerResult<T> = Result<T, AdminManagerError>;
 
-pub fn create_file_lss(path: String) -> AdminManagerResult<FileLSS> {
-    wildland_corex::create_file_lss(path).map_err(AdminManagerError::from)
-}
-
-// TODO change lss to &dyn LocalSecureStorage after https://wildlandio.atlassian.net/browse/WILX-100 is finished
-pub fn create_admin_manager(lss: FileLSS) -> AdminManager {
-    AdminManager::new(Rc::new(lss))
+// TODO change lss_path to &dyn LocalSecureStorage and pass here native lss implementation after https://wildlandio.atlassian.net/browse/WILX-100 is finished
+pub fn create_admin_manager(lss_path: String) -> AdminManagerResult<AdminManager> {
+    let lss = create_file_lss(lss_path)?;
+    Ok(AdminManager::new(Rc::new(lss)))
 }

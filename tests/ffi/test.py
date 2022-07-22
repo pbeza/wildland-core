@@ -4,7 +4,7 @@ import wildland
 
 class TestAdminManager(unittest.TestCase):
     def setUp(self):
-        self.admin_manager = wildland.create_admin_manager()
+        self.admin_manager = wildland.create_admin_manager(wildland.RustString("/tmp/lss.yaml"))
 
     def test_mnemonic_generation(self):
         mnemonic_result = self.admin_manager.user_api().generate_mnemonic()
