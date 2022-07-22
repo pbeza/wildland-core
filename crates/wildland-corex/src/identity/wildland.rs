@@ -1,6 +1,5 @@
-use crate::CoreXError;
 use sha2::{Digest, Sha256};
-use std::{fmt::Display, rc::Rc};
+use std::fmt::Display;
 use wildland_crypto::identity::SigningKeypair;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
