@@ -1732,6 +1732,7 @@ dependencies = [
  "wildland-catlib",
  "wildland-crypto",
  "wildland-dfs",
+ "wildland-local-secure-storage",
 ]
 
 [[package]]

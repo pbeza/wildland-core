@@ -6,12 +6,12 @@ use std::path::PathBuf;
 
 type FileLSSData = std::collections::HashMap<String, Vec<u8>>;
 
-struct FileLSS {
+pub struct FileLSS {
     db: PathDatabase<FileLSSData, Yaml>,
 }
 
 impl FileLSS {
-    fn new(path: PathBuf) -> LSSResult<Self> {
+    pub fn new(path: PathBuf) -> LSSResult<Self> {
         let db = PathDatabase::load_from_path_or_default(path)?;
         Ok(Self { db })
     }

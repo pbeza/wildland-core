@@ -1,8 +1,12 @@
 mod crypto;
 mod error;
 mod identity;
+mod lss;
 
 pub use crypto::*;
 pub use error::*;
 pub use identity::{master::*, wildland::*};
-pub use wildland_crypto::identity::{Identity, SeedPhraseWordsArray, SEED_PHRASE_LEN};
+pub use lss::*;
+pub use wildland_local_secure_storage::{FileLSS, LocalSecureStorage};
+
+pub type CorexResult<T> = Result<T, CoreXError>;

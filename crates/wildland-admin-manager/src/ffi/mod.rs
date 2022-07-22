@@ -1,6 +1,6 @@
 use crate::{
     admin_manager::AdminManager, api::user::UserApi, create_admin_manager, AdminManagerError,
-    SeedPhrase,
+    FileLSS, SeedPhrase,
 };
 use ffi_macro::binding_wrapper;
 
@@ -12,8 +12,10 @@ type VoidType = ();
 mod ffi_binding {
     extern "Rust" {
         type AdminManager;
-        fn create_admin_manager() -> AdminManager;
+        fn create_admin_manager(lss: FileLSS) -> AdminManager;
         fn user_api(self: &AdminManager) -> &UserApi;
+
+        type FileLSS;
 
         type UserApi;
         fn generate_mnemonic(self: &UserApi) -> Result<SeedPhrase>;

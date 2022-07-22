@@ -1,5 +1,6 @@
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
+use wildland_local_secure_storage::LSSError;
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
 pub enum CoreXError {
@@ -13,8 +14,18 @@ pub enum CoreXError {
     EntropyTooLow,
     #[error("Seed phrase parsing error: {0}")]
     ParseSeedPhraseError(String),
+    #[error("LSS Error: {0}")]
+    LSSError(String),
     #[error("CoreX error: {0}")]
     Generic(String),
+}
+
+impl From<LSSError> for CoreXError {
+    fn from(lss_err: LSSError) -> Self {
+        match lss_err {
+            LSSError::FileLSSError(err) => CoreXError::LSSError(format!("{:?}", err)),
+        }
+    }
 }
 
 impl From<CryptoError> for CoreXError {
