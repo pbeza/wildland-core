@@ -1745,7 +1745,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager"
-version = "0.5.6"
+version = "0.6.0"
 dependencies = [
  "ffi-macro",
  "ffi-macro-build",
