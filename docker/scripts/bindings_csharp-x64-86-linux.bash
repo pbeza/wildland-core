@@ -19,7 +19,7 @@ ${CC} -fpermissive \
       -w \
       -L . \
       wildland_wrap.cxx \
-      -lwildland_admin_manager \
+      -lwildland_cargo_lib \
       -o /bindings_test/lib${DLLIMPORT}.so
 
 ${CSHARP_COMPILER} \

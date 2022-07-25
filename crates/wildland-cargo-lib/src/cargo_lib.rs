@@ -1,10 +1,10 @@
 use crate::api::user::UserApi;
 
 #[derive(Default)]
-pub struct AdminManager {
+pub struct CargoLib {
     user_api: UserApi,
 }
-impl AdminManager {
+impl CargoLib {
     pub fn user_api(&self) -> &UserApi {
         &self.user_api
     }

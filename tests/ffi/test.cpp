@@ -7,9 +7,9 @@ extern "C" {
 
 int main()
 {
-    AdminManager admin_manager = create_admin_manager();
+    CargoLib cargo_lib = create_cargo_lib();
 
-    ResultSeedPhrase mnemonic_result = admin_manager.user_api().generate_mnemonic();
+    ResultSeedPhrase mnemonic_result = cargo_lib.user_api().generate_mnemonic();
     if (mnemonic_result.is_ok())
     {
         SeedPhrase mnemonic_ok = mnemonic_result.unwrap(); // it is safe to unwrap after `is_ok` check

@@ -1,19 +1,16 @@
-use crate::{
-    admin_manager::AdminManager, api::user::UserApi, create_admin_manager, AdminManagerError,
-    SeedPhrase,
-};
+use crate::{api::user::UserApi, cargo_lib::CargoLib, create_cargo_lib, CargoLibError, SeedPhrase};
 use ffi_macro::binding_wrapper;
 
 // Define Error type and `()` type.
-type ErrorType = AdminManagerError;
+type ErrorType = CargoLibError;
 type VoidType = ();
 
 #[binding_wrapper]
 mod ffi_binding {
     extern "Rust" {
-        type AdminManager;
-        fn create_admin_manager() -> AdminManager;
-        fn user_api(self: &AdminManager) -> &UserApi;
+        type CargoLib;
+        fn create_cargo_lib() -> CargoLib;
+        fn user_api(self: &CargoLib) -> &UserApi;
 
         type UserApi;
         fn generate_mnemonic(self: &UserApi) -> Result<SeedPhrase>;

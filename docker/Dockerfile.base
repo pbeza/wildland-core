@@ -4,7 +4,7 @@ ARG BUILD_TARGET=x86_64-unknown-linux-gnu
 
 ARG FFI_BUILD_DIR=/ffi_build
 ARG TARGET_DIR=/app/target/${BUILD_TARGET}
-ARG CXX_LIB=$TARGET_DIR/debug/libwildland_admin_manager.a
+ARG CXX_LIB=$TARGET_DIR/debug/libwildland_cargo_lib.a
 
 ENV CARGO_REGISTRIES_WL_DEV_INDEX="https://crates.wildland.dev/git/index"
 ENV SWIFT_BRIDGE_OUT_DIR=$TARGET_DIR
@@ -17,7 +17,7 @@ RUN rustup target add ${BUILD_TARGET}
 # Build only dependencies to cache them in the docker layer
 WORKDIR /app/crates/
 RUN for crate in \
-    wildland-admin-manager \
+    wildland-cargo-lib \
     wildland-corex \
     wildland-catlib \
     wildland-crypto \
@@ -26,8 +26,8 @@ RUN for crate in \
     ; do cargo new --lib $crate; done
 COPY Cargo.toml /app/
 COPY Cargo.lock /app/
-COPY crates/wildland-admin-manager/Cargo.toml wildland-admin-manager/
-COPY crates/wildland-admin-manager/build.rs wildland-admin-manager/
+COPY crates/wildland-cargo-lib/Cargo.toml wildland-cargo-lib/
+COPY crates/wildland-cargo-lib/build.rs wildland-cargo-lib/
 COPY crates/wildland-corex/Cargo.toml wildland-corex/
 COPY crates/wildland-catlib/Cargo.toml wildland-catlib/
 COPY crates/wildland-crypto/Cargo.toml wildland-crypto/
@@ -36,16 +36,16 @@ COPY crates/wildland-wallet/Cargo.toml wildland-wallet/
 
 WORKDIR /app/
 RUN cargo build \
-        --package wildland-admin-manager \
-        --target ${BUILD_TARGET}
+    --package wildland-cargo-lib \
+    --target ${BUILD_TARGET}
 
 # Actual build
 COPY crates/ /app/crates/
-WORKDIR /app/crates/wildland-admin-manager
+WORKDIR /app/crates/wildland-cargo-lib
 RUN cargo clean \
     && cargo build \
-        --features "bindings" \
-        --target ${BUILD_TARGET}
+    --features "bindings" \
+    --target ${BUILD_TARGET}
 
 RUN cp \
     "${SWIFT_BRIDGE_OUT_DIR}/SwiftBridgeCore.h" \
@@ -54,7 +54,7 @@ RUN cp \
     "./_generated_swift/ffi_swift/ffi_swift.h" \
     "wildland.i" \
     "${CXX_LIB}" \
-  "${FFI_BUILD_DIR}"
+    "${FFI_BUILD_DIR}"
 
 COPY tests/ffi/ /ffi_tests/
 COPY /docker/scripts/ /scripts/

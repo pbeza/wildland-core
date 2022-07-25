@@ -2,9 +2,9 @@ FROM debian:testing-slim
 
 # Run with:
 #
-# docker-compose -f wildland-admin-manager/docker/docker-compose.yml run --rm wildland-sdk-python
+# docker-compose -f wildland-cargo-lib/docker/docker-compose.yml run --rm wildland-sdk-python
 
-ENV ADMIN_MANAGER_PATH=/wildland-core/crates/wildland-admin-manager
+ENV CARGO_LIB_PATH=/wildland-core/crates/wildland-cargo-lib
 ENV TARGET=/wildland-core/target/debug/
 ENV CC=g++
 
@@ -14,17 +14,17 @@ RUN mkdir -p /wildland-core/
 WORKDIR /wildland-core
 
 # Copy from base image instead of building new image on top of it to avoid reinstalling packages after source code changes
-COPY --from=wildland-sdk-base ${ADMIN_MANAGER_PATH}/_generated_cpp ./_generated_cpp
-COPY --from=wildland-sdk-base ${ADMIN_MANAGER_PATH}/_generated_swift ./_generated_swift
-COPY --from=wildland-sdk-base ${TARGET}/libwildland_admin_manager.a ./lib/
-COPY crates/wildland-admin-manager/wildland.i ./
+COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_cpp ./_generated_cpp
+COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_swift ./_generated_swift
+COPY --from=wildland-sdk-base ${TARGET}/libwildland_cargo_lib.a ./lib/
+COPY crates/wildland-cargo-lib/wildland.i ./
 
 RUN mkdir -p _generated_python \
     && swig -python -c++ -outdir _generated_python wildland.i \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
     wildland_wrap.cxx \
     -Llib \
-    -lwildland_admin_manager \
+    -lwildland_cargo_lib \
     $(python3-config --includes) \
     -I_generated_swift \
     -I_generated_swift/ffi_swift \

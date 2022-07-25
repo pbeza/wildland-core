@@ -1,13 +1,13 @@
-use crate::{AdminManagerError, AdminManagerResult};
+use crate::{CargoLibError, CargoLibResult};
 use wildland_corex::{generate_random_seed_phrase, SeedPhrase};
 
 #[derive(Default)]
 pub struct UserApi;
 
 impl UserApi {
-    pub fn generate_mnemonic(&self) -> AdminManagerResult<SeedPhrase> {
+    pub fn generate_mnemonic(&self) -> CargoLibResult<SeedPhrase> {
         generate_random_seed_phrase()
-            .map_err(AdminManagerError::from)
+            .map_err(CargoLibError::from)
             .map(SeedPhrase::from)
     }
 

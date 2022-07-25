@@ -4,8 +4,8 @@ class main {
     System.out.println("Java FFI Test Suite");
     System.loadLibrary("wildland");
 
-    var admin_manager = wildland.create_admin_manager();
-    var mnemonic_result = admin_manager.user_api().generate_mnemonic();
+    var cargo_lib = wildland.create_cargo_lib();
+    var mnemonic_result = cargo_lib.user_api().generate_mnemonic();
     if (mnemonic_result.is_ok()) {
       var mnemonic = mnemonic_result.unwrap();
       System.out.println(mnemonic.get_string().to_string());
