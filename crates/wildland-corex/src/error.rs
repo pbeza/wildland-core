@@ -1,13 +1,9 @@
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
-use wildland_wallet::WalletError;
+use wildland_local_secure_storage::LSSError;
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
 pub enum CoreXError {
-    #[error("Saving identity error: {0}")]
-    IdentitySaveError(WalletError),
-    #[error("Could not create a wallet: {0}")]
-    WalletCreationError(WalletError),
     #[error("Seed phrase generation error: {0}")]
     SeedPhraseGenerationError(String),
     #[error("Identity generation error: {0}")]
@@ -18,8 +14,21 @@ pub enum CoreXError {
     EntropyTooLow,
     #[error("Seed phrase parsing error: {0}")]
     ParseSeedPhraseError(String),
+    #[error("LSS Error: {0}")]
+    LSSError(String),
     #[error("CoreX error: {0}")]
     Generic(String),
+}
+
+/// Workaround for error types which don't implement `Clone` trait.
+/// The error object needs to be cloned from the result object to be safely propagated through ffi bindings.
+// TODO Remove it if https://wildlandio.atlassian.net/browse/WILX-135 is finished and exceptions are thrown in native platforms (Clone not needed anymore)
+impl From<LSSError> for CoreXError {
+    fn from(lss_err: LSSError) -> Self {
+        match lss_err {
+            LSSError::FileLSSError(err) => CoreXError::LSSError(format!("{:?}", err)),
+        }
+    }
 }
 
 impl From<CryptoError> for CoreXError {
