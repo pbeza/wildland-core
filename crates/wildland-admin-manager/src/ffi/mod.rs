@@ -12,7 +12,7 @@ type VoidType = ();
 mod ffi_binding {
     extern "Rust" {
         type AdminManager;
-        fn create_admin_manager(lss_path: String) -> AdminManager;
+        fn create_admin_manager(lss_path: String) -> Result<AdminManager>;
         fn user_api(self: &AdminManager) -> &UserApi;
 
         type UserApi;

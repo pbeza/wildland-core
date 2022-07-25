@@ -1,9 +1,10 @@
 use crate::LSSResult;
 #[cfg(test)]
 use mockall::automock;
+use std::fmt::Debug;
 
 #[cfg_attr(test, automock)]
-pub trait LocalSecureStorage {
+pub trait LocalSecureStorage: Debug {
     /// Inserts a key-value pair into the LSS.
     /// If the map did not have this key present, None is returned.
     /// If the map did have this key present, the value is updated, and the old value is returned.

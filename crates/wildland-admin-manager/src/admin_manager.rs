@@ -2,6 +2,7 @@ use crate::api::user::UserApi;
 use std::rc::Rc;
 use wildland_corex::LocalSecureStorage;
 
+#[derive(Clone, Debug)]
 pub struct AdminManager {
     lss: Rc<dyn LocalSecureStorage>,
     user_api: UserApi,
