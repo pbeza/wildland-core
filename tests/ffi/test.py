@@ -4,7 +4,8 @@ import wildland
 
 class TestCargoLib(unittest.TestCase):
     def setUp(self):
-        self.cargo_lib = wildland.create_cargo_lib()
+        self.cargo_lib = wildland.create_cargo_lib(
+            wildland.RustString("lss.yaml")).unwrap()
 
     def test_mnemonic_generation(self):
         mnemonic_result = self.cargo_lib.user_api().generate_mnemonic()

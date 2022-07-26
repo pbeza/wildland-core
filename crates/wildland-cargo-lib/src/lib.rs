@@ -1,19 +1,18 @@
-use crate::error::CargoLibError;
-
 mod api;
-
 mod cargo_lib;
 mod error;
 #[cfg(feature = "bindings")]
 pub mod ffi;
 
-pub use api::user::UserApi;
+use crate::error::CargoLibError;
+pub use api::user::{MnemonicPayload, UserApi};
 pub use cargo_lib::CargoLib;
-
-pub use wildland_corex::{SeedPhrase, SeedPhraseWordsArray};
+use std::rc::Rc;
+use wildland_corex::create_file_lss;
 
 pub type CargoLibResult<T> = Result<T, CargoLibError>;
 
-pub fn create_cargo_lib() -> CargoLib {
-    CargoLib::default()
+pub fn create_cargo_lib(lss_path: String) -> CargoLibResult<CargoLib> {
+    let lss = create_file_lss(lss_path)?;
+    Ok(CargoLib::new(Rc::new(lss)))
 }

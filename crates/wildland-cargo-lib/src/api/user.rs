@@ -1,20 +1,39 @@
 use crate::{CargoLibError, CargoLibResult};
-use wildland_corex::{generate_random_seed_phrase, SeedPhrase};
+use wildland_corex::{generate_random_mnemonic, MnemonicPhrase};
 
-#[derive(Default)]
+#[derive(Debug, Clone)]
+pub struct MnemonicPayload(MnemonicPhrase);
+
+impl MnemonicPayload {
+    pub fn get_string(&self) -> String {
+        self.0.join(" ")
+    }
+
+    pub fn get_vec(&self) -> Vec<String> {
+        self.0.clone().into()
+    }
+}
+
+impl From<MnemonicPhrase> for MnemonicPayload {
+    fn from(mnemonic: MnemonicPhrase) -> Self {
+        Self(mnemonic)
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct UserApi;
 
 impl UserApi {
-    pub fn generate_mnemonic(&self) -> CargoLibResult<SeedPhrase> {
-        generate_random_seed_phrase()
+    pub fn generate_mnemonic(&self) -> CargoLibResult<MnemonicPayload> {
+        generate_random_mnemonic()
             .map_err(CargoLibError::from)
-            .map(SeedPhrase::from)
+            .map(MnemonicPayload::from)
     }
 
-    pub fn create_user_from_entropy(&self, entropy: Vec<u8>) {
+    pub fn create_user_from_entropy(&self, _entropy: Vec<u8>) {
         // TODO
     }
-    pub fn create_user_from_mnemonic(&self, mnemonic: SeedPhrase) {
+    pub fn create_user_from_mnemonic(&self, _mnemonic: MnemonicPayload) {
         // TODO
     }
     pub fn get_user(&self) {
