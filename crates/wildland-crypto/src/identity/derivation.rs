@@ -25,12 +25,10 @@ use crypto_box::SecretKey as EncryptionSecretKey;
 use ed25519_dalek_bip32::{DerivationPath, ExtendedSecretKey};
 use sha2::{Digest, Sha256};
 
+use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
 use crate::{
     error::CryptoError,
-    identity::{
-        seed::{extend_seed, SeedPhraseWordsArray, SEED_PHRASE_LEN},
-        signing_keypair::SigningKeypair,
-    },
+    identity::{seed::extend_seed, signing_keypair::SigningKeypair},
 };
 
 use super::encrypting_keypair::EncryptingKeypair;
@@ -62,79 +60,32 @@ fn backup_key_path() -> String {
 #[derive(Debug)]
 pub struct Identity {
     extended_seckey: ExtendedSecretKey,
-    words: SeedPhraseWordsArray,
+    words: MnemonicPhrase,
 }
 
-impl TryFrom<&SeedPhraseWordsArray> for Identity {
+impl TryFrom<&MnemonicPhrase> for Identity {
     type Error = CryptoError;
 
-    fn try_from(seed_phrase: &SeedPhraseWordsArray) -> Result<Self, Self::Error> {
-        let mnemonic = Mnemonic::from_phrase(&seed_phrase.join(" "), English)
-            .map_err(|e| CryptoError::IdentityGenerationError(e.to_string()))?;
-        Self::try_from(mnemonic)
-    }
-}
-
-impl TryFrom<Mnemonic> for Identity {
-    type Error = CryptoError;
-
-    /// Derive identity from Mnemonic.
+    /// Derive identity from mnemonic phrase.
     ///
     /// Derived identity is bound to Wildland project - same 12 words will
     /// produce different seed (number) in other project.
-    fn try_from(mnemonic: Mnemonic) -> Result<Self, Self::Error> {
-        // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
-        // We don't need them here.
-        let passphrase = "";
-        let seed = Seed::new(&mnemonic, passphrase);
-        // Seed here is randomness of high quality (it is hard to guess).
-        // But we only have 64 bytes of it, and we need extra 32 bytes for
-        // BIP32's "chain code", which should satisfy following requirements:
-        // 1. be deterministic
-        // 2. look like good randomness
-        // 3. be public, since it will be used as a part of both XPrv and XPub!
-        // To achieve this, we use key derivation function (KDF).
-        // A very standard variant of that is HKDF.
-        let mut output_key_material = [0u8; 96];
-        extend_seed(seed.as_bytes(), &mut output_key_material);
+    /// Only English language is accepted.
+    fn try_from(mnemonic_phrase: &MnemonicPhrase) -> Result<Self, Self::Error> {
+        let mnemonic = Mnemonic::from_phrase(&mnemonic_phrase.join(" "), English)
+            .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?;
 
-        // Now we can use this randomness as bip32-dalek-ed25519 extended private key
-        let extended_secret_key =
-            ExtendedSecretKey::from_seed(output_key_material.as_slice()).unwrap();
-
-        Ok(Identity {
-            extended_seckey: extended_secret_key,
-            words: mnemonic
-                .phrase()
-                .split(' ')
-                .map(|word| word.to_owned())
-                .collect::<Vec<_>>()
-                .try_into()
-                .map_err(|e: Vec<_>| {
-                    CryptoError::IdentityGenerationError(format!(
-                        "Invalid seed phrase length: {} - expected {}",
-                        e.len(),
-                        SEED_PHRASE_LEN
-                    ))
-                })?,
-        })
+        Self::from_mnemonic(mnemonic)
     }
 }
 
-impl Identity {
-    pub fn get_extended_seckey(&self) -> &ExtendedSecretKey {
-        &self.extended_seckey
-    }
-
-    pub fn get_seed_phrase(&self) -> SeedPhraseWordsArray {
-        self.words.clone()
-    }
+impl TryFrom<&[u8]> for Identity {
+    type Error = CryptoError;
 
     /// Deterministically derive Wildland identity from Ethereum
     /// signature (or any random bits). Assumes high quality entropy
     /// and does not perform any checks.
-    #[allow(clippy::ptr_arg)]
-    pub fn from_entropy(entropy: &[u8]) -> Result<Self, CryptoError> {
+    fn try_from(entropy: &[u8]) -> Result<Self, CryptoError> {
         // assume high quality entropy of arbitrary length (>= 32 bytes)
         if (entropy.len() * 8) < 128 {
             return Err(CryptoError::EntropyTooLow);
@@ -142,10 +93,13 @@ impl Identity {
         let mut hasher = Sha256::new();
         hasher.update(entropy);
         let hashed_entropy = hasher.finalize();
-        let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16], English).unwrap();
-        Self::try_from(mnemonic)
+        let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16], English)
+            .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?;
+        Self::from_mnemonic(mnemonic)
     }
+}
 
+impl Identity {
     /// Derive the key that represents a forest.
     /// Pubkey represents forest to the world.
     pub fn forest_keypair(&self, forest_index: u64) -> SigningKeypair {
@@ -178,6 +132,52 @@ impl Identity {
     /// This keypair is not scoped to the forest. It should be used only internally.
     pub fn backup_keypair(&self) -> EncryptingKeypair {
         self.derive_encryption_keypair(&backup_key_path())
+    }
+
+    pub fn get_extended_seckey(&self) -> &ExtendedSecretKey {
+        &self.extended_seckey
+    }
+
+    pub fn get_mnemonic(&self) -> MnemonicPhrase {
+        self.words.clone()
+    }
+
+    fn from_mnemonic(mnemonic: Mnemonic) -> Result<Self, CryptoError> {
+        // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
+        // We don't need them here.
+        let passphrase = "";
+        let seed = Seed::new(&mnemonic, passphrase);
+        // Seed here is randomness of high quality (it is hard to guess).
+        // But we only have 64 bytes of it, and we need extra 32 bytes for
+        // BIP32's "chain code", which should satisfy following requirements:
+        // 1. be deterministic
+        // 2. look like good randomness
+        // 3. be public, since it will be used as a part of both XPrv and XPub!
+        // To achieve this, we use key derivation function (KDF).
+        // A very standard variant of that is HKDF.
+        let mut output_key_material = [0u8; 96];
+        extend_seed(seed.as_bytes(), &mut output_key_material);
+
+        // Now we can use this randomness as bip32-dalek-ed25519 extended private key
+        let extended_secret_key =
+            ExtendedSecretKey::from_seed(output_key_material.as_slice()).unwrap();
+
+        Ok(Identity {
+            extended_seckey: extended_secret_key,
+            words: mnemonic
+                .phrase()
+                .split(' ')
+                .map(|word| word.to_owned())
+                .collect::<Vec<_>>()
+                .try_into()
+                .map_err(|e: Vec<_>| {
+                    CryptoError::IdentityGenerationError(format!(
+                        "Invalid mnemonic phrase length: {} - expected {}",
+                        e.len(),
+                        MNEMONIC_LEN
+                    ))
+                })?,
+        })
     }
 
     fn derive_forest_keypair(&self, path: &str) -> SigningKeypair {
@@ -224,7 +224,7 @@ mod tests {
 
     fn user() -> Identity {
         let mnemonic = Mnemonic::from_phrase(MNEMONIC_PHRASE, English).unwrap();
-        Identity::try_from(mnemonic).unwrap()
+        Identity::from_mnemonic(mnemonic).unwrap()
     }
 
     // please note that this helper is for TESTS ONLY!
@@ -257,7 +257,7 @@ mod tests {
         let user = user();
         let alice_keypair: EncryptingKeypair = user.encryption_keypair(0, 0);
         let bob_keypair: EncryptingKeypair = user.encryption_keypair(1, 0);
-        let mut rng = crypto_box::rand_core::OsRng;
+        let mut rng = rand_core::OsRng;
         let nonce = crypto_box::generate_nonce(&mut rng);
 
         let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
@@ -319,7 +319,7 @@ mod tests {
             12
         "
         );
-        let user = Identity::from_entropy(entropy.as_ref()).ok().unwrap();
+        let user = Identity::try_from(entropy.as_ref()).ok().unwrap();
         assert_eq!(
             [
                 "expect".to_owned(),
@@ -335,7 +335,7 @@ mod tests {
                 "noise".to_owned(),
                 "voice".to_owned()
             ],
-            user.get_seed_phrase()
+            user.get_mnemonic()
         );
     }
 
@@ -346,12 +346,12 @@ mod tests {
             65426aa1176159d1929caea10514
         "
         );
-        assert!(Identity::from_entropy(entropy.as_ref()).is_err());
+        assert!(Identity::try_from(entropy.as_ref()).is_err());
     }
 
     #[test]
     fn can_generate_from_mnemonic() {
-        let mnemonic_array: SeedPhraseWordsArray = TEST_MNEMONIC_12
+        let mnemonic_array: MnemonicPhrase = TEST_MNEMONIC_12
             .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>()
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn should_fail_on_not_english_mnemonic() {
-        let mnemonic_array: SeedPhraseWordsArray = TEST_MNEMONIC_ITALIAN
+        let mnemonic_array: MnemonicPhrase = TEST_MNEMONIC_ITALIAN
             .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>()
@@ -381,14 +381,14 @@ mod tests {
     }
 
     #[test]
-    fn can_recover_seed() {
-        let mnemonic_array: SeedPhraseWordsArray = TEST_MNEMONIC_12
+    fn can_recover_mnemonic() {
+        let mnemonic: MnemonicPhrase = TEST_MNEMONIC_12
             .split(' ')
             .map(|s| s.to_string())
             .collect::<Vec<String>>()
             .try_into()
             .unwrap();
-        let user = Identity::try_from(&mnemonic_array).unwrap();
-        assert_eq!(user.get_seed_phrase().join(" "), TEST_MNEMONIC_12);
+        let user = Identity::try_from(&mnemonic).unwrap();
+        assert_eq!(user.get_mnemonic().join(" "), TEST_MNEMONIC_12);
     }
 }

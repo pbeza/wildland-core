@@ -9,10 +9,10 @@ mod error;
 pub mod ffi;
 
 pub use admin_manager::AdminManager;
+pub use api::user::MnemonicPayload;
 pub use api::user::UserApi;
 
 use wildland_corex::create_file_lss;
-pub use wildland_corex::SeedPhrase;
 
 pub type AdminManagerResult<T> = Result<T, AdminManagerError>;
 

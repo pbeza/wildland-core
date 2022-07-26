@@ -18,20 +18,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use bip39::{Language::English, Mnemonic, MnemonicType};
+use crate::error::CryptoError;
+use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
+use bip39::Language::English;
+use bip39::{Mnemonic, MnemonicType};
 use hkdf::Hkdf;
 use sha2::Sha256;
 
-use crate::error::CryptoError;
-
-pub const SEED_PHRASE_LEN: usize = 12;
-pub type SeedPhraseWordsArray = [String; SEED_PHRASE_LEN];
-
-/// Create a new random seed phrase
-pub fn generate_random_seed_phrase() -> Result<SeedPhraseWordsArray, CryptoError> {
+/// Generate a new random mnemonic phrase
+pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     Mnemonic::new(
-        MnemonicType::for_word_count(SEED_PHRASE_LEN)
-            .map_err(|e| CryptoError::SeedPhraseGenerationError(e.to_string()))?,
+        MnemonicType::for_word_count(MNEMONIC_LEN)
+            .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?,
         English,
     )
     .phrase()
@@ -40,15 +38,15 @@ pub fn generate_random_seed_phrase() -> Result<SeedPhraseWordsArray, CryptoError
     .collect::<Vec<String>>()
     .try_into()
     .map_err(|e: Vec<_>| {
-        CryptoError::SeedPhraseGenerationError(format!(
-            "Invalid seed phrase length: {} - expected {}",
+        CryptoError::MnemonicGenerationError(format!(
+            "Invalid mnemonic phrase length: {} - expected {}",
             e.len(),
-            SEED_PHRASE_LEN
+            MNEMONIC_LEN
         ))
     })
 }
 
-pub fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
+pub(crate) fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
     let input_key_material = seed;
     let info = [87, 105, 108, 100, 108, 97, 110, 100]; // list(b'Wildland')
     let hk = Hkdf::<Sha256>::new(None, input_key_material);
@@ -58,7 +56,8 @@ pub fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
 
 #[cfg(test)]
 mod tests {
-    use bip39::Seed;
+    use bip39::Language::English;
+    use bip39::{Mnemonic, Seed};
     use hex_literal::hex;
 
     use crate::common::test_utilities::MNEMONIC_PHRASE;

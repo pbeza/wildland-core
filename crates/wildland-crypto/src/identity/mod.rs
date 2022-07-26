@@ -20,15 +20,19 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::error::CryptoError;
-pub use crate::identity::{derivation::Identity, signing_keypair::SigningKeypair};
+pub use crate::identity::{
+    derivation::Identity, seed::generate_random_mnemonic, signing_keypair::SigningKeypair,
+};
 use hex::FromHex;
-pub use seed::{generate_random_seed_phrase, SeedPhraseWordsArray, SEED_PHRASE_LEN};
 
 mod derivation;
 pub mod device;
 pub mod encrypting_keypair;
 mod seed;
 pub mod signing_keypair;
+
+pub const MNEMONIC_LEN: usize = 12;
+pub type MnemonicPhrase = [String; MNEMONIC_LEN];
 
 fn bytes_key_from_str(key: &str) -> Result<[u8; 32], CryptoError> {
     <[u8; 32]>::from_hex(key).map_err(|_| CryptoError::KeyParsingError(key.len()))

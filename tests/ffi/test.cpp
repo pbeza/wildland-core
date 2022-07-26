@@ -10,10 +10,10 @@ int main()
     String lss_path = String("lss.yaml");
     AdminManager admin_manager = create_admin_manager(lss_path).unwrap();
 
-    ResultSeedPhrase mnemonic_result = admin_manager.user_api().generate_mnemonic();
+    ResultMnemonicPayload mnemonic_result = admin_manager.user_api().generate_mnemonic();
     if (mnemonic_result.is_ok())
     {
-        SeedPhrase mnemonic_ok = mnemonic_result.unwrap(); // it is safe to unwrap after `is_ok` check
+        MnemonicPayload mnemonic_ok = mnemonic_result.unwrap(); // it is safe to unwrap after `is_ok` check
 
         std::string mnemonic_str = mnemonic_ok.get_string().to_string();
         std::cout << "Generated mnemonic: " << mnemonic_str << std::endl;
