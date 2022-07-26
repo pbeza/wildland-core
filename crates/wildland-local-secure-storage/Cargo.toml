@@ -1,6 +1,6 @@
 [package]
 name = "wildland-local-secure-storage"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
