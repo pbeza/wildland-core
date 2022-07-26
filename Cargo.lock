@@ -1711,7 +1711,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "ffi-macro",
  "ffi-macro-build",
@@ -1727,7 +1727,7 @@ version = "0.3.2"
 
 [[package]]
 name = "wildland-corex"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "hex",
  "sha2 0.10.2",
@@ -1740,7 +1740,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "crypto_box",
  "ed25519-dalek",
@@ -1765,7 +1765,7 @@ version = "0.1.2"
 
 [[package]]
 name = "wildland-local-secure-storage"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "mockall",
  "rustbreak",
