@@ -28,8 +28,8 @@ pub enum CryptoError {
     MessageVerificationError(String),
     #[error("Invalid key signature: {0}")]
     InvalidSignatureBytesError(String),
-    #[error("Failed to create a seed phrase: {0}")]
-    SeedPhraseGenerationError(String),
+    #[error("Failed to create a mnemonic: {0}")]
+    MnemonicGenerationError(String),
     #[error("Identity generation failed: {0}")]
     IdentityGenerationError(String),
     #[error("Too low entropy")]
