@@ -1,7 +1,7 @@
 use crate::{AdminManagerError, AdminManagerResult};
 use wildland_corex::{generate_random_seed_phrase, SeedPhrase};
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct UserApi;
 
 impl UserApi {
