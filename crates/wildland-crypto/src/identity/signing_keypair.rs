@@ -66,6 +66,10 @@ impl SigningKeypair {
         self.0.secret.to_bytes()
     }
 
+    pub fn to_bytes(&self) -> Vec<u8> {
+        Vec::from(self.0.to_bytes())
+    }
+
     pub fn sign(&self, msg: &[u8]) -> Signature {
         Signature(self.0.sign(msg))
     }

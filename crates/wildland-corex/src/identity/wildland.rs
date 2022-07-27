@@ -1,5 +1,5 @@
-use sha2::{Digest, Sha256};
-use std::fmt::Display;
+use std::fmt;
+use std::fmt::{Display, Formatter};
 use wildland_crypto::identity::SigningKeypair;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -8,18 +8,9 @@ pub enum WildlandIdentityType {
     Device,
 }
 
-// TODO WILX-95 generate code for handling enums with binding_wrapper macro
-impl WildlandIdentityType {
-    pub fn is_forest(&self) -> bool {
-        *self == Self::Forest
-    }
-
-    pub fn is_device(&self) -> bool {
-        *self == Self::Device
-    }
-
-    pub fn is_same(&self, other: &Self) -> bool {
-        *self == *other
+impl Display for WildlandIdentityType {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
@@ -43,10 +34,6 @@ impl WildlandIdentity {
         self.name.clone()
     }
 
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
-    }
-
     pub fn get_public_key(&self) -> Vec<u8> {
         self.keypair.public().into()
     }
@@ -55,14 +42,12 @@ impl WildlandIdentity {
         self.keypair.secret().into()
     }
 
-    pub fn get_fingerprint(&self) -> Vec<u8> {
-        let hash = Sha256::digest(&self.get_public_key());
-
-        hash[..16].into()
+    pub fn get_keypair_bytes(&self) -> Vec<u8> {
+        self.keypair.to_bytes()
     }
 
-    pub fn get_fingerprint_string(&self) -> String {
-        hex::encode(self.get_fingerprint())
+    pub fn get_fingerprint(&self) -> String {
+        format!("wildland.{}.{}", self.identity_type, self.name)
     }
 
     pub fn get_type(&self) -> WildlandIdentityType {
@@ -70,8 +55,19 @@ impl WildlandIdentity {
     }
 }
 
-impl Display for WildlandIdentity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.get_fingerprint_string(),)
+
+#[cfg(test)]
+mod tests {
+    use wildland_crypto::identity::SigningKeypair;
+    use crate::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
+    use crate::WildlandIdentity;
+    use crate::WildlandIdentityType::Device;
+
+    #[test]
+    fn should_get_correct_fingerprint() {
+        let keypair = SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap();
+        let wildland_identity = WildlandIdentity::new(Device, keypair, "Device 1".to_string());
+
+        assert_eq!(wildland_identity.get_fingerprint(), "wildland.Device.Device 1".to_string())
     }
 }

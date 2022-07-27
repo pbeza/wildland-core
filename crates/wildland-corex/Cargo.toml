@@ -21,5 +21,8 @@ thiserror = "1.0.31"
 sha2 = "0.10.2"
 hex = "0.4.3"
 
+[dev-dependencies]
+mockall = "0.11.1"
+
 [package.metadata.workspaces]
 independent = true

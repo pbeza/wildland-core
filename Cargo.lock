@@ -1727,6 +1727,7 @@ name = "wildland-corex"
 version = "0.2.1"
 dependencies = [
  "hex",
+ "mockall",
  "sha2 0.10.2",
  "thiserror",
  "wildland-catlib",
@@ -1764,7 +1765,6 @@ version = "0.1.2"
 name = "wildland-local-secure-storage"
 version = "0.0.3"
 dependencies = [
- "mockall",
  "rustbreak",
  "tempfile",
  "thiserror",
