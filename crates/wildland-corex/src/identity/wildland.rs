@@ -22,7 +22,7 @@ pub struct WildlandIdentity {
 }
 
 impl WildlandIdentity {
-    pub fn new(identity_type: WildlandIdentityType, keypair: SigningKeypair, name: String) -> Self {
+    pub(crate) fn new(identity_type: WildlandIdentityType, keypair: SigningKeypair, name: String) -> Self {
         Self {
             identity_type,
             keypair,
@@ -55,19 +55,21 @@ impl WildlandIdentity {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use wildland_crypto::identity::SigningKeypair;
     use crate::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
     use crate::WildlandIdentity;
     use crate::WildlandIdentityType::Device;
+    use wildland_crypto::identity::SigningKeypair;
 
     #[test]
     fn should_get_correct_fingerprint() {
         let keypair = SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap();
         let wildland_identity = WildlandIdentity::new(Device, keypair, "Device 1".to_string());
 
-        assert_eq!(wildland_identity.get_fingerprint(), "wildland.Device.Device 1".to_string())
+        assert_eq!(
+            wildland_identity.get_fingerprint(),
+            "wildland.Device.Device 1".to_string()
+        )
     }
 }
