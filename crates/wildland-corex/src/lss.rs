@@ -7,6 +7,8 @@ use wildland_local_secure_storage::{FileLSS, LocalSecureStorage};
 use crate::WildlandIdentityType::Forest;
 use crate::{CoreXError, CorexResult, WildlandIdentity};
 
+pub static DEFAULT_FOREST_KEY: &str = "wildland.Forest.0";
+
 pub fn create_file_lss(path: String) -> CorexResult<FileLSS> {
     FileLSS::new(PathBuf::from(path)).map_err(CoreXError::from)
 }
@@ -29,12 +31,16 @@ impl LSSService {
     }
 
     pub fn get_default_forest(&self) -> CorexResult<Option<WildlandIdentity>> {
-        let default_forest_value = self.lss.get("wildland.Forest.0".to_string())?;
-        if default_forest_value.is_some() {
-            let signing_key = SigningKeypair::try_from(default_forest_value.unwrap())?;
-            return Ok(Some(WildlandIdentity::new(Forest, signing_key, "0".to_string())));
+        let default_forest_value = self.lss.get(DEFAULT_FOREST_KEY.to_string())?;
+        if default_forest_value.is_none() {
+            return Ok(None);
         }
-        Ok(None)
+        let signing_key = SigningKeypair::try_from(default_forest_value.unwrap())?;
+        Ok(Some(WildlandIdentity::new(
+            Forest,
+            signing_key,
+            0.to_string(),
+        )))
     }
 }
 
@@ -42,7 +48,7 @@ impl LSSService {
 mod tests {
     use crate::lss::LSSService;
     use crate::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
-    use crate::{LocalSecureStorage, WildlandIdentity, WildlandIdentityType};
+    use crate::{LocalSecureStorage, WildlandIdentity, WildlandIdentityType, DEFAULT_FOREST_KEY};
     use mockall::mock;
     use mockall::predicate::eq;
     use std::rc::Rc;
@@ -63,20 +69,28 @@ mod tests {
         }
     }
 
+    fn signing_keypair() -> SigningKeypair {
+        SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap()
+    }
+
+    fn wildland_forest_identity() -> WildlandIdentity {
+        WildlandIdentity::new(
+            WildlandIdentityType::Forest,
+            signing_keypair(),
+            0.to_string(),
+        )
+    }
+
     #[test]
     fn should_save_forest_identity() {
         // given
-        let keypair = SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap();
+        let keypair = signing_keypair();
+        let wildland_identity = wildland_forest_identity();
         let mut lss_mock = MockTestLSS::new();
         lss_mock
             .expect_insert()
-            .with(
-                eq(String::from("wildland.Forest.0")),
-                eq(keypair.to_bytes()),
-            )
+            .with(eq(String::from(DEFAULT_FOREST_KEY)), eq(keypair.to_bytes()))
             .return_once(|_key, _value| Ok(None));
-        let wildland_identity =
-            WildlandIdentity::new(WildlandIdentityType::Forest, keypair, "0".to_string());
         let lss_service = LSSService::new(Rc::new(lss_mock));
 
         // when
@@ -89,14 +103,13 @@ mod tests {
     #[test]
     fn should_get_default_forest() {
         // given
-        let keypair = SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap();
+        let keypair = signing_keypair();
         let keypair_bytes = keypair.to_bytes();
+        let wildland_identity = wildland_forest_identity();
         let mut lss_mock = MockTestLSS::new();
-        let wildland_identity =
-            WildlandIdentity::new(WildlandIdentityType::Forest, keypair, "0".to_string());
         lss_mock
             .expect_get()
-            .with(eq(String::from("wildland.Forest.0")))
+            .with(eq(String::from(DEFAULT_FOREST_KEY)))
             .return_once(|_| Ok(Some(keypair_bytes)));
         let lss_service = LSSService::new(Rc::new(lss_mock));
 
@@ -104,8 +117,14 @@ mod tests {
         let result = lss_service.get_default_forest().unwrap().unwrap();
 
         // then
-        assert_eq!(result.get_fingerprint(), wildland_identity.get_fingerprint());
-        assert_eq!(result.get_keypair_bytes(), wildland_identity.get_keypair_bytes());
+        assert_eq!(
+            result.get_fingerprint(),
+            wildland_identity.get_fingerprint()
+        );
+        assert_eq!(
+            result.get_keypair_bytes(),
+            wildland_identity.get_keypair_bytes()
+        );
     }
 
     #[test]
@@ -114,7 +133,7 @@ mod tests {
         let mut lss_mock = MockTestLSS::new();
         lss_mock
             .expect_get()
-            .with(eq(String::from("wildland.Forest.0")))
+            .with(eq(String::from(DEFAULT_FOREST_KEY)))
             .return_once(|_| Ok(None));
         let lss_service = LSSService::new(Rc::new(lss_mock));
 
