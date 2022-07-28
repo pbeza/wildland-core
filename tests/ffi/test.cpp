@@ -1,7 +1,8 @@
 #include <iostream>
-extern "C" {
-    #include "ffi_swift.h"
-    #include "SwiftBridgeCore.h"
+extern "C"
+{
+#include "ffi_swift.h"
+#include "SwiftBridgeCore.h"
 }
 #include "ffi_cxx.h"
 
@@ -9,7 +10,6 @@ int main()
 {
     String lss_path = String("lss.yaml");
     CargoLib cargo_lib = create_cargo_lib(lss_path).unwrap();
-
     ResultMnemonicPayload mnemonic_result = cargo_lib.user_api().generate_mnemonic();
     if (mnemonic_result.is_ok())
     {
