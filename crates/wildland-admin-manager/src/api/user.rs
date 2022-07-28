@@ -60,7 +60,8 @@ impl UserApi {
         Ok(())
     }
     pub fn get_user(&self) -> AdminManagerResult<Option<UserPayload>> {
-        self.user_service.user_exists()
+        self.user_service
+            .user_exists()
             .map(|exist| if exist { Some(UserPayload) } else { None })
             .map_err(AdminManagerError::from)
     }
