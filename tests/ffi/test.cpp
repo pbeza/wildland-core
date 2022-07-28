@@ -1,16 +1,16 @@
 #include <iostream>
-extern "C" {
-    #include "ffi_swift.h"
-    #include "SwiftBridgeCore.h"
+extern "C"
+{
+#include "ffi_swift.h"
+#include "SwiftBridgeCore.h"
 }
 #include "ffi_cxx.h"
 
 int main()
 {
     String lss_path = String("lss.yaml");
-    AdminManager admin_manager = create_admin_manager(lss_path).unwrap();
-
-    ResultMnemonicPayload mnemonic_result = admin_manager.user_api().generate_mnemonic();
+    CargoLib cargo_lib = create_cargo_lib(lss_path).unwrap();
+    ResultMnemonicPayload mnemonic_result = cargo_lib.user_api().generate_mnemonic();
     if (mnemonic_result.is_ok())
     {
         MnemonicPayload mnemonic_ok = mnemonic_result.unwrap(); // it is safe to unwrap after `is_ok` check

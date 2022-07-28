@@ -1,12 +1,12 @@
 [package]
-name = "wildland-admin-manager"
-version = "0.6.2"
+name = "wildland-cargo-lib"
+version = "0.6.3"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
 repository = "https://gitlab.com/wildland/corex/wildland-core"
 homepage = "https://wildland.io/"
-description = "Wildland Admin Manager"
+description = "Wildland Cargo Lib"
 keywords = ["storage"]
 publish = ["wl-dev"]
 
