@@ -1720,7 +1720,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-admin-manager"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "ffi-macro",
  "ffi-macro-build",
@@ -1736,7 +1736,7 @@ version = "0.3.2"
 
 [[package]]
 name = "wildland-corex"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "hex",
  "hex-literal",
@@ -1752,7 +1752,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.4.10"
+version = "0.4.11"
 dependencies = [
  "crypto_box",
  "ed25519-dalek",
@@ -1777,7 +1777,7 @@ version = "0.1.2"
 
 [[package]]
 name = "wildland-local-secure-storage"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "rustbreak",
  "tempfile",
