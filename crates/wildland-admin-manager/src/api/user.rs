@@ -47,11 +47,13 @@ impl UserApi {
     }
     pub fn create_user_from_mnemonic(
         &self,
-        mnemonic: MnemonicPayload,
+        mnemonic: &MnemonicPayload,
         device_name: String,
     ) -> AdminManagerResult<()> {
-        self.user_service
-            .create_user(CreateUserInput::Mnemonic(Box::new(mnemonic.0)), device_name)?;
+        self.user_service.create_user(
+            CreateUserInput::Mnemonic(Box::new(mnemonic.0.clone())),
+            device_name,
+        )?;
         Ok(())
     }
     pub fn get_user(&self) {
