@@ -20,6 +20,9 @@ impl From<MnemonicPhrase> for MnemonicPayload {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct UserPayload;
+
 #[derive(Clone, Debug)]
 pub struct UserApi {
     user_service: UserService,
@@ -56,7 +59,9 @@ impl UserApi {
         )?;
         Ok(())
     }
-    pub fn get_user(&self) {
-        todo!()
+    pub fn get_user(&self) -> AdminManagerResult<Option<UserPayload>> {
+        self.user_service.user_exists()
+            .map(|exist| if exist { Some(UserPayload) } else { None })
+            .map_err(AdminManagerError::from)
     }
 }

@@ -26,7 +26,7 @@ impl UserService {
     }
 
     pub fn create_user(&self, input: CreateUserInput, device_name: String) -> CorexResult<()> {
-        if self.does_user_exist()? {
+        if self.user_exists()? {
             return Err(CoreXError::UserAlreadyExists);
         }
         let crypto_identity = match input {
@@ -45,7 +45,7 @@ impl UserService {
         Ok(())
     }
 
-    fn does_user_exist(&self) -> CorexResult<bool> {
+    pub fn user_exists(&self) -> CorexResult<bool> {
         self.lss_service
             .get_default_forest()
             .map(|forest| forest.is_some())
@@ -168,5 +168,22 @@ mod tests {
 
         // then
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn should_return_true_if_user_exists() {
+        // given
+        let forest_wildland_identity = create_wildland_forest_identity();
+        let mut lss_service_mock = LSSService::default();
+        lss_service_mock
+            .expect_get_default_forest()
+            .return_once(|| Ok(Some(forest_wildland_identity)));
+        let user_service = UserService::new(Rc::new(lss_service_mock));
+
+        // when
+        let result = user_service.user_exists();
+
+        // then
+        assert!(result.unwrap());
     }
 }
