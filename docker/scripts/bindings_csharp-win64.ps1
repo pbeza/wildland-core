@@ -18,10 +18,10 @@ $env:CSHARP_COMPILER = "csc"
 $env:CARGO_REGISTRIES_WL_DEV_INDEX = "https://crates.wildland.dev/git/index"
 
 $env:PROJECT_ROOT = if ($env:CI_PROJECT_DIR) { $env:CI_PROJECT_DIR } else { "/app" }
-$env:ADMIN_MGR_PROJECT_DIR = "$env:PROJECT_ROOT/crates/wildland-admin-manager"
+$env:CARGO_LIB_PROJECT_DIR = "$env:PROJECT_ROOT/crates/wildland-cargo-lib"
 $env:FFI_BUILD_DIR = "/ffi_build"
 $env:TARGET_DIR = "$env:PROJECT_ROOT/target/$env:BUILD_TARGET"
-$env:CXX_LIB = "$env:TARGET_DIR/debug/wildland_admin_manager.lib"
+$env:CXX_LIB = "$env:TARGET_DIR/debug/wildland_cargo_lib.lib"
 $env:SWIFT_BRIDGE_OUT_DIR = $env:TARGET_DIR
 
 # Create build dirs
@@ -49,10 +49,10 @@ if ($p.ExitCode -ne 0) {
 
 Write-Host "---------- Cargo Build artifacts ----------"
 cp "$env:SWIFT_BRIDGE_OUT_DIR/SwiftBridgeCore.h" "$env:FFI_BUILD_DIR"
-cp "$env:ADMIN_MGR_PROJECT_DIR/_generated_cpp/ffi_cxx.h" "$env:FFI_BUILD_DIR"
-cp "$env:ADMIN_MGR_PROJECT_DIR/_generated_cpp/ffi_swig.i" "$env:FFI_BUILD_DIR"
-cp "$env:ADMIN_MGR_PROJECT_DIR/_generated_swift/ffi_swift/ffi_swift.h" "$env:FFI_BUILD_DIR"
-cp "$env:ADMIN_MGR_PROJECT_DIR/wildland.i" "$env:FFI_BUILD_DIR"
+cp "$env:CARGO_LIB_PROJECT_DIR/_generated_cpp/ffi_cxx.h" "$env:FFI_BUILD_DIR"
+cp "$env:CARGO_LIB_PROJECT_DIR/_generated_cpp/ffi_swig.i" "$env:FFI_BUILD_DIR"
+cp "$env:CARGO_LIB_PROJECT_DIR/_generated_swift/ffi_swift/ffi_swift.h" "$env:FFI_BUILD_DIR"
+cp "$env:CARGO_LIB_PROJECT_DIR/wildland.i" "$env:FFI_BUILD_DIR"
 cp "$env:CXX_LIB" "$env:FFI_BUILD_DIR"
 
 Write-Host "---------- Create SWIG-Generated C# Bindings ----------"
@@ -62,7 +62,7 @@ if ($p.ExitCode -ne 0) {
 }
 
 Write-Host "---------- BUILD /bindings_test/Wildland.dll ----------"
-$p = (Start-Process -PassThru -WorkingDirectory /ffi_build -FilePath $env:CC -Wait -NoNewWindow -ArgumentList "/LD", "/MD", "/std:c++14", "wildland_wrap.cxx", "/link", "wildland_admin_manager.lib", "ws2_32.lib", "bcrypt.lib", "userenv.lib", "advapi32.lib", "shell32.lib", "Ole32.lib", "/out:/bindings_test/Wildland.dll")
+$p = (Start-Process -PassThru -WorkingDirectory /ffi_build -FilePath $env:CC -Wait -NoNewWindow -ArgumentList "/LD", "/MD", "/std:c++14", "wildland_wrap.cxx", "/link", "wildland_cargo_lib.lib", "ws2_32.lib", "bcrypt.lib", "userenv.lib", "advapi32.lib", "shell32.lib", "Ole32.lib", "/out:/bindings_test/Wildland.dll")
 if ($p.ExitCode -ne 0) {
     exit $p.ExitCode
 }

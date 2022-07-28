@@ -1,7 +1,7 @@
 print("Swift FFI Test Suite");
 
-var admin_manager = create_admin_manager(RustString("lss.yaml")).unwrap();
-var mnemonic_result = admin_manager.user_api().generate_mnemonic();
+var cargo_lib = create_cargo_lib(RustString("lss.yaml")).unwrap();
+var mnemonic_result = cargo_lib.user_api().generate_mnemonic();
 if mnemonic_result.is_ok() {
     var mnemonic = mnemonic_result.unwrap();
     print(mnemonic.get_string().to_string());
