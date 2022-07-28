@@ -8,7 +8,7 @@ services:
   wildland-bindings-builder:
     build:
       context: ..
-      dockerfile: Dockerfile.builder
+      dockerfile: ./docker/Dockerfile.builder
     image: wildland-bindings-builder
 
   wildland-bindings:

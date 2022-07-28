@@ -3,15 +3,15 @@ use std::rc::Rc;
 use wildland_corex::LocalSecureStorage;
 
 #[derive(Clone, Debug)]
-pub struct AdminManager {
-    lss: Rc<dyn LocalSecureStorage>,
+pub struct CargoLib {
+    _lss: Rc<dyn LocalSecureStorage>,
     user_api: UserApi,
 }
 
-impl AdminManager {
+impl CargoLib {
     pub fn new(lss: Rc<dyn LocalSecureStorage>) -> Self {
         Self {
-            lss,
+            _lss: lss,
             user_api: UserApi,
         }
     }
