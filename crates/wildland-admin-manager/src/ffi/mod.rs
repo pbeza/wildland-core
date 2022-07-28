@@ -17,8 +17,16 @@ mod ffi_binding {
 
         type UserApi;
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload>;
-        fn create_user_from_entropy(self: &UserApi, entropy: Vec<u8>) -> VoidType;
-        fn create_user_from_mnemonic(self: &UserApi, mnemonic: MnemonicPayload) -> VoidType;
+        fn create_user_from_entropy(
+            self: &UserApi,
+            entropy: Vec<u8>,
+            device_name: String,
+        ) -> VoidType;
+        fn create_user_from_mnemonic(
+            self: &UserApi,
+            mnemonic: MnemonicPayload,
+            device_name: String,
+        ) -> VoidType;
         fn get_user(self: &UserApi) -> VoidType;
 
         type MnemonicPayload;

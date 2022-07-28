@@ -1,5 +1,5 @@
 use crate::{AdminManagerError, AdminManagerResult};
-use wildland_corex::{generate_random_mnemonic, MnemonicPhrase};
+use wildland_corex::{generate_random_mnemonic, CreateUserInput, MnemonicPhrase, UserService};
 
 #[derive(Debug, Clone)]
 pub struct MnemonicPayload(MnemonicPhrase);
@@ -20,36 +20,41 @@ impl From<MnemonicPhrase> for MnemonicPayload {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct UserApi;
+#[derive(Clone, Debug)]
+pub struct UserApi {
+    user_service: UserService,
+}
 
 impl UserApi {
+    pub fn new(user_service: UserService) -> Self {
+        Self { user_service }
+    }
+
     pub fn generate_mnemonic(&self) -> AdminManagerResult<MnemonicPayload> {
         generate_random_mnemonic()
             .map_err(AdminManagerError::from)
             .map(MnemonicPayload::from)
     }
 
-    pub fn create_user_from_entropy(&self, entropy: Vec<u8>) {
-        // TODO
+    pub fn create_user_from_entropy(
+        &self,
+        entropy: Vec<u8>,
+        device_name: String,
+    ) -> AdminManagerResult<()> {
+        self.user_service
+            .create_user(CreateUserInput::Entropy(entropy), device_name)?;
+        Ok(())
     }
-    pub fn create_user_from_mnemonic(&self, mnemonic: MnemonicPayload) {
-        // TODO
+    pub fn create_user_from_mnemonic(
+        &self,
+        mnemonic: MnemonicPayload,
+        device_name: String,
+    ) -> AdminManagerResult<()> {
+        self.user_service
+            .create_user(CreateUserInput::Mnemonic(Box::new(mnemonic.0)), device_name)?;
+        Ok(())
     }
     pub fn get_user(&self) {
-        // TODO
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::api::user::UserApi;
-
-    #[test]
-    fn generated_mnemonic_has_proper_length() {
-        let user_api = UserApi;
-        let mnemonic = user_api.generate_mnemonic().unwrap();
-
-        assert_eq!(mnemonic.get_vec().len(), 12);
+        todo!()
     }
 }

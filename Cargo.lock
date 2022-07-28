@@ -775,6 +775,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "mockall_double"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae71c7bb287375187c775cf82e2dcf1bef3388aaf58f0789a77f9c7ab28466f6"
+dependencies = [
+ "cfg-if",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "mockito"
 version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1727,7 +1739,9 @@ name = "wildland-corex"
 version = "0.2.1"
 dependencies = [
  "hex",
+ "hex-literal",
  "mockall",
+ "mockall_double",
  "sha2 0.10.2",
  "thiserror",
  "wildland-catlib",

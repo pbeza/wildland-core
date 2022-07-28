@@ -22,7 +22,11 @@ pub struct WildlandIdentity {
 }
 
 impl WildlandIdentity {
-    pub(crate) fn new(identity_type: WildlandIdentityType, keypair: SigningKeypair, name: String) -> Self {
+    pub(crate) fn new(
+        identity_type: WildlandIdentityType,
+        keypair: SigningKeypair,
+        name: String,
+    ) -> Self {
         Self {
             identity_type,
             keypair,
