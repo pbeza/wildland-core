@@ -26,7 +26,7 @@ impl UserService {
     }
 
     pub fn create_user(&self, input: CreateUserInput, device_name: String) -> CorexResult<()> {
-        if self.does_user_exist()? {
+        if self.user_exists()? {
             return Err(CoreXError::UserAlreadyExists);
         }
         let crypto_identity = match input {
@@ -45,7 +45,7 @@ impl UserService {
         Ok(())
     }
 
-    fn does_user_exist(&self) -> CorexResult<bool> {
+    fn user_exists(&self) -> CorexResult<bool> {
         self.lss_service
             .get_default_forest()
             .map(|forest| forest.is_some())

@@ -14,7 +14,7 @@ class TestCargoLib(unittest.TestCase):
         print(mnemonic.get_string().to_string())
 
     def test_create_user_from_mnemonic(self):
-        user_api = self.admin_manager.user_api()
+        user_api = self.cargo_lib.user_api()
         mnemonic = user_api.generate_mnemonic().unwrap()
         user_api.create_user_from_mnemonic(mnemonic, wildland.RustString("My Mac")).unwrap()
         print("User successfully created from mnemonic")

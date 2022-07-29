@@ -1,6 +1,5 @@
-use wildland_corex::{generate_random_mnemonic, CreateUserInput, MnemonicPhrase, UserService};
 use crate::{CargoLibError, CargoLibResult};
-use wildland_corex::{generate_random_mnemonic, MnemonicPhrase};
+use wildland_corex::{generate_random_mnemonic, CreateUserInput, MnemonicPhrase, UserService};
 
 #[derive(Debug, Clone)]
 pub struct MnemonicPayload(MnemonicPhrase);
