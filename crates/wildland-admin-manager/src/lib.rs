@@ -9,8 +9,7 @@ mod error;
 pub mod ffi;
 
 pub use admin_manager::AdminManager;
-pub use api::user::MnemonicPayload;
-pub use api::user::UserApi;
+pub use api::user::{MnemonicPayload, UserPayload, UserApi};
 
 use wildland_corex::{create_file_lss, LSSService, UserService};
 

@@ -20,7 +20,7 @@ impl From<MnemonicPhrase> for MnemonicPayload {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct UserPayload;
 
 #[derive(Clone, Debug)]
@@ -48,6 +48,7 @@ impl UserApi {
             .create_user(CreateUserInput::Entropy(entropy), device_name)?;
         Ok(())
     }
+
     pub fn create_user_from_mnemonic(
         &self,
         mnemonic: &MnemonicPayload,
@@ -59,6 +60,7 @@ impl UserApi {
         )?;
         Ok(())
     }
+
     pub fn get_user(&self) -> AdminManagerResult<Option<UserPayload>> {
         self.user_service
             .user_exists()

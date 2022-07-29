@@ -14,6 +14,9 @@ namespace Main
 
             user_api.create_user_from_mnemonic(mnemonic, new RustString("My Mac")).unwrap();
             Console.WriteLine("User successfully created from mnemonic");
+
+            var user = user_api.get_user().unwrap();
+            Console.WriteLine("User: " + user);
         }
     }
 }

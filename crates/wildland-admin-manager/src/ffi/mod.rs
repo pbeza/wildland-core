@@ -1,6 +1,6 @@
 use crate::{
     admin_manager::AdminManager, api::user::UserApi, create_admin_manager, AdminManagerError,
-    MnemonicPayload,
+    MnemonicPayload, UserPayload
 };
 use ffi_macro::binding_wrapper;
 
@@ -10,6 +10,7 @@ type VoidType = ();
 
 #[binding_wrapper]
 mod ffi_binding {
+
     extern "Rust" {
         type AdminManager;
         fn create_admin_manager(lss_path: String) -> Result<AdminManager>;
@@ -27,11 +28,13 @@ mod ffi_binding {
             mnemonic: &MnemonicPayload,
             device_name: String,
         ) -> Result<VoidType>;
-        fn get_user(self: &UserApi) -> VoidType;
+        fn get_user(self: &UserApi) -> Result<Option<UserPayload>>;
 
         type MnemonicPayload;
         fn get_string(self: &MnemonicPayload) -> String;
         fn get_vec(self: &MnemonicPayload) -> Vec<String>;
+
+        type UserPayload;
 
         type VoidType;
         type ErrorType;
