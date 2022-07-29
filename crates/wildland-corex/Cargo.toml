@@ -1,6 +1,6 @@
 [package]
 name = "wildland-corex"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -16,7 +16,7 @@ publish = ["wl-dev"]
 wildland-catlib = { version = "0.3.0", path = "../wildland-catlib", registry = "wl-dev" }
 wildland-crypto = { version = "0.4.4", path = "../wildland-crypto", registry = "wl-dev" }
 wildland-dfs = { version = "0.1.0", path = "../wildland-dfs", registry = "wl-dev" }
-wildland-local-secure-storage = { version = "0.0.4", path = "../wildland-local-secure-storage", registry = "wl-dev" }
+wildland-local-secure-storage = { version = "0.0.5", path = "../wildland-local-secure-storage", registry = "wl-dev" }
 thiserror = "1.0.31"
 sha2 = "0.10.2"
 hex = "0.4.3"
