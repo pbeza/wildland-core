@@ -4,10 +4,9 @@ use wildland_crypto::identity::SigningKeypair;
 
 use wildland_local_secure_storage::{FileLSS, LocalSecureStorage};
 
-use crate::WildlandIdentityType::Forest;
 use crate::{CoreXError, CorexResult, WildlandIdentity};
 
-pub static DEFAULT_FOREST_KEY: &str = "wildland.Forest.0";
+pub static DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
 
 pub fn create_file_lss(path: String) -> CorexResult<FileLSS> {
     FileLSS::new(PathBuf::from(path)).map_err(CoreXError::from)
@@ -24,7 +23,7 @@ impl LSSService {
 
     pub fn save(&self, wildland_identity: WildlandIdentity) -> CorexResult<Option<Vec<u8>>> {
         let prev_value = self.lss.insert(
-            wildland_identity.get_fingerprint(),
+            wildland_identity.to_string(),
             wildland_identity.get_keypair_bytes(),
         )?;
         Ok(prev_value)
@@ -36,11 +35,7 @@ impl LSSService {
             return Ok(None);
         }
         let signing_key = SigningKeypair::try_from(default_forest_value.unwrap())?;
-        Ok(Some(WildlandIdentity::new(
-            Forest,
-            signing_key,
-            0.to_string(),
-        )))
+        Ok(Some(WildlandIdentity::Forest(0, signing_key)))
     }
 }
 
@@ -48,7 +43,7 @@ impl LSSService {
 mod tests {
     use crate::lss::LSSService;
     use crate::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
-    use crate::{LocalSecureStorage, WildlandIdentity, WildlandIdentityType, DEFAULT_FOREST_KEY};
+    use crate::{LocalSecureStorage, WildlandIdentity, DEFAULT_FOREST_KEY};
     use mockall::mock;
     use mockall::predicate::eq;
     use std::rc::Rc;
@@ -74,11 +69,7 @@ mod tests {
     }
 
     fn wildland_forest_identity() -> WildlandIdentity {
-        WildlandIdentity::new(
-            WildlandIdentityType::Forest,
-            signing_keypair(),
-            0.to_string(),
-        )
+        WildlandIdentity::Forest(0, signing_keypair())
     }
 
     #[test]
@@ -117,10 +108,7 @@ mod tests {
         let result = lss_service.get_default_forest().unwrap().unwrap();
 
         // then
-        assert_eq!(
-            result.get_fingerprint(),
-            wildland_identity.get_fingerprint()
-        );
+        assert_eq!(result.to_string(), wildland_identity.to_string());
         assert_eq!(
             result.get_keypair_bytes(),
             wildland_identity.get_keypair_bytes()
