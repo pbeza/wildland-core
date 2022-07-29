@@ -1,5 +1,6 @@
-use crate::{AdminManagerError, AdminManagerResult};
 use wildland_corex::{generate_random_mnemonic, CreateUserInput, MnemonicPhrase, UserService};
+use crate::{CargoLibError, CargoLibResult};
+use wildland_corex::{generate_random_mnemonic, MnemonicPhrase};
 
 #[derive(Debug, Clone)]
 pub struct MnemonicPayload(MnemonicPhrase);
@@ -30,9 +31,9 @@ impl UserApi {
         Self { user_service }
     }
 
-    pub fn generate_mnemonic(&self) -> AdminManagerResult<MnemonicPayload> {
+    pub fn generate_mnemonic(&self) -> CargoLibResult<MnemonicPayload> {
         generate_random_mnemonic()
-            .map_err(AdminManagerError::from)
+            .map_err(CargoLibError::from)
             .map(MnemonicPayload::from)
     }
 
@@ -40,7 +41,7 @@ impl UserApi {
         &self,
         entropy: Vec<u8>,
         device_name: String,
-    ) -> AdminManagerResult<()> {
+    ) -> CargoLibResult<()> {
         self.user_service
             .create_user(CreateUserInput::Entropy(entropy), device_name)?;
         Ok(())
@@ -49,7 +50,7 @@ impl UserApi {
         &self,
         mnemonic: &MnemonicPayload,
         device_name: String,
-    ) -> AdminManagerResult<()> {
+    ) -> CargoLibResult<()> {
         self.user_service.create_user(
             CreateUserInput::Mnemonic(Box::new(mnemonic.0.clone())),
             device_name,

@@ -1,11 +1,11 @@
 use crate::api::user::UserApi;
 
 #[derive(Clone, Debug)]
-pub struct AdminManager {
+pub struct CargoLib {
     user_api: UserApi,
 }
 
-impl AdminManager {
+impl CargoLib {
     pub fn new(user_api: UserApi) -> Self {
         Self { user_api }
     }

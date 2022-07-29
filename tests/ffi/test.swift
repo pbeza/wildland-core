@@ -1,7 +1,7 @@
 print("Swift FFI Test Suite");
 
-var admin_manager = create_admin_manager(RustString("lss.yaml")).unwrap();
-var user_api = admin_manager.user_api();
+var cargo_lib = create_cargo_lib(RustString("lss.yaml")).unwrap();
+var user_api = cargo_lib.user_api();
 var mnemonic = user_api.generate_mnemonic().unwrap();
 print(mnemonic.get_string().to_string());
 user_api.create_user_from_mnemonic(mnemonic, RustString("My Mac")).unwrap();
