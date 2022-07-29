@@ -47,7 +47,6 @@ impl LSSService {
 #[cfg(test)]
 mod tests {
     use crate::lss::LSSService;
-    use crate::{LocalSecureStorage, WildlandIdentity, DEFAULT_FOREST_KEY};
     use crate::test_utilities::{create_signing_keypair, create_wildland_forest_identity};
     use crate::{LocalSecureStorage, DEFAULT_FOREST_KEY};
     use mockall::mock;

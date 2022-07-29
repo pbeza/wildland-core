@@ -14,7 +14,7 @@ pub type CorexResult<T> = Result<T, CoreXError>;
 
 #[cfg(test)]
 pub mod test_utilities {
-    use crate::{WildlandIdentity, WildlandIdentityType};
+    use crate::WildlandIdentity;
     use wildland_crypto::identity::SigningKeypair;
 
     pub static SIGNING_PUBLIC_KEY: &str =
@@ -27,10 +27,6 @@ pub mod test_utilities {
     }
 
     pub fn create_wildland_forest_identity() -> WildlandIdentity {
-        WildlandIdentity::new(
-            WildlandIdentityType::Forest,
-            create_signing_keypair(),
-            0.to_string(),
-        )
+        WildlandIdentity::Forest(0, create_signing_keypair())
     }
 }

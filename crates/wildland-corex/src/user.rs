@@ -103,13 +103,13 @@ mod tests {
         lss_service_mock
             .expect_save()
             .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.get_fingerprint() == DEFAULT_FOREST_KEY
+                wildland_identity.to_string() == DEFAULT_FOREST_KEY
             })
             .returning(|_| Ok(None));
         lss_service_mock
             .expect_save()
             .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.get_fingerprint() == "wildland.Device.My Mac"
+                wildland_identity.to_string() == "wildland.device.My Mac"
             })
             .returning(|_| Ok(None));
         let user_service = UserService::new(Rc::new(lss_service_mock));
@@ -149,13 +149,13 @@ mod tests {
         lss_service_mock
             .expect_save()
             .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.get_fingerprint() == DEFAULT_FOREST_KEY
+                wildland_identity.to_string() == DEFAULT_FOREST_KEY
             })
             .returning(|_| Ok(None));
         lss_service_mock
             .expect_save()
             .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.get_fingerprint() == "wildland.Device.My Mac"
+                wildland_identity.to_string() == "wildland.device.My Mac"
             })
             .returning(|_| Ok(None));
         let user_service = UserService::new(Rc::new(lss_service_mock));
