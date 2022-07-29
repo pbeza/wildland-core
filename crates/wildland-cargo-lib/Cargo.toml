@@ -1,6 +1,6 @@
 [package]
 name = "wildland-cargo-lib"
-version = "0.6.4"
+version = "0.6.5"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -21,7 +21,7 @@ crate-type = ["staticlib", "lib"]
 
 [dependencies]
 wildland-corex = { version = "0.2.0", path = "../wildland-corex", registry = "wl-dev" }
-ffi-macro = { version = "0.1.0", registry = "wl-dev", optional = true }
+ffi-macro = { version = "0.2.0", registry = "wl-dev", optional = true }
 thiserror = "1.0.31"
 swift-bridge = { version = "0.1", optional = true }
 sha2 = "0.10.2"
@@ -32,4 +32,4 @@ independent = true
 
 
 [build-dependencies]
-ffi-macro-build = { version = "0.1.0", registry = "wl-dev", optional = true }
+ffi-macro-build = { version = "0.2.0", registry = "wl-dev", optional = true }

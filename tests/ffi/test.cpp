@@ -1,8 +1,4 @@
 #include <iostream>
-extern "C" {
-    #include "ffi_swift.h"
-    #include "SwiftBridgeCore.h"
-}
 #include "ffi_cxx.h"
 
 int main()

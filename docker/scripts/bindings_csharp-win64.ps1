@@ -52,17 +52,16 @@ cp "$env:SWIFT_BRIDGE_OUT_DIR/SwiftBridgeCore.h" "$env:FFI_BUILD_DIR"
 cp "$env:CARGO_LIB_PROJECT_DIR/_generated_cpp/ffi_cxx.h" "$env:FFI_BUILD_DIR"
 cp "$env:CARGO_LIB_PROJECT_DIR/_generated_cpp/ffi_swig.i" "$env:FFI_BUILD_DIR"
 cp "$env:CARGO_LIB_PROJECT_DIR/_generated_swift/ffi_swift/ffi_swift.h" "$env:FFI_BUILD_DIR"
-cp "$env:CARGO_LIB_PROJECT_DIR/wildland.i" "$env:FFI_BUILD_DIR"
 cp "$env:CXX_LIB" "$env:FFI_BUILD_DIR"
 
 Write-Host "---------- Create SWIG-Generated C# Bindings ----------"
-$p = (Start-Process -PassThru -WorkingDirectory /ffi_build -FilePath "swig" -Wait -NoNewWindow -ArgumentList "-dllimport $env:DLLIMPORT -csharp -c++ -w'516,503,476,302,124' -outdir /bindings wildland.i")
+$p = (Start-Process -PassThru -WorkingDirectory /ffi_build -FilePath "swig" -Wait -NoNewWindow -ArgumentList "-dllimport $env:DLLIMPORT -csharp -module wildland -c++ -w'516,503,476,302,124' -outdir /bindings ffi_swig.i")
 if ($p.ExitCode -ne 0) {
     exit $p.ExitCode
 }
 
 Write-Host "---------- BUILD /bindings_test/Wildland.dll ----------"
-$p = (Start-Process -PassThru -WorkingDirectory /ffi_build -FilePath $env:CC -Wait -NoNewWindow -ArgumentList "/LD", "/MD", "/std:c++14", "wildland_wrap.cxx", "/link", "wildland_cargo_lib.lib", "ws2_32.lib", "bcrypt.lib", "userenv.lib", "advapi32.lib", "shell32.lib", "Ole32.lib", "/out:/bindings_test/Wildland.dll")
+$p = (Start-Process -PassThru -WorkingDirectory /ffi_build -FilePath $env:CC -Wait -NoNewWindow -ArgumentList "/LD", "/MD", "/std:c++14", "ffi_swig_wrap.cxx", "/link", "wildland_cargo_lib.lib", "ws2_32.lib", "bcrypt.lib", "userenv.lib", "advapi32.lib", "shell32.lib", "Ole32.lib", "/out:/bindings_test/Wildland.dll")
 if ($p.ExitCode -ne 0) {
     exit $p.ExitCode
 }

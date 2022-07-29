@@ -17,12 +17,11 @@ WORKDIR /wildland-core
 COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_cpp ./_generated_cpp
 COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_swift ./_generated_swift
 COPY --from=wildland-sdk-base ${TARGET}/libwildland_cargo_lib.a ./lib/
-COPY crates/wildland-cargo-lib/wildland.i ./
 
 RUN mkdir -p _generated_python \
-    && swig -python -c++ -outdir _generated_python wildland.i \
+    && swig -python -c++ -module wildland -outdir _generated_python _generated_cpp/ffi_swig.i \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
-    wildland_wrap.cxx \
+    _generated_cpp/ffi_swig_wrap.cxx \
     -Llib \
     -lwildland_cargo_lib \
     $(python3-config --includes) \
