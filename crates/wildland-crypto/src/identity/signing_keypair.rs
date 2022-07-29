@@ -27,6 +27,17 @@ use super::bytes_key_from_str;
 #[derive(Debug)]
 pub struct SigningKeypair(ed25519_dalek::Keypair);
 
+impl TryFrom<Vec<u8>> for SigningKeypair {
+    type Error = CryptoError;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        Ok(Self(
+            ed25519_dalek::Keypair::from_bytes(value.as_slice())
+                .map_err(|e| CryptoError::InvalidSignatureBytesError(e.to_string()))?,
+        ))
+    }
+}
+
 impl SigningKeypair {
     pub fn generate<R>(csprng: &mut R) -> Self
     where
@@ -64,6 +75,10 @@ impl SigningKeypair {
 
     pub fn secret(&self) -> [u8; 32] {
         self.0.secret.to_bytes()
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        Vec::from(self.0.to_bytes())
     }
 
     pub fn sign(&self, msg: &[u8]) -> Signature {

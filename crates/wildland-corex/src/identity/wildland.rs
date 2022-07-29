@@ -1,77 +1,64 @@
-use sha2::{Digest, Sha256};
-use std::fmt::Display;
+use crate::WildlandIdentity::{Device, Forest};
+use std::fmt;
+use std::fmt::{Display, Formatter};
 use wildland_crypto::identity::SigningKeypair;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum WildlandIdentityType {
-    Forest,
-    Device,
-}
-
-// TODO WILX-95 generate code for handling enums with binding_wrapper macro
-impl WildlandIdentityType {
-    pub fn is_forest(&self) -> bool {
-        *self == Self::Forest
-    }
-
-    pub fn is_device(&self) -> bool {
-        *self == Self::Device
-    }
-
-    pub fn is_same(&self, other: &Self) -> bool {
-        *self == *other
-    }
-}
-
 #[derive(Debug)]
-pub struct WildlandIdentity {
-    identity_type: WildlandIdentityType,
-    keypair: SigningKeypair,
-    name: String,
-}
-
-impl WildlandIdentity {
-    pub fn new(identity_type: WildlandIdentityType, keypair: SigningKeypair, name: String) -> Self {
-        Self {
-            identity_type,
-            keypair,
-            name,
-        }
-    }
-
-    pub fn get_name(&self) -> String {
-        self.name.clone()
-    }
-
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
-    }
-
-    pub fn get_public_key(&self) -> Vec<u8> {
-        self.keypair.public().into()
-    }
-
-    pub fn get_private_key(&self) -> Vec<u8> {
-        self.keypair.secret().into()
-    }
-
-    pub fn get_fingerprint(&self) -> Vec<u8> {
-        let hash = Sha256::digest(&self.get_public_key());
-
-        hash[..16].into()
-    }
-
-    pub fn get_fingerprint_string(&self) -> String {
-        hex::encode(self.get_fingerprint())
-    }
-
-    pub fn get_type(&self) -> WildlandIdentityType {
-        self.identity_type
-    }
+pub enum WildlandIdentity {
+    Forest(u64, SigningKeypair),
+    Device(String, SigningKeypair),
 }
 
 impl Display for WildlandIdentity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.get_fingerprint_string(),)
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            Forest(index, _) => write!(f, "wildland.forest.{}", index),
+            Device(name, _) => write!(f, "wildland.device.{}", name),
+        }
+    }
+}
+
+impl WildlandIdentity {
+    pub fn get_identifier(&self) -> String {
+        match self {
+            Forest(index, _) => index.to_string(),
+            Device(name, _) => name.to_string(),
+        }
+    }
+
+    pub fn get_public_key(&self) -> Vec<u8> {
+        match self {
+            Forest(_, keypair) | Device(_, keypair) => keypair.public().into(),
+        }
+    }
+
+    pub fn get_private_key(&self) -> Vec<u8> {
+        match self {
+            Forest(_, keypair) | Device(_, keypair) => keypair.secret().into(),
+        }
+    }
+
+    pub fn get_keypair_bytes(&self) -> Vec<u8> {
+        match self {
+            Forest(_, keypair) | Device(_, keypair) => keypair.to_bytes(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
+    use crate::WildlandIdentity;
+    use wildland_crypto::identity::SigningKeypair;
+
+    #[test]
+    fn should_get_correct_fingerprint() {
+        let keypair = SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap();
+        let wildland_identity = WildlandIdentity::Device("Device 1".to_string(), keypair);
+
+        assert_eq!(
+            wildland_identity.to_string(),
+            "wildland.device.Device 1".to_string()
+        )
     }
 }

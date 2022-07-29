@@ -1,6 +1,6 @@
 [package]
 name = "wildland-local-secure-storage"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -17,7 +17,6 @@ rustbreak = { version = "2.0.0", features = ["yaml_enc"] }
 thiserror = "1.0.31"
 
 [dev-dependencies]
-mockall = "0.11.1"
 tempfile = "3.3.0"
 
 [package.metadata.workspaces]
