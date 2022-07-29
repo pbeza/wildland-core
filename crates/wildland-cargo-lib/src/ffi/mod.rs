@@ -1,5 +1,6 @@
 use crate::{
     api::user::UserApi, cargo_lib::CargoLib, create_cargo_lib, CargoLibError, MnemonicPayload,
+    UserPayload,
 };
 use ffi_macro::binding_wrapper;
 
@@ -26,7 +27,7 @@ mod ffi_binding {
             mnemonic: &MnemonicPayload,
             device_name: String,
         ) -> Result<VoidType, ErrorType>;
-        fn get_user(self: &UserApi) -> VoidType;
+        fn get_user(self: &UserApi) -> Result<Option<UserPayload>, ErrorType>;
 
         type MnemonicPayload;
         fn get_string(self: &MnemonicPayload) -> String;

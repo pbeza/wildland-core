@@ -8,8 +8,8 @@ mod error;
 #[cfg(feature = "bindings")]
 pub mod ffi;
 
+pub use api::user::{MnemonicPayload, UserApi, UserPayload};
 pub use cargo_lib::CargoLib;
-pub use api::user::{MnemonicPayload, UserPayload, UserApi};
 
 use wildland_corex::{create_file_lss, LSSService, UserService};
 
