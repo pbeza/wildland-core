@@ -1708,7 +1708,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "ffi-macro",
  "ffi-macro-build",
