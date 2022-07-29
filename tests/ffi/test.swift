@@ -1,3 +1,6 @@
+
+// This test file is not supported since ffi-macro v.0.2.0
+
 print("Swift FFI Test Suite");
 
 var cargo_lib = create_cargo_lib(RustString("lss.yaml")).unwrap();

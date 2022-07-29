@@ -8,7 +8,7 @@ CSHARP_COMPILER=mcs
 # --------------------------------------------------------------------------------------------------
 
 cd /ffi_build
-swig -dllimport ${DLLIMPORT} -csharp -c++ -w516,503,476,302,124 -outdir /bindings wildland.i
+swig -dllimport ${DLLIMPORT} -module wildland -csharp -c++ -w516,503,476,302,124 -outdir /bindings ffi_swig.i
 
 # --------------------------------------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ ${CC} -fpermissive \
       -std=c++14 \
       -w \
       -L . \
-      wildland_wrap.cxx \
+      ffi_swig_wrap.cxx \
       -lwildland_cargo_lib \
       -o /bindings_test/lib${DLLIMPORT}.so
 
