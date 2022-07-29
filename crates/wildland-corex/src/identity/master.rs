@@ -1,19 +1,19 @@
-use wildland_crypto::identity::{new_device_identity, Identity};
+use wildland_crypto::identity::{new_device_identity, Identity as CryptoIdentity};
 
-use crate::CoreXError;
+use crate::{CoreXError, CorexResult};
 
 use super::wildland::{WildlandIdentity, WildlandIdentityType};
 
 pub struct MasterIdentity {
-    crypto_identity: Option<Identity>,
+    crypto_identity: Option<CryptoIdentity>,
 }
 
 impl MasterIdentity {
-    pub fn new(crypto_identity: Option<Identity>) -> Self {
+    pub fn new(crypto_identity: Option<CryptoIdentity>) -> Self {
         Self { crypto_identity }
     }
 
-    pub fn create_forest_identity(&self, index: u64) -> Result<WildlandIdentity, CoreXError> {
+    pub fn create_forest_identity(&self, index: u64) -> CorexResult<WildlandIdentity> {
         let keypair = self
             .crypto_identity
             .as_ref()
@@ -29,7 +29,7 @@ impl MasterIdentity {
         Ok(identity)
     }
 
-    pub fn create_device_identity(&self, name: String) -> Result<WildlandIdentity, CoreXError> {
+    pub fn create_device_identity(&self, name: String) -> CorexResult<WildlandIdentity> {
         let keypair = new_device_identity();
         let identity = WildlandIdentity::new(WildlandIdentityType::Device, keypair, name);
 

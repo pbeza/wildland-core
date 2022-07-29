@@ -8,8 +8,8 @@ extern "C" {
 int main()
 {
     String lss_path = String("lss.yaml");
-    AdminManager admin_manager = create_admin_manager(lss_path).unwrap();
-    UserApi user_api = admin_manager.user_api();
+    CargoLib cargo_lib = create_cargo_lib(lss_path).unwrap();
+    UserApi user_api = cargo_lib.user_api();
 
     ResultMnemonicPayload mnemonic_result = user_api.generate_mnemonic();
     if (mnemonic_result.is_ok())
