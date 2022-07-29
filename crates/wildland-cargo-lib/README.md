@@ -1,9 +1,9 @@
-# Wildland Admin Manager
+# Wildland Cargo Lib
 TODO
 
 
 ## Bindings
-Wildland Admin Manager support bindings for the following languages:
+Wildland Cargo Lib support bindings for the following languages:
  * Java
  * C++
  * C#

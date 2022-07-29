@@ -1,4 +1,4 @@
-use crate::{AdminManagerError, AdminManagerResult};
+use crate::{CargoLibError, CargoLibResult};
 use wildland_corex::{generate_random_mnemonic, MnemonicPhrase};
 
 #[derive(Debug, Clone)]
@@ -24,16 +24,16 @@ impl From<MnemonicPhrase> for MnemonicPayload {
 pub struct UserApi;
 
 impl UserApi {
-    pub fn generate_mnemonic(&self) -> AdminManagerResult<MnemonicPayload> {
+    pub fn generate_mnemonic(&self) -> CargoLibResult<MnemonicPayload> {
         generate_random_mnemonic()
-            .map_err(AdminManagerError::from)
+            .map_err(CargoLibError::from)
             .map(MnemonicPayload::from)
     }
 
-    pub fn create_user_from_entropy(&self, entropy: Vec<u8>) {
+    pub fn create_user_from_entropy(&self, _entropy: Vec<u8>) {
         // TODO
     }
-    pub fn create_user_from_mnemonic(&self, mnemonic: MnemonicPayload) {
+    pub fn create_user_from_mnemonic(&self, _mnemonic: MnemonicPayload) {
         // TODO
     }
     pub fn get_user(&self) {

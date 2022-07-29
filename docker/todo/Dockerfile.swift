@@ -2,9 +2,9 @@ FROM swift:5.6.1-focal
 
 # Run with:
 #
-# docker-compose -f wildland-admin-manager/docker/docker-compose.yml run --rm wildland-sdk-swift
+# docker-compose -f wildland-cargo-lib/docker/docker-compose.yml run --rm wildland-sdk-swift
 
-ENV ADMIN_MANAGER_PATH=/wildland-core/crates/wildland-admin-manager
+ENV CARGO_LIB_PATH=/wildland-core/crates/wildland-cargo-lib
 ENV TARGET=/wildland-core/target/debug/
 ENV CC=g++
 ENV CSHARP_COMPILER=mcs
@@ -15,14 +15,14 @@ RUN mkdir -p /wildland-core/
 WORKDIR /wildland-core
 
 # Copy from base image instead of building new image on top of it to avoid reinstalling packages after source code changes
-COPY --from=wildland-sdk-base ${ADMIN_MANAGER_PATH}/_generated_cpp ./_generated_cpp
-COPY --from=wildland-sdk-base ${ADMIN_MANAGER_PATH}/_generated_swift ./_generated_swift
-COPY --from=wildland-sdk-base ${ADMIN_MANAGER_PATH}/swift_header.h .
-COPY --from=wildland-sdk-base ${TARGET}/libwildland_admin_manager.a ./lib/
+COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_cpp ./_generated_cpp
+COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_swift ./_generated_swift
+COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/swift_header.h .
+COPY --from=wildland-sdk-base ${TARGET}/libwildland_cargo_lib.a ./lib/
 
 
 COPY test/ffi/test.swift _generated_swift/main.swift
-RUN swiftc -L lib -lwildland_admin_manager -lstdc++ \
+RUN swiftc -L lib -lwildland_cargo_lib -lstdc++ \
         -I _generated_swift -import-objc-header \
         swift_header.h \
         ./_generated_swift/SwiftBridgeCore.swift \
