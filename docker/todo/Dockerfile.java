@@ -20,12 +20,11 @@ WORKDIR /wildland-core
 COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_cpp ./_generated_cpp
 COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_swift ./_generated_swift
 COPY --from=wildland-sdk-base ${TARGET}/libwildland_cargo_lib.a ./lib/
-COPY crates/wildland-cargo-lib/wildland.i ./
 
 RUN mkdir -p _generated_java \
-    && swig -java -c++ -outdir _generated_java wildland.i \
+    && swig -java -c++  -module wildland -outdir _generated_java _generated_cpp/ffi_swig.i \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
-    wildland_wrap.cxx \
+    _generated_cpp/ffi_swig_wrap.cxx \
     -Llib \
     -lwildland_cargo_lib \
     -I${JDK_INC_DIR} \
