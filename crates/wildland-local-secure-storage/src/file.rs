@@ -19,7 +19,7 @@ impl FileLSS {
 }
 
 impl LocalSecureStorage for FileLSS {
-    fn insert(&mut self, key: String, value: Vec<u8>) -> LSSResult<Option<Vec<u8>>> {
+    fn insert(&self, key: String, value: Vec<u8>) -> LSSResult<Option<Vec<u8>>> {
         let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
         self.db.write(|db| db.insert(key, value))?;
         Ok(prev_value)
@@ -42,7 +42,7 @@ impl LocalSecureStorage for FileLSS {
         Ok(result)
     }
 
-    fn remove(&mut self, key: String) -> LSSResult<Option<Vec<u8>>> {
+    fn remove(&self, key: String) -> LSSResult<Option<Vec<u8>>> {
         let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
         self.db.write(|db| db.remove(&key))?;
         Ok(prev_value)
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn should_insert_new_value_and_return_none() {
-        let mut lss = create_file_lss();
+        let lss = create_file_lss();
         let result = lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
 
         assert!(result.is_none())
@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn should_update_value_and_return_previous() {
-        let mut lss = create_file_lss();
+        let lss = create_file_lss();
         lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
         let result = lss.insert("foo".to_string(), b"baz".to_vec()).unwrap();
 
@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn should_get_inserted_value() {
-        let mut lss = create_file_lss();
+        let lss = create_file_lss();
         lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
         let result = lss.get("foo".to_string()).unwrap();
 
@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn should_return_true_when_contains_key() {
-        let mut lss = create_file_lss();
+        let lss = create_file_lss();
         lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
         let result = lss.contains_key("foo".to_string()).unwrap();
 
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn should_return_list_of_keys() {
-        let mut lss = create_file_lss();
+        let lss = create_file_lss();
         lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
         lss.insert("baz".to_string(), b"bar".to_vec()).unwrap();
         let result = lss.keys().unwrap();
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn should_remove_return_none_when_key_not_presented() {
-        let mut lss = create_file_lss();
+        let lss = create_file_lss();
         let result = lss.remove("foo".to_string()).unwrap();
 
         assert!(result.is_none())
@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn should_remove_and_return_previous_value() {
-        let mut lss = create_file_lss();
+        let lss = create_file_lss();
         lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
         let result = lss.remove("foo".to_string()).unwrap();
         let does_contain_foo = lss.contains_key("foo".to_string()).unwrap();
@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn should_return_keys_len() {
-        let mut lss = create_file_lss();
+        let lss = create_file_lss();
         lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
         lss.insert("baz".to_string(), b"bar".to_vec()).unwrap();
         let result = lss.len().unwrap();
@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn should_return_false_if_db_is_not_empty() {
-        let mut lss = create_file_lss();
+        let lss = create_file_lss();
         lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
         lss.insert("baz".to_string(), b"bar".to_vec()).unwrap();
         let result = lss.is_empty().unwrap();

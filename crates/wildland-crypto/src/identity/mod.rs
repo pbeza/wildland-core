@@ -20,16 +20,18 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::error::CryptoError;
-pub use crate::identity::{
-    derivation::Identity, seed::generate_random_mnemonic, signing_keypair::SigningKeypair,
-};
 use hex::FromHex;
 
 mod derivation;
-pub mod device;
+mod device;
 pub mod encrypting_keypair;
 mod seed;
 pub mod signing_keypair;
+
+pub use crate::identity::{
+    derivation::Identity, seed::generate_random_mnemonic, signing_keypair::SigningKeypair,
+};
+pub use device::new_device_identity;
 
 pub const MNEMONIC_LEN: usize = 12;
 pub type MnemonicPhrase = [String; MNEMONIC_LEN];

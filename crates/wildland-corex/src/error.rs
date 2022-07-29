@@ -4,6 +4,8 @@ use wildland_local_secure_storage::LSSError;
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
 pub enum CoreXError {
+    #[error("Cannot create forest identity: {0}")]
+    CannotCreateForestIdentityError(String),
     #[error("Mnemonic generation error: {0}")]
     MnemonicGenerationError(String),
     #[error("Identity generation error: {0}")]

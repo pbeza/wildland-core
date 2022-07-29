@@ -134,10 +134,6 @@ impl Identity {
         self.derive_encryption_keypair(&backup_key_path())
     }
 
-    pub fn get_extended_seckey(&self) -> &ExtendedSecretKey {
-        &self.extended_seckey
-    }
-
     pub fn get_mnemonic(&self) -> MnemonicPhrase {
         self.words.clone()
     }
@@ -360,7 +356,7 @@ mod tests {
         let user = Identity::try_from(&mnemonic_array).unwrap();
 
         assert_eq!(
-            user.get_extended_seckey().secret_key.to_bytes(),
+            user.extended_seckey.secret_key.to_bytes(),
             ExtendedSecretKey::from_seed(&ROOT_XPRV)
                 .unwrap()
                 .secret_key

@@ -1,42 +1,100 @@
-use super::wildland::{WildlandIdentity, WildlandIdentityType};
-use crate::CoreXError;
-use std::fmt::Display;
-use wildland_crypto::identity::{Identity, SigningKeypair};
+use wildland_crypto::identity::{new_device_identity, Identity as CryptoIdentity};
+
+use crate::{CoreXError, CorexResult};
+
+use super::wildland::WildlandIdentity;
 
 pub struct MasterIdentity {
-    inner_identity: Identity,
+    crypto_identity: Option<CryptoIdentity>,
 }
 
 impl MasterIdentity {
-    pub fn with_identity(inner_identity: Identity) -> Self {
-        Self { inner_identity }
+    pub fn new(crypto_identity: Option<CryptoIdentity>) -> Self {
+        Self { crypto_identity }
     }
 
-    pub fn get_forest_keypair(&self) -> SigningKeypair {
-        self.inner_identity.forest_keypair(0)
+    pub fn create_forest_identity(&self, index: u64) -> CorexResult<WildlandIdentity> {
+        let keypair = self
+            .crypto_identity
+            .as_ref()
+            .map(|identity| identity.forest_keypair(index))
+            .ok_or_else(|| {
+                CoreXError::CannotCreateForestIdentityError(
+                    "Crypto identity is required to create a new forest".to_string(),
+                )
+            })?;
+        let identity = WildlandIdentity::Forest(index, keypair);
+
+        Ok(identity)
     }
 
-    pub fn create_wildland_identity(
-        &self,
-        identity_type: WildlandIdentityType,
-        name: String,
-    ) -> Result<WildlandIdentity, CoreXError> {
-        let keypair = self.get_forest_keypair();
-        let identity = WildlandIdentity::new(identity_type, keypair, name);
+    pub fn create_device_identity(&self, name: String) -> CorexResult<WildlandIdentity> {
+        let keypair = new_device_identity();
+        let identity = WildlandIdentity::Device(name, keypair);
 
         Ok(identity)
     }
 }
 
-impl Display for MasterIdentity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "
-Type: Master
-Mnemonic: {}
-",
-            self.inner_identity.get_mnemonic().join(" ")
-        )
+#[cfg(test)]
+mod tests {
+    use crate::{generate_random_mnemonic, CoreXError, MasterIdentity, WildlandIdentity};
+    use wildland_crypto::identity::Identity;
+
+    fn create_crypto_identity() -> Identity {
+        generate_random_mnemonic()
+            .map(|mnemonic| Identity::try_from(&mnemonic).unwrap())
+            .unwrap()
+    }
+
+    #[test]
+    fn should_create_forest_identity() {
+        let crypto_identity = create_crypto_identity();
+        let master_identity = MasterIdentity::new(Some(crypto_identity));
+        let forest_identity = master_identity.create_forest_identity(0).unwrap();
+
+        assert!(matches!(forest_identity, WildlandIdentity::Forest(_, _)));
+        assert_eq!(forest_identity.get_identifier(), "0");
+        assert!(!forest_identity.get_private_key().is_empty());
+        assert!(!forest_identity.get_public_key().is_empty());
+    }
+
+    #[test]
+    fn should_not_create_forest_identity_without_crypto_identity() {
+        let master_identity = MasterIdentity::new(None);
+        let result = master_identity.create_forest_identity(0);
+        assert_eq!(
+            result.unwrap_err(),
+            CoreXError::CannotCreateForestIdentityError(
+                "Crypto identity is required to create a new forest".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn should_create_device_identity_with_crypto_identity() {
+        let crypto_identity = create_crypto_identity();
+        let master_identity = MasterIdentity::new(Some(crypto_identity));
+        let device_identity = master_identity
+            .create_device_identity("Device 1".to_string())
+            .unwrap();
+
+        assert!(matches!(device_identity, WildlandIdentity::Device(_, _)));
+        assert_eq!(device_identity.get_identifier(), "Device 1");
+        assert!(!device_identity.get_private_key().is_empty());
+        assert!(!device_identity.get_public_key().is_empty());
+    }
+
+    #[test]
+    fn should_create_device_identity_without_crypto_identity() {
+        let master_identity = MasterIdentity::new(None);
+        let device_identity = master_identity
+            .create_device_identity("Device 1".to_string())
+            .unwrap();
+
+        assert!(matches!(device_identity, WildlandIdentity::Device(_, _)));
+        assert_eq!(device_identity.get_identifier(), "Device 1");
+        assert!(!device_identity.get_private_key().is_empty());
+        assert!(!device_identity.get_public_key().is_empty());
     }
 }
