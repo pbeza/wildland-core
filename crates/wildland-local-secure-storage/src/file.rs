@@ -156,10 +156,10 @@ mod tests {
         let lss = create_file_lss();
         lss.insert("foo".to_string(), b"bar".to_vec()).unwrap();
         let result = lss.remove("foo".to_string()).unwrap();
-        let does_contain_foo = lss.contains_key("foo".to_string()).unwrap();
+        let contains_foo = lss.contains_key("foo".to_string()).unwrap();
 
         assert_eq!(result.unwrap(), b"bar".to_vec());
-        assert!(!does_contain_foo)
+        assert!(!contains_foo)
     }
 
     #[test]

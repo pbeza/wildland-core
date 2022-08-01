@@ -2,6 +2,9 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use wildland_crypto::identity::SigningKeypair;
 
+#[cfg(test)]
+use mockall::automock;
+
 use wildland_local_secure_storage::{FileLSS, LocalSecureStorage};
 
 use crate::{CoreXError, CorexResult, WildlandIdentity};
@@ -12,10 +15,12 @@ pub fn create_file_lss(path: String) -> CorexResult<FileLSS> {
     FileLSS::new(PathBuf::from(path)).map_err(CoreXError::from)
 }
 
-struct LSSService {
+#[derive(Clone, Debug)]
+pub struct LSSService {
     lss: Rc<dyn LocalSecureStorage>,
 }
 
+#[cfg_attr(test, automock)]
 impl LSSService {
     pub fn new(lss: Rc<dyn LocalSecureStorage>) -> Self {
         Self { lss }
@@ -42,12 +47,11 @@ impl LSSService {
 #[cfg(test)]
 mod tests {
     use crate::lss::LSSService;
-    use crate::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
-    use crate::{LocalSecureStorage, WildlandIdentity, DEFAULT_FOREST_KEY};
+    use crate::test_utilities::{create_signing_keypair, create_wildland_forest_identity};
+    use crate::{LocalSecureStorage, DEFAULT_FOREST_KEY};
     use mockall::mock;
     use mockall::predicate::eq;
     use std::rc::Rc;
-    use wildland_crypto::identity::SigningKeypair;
     use wildland_local_secure_storage::LSSResult;
 
     mock! {
@@ -64,19 +68,11 @@ mod tests {
         }
     }
 
-    fn signing_keypair() -> SigningKeypair {
-        SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap()
-    }
-
-    fn wildland_forest_identity() -> WildlandIdentity {
-        WildlandIdentity::Forest(0, signing_keypair())
-    }
-
     #[test]
     fn should_save_forest_identity() {
         // given
-        let keypair = signing_keypair();
-        let wildland_identity = wildland_forest_identity();
+        let keypair = create_signing_keypair();
+        let wildland_identity = create_wildland_forest_identity();
         let mut lss_mock = MockTestLSS::new();
         lss_mock
             .expect_insert()
@@ -94,9 +90,9 @@ mod tests {
     #[test]
     fn should_get_default_forest() {
         // given
-        let keypair = signing_keypair();
+        let keypair = create_signing_keypair();
         let keypair_bytes = keypair.to_bytes();
-        let wildland_identity = wildland_forest_identity();
+        let wildland_identity = create_wildland_forest_identity();
         let mut lss_mock = MockTestLSS::new();
         lss_mock
             .expect_get()
