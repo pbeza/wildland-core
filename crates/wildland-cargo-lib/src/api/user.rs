@@ -23,6 +23,13 @@ impl From<MnemonicPhrase> for MnemonicPayload {
 #[derive(Clone, Debug)]
 pub struct UserPayload;
 
+impl UserPayload {
+    pub fn get_string(&self) -> String {
+        "User Payload".to_string()
+    }
+}
+
+
 #[derive(Clone, Debug)]
 pub struct UserApi {
     user_service: UserService,

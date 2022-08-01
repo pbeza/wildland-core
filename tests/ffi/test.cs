@@ -16,7 +16,7 @@ namespace Main
             Console.WriteLine("User successfully created from mnemonic");
 
             var user = user_api.get_user().unwrap().unwrap();
-            Console.WriteLine("User: " + user);
+            Console.WriteLine("User: " + user.get_string().to_string());
         }
     }
 }

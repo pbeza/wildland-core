@@ -18,6 +18,8 @@ class TestCargoLib(unittest.TestCase):
         mnemonic = user_api.generate_mnemonic().unwrap()
         user_api.create_user_from_mnemonic(mnemonic, wildland.RustString("My Mac")).unwrap()
         print("User successfully created from mnemonic")
+        user = user_api.get_user().unwrap().unwrap()
+        print("User: " + user.get_string().to_string())
 
 if __name__ == '__main__':
     unittest.main()
