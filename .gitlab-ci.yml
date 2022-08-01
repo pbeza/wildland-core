@@ -144,7 +144,8 @@ x86_64 linux:
       allow_failure: true
 
 
-###############
+
+################
 # STAGE: Bindings
 #
 # This stage generates bindings for target language *and* platform. The jobs in this stage (apart
@@ -152,31 +153,31 @@ x86_64 linux:
 #
 # Artifacts from this stage are used as the pipeline artifacts and/or release assets.
 
-csharp x86_64 windows-msvc:
-  stage: Bindings
-  image:
-    name: registry.gitlab.com/wildland/corex/wildland-core/builder:win32-ltsc2022
-  script:
-    - echo $env:CI_PROJECT_DIR
-    - $ErrorActionPreference = 'Stop'
-    - $ProgressPreference = 'SilentlyContinue'
-    - Powershell.exe -File "$env:CI_PROJECT_DIR/docker/scripts/bindings_csharp-win64.ps1"
-  artifacts:
-    expose_as: 'csharp-x86_64-windows-msvc'
-    name: csharp-x86_64-windows-msvc
-    paths:
-      - build/
-    expire_in: 1 week
-  tags:
-    - docker
-    - windows
-    - x64
-  rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
-      when: manual
-      allow_failure: true
+#csharp x86_64 windows-msvc:
+#  stage: Bindings
+#  image:
+#    name: registry.gitlab.com/wildland/corex/wildland-core/builder:win32-ltsc2022
+#  script:
+#    - echo $env:CI_PROJECT_DIR
+#    - $ErrorActionPreference = 'Stop'
+#    - $ProgressPreference = 'SilentlyContinue'
+#    - Powershell.exe -File "$env:CI_PROJECT_DIR/docker/scripts/bindings_csharp-win64.ps1"
+#  artifacts:
+#    expose_as: 'csharp-x86_64-windows-msvc'
+#    name: csharp-x86_64-windows-msvc
+#    paths:
+#      - build/
+#    expire_in: 1 week
+#  tags:
+#    - docker
+#    - windows
+#    - x64
+#  rules:
+#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+#    - if: $CI_COMMIT_BRANCH == "main"
+#    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+#      when: manual
+#      allow_failure: true
 
 csharp x86_64 linux:
   stage: Bindings
