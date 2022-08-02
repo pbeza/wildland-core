@@ -1,14 +1,19 @@
 FROM debian:bullseye-slim
 ARG DEBIAN_FRONTEND=noninteractive
 
+
 RUN apt-get -qy update \
-	&& apt-get install -y \
+    && apt-get install -y \
+		curl \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get -qy update \
+    && apt-get install -y \
 		g++ \
 		swig \
+		nodejs \
 		mono-mcs \
 		openjdk-17-jdk-headless \
 		python3-dev \
-		curl \
 		ca-certificates \
 		file \
 		nano \
@@ -24,6 +29,10 @@ RUN apt-get -qy update \
 
 ENV PATH=/root/.cargo/bin:$PATH
 
+RUN git clone https://github.com/emscripten-core/emsdk.git \
+    && cd emsdk \
+    && ./emsdk install latest
+
 RUN mkdir -p \
     /bindings \
     /bindings_test \
@@ -38,5 +47,7 @@ RUN curl https://sh.rustup.rs -sSf | \
 RUN cargo install \
 	cargo-release \
 	cargo-workspaces
+
+RUN rustup target add wasm32-unknown-emscripten
 
 WORKDIR /
