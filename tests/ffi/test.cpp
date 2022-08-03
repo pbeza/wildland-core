@@ -5,19 +5,24 @@ int main()
 {
     String lss_path = String("lss.yaml");
     CargoLib cargo_lib = create_cargo_lib(lss_path).unwrap();
-    ResultMnemonicPayload mnemonic_result = cargo_lib.user_api().generate_mnemonic();
+    UserApi user_api = cargo_lib.user_api();
+
+    ResultMnemonicPayload mnemonic_result = user_api.generate_mnemonic();
     if (mnemonic_result.is_ok())
     {
-        MnemonicPayload mnemonic_ok = mnemonic_result.unwrap(); // it is safe to unwrap after `is_ok` check
+        MnemonicPayload mnemonic = mnemonic_result.unwrap(); // it is safe to unwrap after `is_ok` check
 
-        std::string mnemonic_str = mnemonic_ok.get_string().to_string();
+        std::string mnemonic_str = mnemonic.get_string().to_string();
         std::cout << "Generated mnemonic: " << mnemonic_str << std::endl;
 
-        RustVec<String> words_vec = mnemonic_ok.get_vec(); // String (starting with capital letter) is a rust type
+        RustVec<String> words_vec = mnemonic.get_vec(); // String (starting with capital letter) is a rust type
         for (uint i = 0; i < words_vec.size(); i++)
         {
             std::cout << words_vec.at(i).to_string() << std::endl;
         }
+        String device_name = String("My Mac");
+        user_api.create_user_from_mnemonic(mnemonic, device_name).unwrap();
+        std::cout << "User successfully created from mnemonic";
     }
     else
     {
