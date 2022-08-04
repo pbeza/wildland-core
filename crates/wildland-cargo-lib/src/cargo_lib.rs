@@ -10,7 +10,7 @@ impl CargoLib {
         Self { user_api }
     }
 
-    pub fn user_api(&self) -> &UserApi {
-        &self.user_api
+    pub fn user_api(&self) -> UserApi {
+        self.user_api.clone()
     }
 }
