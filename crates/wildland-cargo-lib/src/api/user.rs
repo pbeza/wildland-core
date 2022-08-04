@@ -29,7 +29,6 @@ impl UserPayload {
     }
 }
 
-
 #[derive(Clone, Debug)]
 pub struct UserApi {
     user_service: UserService,
