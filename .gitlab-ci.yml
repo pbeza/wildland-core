@@ -144,6 +144,14 @@ x86_64 linux:
       allow_failure: true
 
 
+apple:
+  stage: Bridges
+  tags:
+    - macos
+  script:
+    - ci/build_apple.sh
+
+
 
 ################
 # STAGE: Bindings
