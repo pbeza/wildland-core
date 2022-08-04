@@ -10,6 +10,8 @@ class main {
         System.out.println(mnemonic.get_string().to_string());
         user_api.create_user_from_mnemonic(mnemonic, new RustString("My Mac")).unwrap();
         System.out.println("User successfully created from mnemonic");
+        var user = user_api.get_user().unwrap().unwrap();
+        System.out.println("User: " + user.get_string().to_string());
     }
 }
 

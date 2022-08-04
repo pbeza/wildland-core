@@ -21,6 +21,15 @@ impl From<MnemonicPhrase> for MnemonicPayload {
 }
 
 #[derive(Clone, Debug)]
+pub struct UserPayload;
+
+impl UserPayload {
+    pub fn get_string(&self) -> String {
+        "User Payload".to_string()
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct UserApi {
     user_service: UserService,
 }
@@ -45,6 +54,7 @@ impl UserApi {
             .create_user(CreateUserInput::Entropy(entropy), device_name)?;
         Ok(())
     }
+
     pub fn create_user_from_mnemonic(
         &self,
         mnemonic: &MnemonicPayload,
@@ -56,7 +66,11 @@ impl UserApi {
         )?;
         Ok(())
     }
-    pub fn get_user(&self) {
-        todo!()
+
+    pub fn get_user(&self) -> CargoLibResult<Option<UserPayload>> {
+        self.user_service
+            .user_exists()
+            .map(|exist| if exist { Some(UserPayload) } else { None })
+            .map_err(CargoLibError::from)
     }
 }

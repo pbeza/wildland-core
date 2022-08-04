@@ -1,5 +1,6 @@
 use crate::{
     api::user::UserApi, cargo_lib::CargoLib, create_cargo_lib, CargoLibError, MnemonicPayload,
+    UserPayload,
 };
 use ffi_macro::binding_wrapper;
 
@@ -12,7 +13,7 @@ mod ffi_binding {
     extern "Rust" {
         type CargoLib;
         fn create_cargo_lib(lss_path: String) -> Result<CargoLib, ErrorType>;
-        fn user_api(self: &CargoLib) -> &UserApi;
+        fn user_api(self: &CargoLib) -> UserApi;
 
         type UserApi;
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, ErrorType>;
@@ -26,11 +27,14 @@ mod ffi_binding {
             mnemonic: &MnemonicPayload,
             device_name: String,
         ) -> Result<VoidType, ErrorType>;
-        fn get_user(self: &UserApi) -> VoidType;
+        fn get_user(self: &UserApi) -> Result<Option<UserPayload>, ErrorType>;
 
         type MnemonicPayload;
         fn get_string(self: &MnemonicPayload) -> String;
         fn get_vec(self: &MnemonicPayload) -> Vec<String>;
+
+        type UserPayload;
+        fn get_string(self: &UserPayload) -> String;
 
         type VoidType;
         type ErrorType;

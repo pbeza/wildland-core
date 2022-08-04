@@ -23,6 +23,8 @@ int main()
         String device_name = String("My Mac");
         user_api.create_user_from_mnemonic(mnemonic, device_name).unwrap();
         std::cout << "User successfully created from mnemonic";
+        UserPayload user = user_api.get_user().unwrap().unwrap();
+        std::cout << "User: " << user.get_string().to_string() << std::endl;
     }
     else
     {
