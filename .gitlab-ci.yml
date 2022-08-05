@@ -150,7 +150,9 @@ apple:
     - macos
   script:
     - ci/build_apple.sh
-
+  artifacts:
+    paths:
+      - wildland-build/wildland.xcframework.zip
 
 
 ################

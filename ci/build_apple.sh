@@ -43,3 +43,5 @@ xcodebuild -create-xcframework \
  -library $WRKDIR/aarch64-apple-ios-sim/debug/libwildland_cargo_lib.a \
  -headers $WRKDIR/Headers \
  -output $WRKDIR/wildland.xcframework
+
+zip -9r $WRKDIR/wildland.xcframework.zip $WRKDIR/wildland.xcframework
