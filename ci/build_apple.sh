@@ -2,24 +2,25 @@
 
 set -ex
 env
-WRKDIR="/tmp/wildland"
+WRKDIR="$PWD/wildland-build"
+
 
 TARGETS="x86_64-apple-darwin aarch64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim"
 export SWIFT_BRIDGE_OUT_DIR="$PWD/_generated_swift"
+export CPP_BRIDGE_OUT_DIR="$PWD/_generated_cpp"
 test -d "$SWIFT_BRIDGE_OUT_DIR" || mkdir -p "$SWIFT_BRIDGE_OUT_DIR"
-mkdir -p "/tmp/wildland/Headers"
+test -d "$CPP_BRIDGE_OUT_DIR" || mkdir -p "$CPP_BRIDGE_OUT_DIR"
+mkdir -p "$WRKDIR/Headers"
 
 for target in $TARGETS; do
     cargo build --features bindings --target $target --target-dir $WRKDIR
-    cp _generated_cpp/ffi_cxx.h /tmp/wildland/Headers/ffi_cxx.h
-    cp _generated_swift/ffi_swift/ffi_swift.h /tmp/wildland/Headers/ffi_swift.h
-    cp _generated_swift/SwiftBridgeCore.h /tmp/wildland/Headers/SwiftBridgeCore.h
+    cp $CPP_BRIDGE_OUT_DIR/ffi_cxx.h $WRKDIR/Headers/ffi_cxx.h
+    cp $SWIFT_BRIDGE_OUT_DIR/ffi_swift/ffi_swift.h $WRKDIR/Headers/ffi_swift.h
+    cp $SWIFT_BRIDGE_OUT_DIR/SwiftBridgeCore.h $WRKDIR/Headers/SwiftBridgeCore.h
 done
 
 
-ls -lR /tmp/wildland > /tmp/wildland.ls-lR
-
-cat > /tmp/wildland/Headers/wildland.h <<EOF
+cat > $WRKDIR/Headers/wildland.h <<EOF
 #ifndef __wildland_h__
 #define __wildland_h__
 extern "C" {
@@ -31,8 +32,8 @@ extern "C" {
 EOF
 
 lipo -create -output $WRKDIR/libwildland_macos.a \
-     -arch x86_64 /tmp/wildland/x86_64-apple-darwin/debug/libwildland_cargo_lib.a \
-     -arch arm64e /tmp/wildland/aarch64-apple-darwin/debug/libwildland_cargo_lib.a
+     -arch x86_64 $WRKDIR/x86_64-apple-darwin/debug/libwildland_cargo_lib.a \
+     -arch arm64e $WRKDIR/aarch64-apple-darwin/debug/libwildland_cargo_lib.a
 
 xcodebuild -create-xcframework \
  -library $WRKDIR/libwildland_macos.a \
