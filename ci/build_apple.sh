@@ -5,11 +5,12 @@ env
 WRKDIR="/tmp/wildland"
 
 TARGETS="x86_64-apple-darwin aarch64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim"
-
+export SWIFT_BRIDGE_OUT_DIR="$PWD/_generated_swift"
+test -d "$SWIFT_BRIDGE_OUT_DIR" || mkdir -p "$SWIFT_BRIDGE_OUT_DIR"
 mkdir -p "/tmp/wildland/Headers"
 
 for target in $TARGETS; do
-    SWIFT_BRIDGE_OUT_DIR="$PWD/_generated_swift"  cargo build --features bindings --target $target --target-dir $WRKDIR
+    cargo build --features bindings --target $target --target-dir $WRKDIR
     cp _generated_cpp/ffi_cxx.h /tmp/wildland/Headers/ffi_cxx.h
     cp _generated_swift/ffi_swift/ffi_swift.h /tmp/wildland/Headers/ffi_swift.h
     cp _generated_swift/SwiftBridgeCore.h /tmp/wildland/Headers/SwiftBridgeCore.h
