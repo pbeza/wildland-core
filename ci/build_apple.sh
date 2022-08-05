@@ -6,8 +6,8 @@ WRKDIR="$PWD/wildland-build"
 
 
 TARGETS="x86_64-apple-darwin aarch64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim"
-export SWIFT_BRIDGE_OUT_DIR="$PWD/_generated_swift"
-export CPP_BRIDGE_OUT_DIR="$PWD/_generated_cpp"
+export SWIFT_BRIDGE_OUT_DIR="$PWD/crates/wildland-cargo-lib/_generated_swift"
+export CPP_BRIDGE_OUT_DIR="$PWD/crates/wildland-cargo-lib/_generated_cpp"
 test -d "$SWIFT_BRIDGE_OUT_DIR" || mkdir -p "$SWIFT_BRIDGE_OUT_DIR"
 test -d "$CPP_BRIDGE_OUT_DIR" || mkdir -p "$CPP_BRIDGE_OUT_DIR"
 mkdir -p "$WRKDIR/Headers"
