@@ -337,18 +337,18 @@ dependencies = [
 
 [[package]]
 name = "ffi-macro"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "a3d5bb910620c62dd1313977cbe998ddaf7c4e436970090e93fb3cbd57746e38"
+checksum = "2d06d6ceb52c77b2d15b241372507e7eebbe54c4129001955a4018773f937a55"
 dependencies = [
  "ffi-parser",
 ]
 
 [[package]]
 name = "ffi-macro-build"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "488b9cb40d841c21fc699cffb3606df55fdd9345439963e530c6cf0503a3b9f8"
+checksum = "b8503deedf8bb129b32c108537252e7df57ed0dcf2a0132cb4d1c9a133a2c3a1"
 dependencies = [
  "ffi-parser",
  "swift-bridge-build",
@@ -357,9 +357,9 @@ dependencies = [
 
 [[package]]
 name = "ffi-parser"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "f009cc8f3172964bf3bd46abf903eeebfec306f10e364bfb6ac7c7888866a8fd"
+checksum = "207c81e5c99ccb8f3e7b20135345604cd5b5df4efb7f89140cf30d9500f19643"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -654,8 +654,7 @@ dependencies = [
 [[package]]
 name = "instant"
 version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
+source = "git+https://github.com/hoodmane/instant.git?branch=emscripten-no-leading-underscore#8e4b0ed1683cb4dffdc0c132edadf1a25b914b08"
 dependencies = [
  "cfg-if",
 ]
@@ -1723,7 +1722,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.6.6"
+version = "0.6.7"
 dependencies = [
  "ffi-macro",
  "ffi-macro-build",
