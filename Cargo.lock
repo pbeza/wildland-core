@@ -1928,7 +1928,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.6.7"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "env_logger 0.9.0",
@@ -1949,11 +1949,11 @@ dependencies = [
 
 [[package]]
 name = "wildland-catlib"
-version = "0.3.2"
+version = "0.4.0"
 
 [[package]]
 name = "wildland-corex"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "hex",
  "hex-literal",
@@ -1970,7 +1970,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.4.12"
+version = "0.5.0"
 dependencies = [
  "crypto_box",
  "ed25519-dalek",
@@ -1992,11 +1992,11 @@ dependencies = [
 
 [[package]]
 name = "wildland-dfs"
-version = "0.1.2"
+version = "0.2.0"
 
 [[package]]
 name = "wildland-local-secure-storage"
-version = "0.0.6"
+version = "0.1.0"
 dependencies = [
  "rustbreak",
  "tempfile",
@@ -2006,7 +2006,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-rucli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "tracing",
@@ -2017,7 +2017,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-storage-controller-client"
-version = "0.2.7"
+version = "0.3.0"
 dependencies = [
  "dotenv",
  "http",

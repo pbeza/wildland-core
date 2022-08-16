@@ -1,6 +1,6 @@
 [package]
 name = "wildland-storage-controller-client"
-version = "0.2.7"
+version = "0.3.0"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -19,7 +19,7 @@ reqwest          = { version = "0.11.10", features = ["json"] }
 log              = { version = "0.4" }
 thiserror        = { version = "1.0.30" }
 tracing          = { version = "0.1" }
-wildland-crypto  = { version = "0.4.0", path = "../wildland-crypto", registry = "wl-dev" }
+wildland-crypto  = { version = "0.5.0", path = "../wildland-crypto", registry = "wl-dev" }
 
 [dev-dependencies]
 dotenv          = { version = "0.15.0" }
