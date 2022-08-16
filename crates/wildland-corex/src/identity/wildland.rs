@@ -27,7 +27,6 @@ impl WildlandIdentity {
         }
     }
 
-
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn get_public_key(&self) -> Vec<u8> {
         match self {

@@ -5,9 +5,9 @@ mod api;
 
 mod cargo_lib;
 mod error;
-mod logging;
 #[cfg(feature = "bindings")]
 pub mod ffi;
+mod logging;
 
 pub use api::user::{MnemonicPayload, UserApi, UserPayload};
 pub use cargo_lib::CargoLib;
