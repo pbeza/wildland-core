@@ -20,16 +20,23 @@ crate-type = ["staticlib", "lib"]
 
 
 [dependencies]
-wildland-corex = { version = "0.2.0", path = "../wildland-corex", registry = "wl-dev" }
-ffi-macro = { version = "0.2", registry = "wl-dev", optional = true }
-thiserror = "1.0.31"
-swift-bridge = { version = "0.1", optional = true }
-sha2 = "0.10.2"
-
+anyhow              = { version = "1.0" }
+env_logger          = { version = "0.9.0" }
+ffi-macro           = { version = "0.2.0", registry = "wl-dev", optional = true }
+log                 = { version = "0.4.17" }
+sha2                = { version = "0.10.2" }
+swift-bridge        = { version = "0.1", optional = true }
+thiserror           = { version = "1.0.31" }
+tracing             = { version = "0.1.36" }
+tracing-attributes  = { version = "0.1" }
+tracing-core        = { version = "0.1.29" }
+tracing-futures     = { version = "0.2.5", features = ["futures-01"] }
+tracing-log         = { version = "0.1", features = ["env_logger"] }
+tracing-subscriber  = { version = "0.3", features = ["json", "env-filter", "fmt", "std"] }
+wildland-corex      = { version = "0.2.0", path = "../wildland-corex", registry = "wl-dev" }
 
 [package.metadata.workspaces]
 independent = true
 
-
 [build-dependencies]
-ffi-macro-build = { version = "0.2", registry = "wl-dev", optional = true }
+ffi-macro-build     = { version = "0.2", registry = "wl-dev", optional = true }

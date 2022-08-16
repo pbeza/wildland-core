@@ -26,6 +26,7 @@ use hkdf::Hkdf;
 use sha2::Sha256;
 
 /// Generate a new random mnemonic phrase
+#[tracing::instrument(level = "debug", ret)]
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     Mnemonic::new(
         MnemonicType::for_word_count(MNEMONIC_LEN)
@@ -46,6 +47,7 @@ pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     })
 }
 
+#[tracing::instrument(level = "debug", ret)]
 pub(crate) fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
     let input_key_material = seed;
     let info = [87, 105, 108, 100, 108, 97, 110, 100]; // list(b'Wildland')

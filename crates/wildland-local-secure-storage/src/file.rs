@@ -12,6 +12,7 @@ pub struct FileLSS {
 }
 
 impl FileLSS {
+    #[tracing::instrument(level = "debug", ret)]
     pub fn new(path: PathBuf) -> LSSResult<Self> {
         let db = PathDatabase::load_from_path_or_default(path)?;
         Ok(Self { db: Box::new(db) })
@@ -19,22 +20,26 @@ impl FileLSS {
 }
 
 impl LocalSecureStorage for FileLSS {
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     fn insert(&self, key: String, value: Vec<u8>) -> LSSResult<Option<Vec<u8>>> {
         let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
         self.db.write(|db| db.insert(key, value))?;
         Ok(prev_value)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     fn get(&self, key: String) -> LSSResult<Option<Vec<u8>>> {
         let result = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
         Ok(result)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     fn contains_key(&self, key: String) -> LSSResult<bool> {
         let result = self.db.read(|db| db.contains_key(&key))?;
         Ok(result)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     fn keys(&self) -> LSSResult<Vec<String>> {
         let result: Vec<String> = self
             .db
@@ -42,17 +47,20 @@ impl LocalSecureStorage for FileLSS {
         Ok(result)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     fn remove(&self, key: String) -> LSSResult<Option<Vec<u8>>> {
         let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
         self.db.write(|db| db.remove(&key))?;
         Ok(prev_value)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     fn len(&self) -> LSSResult<usize> {
         let result = self.db.read(|db| db.len())?;
         Ok(result)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     fn is_empty(&self) -> LSSResult<bool> {
         let result = self.db.read(|db| db.is_empty())?;
         Ok(result)
@@ -65,6 +73,7 @@ mod tests {
     use crate::file::FileLSS;
     use tempfile::tempdir;
 
+    #[tracing::instrument(level = "debug", ret)]
     fn create_file_lss() -> FileLSS {
         let dir = tempdir().expect("Could not create temporary dir");
         let file_path = dir.path().join("lss-test.yaml");

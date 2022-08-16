@@ -4,15 +4,18 @@ use crate::{CoreXError, CorexResult};
 
 use super::wildland::WildlandIdentity;
 
+#[derive(Debug)]
 pub struct MasterIdentity {
     crypto_identity: Option<CryptoIdentity>,
 }
 
 impl MasterIdentity {
+    #[tracing::instrument(level = "debug", ret)]
     pub fn new(crypto_identity: Option<CryptoIdentity>) -> Self {
         Self { crypto_identity }
     }
 
+    #[tracing::instrument(level = "debug", ret)]
     pub fn create_forest_identity(&self, index: u64) -> CorexResult<WildlandIdentity> {
         let keypair = self
             .crypto_identity
@@ -28,6 +31,7 @@ impl MasterIdentity {
         Ok(identity)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn create_device_identity(&self, name: String) -> CorexResult<WildlandIdentity> {
         let keypair = new_device_identity();
         let identity = WildlandIdentity::Device(name, keypair);

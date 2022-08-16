@@ -27,13 +27,14 @@ pub struct UsageReq {
     pub tx: i64,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub(crate) struct SCMetricsClient {
     pub(crate) base_url: String,
     pub(crate) client: Client,
 }
 
 impl SCMetricsClient {
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub(crate) async fn request_metrics(
         &self,
         request: RequestMetricsReq,
