@@ -41,8 +41,6 @@ pub struct UserApi {
 impl UserApi {
     #[tracing::instrument(level = "debug", ret)]
     pub fn new(user_service: UserService) -> Self {
-        tracing::trace!("initialized subscriber");
-        tracing::trace!("creating UserService");
         Self { user_service }
     }
 
@@ -54,23 +52,25 @@ impl UserApi {
             .map(MnemonicPayload::from)
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip(self, entropy))]
     pub fn create_user_from_entropy(
         &self,
         entropy: Vec<u8>,
         device_name: String,
     ) -> CargoLibResult<()> {
+        tracing::debug!("creating new user");
         self.user_service
             .create_user(CreateUserInput::Entropy(entropy), device_name)?;
         Ok(())
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn create_user_from_mnemonic(
         &self,
         mnemonic: &MnemonicPayload,
         device_name: String,
     ) -> CargoLibResult<()> {
+        tracing::debug!("creating new user");
         self.user_service.create_user(
             CreateUserInput::Mnemonic(Box::new(mnemonic.0.clone())),
             device_name,

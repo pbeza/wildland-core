@@ -10,7 +10,6 @@ pub fn generate_random_mnemonic() -> CorexResult<MnemonicPhrase> {
     identity::generate_random_mnemonic().map_err(CoreXError::from)
 }
 
-#[derive(Debug)]
 pub enum CreateUserInput {
     Mnemonic(Box<MnemonicPhrase>),
     Entropy(Vec<u8>),
@@ -27,7 +26,7 @@ impl UserService {
         Self { lss_service }
     }
 
-    #[tracing::instrument(level = "debug", ret)]
+    #[tracing::instrument(level = "debug", skip(input, self))]
     pub fn create_user(&self, input: CreateUserInput, device_name: String) -> CorexResult<()> {
         if self.user_exists()? {
             return Err(CoreXError::UserAlreadyExists);

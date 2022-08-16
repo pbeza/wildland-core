@@ -22,12 +22,13 @@ pub struct LSSService {
 
 #[cfg_attr(test, automock)]
 impl LSSService {
-    #[tracing::instrument(level = "debug", ret)]
+    #[tracing::instrument(level = "debug")]
     pub fn new(lss: Rc<dyn LocalSecureStorage>) -> Self {
+        tracing::debug!("created new instance");
         Self { lss }
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip(self, wildland_identity))]
     pub fn save(&self, wildland_identity: WildlandIdentity) -> CorexResult<Option<Vec<u8>>> {
         let prev_value = self.lss.insert(
             wildland_identity.to_string(),
@@ -36,7 +37,7 @@ impl LSSService {
         Ok(prev_value)
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_default_forest(&self) -> CorexResult<Option<WildlandIdentity>> {
         let default_forest_value = self.lss.get(DEFAULT_FOREST_KEY.to_string())?;
         if default_forest_value.is_none() {

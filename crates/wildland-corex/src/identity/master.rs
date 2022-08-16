@@ -10,12 +10,13 @@ pub struct MasterIdentity {
 }
 
 impl MasterIdentity {
-    #[tracing::instrument(level = "debug", ret)]
+    #[tracing::instrument(level = "debug", skip(crypto_identity))]
     pub fn new(crypto_identity: Option<CryptoIdentity>) -> Self {
+        tracing::debug!("creating new identity");
         Self { crypto_identity }
     }
 
-    #[tracing::instrument(level = "debug", ret)]
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn create_forest_identity(&self, index: u64) -> CorexResult<WildlandIdentity> {
         let keypair = self
             .crypto_identity
@@ -31,7 +32,7 @@ impl MasterIdentity {
         Ok(identity)
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn create_device_identity(&self, name: String) -> CorexResult<WildlandIdentity> {
         let keypair = new_device_identity();
         let identity = WildlandIdentity::Device(name, keypair);
