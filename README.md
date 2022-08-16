@@ -24,3 +24,15 @@ wildland-corex = { version = "0.1.0", path = "../wildland-corex", registry = "wl
 ### Publishing to the registry
 
 This registry does not have a web frontend. In order to get the publish token, use the following endpoint: [https://crates.wildland.dev/me](https://crates.wildland.dev/me)
+
+### Logging and Debugging
+
+Logs are gathered automatically. Current log scrubber implementations:
+
+- Console
+
+To initiate logging, following env must be enabled:
+`RUST_LOG=XXX`
+where XXX is one of `{ trace, debug, info, warn, error, off }`
+
+By default, logging is disabled, it is highly encouraged to set `RUST_LOG=trace` or `RUST_LOG=debug` permamently while working on the library.
