@@ -48,7 +48,7 @@ impl SigningKeypair {
         Self(ed25519_dalek::Keypair::generate(csprng))
     }
 
-    #[tracing::instrument(level = "debug", skip(pubkey,seckey))]
+    #[tracing::instrument(level = "debug", skip(pubkey, seckey))]
     pub fn try_from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Result<Self, CryptoError> {
         Ok(Self(
             ed25519_dalek::Keypair::from_bytes([seckey, pubkey].concat().as_slice())

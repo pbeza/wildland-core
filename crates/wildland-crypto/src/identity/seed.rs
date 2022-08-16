@@ -47,7 +47,7 @@ pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     })
 }
 
-#[tracing::instrument(level = "debug", ret, skip(seed,target))]
+#[tracing::instrument(level = "debug", ret, skip(seed, target))]
 pub(crate) fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
     let input_key_material = seed;
     let info = [87, 105, 108, 100, 108, 97, 110, 100]; // list(b'Wildland')

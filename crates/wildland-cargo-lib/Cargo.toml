@@ -29,6 +29,7 @@ swift-bridge        = { version = "0.1", optional = true }
 thiserror           = { version = "1.0.31" }
 tracing             = { version = "0.1.36" }
 tracing-attributes  = { version = "0.1" }
+tracing-appender    = { version = "0.2" }
 tracing-core        = { version = "0.1.29" }
 tracing-futures     = { version = "0.2.5", features = ["futures-01"] }
 tracing-log         = { version = "0.1", features = ["env_logger"] }

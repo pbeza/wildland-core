@@ -133,7 +133,7 @@ impl Identity {
     /// harder.
     /// Please note that this keys are not scoped to particular forest,
     /// since they are supposed to be used only once anyway.
-    #[tracing::instrument(level = "debug",skip(self))]
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn single_use_encryption_keypair(&self, index: u64) -> EncryptingKeypair {
         self.derive_encryption_keypair(&single_use_encryption_key_path(index))
     }
@@ -141,12 +141,12 @@ impl Identity {
     /// Deterministically derive encryption keypair that can be used
     /// to backup secrets with intent of using them later, during recovery process.
     /// This keypair is not scoped to the forest. It should be used only internally.
-    #[tracing::instrument(level = "debug",skip(self))]
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn backup_keypair(&self) -> EncryptingKeypair {
         self.derive_encryption_keypair(&backup_key_path())
     }
 
-    #[tracing::instrument(level = "debug", ret,skip(self))]
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn get_mnemonic(&self) -> MnemonicPhrase {
         self.words.clone()
     }
