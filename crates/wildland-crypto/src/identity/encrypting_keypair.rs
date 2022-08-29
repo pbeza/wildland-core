@@ -11,7 +11,7 @@ pub struct EncryptingKeypair {
 }
 
 impl EncryptingKeypair {
-    // TODO unused method
+    // TODO:WILX-209 unused method
     fn _from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self {
         Self {
             secret: EncryptionSecretKey::from(seckey),
@@ -19,7 +19,7 @@ impl EncryptingKeypair {
         }
     }
 
-    // TODO unused method
+    // TODO:WILX-209 unused method
     fn _from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
         let pubkey = bytes_key_from_str(public_key)?;
         let seckey = bytes_key_from_str(secret_key)?;

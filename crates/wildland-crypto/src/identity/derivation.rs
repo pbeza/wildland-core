@@ -181,7 +181,7 @@ impl Identity {
 
         // drop both the chain-code from xprv and last 32 bytes
         let sec_key = *derived_extended_seckey.secret_key.as_bytes();
-        SigningKeypair::try_from_secret_bytes(&sec_key).unwrap() // TODO handle unwrap
+        SigningKeypair::try_from_secret_bytes(&sec_key).unwrap() // TODO:WILX-209 handle unwrap
     }
 
     fn derive_encryption_keypair(&self, path: &str) -> EncryptingKeypair {
