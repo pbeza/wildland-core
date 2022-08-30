@@ -18,13 +18,14 @@ pub struct SignatureRequestRes {
     pub message: String,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub(crate) struct SCSignatureClient {
     pub(crate) base_url: String,
     pub(crate) client: Client,
 }
 
 impl SCSignatureClient {
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub(crate) async fn signature_request(
         &self,
         request: SignatureRequestReq,

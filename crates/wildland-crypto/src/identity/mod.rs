@@ -36,6 +36,7 @@ pub use device::new_device_identity;
 pub const MNEMONIC_LEN: usize = 12;
 pub type MnemonicPhrase = [String; MNEMONIC_LEN];
 
+#[tracing::instrument(level = "debug", ret)]
 fn bytes_key_from_str(key: &str) -> Result<[u8; 32], CryptoError> {
     <[u8; 32]>::from_hex(key).map_err(|_| CryptoError::KeyParsingError(key.len()))
 }
