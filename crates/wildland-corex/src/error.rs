@@ -26,6 +26,7 @@ pub enum CoreXError {
 /// The error object needs to be cloned from the result object to be safely propagated through ffi bindings.
 // TODO Remove it if https://wildlandio.atlassian.net/browse/WILX-135 is finished and exceptions are thrown in native platforms (Clone not needed anymore)
 impl From<LSSError> for CoreXError {
+    #[tracing::instrument(level = "debug", ret)]
     fn from(lss_err: LSSError) -> Self {
         match lss_err {
             LSSError::FileLSSError(err) => CoreXError::LSSError(format!("{:?}", err)),
@@ -34,6 +35,7 @@ impl From<LSSError> for CoreXError {
 }
 
 impl From<CryptoError> for CoreXError {
+    #[tracing::instrument(level = "debug", ret)]
     fn from(crypto_err: CryptoError) -> Self {
         match crypto_err {
             CryptoError::MnemonicGenerationError(msg) => CoreXError::MnemonicGenerationError(msg),
