@@ -12,7 +12,8 @@ pub struct EncryptingKeypair {
 
 impl EncryptingKeypair {
     // TODO:WILX-209 unused method
-    fn _from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self {
+    #[tracing::instrument(level = "debug", ret)]
+    fn from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self {
         Self {
             secret: EncryptionSecretKey::from(seckey),
             public: EncryptionPublicKey::from(pubkey),
@@ -20,14 +21,16 @@ impl EncryptingKeypair {
     }
 
     // TODO:WILX-209 unused method
-    fn _from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
+    #[tracing::instrument(level = "debug", ret)]
+    fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
         let pubkey = bytes_key_from_str(public_key)?;
         let seckey = bytes_key_from_str(secret_key)?;
-        Ok(Self::_from_bytes_slices(pubkey, seckey))
+        Ok(Self::from_bytes_slices(pubkey, seckey))
     }
 
     /// Creates a randomly generated (non-deterministic) encryption keypair.
     /// This keypair can be used as Single-use Transient Encryption Keypair (STEK).
+    #[tracing::instrument(level = "debug", ret)]
     pub fn new() -> Self {
         let mut rng = rand_core::OsRng;
         let secret = EncryptionSecretKey::generate(&mut rng);
@@ -37,6 +40,7 @@ impl EncryptingKeypair {
 }
 
 impl Default for EncryptingKeypair {
+    #[tracing::instrument(level = "debug", ret)]
     fn default() -> Self {
         Self::new()
     }

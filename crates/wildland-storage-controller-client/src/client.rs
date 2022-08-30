@@ -12,12 +12,13 @@ use crate::{
     storage::{CreateStorageRes, SCStorageClient},
 };
 
+#[derive(Debug)]
 pub struct Credentials {
     pub id: String,
     pub secret: String,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct StorageControllerClient {
     // TODO:WILX-210 credentials are provided here only for test purposes. Remove it and get real id and secret assigned to a lease
     pub credential_id: String,
@@ -29,6 +30,7 @@ pub struct StorageControllerClient {
 }
 
 impl StorageControllerClient {
+    #[tracing::instrument(level = "debug", ret)]
     pub fn new(base_url: &str) -> Self {
         let client = Client::new();
         Self {
@@ -52,12 +54,14 @@ impl StorageControllerClient {
         }
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub async fn create_storage(&self) -> Result<CreateStorageRes, StorageControllerClientError> {
         let response = self.sc_storage_client.create_storage().await?;
         let response_json = handle(response).await?.json().await?;
         Ok(response_json)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub async fn create_credentials(
         &self,
         request: CreateCredentialsReq,
@@ -71,6 +75,7 @@ impl StorageControllerClient {
         Ok(response_json)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self, request))]
     pub async fn request_signature(
         &self,
         request: SignatureRequestReq,
@@ -84,6 +89,7 @@ impl StorageControllerClient {
         Ok(response_json)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self, request))]
     pub async fn request_metrics(
         &self,
         request: RequestMetricsReq,
@@ -97,19 +103,23 @@ impl StorageControllerClient {
         Ok(response_json)
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn set_credentials(&mut self, credentials: Credentials) {
         self.credential_id = credentials.id;
         self.credential_secret = credentials.secret;
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn get_credential_id(&self) -> &str {
         &self.credential_id
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn get_credential_secret(&self) -> &str {
         &self.credential_secret
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self, request))]
     fn sign_request<T>(&self, request: &T) -> Result<String, StorageControllerClientError>
     where
         T: Serialize,

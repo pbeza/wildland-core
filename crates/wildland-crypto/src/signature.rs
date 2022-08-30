@@ -23,13 +23,16 @@ use hex::{encode, ToHex};
 
 use crate::error::CryptoError;
 
+#[derive(Debug)]
 pub struct Signature(pub ed25519_dalek::Signature);
 
 impl Signature {
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn encode_signature(self) -> String {
         self.0.encode_hex::<String>()
     }
 
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn verify(&self, msg: &[u8], public_key: &[u8; 32]) -> Result<(), CryptoError> {
         PublicKey::from_bytes(public_key)
             .unwrap() // TODO:WILX-210 remove unwrap

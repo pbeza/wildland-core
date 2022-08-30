@@ -3,6 +3,7 @@ use reqwest::{Response, StatusCode};
 
 use crate::error::StorageControllerClientError::HttpError;
 
+#[tracing::instrument(level = "debug", ret)]
 pub(crate) async fn handle(response: Response) -> Result<Response, StorageControllerClientError> {
     match response.status() {
         StatusCode::OK => Ok(response),

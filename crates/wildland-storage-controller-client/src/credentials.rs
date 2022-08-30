@@ -22,13 +22,14 @@ pub struct CreateCredentialsRes {
     pub credentials_secret: String,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub(crate) struct SCCredentialsClient {
     pub(crate) base_url: String,
     pub(crate) client: Client,
 }
 
 impl SCCredentialsClient {
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub(crate) async fn create_credentials(
         &self,
         request: CreateCredentialsReq,
@@ -54,6 +55,7 @@ mod tests {
 
     use super::*;
 
+    #[tracing::instrument]
     fn client() -> SCCredentialsClient {
         SCCredentialsClient {
             base_url: server_url(),
