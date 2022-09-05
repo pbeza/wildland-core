@@ -26,7 +26,7 @@ impl<E: Display + Clone> ExceptionTrait for CreationError<E> {
     }
 
     fn domain(&self) -> WildlandXDomain {
-        WildlandXDomain::CoreX
+        WildlandXDomain::CoreX // TODO
     }
 }
 
@@ -47,6 +47,6 @@ impl<E: Display + Clone> ExceptionTrait for RetrievalError<E> {
     }
 
     fn domain(&self) -> WildlandXDomain {
-        WildlandXDomain::CoreX
+        WildlandXDomain::CoreX // TODO
     }
 }

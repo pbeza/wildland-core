@@ -77,8 +77,9 @@ impl TryFrom<&MnemonicPhrase> for Identity {
     /// Only English language is accepted.
     #[tracing::instrument(level = "debug")]
     fn try_from(mnemonic_phrase: &MnemonicPhrase) -> Result<Self, Self::Error> {
-        let mnemonic = Mnemonic::from_phrase(&mnemonic_phrase.join(" "), English)
-            .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?;
+        let mnemonic =
+            Mnemonic::from_phrase(&mnemonic_phrase.join(" "), English) // TODO WILX-220 Memory leak
+                .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?;
 
         Self::from_mnemonic(mnemonic)
     }
@@ -205,7 +206,7 @@ impl Identity {
         let derived_extended_seckey = self.derive_private_key_from_path(path);
 
         // Curve25519 keys are created from random bytes. Here we just trim.
-        // // As for the key clamping - it is handled by crypto_box::SecretKey
+        // As for the key clamping - it is handled by crypto_box::SecretKey
         let curve25519_sk =
             EncryptionSecretKey::from(*derived_extended_seckey.secret_key.as_bytes());
         let curve25519_pk = curve25519_sk.public_key();

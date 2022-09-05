@@ -4,4 +4,4 @@ mod file;
 pub use api::LocalSecureStorage;
 pub use file::FileLSS;
 
-pub type LSSResult<T> = Result<T, String>; // TODO string?
+pub type LSSResult<T> = Result<T, String>;

@@ -15,6 +15,8 @@ pub enum UserCreationError {
     ForestIdentityCreationError(&'static str),
     #[error("Local Secure Storage error: {0}: {1}")]
     LssError(&'static str, String),
+    #[error("Too low entropy")]
+    EntropyTooLow,
 }
 
 impl From<CryptoError> for UserCreationError {
@@ -27,6 +29,7 @@ impl From<CryptoError> for UserCreationError {
             CryptoError::IdentityGenerationError(_) => {
                 UserCreationError::IdentityGenerationError(crypto_err)
             }
+            CryptoError::EntropyTooLow => UserCreationError::EntropyTooLow,
             _ => panic!(
                 "Unexpected error happened while converting {crypto_err:?} into UserCreationError"
             ),
@@ -48,8 +51,6 @@ pub enum CoreXError {
     CannotCreateForestIdentityError(String),
     #[error("Identity read error: {0}")]
     IdentityReadError(String),
-    #[error("Too low entropy")]
-    EntropyTooLow,
     #[error("LSS Error: {0}")]
     LSSError(String),
     #[error("CoreX error: {0}")]
@@ -60,7 +61,6 @@ impl From<CryptoError> for CoreXError {
     #[tracing::instrument(level = "debug", ret)]
     fn from(crypto_err: CryptoError) -> Self {
         match crypto_err {
-            CryptoError::EntropyTooLow => CoreXError::EntropyTooLow,
             CryptoError::KeyParsingError(_) => todo!(),
             CryptoError::MessageVerificationError(_) => todo!(),
             CryptoError::InvalidSignatureBytesError(_) => todo!(),

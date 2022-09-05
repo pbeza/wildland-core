@@ -14,7 +14,7 @@ pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
 }
 
 pub enum CreateUserInput {
-    Mnemonic(Box<MnemonicPhrase>), // TODO why is this a box
+    Mnemonic(MnemonicPhrase),
     Entropy(Vec<u8>),
 }
 
@@ -42,10 +42,7 @@ impl UserService {
             return Err(UserCreationError::UserAlreadyExists);
         }
         let crypto_identity = match input {
-            CreateUserInput::Mnemonic(mnemonic) => {
-                let mnemonic = *mnemonic;
-                Identity::try_from(&mnemonic)?
-            }
+            CreateUserInput::Mnemonic(mnemonic) => Identity::try_from(&mnemonic)?,
             CreateUserInput::Entropy(entropy) => Identity::try_from(entropy.as_slice())?,
         };
         let master_identity = MasterIdentity::new(Some(crypto_identity));
