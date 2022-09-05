@@ -7,7 +7,7 @@ pub use error::*;
 pub use identity::{master::*, wildland::*};
 pub use lss::*;
 pub use user::{generate_random_mnemonic, CreateUserInput, UserService};
-pub use wildland_crypto::identity::MnemonicPhrase;
+pub use wildland_crypto::{error::CryptoError, identity::MnemonicPhrase};
 pub use wildland_local_secure_storage::{FileLSS, LocalSecureStorage};
 
 pub type CorexResult<T> = Result<T, CoreXError>;

@@ -1,17 +1,52 @@
-use thiserror::Error;
-use wildland_corex::CoreXError;
+use std::fmt::Display;
 
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum CargoLibError {
-    #[error("CoreX error")]
-    CoreX(#[from] CoreXError),
+#[derive(Debug, Clone)]
+#[repr(C)]
+pub enum WildlandXDomain {
+    CoreX,
 }
 
-impl CargoLibError {
-    // TODO error interface specification: what do we care about? do we want codes or some string kind?
-    pub fn code(&self) -> u32 {
+pub trait ExceptionTrait {
+    fn reason(&self) -> String;
+    fn domain(&self) -> WildlandXDomain;
+}
+
+pub type CreationResult<T, E> = Result<T, CreationError<E>>;
+#[derive(Debug, Clone)]
+#[repr(C)]
+pub enum CreationError<T: Clone> {
+    NotCreated(T),
+}
+
+impl<E: Display + Clone> ExceptionTrait for CreationError<E> {
+    fn reason(&self) -> String {
         match self {
-            CargoLibError::CoreX(_inner) => 100, // TODO codes
+            Self::NotCreated(e) => e.to_string(),
         }
+    }
+
+    fn domain(&self) -> WildlandXDomain {
+        WildlandXDomain::CoreX
+    }
+}
+
+pub type RetrievalResult<T, E> = Result<T, RetrievalError<E>>;
+#[derive(Debug, Clone)]
+#[repr(C)]
+pub enum RetrievalError<E: Clone> {
+    NotFound(String),
+    Unexpected(E),
+}
+
+impl<E: Display + Clone> ExceptionTrait for RetrievalError<E> {
+    fn reason(&self) -> String {
+        match self {
+            RetrievalError::NotFound(s) => s.to_string(),
+            RetrievalError::Unexpected(e) => e.to_string(),
+        }
+    }
+
+    fn domain(&self) -> WildlandXDomain {
+        WildlandXDomain::CoreX
     }
 }

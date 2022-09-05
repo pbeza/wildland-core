@@ -14,7 +14,7 @@ pub struct FileLSS {
 impl FileLSS {
     #[tracing::instrument(level = "debug", ret)]
     pub fn new(path: PathBuf) -> LSSResult<Self> {
-        let db = PathDatabase::load_from_path_or_default(path)?;
+        let db = PathDatabase::load_from_path_or_default(path).map_err(|e| e.to_string())?;
         Ok(Self { db: Box::new(db) })
     }
 }
@@ -22,48 +22,57 @@ impl FileLSS {
 impl LocalSecureStorage for FileLSS {
     #[tracing::instrument(level = "debug", ret, skip(self))]
     fn insert(&self, key: String, value: Vec<u8>) -> LSSResult<Option<Vec<u8>>> {
-        let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
-        self.db.write(|db| db.insert(key, value))?;
+        let prev_value = self
+            .db
+            .read(|db| db.get(&key).map(|v| v.to_vec()))
+            .map_err(|e| e.to_string())?;
+        self.db
+            .write(|db| db.insert(key, value))
+            .map_err(|e| e.to_string())?;
         Ok(prev_value)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     fn get(&self, key: String) -> LSSResult<Option<Vec<u8>>> {
-        let result = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
-        Ok(result)
+        self.db
+            .read(|db| db.get(&key).map(|v| v.to_vec()))
+            .map_err(|e| e.to_string())
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     fn contains_key(&self, key: String) -> LSSResult<bool> {
-        let result = self.db.read(|db| db.contains_key(&key))?;
-        Ok(result)
+        self.db
+            .read(|db| db.contains_key(&key))
+            .map_err(|e| e.to_string())
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     fn keys(&self) -> LSSResult<Vec<String>> {
-        let result: Vec<String> = self
-            .db
-            .read(|db| db.keys().map(|k| k.to_string()).collect())?;
-        Ok(result)
+        self.db
+            .read(|db| db.keys().map(|k| k.to_string()).collect())
+            .map_err(|e| e.to_string())
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     fn remove(&self, key: String) -> LSSResult<Option<Vec<u8>>> {
-        let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
-        self.db.write(|db| db.remove(&key))?;
+        let prev_value = self
+            .db
+            .read(|db| db.get(&key).map(|v| v.to_vec()))
+            .map_err(|e| e.to_string())?;
+        self.db
+            .write(|db| db.remove(&key))
+            .map_err(|e| e.to_string())?;
         Ok(prev_value)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     fn len(&self) -> LSSResult<usize> {
-        let result = self.db.read(|db| db.len())?;
-        Ok(result)
+        self.db.read(|db| db.len()).map_err(|e| e.to_string())
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     fn is_empty(&self) -> LSSResult<bool> {
-        let result = self.db.read(|db| db.is_empty())?;
-        Ok(result)
+        self.db.read(|db| db.is_empty()).map_err(|e| e.to_string())
     }
 }
 

@@ -1,5 +1,8 @@
-use crate::{CargoLibError, CargoLibResult};
-use wildland_corex::{generate_random_mnemonic, CreateUserInput, MnemonicPhrase, UserService};
+use crate::error::{CreationError, CreationResult, RetrievalError, RetrievalResult};
+use wildland_corex::{
+    generate_random_mnemonic, CreateUserInput, CryptoError, ForestRetrievalError, MnemonicPhrase,
+    UserCreationError, UserService,
+};
 
 #[derive(Debug, Clone)]
 pub struct MnemonicPayload(MnemonicPhrase);
@@ -44,11 +47,11 @@ impl UserApi {
         Self { user_service }
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn generate_mnemonic(&self) -> CargoLibResult<MnemonicPayload> {
-        tracing::trace!("generating mnemonic");
+    // #[tracing::instrument(level = "debug", ret, skip(self))]
+    pub fn generate_mnemonic(&self) -> CreationResult<MnemonicPayload, CryptoError> {
+        // tracing::trace!("generating mnemonic");
         generate_random_mnemonic()
-            .map_err(CargoLibError::from)
+            .map_err(CreationError::NotCreated)
             .map(MnemonicPayload::from)
     }
 
@@ -57,11 +60,11 @@ impl UserApi {
         &self,
         entropy: Vec<u8>,
         device_name: String,
-    ) -> CargoLibResult<()> {
+    ) -> CreationResult<(), UserCreationError> {
         tracing::debug!("creating new user");
         self.user_service
-            .create_user(CreateUserInput::Entropy(entropy), device_name)?;
-        Ok(())
+            .create_user(CreateUserInput::Entropy(entropy), device_name)
+            .map_err(CreationError::NotCreated)
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
@@ -69,20 +72,27 @@ impl UserApi {
         &self,
         mnemonic: &MnemonicPayload,
         device_name: String,
-    ) -> CargoLibResult<()> {
+    ) -> CreationResult<(), UserCreationError> {
         tracing::debug!("creating new user");
-        self.user_service.create_user(
-            CreateUserInput::Mnemonic(Box::new(mnemonic.0.clone())),
-            device_name,
-        )?;
-        Ok(())
+        self.user_service
+            .create_user(
+                CreateUserInput::Mnemonic(Box::new(mnemonic.0.clone())),
+                device_name,
+            )
+            .map_err(CreationError::NotCreated)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn get_user(&self) -> CargoLibResult<Option<UserPayload>> {
+    pub fn get_user(&self) -> RetrievalResult<UserPayload, ForestRetrievalError> {
         self.user_service
             .user_exists()
-            .map(|exist| if exist { Some(UserPayload) } else { None })
-            .map_err(CargoLibError::from)
+            .map_err(RetrievalError::Unexpected)
+            .and_then(|exist| {
+                if exist {
+                    Ok(UserPayload)
+                } else {
+                    Err(RetrievalError::NotFound("User not found.".to_string()))
+                }
+            })
     }
 }

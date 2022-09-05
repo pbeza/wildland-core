@@ -1,7 +1,5 @@
 use wildland_crypto::identity::{new_device_identity, Identity as CryptoIdentity};
 
-use crate::{CoreXError, CorexResult};
-
 use super::wildland::WildlandIdentity;
 
 #[derive(Debug)]
@@ -17,27 +15,23 @@ impl MasterIdentity {
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn create_forest_identity(&self, index: u64) -> CorexResult<WildlandIdentity> {
+    pub fn create_forest_identity(&self, index: u64) -> Result<WildlandIdentity, &'static str> {
         let keypair = self
             .crypto_identity
             .as_ref()
             .map(|identity| identity.forest_keypair(index))
-            .ok_or_else(|| {
-                CoreXError::CannotCreateForestIdentityError(
-                    "Crypto identity is required to create a new forest".to_string(),
-                )
-            })?;
+            .ok_or("Crypto identity is required to create a new forest")?;
         let identity = WildlandIdentity::Forest(index, keypair);
 
         Ok(identity)
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn create_device_identity(&self, name: String) -> CorexResult<WildlandIdentity> {
+    pub fn create_device_identity(&self, name: String) -> WildlandIdentity {
         let keypair = new_device_identity();
         let identity = WildlandIdentity::Device(name, keypair);
 
-        Ok(identity)
+        identity
     }
 }
 

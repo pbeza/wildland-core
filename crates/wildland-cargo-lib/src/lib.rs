@@ -1,8 +1,4 @@
-use crate::error::CargoLibError;
-use std::rc::Rc;
-
 mod api;
-
 mod cargo_lib;
 mod error;
 #[cfg(feature = "bindings")]
@@ -11,16 +7,16 @@ mod logging;
 
 pub use api::user::{MnemonicPayload, UserApi, UserPayload};
 pub use cargo_lib::CargoLib;
-
+use error::{CreationError, CreationResult};
+use std::rc::Rc;
 use wildland_corex::{create_file_lss, LSSService, UserService};
-
-pub type CargoLibResult<T> = Result<T, CargoLibError>;
 
 // TODO change lss_path to &dyn LocalSecureStorage and pass here native lss implementation after https://wildlandio.atlassian.net/browse/WILX-100 is finished
 #[tracing::instrument]
-pub fn create_cargo_lib(lss_path: String) -> CargoLibResult<CargoLib> {
-    _ = logging::init_subscriber();
-    let lss = Rc::new(create_file_lss(lss_path)?);
+pub fn create_cargo_lib(lss_path: String) -> CreationResult<CargoLib, String> {
+    _ = logging::init_subscriber(); // TODO MEMLEAK
+    let file_lss = create_file_lss(lss_path).map_err(CreationError::NotCreated)?;
+    let lss = Rc::new(file_lss);
     let lss_service = Rc::new(LSSService::new(lss));
     let user_service = UserService::new(lss_service);
     let user_api = UserApi::new(user_service);

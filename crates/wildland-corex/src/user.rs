@@ -1,17 +1,20 @@
-use crate::{CoreXError, CorexResult, MasterIdentity};
+use crate::{ForestRetrievalError, MasterIdentity, UserCreationError};
 use mockall_double::double;
 use std::rc::Rc;
-use wildland_crypto::identity::{self, Identity, MnemonicPhrase};
+use wildland_crypto::{
+    error::CryptoError,
+    identity::{self, Identity, MnemonicPhrase},
+};
 
 #[double]
 use crate::LSSService;
 
-pub fn generate_random_mnemonic() -> CorexResult<MnemonicPhrase> {
-    identity::generate_random_mnemonic().map_err(CoreXError::from)
+pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
+    identity::generate_random_mnemonic()
 }
 
 pub enum CreateUserInput {
-    Mnemonic(Box<MnemonicPhrase>),
+    Mnemonic(Box<MnemonicPhrase>), // TODO why is this a box
     Entropy(Vec<u8>),
 }
 
@@ -27,9 +30,16 @@ impl UserService {
     }
 
     #[tracing::instrument(level = "debug", skip(input, self))]
-    pub fn create_user(&self, input: CreateUserInput, device_name: String) -> CorexResult<()> {
-        if self.user_exists()? {
-            return Err(CoreXError::UserAlreadyExists);
+    pub fn create_user(
+        &self,
+        input: CreateUserInput,
+        device_name: String,
+    ) -> Result<(), UserCreationError> {
+        if self
+            .user_exists()
+            .map_err(UserCreationError::ForestRetrievalError)?
+        {
+            return Err(UserCreationError::UserAlreadyExists);
         }
         let crypto_identity = match input {
             CreateUserInput::Mnemonic(mnemonic) => {
@@ -39,16 +49,22 @@ impl UserService {
             CreateUserInput::Entropy(entropy) => Identity::try_from(entropy.as_slice())?,
         };
         let master_identity = MasterIdentity::new(Some(crypto_identity));
-        let default_forest_identity = master_identity.create_forest_identity(0)?;
-        let device_identity = master_identity.create_device_identity(device_name)?;
+        let default_forest_identity = master_identity
+            .create_forest_identity(0)
+            .map_err(UserCreationError::ForestIdentityCreationError)?;
+        let device_identity = master_identity.create_device_identity(device_name);
 
-        self.lss_service.save(default_forest_identity)?;
-        self.lss_service.save(device_identity)?;
+        self.lss_service
+            .save(default_forest_identity)
+            .map_err(|e| UserCreationError::LssError("Could not store forest identity", e))?;
+        self.lss_service
+            .save(device_identity)
+            .map_err(|e| UserCreationError::LssError("Could not store device identity", e))?;
         Ok(())
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn user_exists(&self) -> CorexResult<bool> {
+    pub fn user_exists(&self) -> Result<bool, ForestRetrievalError> {
         self.lss_service
             .get_default_forest()
             .map(|forest| forest.is_some())

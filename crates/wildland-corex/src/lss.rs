@@ -7,12 +7,12 @@ use mockall::automock;
 
 use wildland_local_secure_storage::{FileLSS, LocalSecureStorage};
 
-use crate::{CoreXError, CorexResult, WildlandIdentity};
+use crate::{ForestRetrievalError, WildlandIdentity};
 
 pub static DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
 
-pub fn create_file_lss(path: String) -> CorexResult<FileLSS> {
-    FileLSS::new(PathBuf::from(path)).map_err(CoreXError::from)
+pub fn create_file_lss(path: String) -> Result<FileLSS, String> {
+    FileLSS::new(PathBuf::from(path))
 }
 
 #[derive(Clone, Debug)]
@@ -29,22 +29,25 @@ impl LSSService {
     }
 
     #[tracing::instrument(level = "debug", skip(self, wildland_identity))]
-    pub fn save(&self, wildland_identity: WildlandIdentity) -> CorexResult<Option<Vec<u8>>> {
-        let prev_value = self.lss.insert(
+    pub fn save(&self, wildland_identity: WildlandIdentity) -> Result<Option<Vec<u8>>, String> {
+        self.lss.insert(
             wildland_identity.to_string(),
             wildland_identity.get_keypair_bytes(),
-        )?;
-        Ok(prev_value)
+        )
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn get_default_forest(&self) -> CorexResult<Option<WildlandIdentity>> {
-        let default_forest_value = self.lss.get(DEFAULT_FOREST_KEY.to_string())?;
-        if default_forest_value.is_none() {
-            return Ok(None);
-        }
-        let signing_key = SigningKeypair::try_from(default_forest_value.unwrap())?;
-        Ok(Some(WildlandIdentity::Forest(0, signing_key)))
+    pub fn get_default_forest(&self) -> Result<Option<WildlandIdentity>, ForestRetrievalError> {
+        self.lss
+            .get(DEFAULT_FOREST_KEY.to_string())
+            .map_err(ForestRetrievalError::LssError)
+            .and_then(|default_forest_value| {
+                default_forest_value.map_or(Ok(None), |default_forest_value| {
+                    let signing_key = SigningKeypair::try_from(default_forest_value)
+                        .map_err(ForestRetrievalError::KeypairParseError)?;
+                    Ok(Some(WildlandIdentity::Forest(0, signing_key)))
+                })
+            })
     }
 }
 

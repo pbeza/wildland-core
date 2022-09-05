@@ -21,6 +21,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
+#[repr(C)]
 pub enum CryptoError {
     #[error("Key has incorrect length - should be 32 bytes long. Key length = {0}")]
     KeyParsingError(usize),
