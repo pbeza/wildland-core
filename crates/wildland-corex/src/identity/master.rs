@@ -7,6 +7,8 @@ pub struct MasterIdentity {
     crypto_identity: Option<CryptoIdentity>,
 }
 
+const CRYPTO_IDENTITY_NOT_FOUND_ERR: &str = "Crypto identity is required to create a new forest";
+
 impl MasterIdentity {
     #[tracing::instrument(level = "debug", skip(crypto_identity))]
     pub fn new(crypto_identity: Option<CryptoIdentity>) -> Self {
@@ -20,7 +22,7 @@ impl MasterIdentity {
             .crypto_identity
             .as_ref()
             .map(|identity| identity.forest_keypair(index))
-            .ok_or("Crypto identity is required to create a new forest")?;
+            .ok_or(CRYPTO_IDENTITY_NOT_FOUND_ERR)?;
         let identity = WildlandIdentity::Forest(index, keypair);
 
         Ok(identity)
@@ -29,15 +31,14 @@ impl MasterIdentity {
     #[tracing::instrument(level = "debug", skip(self))]
     pub fn create_device_identity(&self, name: String) -> WildlandIdentity {
         let keypair = new_device_identity();
-        let identity = WildlandIdentity::Device(name, keypair);
-
-        identity
+        WildlandIdentity::Device(name, keypair)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{generate_random_mnemonic, CoreXError, MasterIdentity, WildlandIdentity};
+    use super::CRYPTO_IDENTITY_NOT_FOUND_ERR;
+    use crate::{generate_random_mnemonic, MasterIdentity, WildlandIdentity};
     use wildland_crypto::identity::Identity;
 
     fn create_crypto_identity() -> Identity {
@@ -62,21 +63,14 @@ mod tests {
     fn should_not_create_forest_identity_without_crypto_identity() {
         let master_identity = MasterIdentity::new(None);
         let result = master_identity.create_forest_identity(0);
-        assert_eq!(
-            result.unwrap_err(),
-            CoreXError::CannotCreateForestIdentityError(
-                "Crypto identity is required to create a new forest".to_string()
-            )
-        );
+        assert_eq!(result.unwrap_err(), CRYPTO_IDENTITY_NOT_FOUND_ERR);
     }
 
     #[test]
     fn should_create_device_identity_with_crypto_identity() {
         let crypto_identity = create_crypto_identity();
         let master_identity = MasterIdentity::new(Some(crypto_identity));
-        let device_identity = master_identity
-            .create_device_identity("Device 1".to_string())
-            .unwrap();
+        let device_identity = master_identity.create_device_identity("Device 1".to_string());
 
         assert!(matches!(device_identity, WildlandIdentity::Device(_, _)));
         assert_eq!(device_identity.get_identifier(), "Device 1");
@@ -87,9 +81,7 @@ mod tests {
     #[test]
     fn should_create_device_identity_without_crypto_identity() {
         let master_identity = MasterIdentity::new(None);
-        let device_identity = master_identity
-            .create_device_identity("Device 1".to_string())
-            .unwrap();
+        let device_identity = master_identity.create_device_identity("Device 1".to_string());
 
         assert!(matches!(device_identity, WildlandIdentity::Device(_, _)));
         assert_eq!(device_identity.get_identifier(), "Device 1");

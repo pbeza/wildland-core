@@ -1,7 +1,7 @@
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
 
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum UserCreationError {
     #[error("User already exists")]
     UserAlreadyExists,
@@ -37,7 +37,7 @@ impl From<CryptoError> for UserCreationError {
     }
 }
 
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum ForestRetrievalError {
     #[error("Could not retrieve forest keypair from LSS: {0}")]
     LssError(String),

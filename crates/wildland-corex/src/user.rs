@@ -14,7 +14,7 @@ pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
 }
 
 pub enum CreateUserInput {
-    Mnemonic(MnemonicPhrase),
+    Mnemonic(Box<MnemonicPhrase>),
     Entropy(Vec<u8>),
 }
 
@@ -42,7 +42,7 @@ impl UserService {
             return Err(UserCreationError::UserAlreadyExists);
         }
         let crypto_identity = match input {
-            CreateUserInput::Mnemonic(mnemonic) => Identity::try_from(&mnemonic)?,
+            CreateUserInput::Mnemonic(mnemonic) => Identity::try_from(mnemonic.as_ref())?,
             CreateUserInput::Entropy(entropy) => Identity::try_from(entropy.as_slice())?,
         };
         let master_identity = MasterIdentity::new(Some(crypto_identity));
@@ -96,7 +96,7 @@ mod tests {
             user_service.create_user(CreateUserInput::Entropy(vec![]), "My Mac".to_string());
 
         // then
-        assert_eq!(result.unwrap_err(), CoreXError::UserAlreadyExists);
+        assert_eq!(result.unwrap_err(), UserCreationError::UserAlreadyExists);
     }
 
     #[test]
