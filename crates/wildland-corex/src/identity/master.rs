@@ -1,4 +1,8 @@
-use wildland_crypto::identity::{new_device_identity, Identity as CryptoIdentity};
+use thiserror::Error;
+use wildland_crypto::{
+    error::KeyDeriveError,
+    identity::{new_device_identity, Identity as CryptoIdentity},
+};
 
 use super::wildland::WildlandIdentity;
 
@@ -7,7 +11,13 @@ pub struct MasterIdentity {
     crypto_identity: Option<CryptoIdentity>,
 }
 
-const CRYPTO_IDENTITY_NOT_FOUND_ERR: &str = "Crypto identity is required to create a new forest";
+#[derive(Debug, Error, PartialEq, Eq, Clone)]
+pub enum ForestIdentityCreationError {
+    #[error("Crypto identity is required to create a new forest")]
+    CryptoIdentityNotFound,
+    #[error(transparent)]
+    KeyDeriveError(#[from] KeyDeriveError),
+}
 
 impl MasterIdentity {
     #[tracing::instrument(level = "debug", skip(crypto_identity))]
@@ -17,12 +27,15 @@ impl MasterIdentity {
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn create_forest_identity(&self, index: u64) -> Result<WildlandIdentity, &'static str> {
+    pub fn create_forest_identity(
+        &self,
+        index: u64,
+    ) -> Result<WildlandIdentity, ForestIdentityCreationError> {
         let keypair = self
             .crypto_identity
             .as_ref()
             .map(|identity| identity.forest_keypair(index))
-            .ok_or(CRYPTO_IDENTITY_NOT_FOUND_ERR)?;
+            .ok_or(ForestIdentityCreationError::CryptoIdentityNotFound)??;
         let identity = WildlandIdentity::Forest(index, keypair);
 
         Ok(identity)
@@ -37,8 +50,9 @@ impl MasterIdentity {
 
 #[cfg(test)]
 mod tests {
-    use super::CRYPTO_IDENTITY_NOT_FOUND_ERR;
-    use crate::{generate_random_mnemonic, MasterIdentity, WildlandIdentity};
+    use crate::{
+        generate_random_mnemonic, ForestIdentityCreationError, MasterIdentity, WildlandIdentity,
+    };
     use wildland_crypto::identity::Identity;
 
     fn create_crypto_identity() -> Identity {
@@ -63,7 +77,10 @@ mod tests {
     fn should_not_create_forest_identity_without_crypto_identity() {
         let master_identity = MasterIdentity::new(None);
         let result = master_identity.create_forest_identity(0);
-        assert_eq!(result.unwrap_err(), CRYPTO_IDENTITY_NOT_FOUND_ERR);
+        assert_eq!(
+            result.unwrap_err(),
+            ForestIdentityCreationError::CryptoIdentityNotFound
+        );
     }
 
     #[test]

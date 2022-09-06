@@ -3,19 +3,23 @@ use crate::{
     UserPayload,
 };
 use ffi_macro::binding_wrapper;
-pub use wildland_corex::{CoreXError, CryptoError, ForestRetrievalError};
+pub use wildland_corex::{CoreXError, CryptoError, ForestRetrievalError, LssError};
 
 type VoidType = ();
 
 pub type UserRetrievalError = RetrievalError<ForestRetrievalError>;
 pub type MnemonicCreationError = CreationError<CryptoError>;
-pub type CargoLibCreationError = CreationError<String>;
+pub type CargoLibCreationError = CreationError<LssError>;
 pub type UserCreationError = CreationError<wildland_corex::UserCreationError>;
 
 #[binding_wrapper]
 mod ffi_binding {
     enum WildlandXDomain {
+        CargoUser,
+        Crypto,
+        Catlib,
         CoreX,
+        Dfs,
     }
     extern "ExceptionTrait" {
         fn reason(&self) -> String;

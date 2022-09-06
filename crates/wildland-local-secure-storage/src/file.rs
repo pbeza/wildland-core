@@ -1,5 +1,5 @@
 use crate::api::LocalSecureStorage;
-use crate::LSSResult;
+use crate::LssResult;
 use rustbreak::deser::Yaml;
 use rustbreak::PathDatabase;
 use std::path::PathBuf;
@@ -13,66 +13,52 @@ pub struct FileLSS {
 
 impl FileLSS {
     #[tracing::instrument(level = "debug", ret)]
-    pub fn new(path: PathBuf) -> LSSResult<Self> {
-        let db = PathDatabase::load_from_path_or_default(path).map_err(|e| e.to_string())?;
+    pub fn new(path: PathBuf) -> LssResult<Self> {
+        let db = PathDatabase::load_from_path_or_default(path)?;
         Ok(Self { db: Box::new(db) })
     }
 }
 
 impl LocalSecureStorage for FileLSS {
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    fn insert(&self, key: String, value: Vec<u8>) -> LSSResult<Option<Vec<u8>>> {
-        let prev_value = self
-            .db
-            .read(|db| db.get(&key).map(|v| v.to_vec()))
-            .map_err(|e| e.to_string())?;
-        self.db
-            .write(|db| db.insert(key, value))
-            .map_err(|e| e.to_string())?;
+    fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>> {
+        let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
+        self.db.write(|db| db.insert(key, value))?;
         Ok(prev_value)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    fn get(&self, key: String) -> LSSResult<Option<Vec<u8>>> {
-        self.db
-            .read(|db| db.get(&key).map(|v| v.to_vec()))
-            .map_err(|e| e.to_string())
+    fn get(&self, key: String) -> LssResult<Option<Vec<u8>>> {
+        Ok(self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    fn contains_key(&self, key: String) -> LSSResult<bool> {
-        self.db
-            .read(|db| db.contains_key(&key))
-            .map_err(|e| e.to_string())
+    fn contains_key(&self, key: String) -> LssResult<bool> {
+        Ok(self.db.read(|db| db.contains_key(&key))?)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    fn keys(&self) -> LSSResult<Vec<String>> {
-        self.db
-            .read(|db| db.keys().map(|k| k.to_string()).collect())
-            .map_err(|e| e.to_string())
-    }
-
-    #[tracing::instrument(level = "debug", ret, skip(self))]
-    fn remove(&self, key: String) -> LSSResult<Option<Vec<u8>>> {
-        let prev_value = self
+    fn keys(&self) -> LssResult<Vec<String>> {
+        Ok(self
             .db
-            .read(|db| db.get(&key).map(|v| v.to_vec()))
-            .map_err(|e| e.to_string())?;
-        self.db
-            .write(|db| db.remove(&key))
-            .map_err(|e| e.to_string())?;
+            .read(|db| db.keys().map(|k| k.to_string()).collect())?)
+    }
+
+    #[tracing::instrument(level = "debug", ret, skip(self))]
+    fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>> {
+        let prev_value = self.db.read(|db| db.get(&key).map(|v| v.to_vec()))?;
+        self.db.write(|db| db.remove(&key))?;
         Ok(prev_value)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    fn len(&self) -> LSSResult<usize> {
-        self.db.read(|db| db.len()).map_err(|e| e.to_string())
+    fn len(&self) -> LssResult<usize> {
+        Ok(self.db.read(|db| db.len())?)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    fn is_empty(&self) -> LSSResult<bool> {
-        self.db.read(|db| db.is_empty()).map_err(|e| e.to_string())
+    fn is_empty(&self) -> LssResult<bool> {
+        Ok(self.db.read(|db| db.is_empty())?)
     }
 }
 

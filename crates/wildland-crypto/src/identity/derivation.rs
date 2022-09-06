@@ -25,6 +25,7 @@ use crypto_box::SecretKey as EncryptionSecretKey;
 use ed25519_dalek_bip32::{DerivationPath, ExtendedSecretKey};
 use sha2::{Digest, Sha256};
 
+use crate::error::KeyDeriveError;
 use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
 use crate::{
     error::CryptoError,
@@ -110,7 +111,7 @@ impl Identity {
     /// Derive the key that represents a forest.
     /// Pubkey represents forest to the world.
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn forest_keypair(&self, forest_index: u64) -> SigningKeypair {
+    pub fn forest_keypair(&self, forest_index: u64) -> Result<SigningKeypair, KeyDeriveError> {
         tracing::debug!("deriving forest keypair");
         self.derive_forest_keypair(&signing_key_path(forest_index))
     }
@@ -121,7 +122,11 @@ impl Identity {
     /// Current encryption pubkey should be accessible to anyone
     /// willing to communicate with the user.
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn encryption_keypair(&self, forest_index: u64, index: u64) -> EncryptingKeypair {
+    pub fn encryption_keypair(
+        &self,
+        forest_index: u64,
+        index: u64,
+    ) -> Result<EncryptingKeypair, KeyDeriveError> {
         tracing::debug!("deriving encryption keypair");
         self.derive_encryption_keypair(&encryption_key_path(forest_index, index))
     }
@@ -135,7 +140,10 @@ impl Identity {
     /// Please note that this keys are not scoped to particular forest,
     /// since they are supposed to be used only once anyway.
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn single_use_encryption_keypair(&self, index: u64) -> EncryptingKeypair {
+    pub fn single_use_encryption_keypair(
+        &self,
+        index: u64,
+    ) -> Result<EncryptingKeypair, KeyDeriveError> {
         self.derive_encryption_keypair(&single_use_encryption_key_path(index))
     }
 
@@ -143,7 +151,7 @@ impl Identity {
     /// to backup secrets with intent of using them later, during recovery process.
     /// This keypair is not scoped to the forest. It should be used only internally.
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn backup_keypair(&self) -> EncryptingKeypair {
+    pub fn backup_keypair(&self) -> Result<EncryptingKeypair, KeyDeriveError> {
         self.derive_encryption_keypair(&backup_key_path())
     }
 
@@ -193,17 +201,17 @@ impl Identity {
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    fn derive_forest_keypair(&self, path: &str) -> SigningKeypair {
-        let derived_extended_seckey = self.derive_private_key_from_path(path);
+    fn derive_forest_keypair(&self, path: &str) -> Result<SigningKeypair, KeyDeriveError> {
+        let derived_extended_seckey = self.derive_private_key_from_path(path)?;
 
         // drop both the chain-code from xprv and last 32 bytes
         let sec_key = *derived_extended_seckey.secret_key.as_bytes();
-        SigningKeypair::try_from_secret_bytes(&sec_key).unwrap() // TODO handle unwrap
+        SigningKeypair::try_from_secret_bytes(&sec_key).map_err(|e| KeyDeriveError(e.to_string()))
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    fn derive_encryption_keypair(&self, path: &str) -> EncryptingKeypair {
-        let derived_extended_seckey = self.derive_private_key_from_path(path);
+    fn derive_encryption_keypair(&self, path: &str) -> Result<EncryptingKeypair, KeyDeriveError> {
+        let derived_extended_seckey = self.derive_private_key_from_path(path)?;
 
         // Curve25519 keys are created from random bytes. Here we just trim.
         // As for the key clamping - it is handled by crypto_box::SecretKey
@@ -211,16 +219,21 @@ impl Identity {
             EncryptionSecretKey::from(*derived_extended_seckey.secret_key.as_bytes());
         let curve25519_pk = curve25519_sk.public_key();
 
-        EncryptingKeypair {
+        Ok(EncryptingKeypair {
             secret: curve25519_sk,
             public: curve25519_pk,
-        }
+        })
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    fn derive_private_key_from_path(&self, path: &str) -> ExtendedSecretKey {
+    fn derive_private_key_from_path(
+        &self,
+        path: &str,
+    ) -> Result<ExtendedSecretKey, KeyDeriveError> {
         let derivation_path: DerivationPath = path.parse().unwrap();
-        self.extended_seckey.derive(&derivation_path).unwrap()
+        self.extended_seckey
+            .derive(&derivation_path)
+            .map_err(|e| KeyDeriveError(e.to_string()))
     }
 }
 
@@ -270,8 +283,8 @@ mod tests {
     #[test]
     fn can_encrypt_and_decrypt_message_with_encryption_key() {
         let user = user();
-        let alice_keypair: EncryptingKeypair = user.encryption_keypair(0, 0);
-        let bob_keypair: EncryptingKeypair = user.encryption_keypair(1, 0);
+        let alice_keypair: EncryptingKeypair = user.encryption_keypair(0, 0).unwrap();
+        let bob_keypair: EncryptingKeypair = user.encryption_keypair(1, 0).unwrap();
         let mut rng = rand_core::OsRng;
         let nonce = crypto_box::generate_nonce(&mut rng);
 
@@ -284,7 +297,7 @@ mod tests {
     #[test]
     fn can_sign_and_check_signatures_with_derived_keypair() {
         let user = user();
-        let keypair = user.forest_keypair(0);
+        let keypair = user.forest_keypair(0).unwrap();
         let signature = keypair.sign(MSG);
         assert!(signature.verify(MSG, &keypair.public()).is_ok());
     }
@@ -292,7 +305,7 @@ mod tests {
     #[test]
     fn cannot_verify_signature_for_other_message() {
         let user = user();
-        let keypair = user.forest_keypair(0);
+        let keypair = user.forest_keypair(0).unwrap();
         let signature = keypair.sign(MSG);
         assert!(signature.verify(MSG, &keypair.public()).is_ok());
     }
@@ -300,9 +313,9 @@ mod tests {
     #[test]
     fn can_generate_distinct_keypairs() {
         let user = user();
-        let skeypair = user.forest_keypair(0);
-        let e0key = user.encryption_keypair(0, 0);
-        let e1key = user.encryption_keypair(0, 1);
+        let skeypair = user.forest_keypair(0).unwrap();
+        let e0key = user.encryption_keypair(0, 0).unwrap();
+        let e1key = user.encryption_keypair(0, 1).unwrap();
         assert_ne!(&skeypair.secret(), e0key.secret.as_bytes());
         assert_ne!(e0key.secret.as_bytes(), e1key.secret.as_bytes());
 

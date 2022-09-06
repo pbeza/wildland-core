@@ -1,5 +1,7 @@
+use crate::ForestIdentityCreationError;
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
+use wildland_local_secure_storage::LssError;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum UserCreationError {
@@ -12,9 +14,9 @@ pub enum UserCreationError {
     #[error("Could not retrieve user's forest: {0}")]
     ForestRetrievalError(ForestRetrievalError),
     #[error("Could not create a new forest identity: {0}")]
-    ForestIdentityCreationError(&'static str),
-    #[error("Local Secure Storage error: {0}: {1}")]
-    LssError(&'static str, String),
+    ForestIdentityCreationError(ForestIdentityCreationError),
+    #[error(transparent)]
+    LssError(#[from] LssError),
     #[error("Too low entropy")]
     EntropyTooLow,
 }
@@ -39,8 +41,8 @@ impl From<CryptoError> for UserCreationError {
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum ForestRetrievalError {
-    #[error("Could not retrieve forest keypair from LSS: {0}")]
-    LssError(String),
+    #[error(transparent)]
+    LssError(#[from] LssError),
     #[error("Could not create keypair from bytes retrieved from LSS: {0}")]
     KeypairParseError(CryptoError),
 }

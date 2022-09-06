@@ -1,13 +1,24 @@
 use std::fmt::Display;
 
+use wildland_corex::{CryptoError, ForestRetrievalError};
+
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub enum WildlandXDomain {
+    CargoUser,
+    Crypto,
+    Catlib,
     CoreX,
+    Dfs,
+    Lss,
 }
 
 pub trait ExceptionTrait {
     fn reason(&self) -> String;
+    fn domain(&self) -> WildlandXDomain;
+}
+
+pub trait ErrDomain {
     fn domain(&self) -> WildlandXDomain;
 }
 
@@ -18,7 +29,7 @@ pub enum CreationError<T: Clone> {
     NotCreated(T),
 }
 
-impl<E: Display + Clone> ExceptionTrait for CreationError<E> {
+impl<E: Display + Clone + ErrDomain> ExceptionTrait for CreationError<E> {
     fn reason(&self) -> String {
         match self {
             Self::NotCreated(e) => e.to_string(),
@@ -26,7 +37,25 @@ impl<E: Display + Clone> ExceptionTrait for CreationError<E> {
     }
 
     fn domain(&self) -> WildlandXDomain {
-        WildlandXDomain::CoreX // TODO
+        match self {
+            CreationError::NotCreated(e) => e.domain(),
+        }
+    }
+}
+
+impl ErrDomain for CryptoError {
+    fn domain(&self) -> WildlandXDomain {
+        WildlandXDomain::Crypto
+    }
+}
+impl ErrDomain for wildland_corex::UserCreationError {
+    fn domain(&self) -> WildlandXDomain {
+        WildlandXDomain::CargoUser
+    }
+}
+impl ErrDomain for wildland_corex::LssError {
+    fn domain(&self) -> WildlandXDomain {
+        WildlandXDomain::Lss
     }
 }
 
@@ -38,7 +67,7 @@ pub enum RetrievalError<E: Clone> {
     Unexpected(E),
 }
 
-impl<E: Display + Clone> ExceptionTrait for RetrievalError<E> {
+impl<E: Display + Clone + ErrDomain> ExceptionTrait for RetrievalError<E> {
     fn reason(&self) -> String {
         match self {
             RetrievalError::NotFound(s) => s.to_string(),
@@ -47,6 +76,18 @@ impl<E: Display + Clone> ExceptionTrait for RetrievalError<E> {
     }
 
     fn domain(&self) -> WildlandXDomain {
-        WildlandXDomain::CoreX // TODO
+        match self {
+            RetrievalError::NotFound(_) => WildlandXDomain::CargoUser,
+            RetrievalError::Unexpected(e) => e.domain(),
+        }
+    }
+}
+
+impl ErrDomain for ForestRetrievalError {
+    fn domain(&self) -> WildlandXDomain {
+        match self {
+            ForestRetrievalError::LssError(_) => WildlandXDomain::Lss,
+            ForestRetrievalError::KeypairParseError(_) => WildlandXDomain::Crypto,
+        }
     }
 }

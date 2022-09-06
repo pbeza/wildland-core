@@ -51,12 +51,8 @@ impl UserService {
             .map_err(UserCreationError::ForestIdentityCreationError)?;
         let device_identity = master_identity.create_device_identity(device_name);
 
-        self.lss_service
-            .save(default_forest_identity)
-            .map_err(|e| UserCreationError::LssError("Could not store forest identity", e))?;
-        self.lss_service
-            .save(device_identity)
-            .map_err(|e| UserCreationError::LssError("Could not store device identity", e))?;
+        self.lss_service.save(default_forest_identity)?;
+        self.lss_service.save(device_identity)?;
         Ok(())
     }
 

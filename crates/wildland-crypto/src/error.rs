@@ -36,3 +36,7 @@ pub enum CryptoError {
     #[error("Too low entropy")]
     EntropyTooLow,
 }
+
+#[derive(Error, Debug, PartialEq, Eq, Clone)]
+#[error("Error while deriving an extended secret key fom the current using a derivation path: {0}")]
+pub struct KeyDeriveError(pub String);
