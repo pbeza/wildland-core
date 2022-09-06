@@ -1,4 +1,4 @@
-use crate::error::{CreationError, CreationResult, RetrievalError, RetrievalResult};
+use crate::errors::{CreationError, CreationResult, RetrievalError, RetrievalResult};
 use wildland_corex::{
     generate_random_mnemonic, CreateUserInput, CryptoError, ForestRetrievalError, MnemonicPhrase,
     UserCreationError, UserService,

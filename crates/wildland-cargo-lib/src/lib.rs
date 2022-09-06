@@ -1,13 +1,13 @@
 mod api;
 mod cargo_lib;
-mod error;
+mod errors;
 #[cfg(feature = "bindings")]
 pub mod ffi;
 mod logging;
 
 pub use api::user::{MnemonicPayload, UserApi, UserPayload};
 pub use cargo_lib::CargoLib;
-use error::{CreationError, CreationResult};
+use errors::{CreationError, CreationResult};
 use std::rc::Rc;
 use wildland_corex::{create_file_lss, LSSService, LssError, UserService};
 

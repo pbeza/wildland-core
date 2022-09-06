@@ -1,5 +1,5 @@
 use crate::{
-    api::user::UserApi, cargo_lib::CargoLib, create_cargo_lib, error::*, MnemonicPayload,
+    api::user::UserApi, cargo_lib::CargoLib, create_cargo_lib, errors::*, MnemonicPayload,
     UserPayload,
 };
 use ffi_macro::binding_wrapper;
