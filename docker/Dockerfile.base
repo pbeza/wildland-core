@@ -28,12 +28,17 @@ COPY Cargo.toml /app/
 COPY Cargo.lock /app/
 COPY crates/wildland-cargo-lib/Cargo.toml wildland-cargo-lib/
 COPY crates/wildland-cargo-lib/build.rs wildland-cargo-lib/
+COPY crates/wildland-cargo-lib/rust-toolchain wildland-cargo-lib/
 COPY crates/wildland-corex/Cargo.toml wildland-corex/
+COPY crates/wildland-corex/rust-toolchain wildland-corex/
 COPY crates/wildland-catlib/Cargo.toml wildland-catlib/
+COPY crates/wildland-catlib/rust-toolchain wildland-catlib/
 COPY crates/wildland-crypto/Cargo.toml wildland-crypto/
+COPY crates/wildland-crypto/rust-toolchain wildland-crypto/
 COPY crates/wildland-dfs/Cargo.toml wildland-dfs/
+COPY crates/wildland-dfs/rust-toolchain wildland-dfs/
 COPY crates/wildland-local-secure-storage/Cargo.toml wildland-local-secure-storage/
-COPY rust-toolchain /app/
+COPY crates/wildland-local-secure-storage/rust-toolchain wildland-local-secure-storage/
 
 WORKDIR /app/
 RUN cargo build \
@@ -49,7 +54,6 @@ RUN cargo clean && cargo build \
 
 WORKDIR /app/crates/wildland-cargo-lib/
 RUN cp \
-    "${SWIFT_BRIDGE_OUT_DIR}/SwiftBridgeCore.h" \
     "./_generated_cpp/ffi_cxx.h" \
     "./_generated_cpp/ffi_swig.i" \
     "${CXX_LIB}" \
