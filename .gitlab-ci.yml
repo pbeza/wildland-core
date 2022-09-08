@@ -124,6 +124,8 @@ x86_64 linux:
       --dockerfile "${CI_PROJECT_DIR}/docker/Dockerfile.base"
       --no-push
       --build-arg BUILD_TARGET=x86_64-unknown-linux-gnu
+      --single-snapshot
+      --snapshotMode time
     - mv /ffi_build ${CI_PROJECT_DIR}
     - mv /ffi_tests ${CI_PROJECT_DIR}
   cache:
