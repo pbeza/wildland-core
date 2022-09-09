@@ -48,10 +48,8 @@ RUN cargo clean \
     --target ${BUILD_TARGET}
 
 RUN cp \
-    "${SWIFT_BRIDGE_OUT_DIR}/SwiftBridgeCore.h" \
     "./_generated_cpp/ffi_cxx.h" \
     "./_generated_cpp/ffi_swig.i" \
-    "./_generated_swift/ffi_swift/ffi_swift.h" \
     "${CXX_LIB}" \
     "${FFI_BUILD_DIR}"
 
