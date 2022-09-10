@@ -13,7 +13,7 @@ pub(crate) async fn handle(response: Response) -> Result<Response, WildlandHttpC
             log::error!("Unauthorized to make given request");
             let message = response.text().await?;
             Err(HttpError(message))
-        },
+        }
         StatusCode::FORBIDDEN => {
             log::error!("forbidden to make given request");
             let message = response.text().await?;

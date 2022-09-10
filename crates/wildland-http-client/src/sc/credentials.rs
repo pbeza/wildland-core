@@ -1,6 +1,6 @@
+use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
-use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateCredentialsReq {
@@ -47,9 +47,11 @@ impl SCCredentialsClient {
 
 #[cfg(test)]
 mod tests {
+    use crate::sc::constants::test_utilities::{
+        CREDENTIALS_ID, CREDENTIALS_SECRET, SIGNATURE, TIMESTAMP,
+    };
     use mockito::{mock, server_url};
     use serde_json::json;
-    use crate::sc::constants::test_utilities::{CREDENTIALS_ID, CREDENTIALS_SECRET, SIGNATURE, TIMESTAMP};
 
     use super::*;
 

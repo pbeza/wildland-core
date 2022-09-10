@@ -9,7 +9,7 @@ use crate::{
     sc::credentials::{CreateCredentialsReq, CreateCredentialsRes, SCCredentialsClient},
     sc::metrics::{RequestMetricsReq, RequestMetricsRes, SCMetricsClient},
     sc::signature::{SCSignatureClient, SignatureRequestReq, SignatureRequestRes},
-    sc::storage::{CreateStorageRes, SCStorageClient}
+    sc::storage::{CreateStorageRes, SCStorageClient},
 };
 
 #[derive(Debug)]
@@ -118,9 +118,8 @@ impl StorageControllerClient {
     where
         T: Serialize,
     {
-        let message = serde_json::to_vec(request).map_err(|source| {
-            WildlandHttpClientError::CannotSerializeRequestError { source }
-        })?;
+        let message = serde_json::to_vec(request)
+            .map_err(|source| WildlandHttpClientError::CannotSerializeRequestError { source })?;
         let keypair =
             SigningKeypair::try_from_str(self.get_credential_id(), self.get_credential_secret())?;
         let signature = keypair.sign(&message);
