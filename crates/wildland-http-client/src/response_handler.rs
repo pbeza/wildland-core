@@ -1,10 +1,10 @@
-use crate::error::StorageControllerClientError;
+use crate::error::WildlandHttpClientError;
 use reqwest::{Response, StatusCode};
 
-use crate::error::StorageControllerClientError::HttpError;
+use crate::error::WildlandHttpClientError::HttpError;
 
 #[tracing::instrument(level = "debug", ret)]
-pub(crate) async fn handle(response: Response) -> Result<Response, StorageControllerClientError> {
+pub(crate) async fn handle(response: Response) -> Result<Response, WildlandHttpClientError> {
     match response.status() {
         StatusCode::OK => Ok(response),
         StatusCode::CREATED => Ok(response),
@@ -13,10 +13,15 @@ pub(crate) async fn handle(response: Response) -> Result<Response, StorageContro
             log::error!("Unauthorized to make given request");
             let message = response.text().await?;
             Err(HttpError(message))
+        },
+        StatusCode::FORBIDDEN => {
+            log::error!("forbidden to make given request");
+            let message = response.text().await?;
+            Err(HttpError(message))
         }
         other_status => {
-            let message = response.text().await?;
             log::error!("Request failed with status: {:?}", other_status);
+            let message = response.text().await?;
             Err(HttpError(message))
         }
     }
@@ -24,11 +29,12 @@ pub(crate) async fn handle(response: Response) -> Result<Response, StorageContro
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::SC_RESPONSE;
     use http::response::Builder;
     use reqwest::Response;
 
     use crate::response_handler::handle;
+
+    static RESPONSE: &str = "{\"message\":\"message\"}";
 
     #[tokio::test]
     async fn should_return_response_when_status_is_200() {
@@ -37,7 +43,7 @@ mod tests {
 
         // then
         assert_eq!(result.status(), 200);
-        assert_eq!(result.text().await.unwrap(), SC_RESPONSE);
+        assert_eq!(result.text().await.unwrap(), RESPONSE);
     }
 
     #[tokio::test]
@@ -47,7 +53,7 @@ mod tests {
 
         // then
         assert_eq!(result.status(), 201);
-        assert_eq!(result.text().await.unwrap(), SC_RESPONSE);
+        assert_eq!(result.text().await.unwrap(), RESPONSE);
     }
 
     #[tokio::test]
@@ -57,7 +63,7 @@ mod tests {
 
         // then
         assert_eq!(result.status(), 204);
-        assert_eq!(result.text().await.unwrap(), SC_RESPONSE);
+        assert_eq!(result.text().await.unwrap(), RESPONSE);
     }
 
     #[tokio::test]
@@ -67,7 +73,7 @@ mod tests {
 
         // then
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), SC_RESPONSE);
+        assert_eq!(result.unwrap_err(), RESPONSE);
     }
 
     #[tokio::test]
@@ -77,11 +83,11 @@ mod tests {
 
         // then
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), SC_RESPONSE);
+        assert_eq!(result.unwrap_err(), RESPONSE);
     }
 
     fn response(status: u16) -> Response {
-        let response = Builder::new().status(status).body(SC_RESPONSE).unwrap();
+        let response = Builder::new().status(status).body(RESPONSE).unwrap();
         Response::from(response)
     }
 }

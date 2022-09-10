@@ -2047,29 +2047,7 @@ name = "wildland-dfs"
 version = "0.2.0"
 
 [[package]]
-name = "wildland-local-secure-storage"
-version = "0.1.0"
-dependencies = [
- "rustbreak",
- "tempfile",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "wildland-rucli"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "hex-literal",
- "tracing",
- "wildland-cargo-lib",
- "wildland-corex",
- "wildland-local-secure-storage",
-]
-
-[[package]]
-name = "wildland-storage-controller-client"
+name = "wildland-http-client"
 version = "0.3.0"
 dependencies = [
  "dotenv",
@@ -2083,6 +2061,16 @@ dependencies = [
  "tokio",
  "tracing",
  "wildland-crypto",
+]
+
+[[package]]
+name = "wildland-local-secure-storage"
+version = "0.1.0"
+dependencies = [
+ "rustbreak",
+ "tempfile",
+ "thiserror",
+ "tracing",
 ]
 
 [[package]]

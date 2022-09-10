@@ -27,9 +27,9 @@ impl SCStorageClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::{CREDENTIALS_ID, CREDENTIALS_SECRET, STORAGE_ID};
     use mockito::{mock, server_url};
     use serde_json::json;
+    use crate::sc::constants::test_utilities::{CREDENTIALS_ID, CREDENTIALS_SECRET, STORAGE_ID};
 
     use super::*;
 

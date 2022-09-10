@@ -1,41 +1,46 @@
-use crate::constants::WILDLAND_SIGNATURE_HEADER;
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
+use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateCredentialsReq {
+pub struct RequestMetricsReq {
     #[serde(rename(serialize = "credentialID"))]
     pub credential_id: String,
     pub timestamp: String,
-    #[serde(rename(serialize = "credPermission"))]
-    pub cred_permission: String,
-    #[serde(rename(serialize = "fsPermission"))]
-    pub fs_permission: String,
-    pub path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateCredentialsRes {
+pub struct RequestMetricsRes {
     #[serde(rename(deserialize = "credentialID"))]
     pub credentials_id: String,
-    #[serde(rename(deserialize = "credentialSecret"))]
-    pub credentials_secret: String,
+
+    #[serde(rename(deserialize = "usageCred"))]
+    pub usage_cred: UsageReq,
+
+    #[serde(rename(deserialize = "usageStorage"))]
+    pub usage_storage: UsageReq,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UsageReq {
+    pub rx: i64,
+    pub tx: i64,
 }
 
 #[derive(Clone, Default, Debug)]
-pub(crate) struct SCCredentialsClient {
+pub(crate) struct SCMetricsClient {
     pub(crate) base_url: String,
     pub(crate) client: Client,
 }
 
-impl SCCredentialsClient {
+impl SCMetricsClient {
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub(crate) async fn create_credentials(
+    pub(crate) async fn request_metrics(
         &self,
-        request: CreateCredentialsReq,
+        request: RequestMetricsReq,
         signature: &str,
     ) -> Result<Response, Error> {
-        let url = format!("{}/credential/create", self.base_url);
+        let url = format!("{}/metrics", self.base_url);
         self.client
             .post(url)
             .header(WILDLAND_SIGNATURE_HEADER, signature)
@@ -47,56 +52,56 @@ impl SCCredentialsClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::{
-        CREDENTIALS_ID, CREDENTIALS_SECRET, SIGNATURE, TIMESTAMP,
-    };
     use mockito::{mock, server_url};
     use serde_json::json;
+    use crate::sc::constants::test_utilities::{CREDENTIALS_ID, SIGNATURE, TIMESTAMP};
 
     use super::*;
 
-    #[tracing::instrument]
-    fn client() -> SCCredentialsClient {
-        SCCredentialsClient {
+    fn client() -> SCMetricsClient {
+        SCMetricsClient {
             base_url: server_url(),
             client: Client::new(),
         }
     }
 
     #[tokio::test]
-    async fn storage_credentials_can_be_created() {
-        // given
-        let request = CreateCredentialsReq {
+    async fn should_get_storage_metrics() {
+        let request = RequestMetricsReq {
             credential_id: CREDENTIALS_ID.to_string(),
             timestamp: TIMESTAMP.to_string(),
-            cred_permission: "CRSR".to_string(),
-            fs_permission: "write".to_string(),
-            path: "/".to_string(),
         };
 
-        let mock = mock("POST", "/credential/create")
-            .with_status(201)
+        let m = mock("POST", "/metrics")
             .with_body(
                 json!({
                     "credentialID" : CREDENTIALS_ID,
-                    "credentialSecret" : CREDENTIALS_SECRET
+                    "usageCred" : {
+                        "rx" : 433_i64,
+                        "tx" : 523_i64
+                    },
+                    "usageStorage" : {
+                        "rx" : 433_i64,
+                        "tx" : 523_i64
+                    }
                 })
                 .to_string(),
             )
             .create();
 
-        // when
         let response = client()
-            .create_credentials(request, SIGNATURE)
+            .request_metrics(request, SIGNATURE)
             .await
             .unwrap()
-            .json::<CreateCredentialsRes>()
+            .json::<RequestMetricsRes>()
             .await
             .unwrap();
 
-        // then
-        mock.assert();
+        m.assert();
         assert_eq!(response.credentials_id, CREDENTIALS_ID);
-        assert_eq!(response.credentials_secret, CREDENTIALS_SECRET);
+        assert_eq!(response.usage_cred.rx, 433);
+        assert_eq!(response.usage_cred.tx, 523);
+        assert_eq!(response.usage_storage.rx, 433);
+        assert_eq!(response.usage_cred.tx, 523);
     }
 }
