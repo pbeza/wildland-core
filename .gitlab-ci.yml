@@ -204,12 +204,9 @@ csharp x86_64 linux:
     - linux
     - x64
   rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_COMMIT_BRANCH == "main"
       when: manual
       allow_failure: true
-
 
 webassembly emscripten linux:
   stage: Bindings
@@ -228,17 +225,14 @@ webassembly emscripten linux:
     - linux
     - x64
   rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_COMMIT_BRANCH == "main"
       when: manual
       allow_failure: true
-
 
 ###############
 # STAGE: Deploy
 #
-# This stage is the last stage in which the crates are published to the registry.
+# This stage is the last stage in which the crates are published to the registry. 
 
 publish crates:
   stage: Deploy
