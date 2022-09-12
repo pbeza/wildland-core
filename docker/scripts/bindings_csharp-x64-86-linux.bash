@@ -15,7 +15,7 @@ swig -dllimport ${DLLIMPORT} -module wildland -csharp -c++ -w516,503,476,302,124
 ${CC} -fpermissive \
       -shared \
       -fPIC \
-      -std=c++14 \
+      -std=c++20 \
       -w \
       -L . \
       ffi_swig_wrap.cxx \

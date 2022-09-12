@@ -7,7 +7,7 @@ set -ex
 cd $PROJECT_DIR/ffi_build
 mv ffi_cxx.h wildland.cpp
 em++ wildland.cpp \
-        -std=c++14 -g -D WASM \
+        -std=c++20 -g -D WASM \
         -s NO_DISABLE_EXCEPTION_CATCHING \
         -fexceptions \
         -L . \

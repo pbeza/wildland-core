@@ -20,7 +20,7 @@ pub struct Credentials {
 
 #[derive(Clone, Default, Debug)]
 pub struct StorageControllerClient {
-    // TODO credentials are provided here only for test purposes. Remove it and get real id and secret assigned to a lease
+    // TODO:WILX-210 credentials are provided here only for test purposes. Remove it and get real id and secret assigned to a lease
     pub credential_id: String,
     pub credential_secret: String,
     sc_storage_client: SCStorageClient,
