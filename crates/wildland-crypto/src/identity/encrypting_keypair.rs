@@ -11,6 +11,7 @@ pub struct EncryptingKeypair {
 }
 
 impl EncryptingKeypair {
+    // TODO:WILX-209 unused method
     #[tracing::instrument(level = "debug", ret)]
     fn from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self {
         Self {
@@ -19,6 +20,7 @@ impl EncryptingKeypair {
         }
     }
 
+    // TODO:WILX-209 unused method
     #[tracing::instrument(level = "debug", ret)]
     fn from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
         let pubkey = bytes_key_from_str(public_key)?;

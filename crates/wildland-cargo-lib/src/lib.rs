@@ -16,7 +16,7 @@ use wildland_corex::{create_file_lss, LSSService, UserService};
 
 pub type CargoLibResult<T> = Result<T, CargoLibError>;
 
-// TODO change lss_path to &dyn LocalSecureStorage and pass here native lss implementation after https://wildlandio.atlassian.net/browse/WILX-100 is finished
+// TODO:WILX-145 change lss_path to &dyn LocalSecureStorage and pass here native lss implementation after https://wildlandio.atlassian.net/browse/WILX-100 is finished
 #[tracing::instrument]
 pub fn create_cargo_lib(lss_path: String) -> CargoLibResult<CargoLib> {
     _ = logging::init_subscriber();

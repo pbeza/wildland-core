@@ -8,10 +8,10 @@ pub enum CargoLibError {
 }
 
 impl CargoLibError {
-    // TODO error interface specification: what do we care about? do we want codes or some string kind?
+    // TODO:WILX-205 error interface specification: what do we care about? do we want codes or some string kind?
     pub fn code(&self) -> u32 {
         match self {
-            CargoLibError::CoreX(_inner) => 100, // TODO codes
+            CargoLibError::CoreX(_inner) => 100, // TODO:WILX-205 codes
         }
     }
 }
