@@ -1,4 +1,4 @@
-use crate::constants::WILDLAND_SIGNATURE_HEADER;
+use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
 
@@ -43,7 +43,7 @@ impl SCSignatureClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::{CREDENTIALS_ID, MESSAGE, SIGNATURE, TIMESTAMP};
+    use crate::sc::constants::test_utilities::{CREDENTIALS_ID, MESSAGE, SIGNATURE, TIMESTAMP};
     use mockito::{mock, server_url};
     use serde_json::json;
 
