@@ -208,26 +208,27 @@ csharp x86_64 linux:
       when: manual
       allow_failure: true
 
-webassembly emscripten linux:
-  stage: Bindings
-  script:
-    - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
-    - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
-    - mv /out ${CI_PROJECT_DIR}/build
-  artifacts:
-    expose_as: 'wasm'
-    name: wasm
-    paths:
-      - build/
-    expire_in: 1 week
-  tags:
-    - docker
-    - linux
-    - x64
-  rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_COMMIT_BRANCH == "main"
-      when: manual
-      allow_failure: true
+# esavier: disabled since broken
+# webassembly emscripten linux:
+#   stage: Bindings
+#   script:
+#     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
+#     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
+#     - mv /out ${CI_PROJECT_DIR}/build
+#   artifacts:
+#     expose_as: 'wasm'
+#     name: wasm
+#     paths:
+#       - build/
+#     expire_in: 1 week
+#   tags:
+#     - docker
+#     - linux
+#     - x64
+#   rules:
+#     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_COMMIT_BRANCH == "main"
+#       when: manual
+#       allow_failure: true
 
 ###############
 # STAGE: Deploy
