@@ -4,12 +4,12 @@ use serde::Serialize;
 use wildland_crypto::identity::signing_keypair::SigningKeypair;
 
 use crate::{
-    credentials::{CreateCredentialsReq, CreateCredentialsRes, SCCredentialsClient},
-    error::StorageControllerClientError,
-    metrics::{RequestMetricsReq, RequestMetricsRes, SCMetricsClient},
+    error::WildlandHttpClientError,
     response_handler::handle,
-    signature::{SCSignatureClient, SignatureRequestReq, SignatureRequestRes},
-    storage::{CreateStorageRes, SCStorageClient},
+    sc::credentials::{CreateCredentialsReq, CreateCredentialsRes, SCCredentialsClient},
+    sc::metrics::{RequestMetricsReq, RequestMetricsRes, SCMetricsClient},
+    sc::signature::{SCSignatureClient, SignatureRequestReq, SignatureRequestRes},
+    sc::storage::{CreateStorageRes, SCStorageClient},
 };
 
 #[derive(Debug)]
@@ -55,7 +55,7 @@ impl StorageControllerClient {
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub async fn create_storage(&self) -> Result<CreateStorageRes, StorageControllerClientError> {
+    pub async fn create_storage(&self) -> Result<CreateStorageRes, WildlandHttpClientError> {
         let response = self.sc_storage_client.create_storage().await?;
         let response_json = handle(response).await?.json().await?;
         Ok(response_json)
@@ -65,7 +65,7 @@ impl StorageControllerClient {
     pub async fn create_credentials(
         &self,
         request: CreateCredentialsReq,
-    ) -> Result<CreateCredentialsRes, StorageControllerClientError> {
+    ) -> Result<CreateCredentialsRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
         let response = self
             .sc_credentials_client
@@ -79,7 +79,7 @@ impl StorageControllerClient {
     pub async fn request_signature(
         &self,
         request: SignatureRequestReq,
-    ) -> Result<SignatureRequestRes, StorageControllerClientError> {
+    ) -> Result<SignatureRequestRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
         let response = self
             .sc_signature_client
@@ -93,7 +93,7 @@ impl StorageControllerClient {
     pub async fn request_metrics(
         &self,
         request: RequestMetricsReq,
-    ) -> Result<RequestMetricsRes, StorageControllerClientError> {
+    ) -> Result<RequestMetricsRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
         let response = self
             .sc_metrics_client
@@ -101,12 +101,6 @@ impl StorageControllerClient {
             .await?;
         let response_json = handle(response).await?.json().await?;
         Ok(response_json)
-    }
-
-    #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn set_credentials(&mut self, credentials: Credentials) {
-        self.credential_id = credentials.id;
-        self.credential_secret = credentials.secret;
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
@@ -120,13 +114,12 @@ impl StorageControllerClient {
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self, request))]
-    fn sign_request<T>(&self, request: &T) -> Result<String, StorageControllerClientError>
+    fn sign_request<T>(&self, request: &T) -> Result<String, WildlandHttpClientError>
     where
         T: Serialize,
     {
-        let message = serde_json::to_vec(request).map_err(|source| {
-            StorageControllerClientError::CannotSerializeRequestError { source }
-        })?;
+        let message = serde_json::to_vec(request)
+            .map_err(|source| WildlandHttpClientError::CannotSerializeRequestError { source })?;
         let keypair =
             SigningKeypair::try_from_str(self.get_credential_id(), self.get_credential_secret())?;
         let signature = keypair.sign(&message);
