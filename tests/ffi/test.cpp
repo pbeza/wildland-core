@@ -33,16 +33,16 @@ int main()
                     UserPayload user = user_api.get_user();
                     std::cout << "User: " << user.get_string().to_string() << std::endl;
                 }
-                catch (const UserRetrievalError_NotFoundException &e)
+                catch (const UserRetrievalExc_NotFoundException &e)
                 {
                     std::cout << e.reason().to_string() << std::endl;
                 }
-                catch (const UserRetrievalError_UnexpectedException &e)
+                catch (const UserRetrievalExc_UnexpectedException &e)
                 {
                     std::cout << e.reason().to_string() << std::endl;
                 }
             }
-            catch (const UserCreationError_NotCreatedException &e)
+            catch (const UserCreationExc_NotCreatedException &e)
             {
                 std::cout << e.reason().to_string() << std::endl;
             }
@@ -52,17 +52,17 @@ int main()
                 RustVec<u8> entropy;
                 user_api.create_user_from_entropy(entropy, device_name);
             }
-            catch (const UserCreationError_NotCreatedException &e)
+            catch (const UserCreationExc_NotCreatedException &e)
             {
                 std::cout << e.reason().to_string() << std::endl;
             }
         }
-        catch (const MnemonicCreationError_NotCreatedException &e)
+        catch (const MnemonicCreationExc_NotCreatedException &e)
         {
             std::cout << e.reason().to_string() << std::endl;
         }
     }
-    catch (const CargoLibCreationError_NotCreatedException &e)
+    catch (const CargoLibCreationExc_NotCreatedException &e)
     {
         std::cout << e.reason().to_string() << std::endl;
     }

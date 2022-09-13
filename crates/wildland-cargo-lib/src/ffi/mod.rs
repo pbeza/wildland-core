@@ -3,14 +3,16 @@ use crate::{
     UserPayload,
 };
 use ffi_macro::binding_wrapper;
-pub use wildland_corex::{CoreXError, CryptoError, ForestRetrievalError, LssError};
+pub use wildland_corex::{
+    CoreXError, CryptoError, ForestRetrievalError, LssError, UserCreationError,
+};
 
 type VoidType = ();
 
-pub type UserRetrievalError = RetrievalError<ForestRetrievalError>;
-pub type MnemonicCreationError = CreationError<CryptoError>;
-pub type CargoLibCreationError = CreationError<LssError>;
-pub type UserCreationError = CreationError<wildland_corex::UserCreationError>;
+pub type UserRetrievalExc = RetrievalError<ForestRetrievalError>;
+pub type MnemonicCreationExc = CreationError<CryptoError>;
+pub type CargoLibCreationExc = CreationError<LssError>;
+pub type UserCreationExc = CreationError<UserCreationError>;
 
 #[binding_wrapper]
 mod ffi_binding {
@@ -25,42 +27,38 @@ mod ffi_binding {
         fn reason(&self) -> String;
         fn domain(&self) -> WildlandXDomain;
     }
-    enum UserRetrievalError {
-        NotFound(String),
-        Unexpected(VoidType), // In fact in Rust this variant keeps ForestRetrievalError.
-                              // However client code does not need to know anything about ForestRetrievalError
-                              // because it generates exceptions only basing on variants names.
-                              // Inner field is needed only in Rust code in ExceptionTrait impl block,
-                              // so here it is possible to avoid specifying ForestRetrievalError type and use VoidType instead.
+    enum UserRetrievalExc {
+        NotFound(_),
+        Unexpected(_),
     }
-    enum CargoLibCreationError {
-        NotCreated(String),
+    enum CargoLibCreationExc {
+        NotCreated(_),
     }
-    enum MnemonicCreationError {
-        NotCreated(VoidType), // The same as above: used VoidType instead CryptoError
+    enum MnemonicCreationExc {
+        NotCreated(_),
     }
-    enum UserCreationError {
-        NotCreated(VoidType), // The same as above: used VoidType instead wildland_corex::UserCreationError
+    enum UserCreationExc {
+        NotCreated(_),
     }
 
     extern "Rust" {
         type VoidType;
 
-        fn create_cargo_lib(lss_path: String) -> Result<CargoLib, CargoLibCreationError>;
+        fn create_cargo_lib(lss_path: String) -> Result<CargoLib, CargoLibCreationExc>;
         fn user_api(self: &CargoLib) -> UserApi;
 
-        fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationError>;
+        fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_user_from_entropy(
             self: &UserApi,
             entropy: Vec<u8>,
             device_name: String,
-        ) -> Result<VoidType, UserCreationError>;
+        ) -> Result<VoidType, UserCreationExc>;
         fn create_user_from_mnemonic(
             self: &UserApi,
             mnemonic: &MnemonicPayload,
             device_name: String,
-        ) -> Result<VoidType, UserCreationError>;
-        fn get_user(self: &UserApi) -> Result<UserPayload, UserRetrievalError>;
+        ) -> Result<VoidType, UserCreationExc>;
+        fn get_user(self: &UserApi) -> Result<UserPayload, UserRetrievalExc>;
 
         fn get_string(self: &MnemonicPayload) -> String;
         fn get_vec(self: &MnemonicPayload) -> Vec<String>;
