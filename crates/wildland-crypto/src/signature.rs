@@ -35,7 +35,7 @@ impl Signature {
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn verify(&self, msg: &[u8], public_key: &[u8; 32]) -> Result<(), CryptoError> {
         PublicKey::from_bytes(public_key)
-            .unwrap() // TODO remove unwrap
+            .unwrap() // TODO:WILX-210 remove unwrap
             .verify(msg, &self.0)
             .map_err(|_| CryptoError::MessageVerificationError(encode(msg)))
     }
