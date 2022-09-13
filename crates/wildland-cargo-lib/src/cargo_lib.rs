@@ -6,11 +6,13 @@ pub struct CargoLib {
 }
 
 impl CargoLib {
+    #[tracing::instrument(level = "debug", ret)]
     pub fn new(user_api: UserApi) -> Self {
         Self { user_api }
     }
 
-    pub fn user_api(&self) -> &UserApi {
-        &self.user_api
+    #[tracing::instrument(skip(self))]
+    pub fn user_api(&self) -> UserApi {
+        self.user_api.clone()
     }
 }

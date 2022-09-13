@@ -1,6 +1,6 @@
 [package]
 name = "wildland-corex"
-version = "0.2.4"
+version = "0.3.2"
 authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -13,18 +13,19 @@ publish = ["wl-dev"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wildland-catlib = { version = "0.3.0", path = "../wildland-catlib", registry = "wl-dev" }
-wildland-crypto = { version = "0.4.4", path = "../wildland-crypto", registry = "wl-dev" }
-wildland-dfs = { version = "0.1.0", path = "../wildland-dfs", registry = "wl-dev" }
-wildland-local-secure-storage = { version = "0.0.6", path = "../wildland-local-secure-storage", registry = "wl-dev" }
-thiserror = "1.0.31"
-sha2 = "0.10.2"
-hex = "0.4.3"
-mockall_double = "0.3.0"
+wildland-catlib               = { version = "0.4.0", path = "../wildland-catlib", registry = "wl-dev" }
+wildland-crypto               = { version = "0.5.0", path = "../wildland-crypto", registry = "wl-dev" }
+wildland-dfs                  = { version = "0.2.0", path = "../wildland-dfs", registry = "wl-dev" }
+wildland-local-secure-storage = { version = "0.1.0", path = "../wildland-local-secure-storage", registry = "wl-dev" }
+thiserror                     = { version = "1.0.31" }
+sha2                          = { version = "0.10.2" }
+hex                           = { version = "0.4.3" }
+mockall_double                = { version = "0.3.0" }
+tracing                       = { version = "0.1" }
 
 [dev-dependencies]
-mockall = "0.11.1"
-hex-literal = "0.3.4"
+mockall                       = { version = "0.11.1" }
+hex-literal                   = { version = "0.3.4" }
 
 [package.metadata.workspaces]
 independent = true

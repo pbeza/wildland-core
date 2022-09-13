@@ -1,4 +1,4 @@
-use crate::constants::WILDLAND_SIGNATURE_HEADER;
+use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
 
@@ -27,13 +27,14 @@ pub struct UsageReq {
     pub tx: i64,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub(crate) struct SCMetricsClient {
     pub(crate) base_url: String,
     pub(crate) client: Client,
 }
 
 impl SCMetricsClient {
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub(crate) async fn request_metrics(
         &self,
         request: RequestMetricsReq,
@@ -51,7 +52,7 @@ impl SCMetricsClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::{CREDENTIALS_ID, SIGNATURE, TIMESTAMP};
+    use crate::sc::constants::test_utilities::{CREDENTIALS_ID, SIGNATURE, TIMESTAMP};
     use mockito::{mock, server_url};
     use serde_json::json;
 

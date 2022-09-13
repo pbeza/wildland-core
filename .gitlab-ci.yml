@@ -124,6 +124,8 @@ x86_64 linux:
       --dockerfile "${CI_PROJECT_DIR}/docker/Dockerfile.base"
       --no-push
       --build-arg BUILD_TARGET=x86_64-unknown-linux-gnu
+      --single-snapshot
+      --snapshotMode time
     - mv /ffi_build ${CI_PROJECT_DIR}
     - mv /ffi_tests ${CI_PROJECT_DIR}
   cache:
@@ -164,7 +166,7 @@ apple:
 #
 # Artifacts from this stage are used as the pipeline artifacts and/or release assets.
 
-#csharp x86_64 windows-msvc:
+# csharp x86_64 windows-msvc:
 #  stage: Bindings
 #  image:
 #    name: registry.gitlab.com/wildland/corex/wildland-core/builder:win32-ltsc2022
@@ -214,16 +216,35 @@ csharp x86_64 linux:
     - linux
     - x64
   rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_COMMIT_BRANCH == "main"
+      when: manual
+      allow_failure: true
+
+webassembly emscripten linux:
+  stage: Bindings
+  script:
+    - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
+    - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
+    - mv /out ${CI_PROJECT_DIR}/build
+  artifacts:
+    expose_as: 'wasm'
+    name: wasm
+    paths:
+      - build/
+    expire_in: 1 week
+  tags:
+    - docker
+    - linux
+    - x64
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_COMMIT_BRANCH == "main"
       when: manual
       allow_failure: true
 
 ###############
 # STAGE: Deploy
 #
-# This stage is the last stage in which the crates are published to the registry.
+# This stage is the last stage in which the crates are published to the registry. 
 
 publish crates:
   stage: Deploy

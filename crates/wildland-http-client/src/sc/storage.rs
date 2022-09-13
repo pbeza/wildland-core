@@ -11,13 +11,14 @@ pub struct CreateStorageRes {
     pub credentials_secret: String,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub(crate) struct SCStorageClient {
     pub(crate) base_url: String,
     pub(crate) client: Client,
 }
 
 impl SCStorageClient {
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub(crate) async fn create_storage(&self) -> Result<Response, Error> {
         let url = format!("{}/storage/create", self.base_url);
         self.client.post(url).send().await
@@ -26,7 +27,7 @@ impl SCStorageClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::{CREDENTIALS_ID, CREDENTIALS_SECRET, STORAGE_ID};
+    use crate::sc::constants::test_utilities::{CREDENTIALS_ID, CREDENTIALS_SECRET, STORAGE_ID};
     use mockito::{mock, server_url};
     use serde_json::json;
 

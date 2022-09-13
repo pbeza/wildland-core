@@ -21,10 +21,12 @@ pub struct UserService {
 }
 
 impl UserService {
+    #[tracing::instrument(level = "debug", ret)]
     pub fn new(lss_service: Rc<LSSService>) -> Self {
         Self { lss_service }
     }
 
+    #[tracing::instrument(level = "debug", skip(input, self))]
     pub fn create_user(&self, input: CreateUserInput, device_name: String) -> CorexResult<()> {
         if self.user_exists()? {
             return Err(CoreXError::UserAlreadyExists);
@@ -45,7 +47,8 @@ impl UserService {
         Ok(())
     }
 
-    fn user_exists(&self) -> CorexResult<bool> {
+    #[tracing::instrument(level = "debug", ret, skip(self))]
+    pub fn user_exists(&self) -> CorexResult<bool> {
         self.lss_service
             .get_default_forest()
             .map(|forest| forest.is_some())
@@ -168,5 +171,22 @@ mod tests {
 
         // then
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn should_return_true_if_user_exists() {
+        // given
+        let forest_wildland_identity = create_wildland_forest_identity();
+        let mut lss_service_mock = LSSService::default();
+        lss_service_mock
+            .expect_get_default_forest()
+            .return_once(|| Ok(Some(forest_wildland_identity)));
+        let user_service = UserService::new(Rc::new(lss_service_mock));
+
+        // when
+        let result = user_service.user_exists();
+
+        // then
+        assert!(result.unwrap());
     }
 }

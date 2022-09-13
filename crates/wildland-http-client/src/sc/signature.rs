@@ -1,4 +1,4 @@
-use crate::constants::WILDLAND_SIGNATURE_HEADER;
+use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
 
@@ -18,13 +18,14 @@ pub struct SignatureRequestRes {
     pub message: String,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub(crate) struct SCSignatureClient {
     pub(crate) base_url: String,
     pub(crate) client: Client,
 }
 
 impl SCSignatureClient {
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub(crate) async fn signature_request(
         &self,
         request: SignatureRequestReq,
@@ -42,7 +43,7 @@ impl SCSignatureClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::{CREDENTIALS_ID, MESSAGE, SIGNATURE, TIMESTAMP};
+    use crate::sc::constants::test_utilities::{CREDENTIALS_ID, MESSAGE, SIGNATURE, TIMESTAMP};
     use mockito::{mock, server_url};
     use serde_json::json;
 

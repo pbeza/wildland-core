@@ -1,4 +1,4 @@
-use crate::constants::WILDLAND_SIGNATURE_HEADER;
+use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
 
@@ -22,13 +22,14 @@ pub struct CreateCredentialsRes {
     pub credentials_secret: String,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub(crate) struct SCCredentialsClient {
     pub(crate) base_url: String,
     pub(crate) client: Client,
 }
 
 impl SCCredentialsClient {
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub(crate) async fn create_credentials(
         &self,
         request: CreateCredentialsReq,
@@ -46,7 +47,7 @@ impl SCCredentialsClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::{
+    use crate::sc::constants::test_utilities::{
         CREDENTIALS_ID, CREDENTIALS_SECRET, SIGNATURE, TIMESTAMP,
     };
     use mockito::{mock, server_url};
@@ -54,6 +55,7 @@ mod tests {
 
     use super::*;
 
+    #[tracing::instrument]
     fn client() -> SCCredentialsClient {
         SCCredentialsClient {
             base_url: server_url(),

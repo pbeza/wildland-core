@@ -19,6 +19,7 @@ impl Display for WildlandIdentity {
 }
 
 impl WildlandIdentity {
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_identifier(&self) -> String {
         match self {
             Forest(index, _) => index.to_string(),
@@ -26,18 +27,21 @@ impl WildlandIdentity {
         }
     }
 
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_public_key(&self) -> Vec<u8> {
         match self {
             Forest(_, keypair) | Device(_, keypair) => keypair.public().into(),
         }
     }
 
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_private_key(&self) -> Vec<u8> {
         match self {
             Forest(_, keypair) | Device(_, keypair) => keypair.secret().into(),
         }
     }
 
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_keypair_bytes(&self) -> Vec<u8> {
         match self {
             Forest(_, keypair) | Device(_, keypair) => keypair.to_bytes(),
