@@ -2,7 +2,7 @@ use thiserror::Error;
 use wildland_crypto::error::CryptoError;
 
 #[derive(Error, Debug)]
-pub enum StorageControllerClientError {
+pub enum WildlandHttpClientError {
     #[error("{0}")]
     HttpError(String),
     #[error("Cannot serialize request")]

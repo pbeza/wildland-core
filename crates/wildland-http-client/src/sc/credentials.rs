@@ -1,4 +1,4 @@
-use crate::constants::WILDLAND_SIGNATURE_HEADER;
+use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
 
@@ -47,7 +47,7 @@ impl SCCredentialsClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::test_utilities::{
+    use crate::sc::constants::test_utilities::{
         CREDENTIALS_ID, CREDENTIALS_SECRET, SIGNATURE, TIMESTAMP,
     };
     use mockito::{mock, server_url};
