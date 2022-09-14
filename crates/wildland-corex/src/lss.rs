@@ -1,18 +1,15 @@
+use crate::{ForestRetrievalError, WildlandIdentity};
+#[cfg(test)]
+use mockall::automock;
 use std::path::PathBuf;
 use std::rc::Rc;
 use wildland_crypto::identity::SigningKeypair;
-
-#[cfg(test)]
-use mockall::automock;
-
-use wildland_local_secure_storage::{FileLSS, LocalSecureStorage};
-
-use crate::{CoreXError, CorexResult, WildlandIdentity};
+use wildland_local_secure_storage::{FileLSS, LocalSecureStorage, LssResult};
 
 pub static DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
 
-pub fn create_file_lss(path: String) -> CorexResult<FileLSS> {
-    FileLSS::new(PathBuf::from(path)).map_err(CoreXError::from)
+pub fn create_file_lss(path: String) -> LssResult<FileLSS> {
+    FileLSS::new(PathBuf::from(path))
 }
 
 #[derive(Clone, Debug)]
@@ -29,22 +26,25 @@ impl LSSService {
     }
 
     #[tracing::instrument(level = "debug", skip(self, wildland_identity))]
-    pub fn save(&self, wildland_identity: WildlandIdentity) -> CorexResult<Option<Vec<u8>>> {
-        let prev_value = self.lss.insert(
+    pub fn save(&self, wildland_identity: WildlandIdentity) -> LssResult<Option<Vec<u8>>> {
+        self.lss.insert(
             wildland_identity.to_string(),
             wildland_identity.get_keypair_bytes(),
-        )?;
-        Ok(prev_value)
+        )
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn get_default_forest(&self) -> CorexResult<Option<WildlandIdentity>> {
-        let default_forest_value = self.lss.get(DEFAULT_FOREST_KEY.to_string())?;
-        if default_forest_value.is_none() {
-            return Ok(None);
-        }
-        let signing_key = SigningKeypair::try_from(default_forest_value.unwrap())?;
-        Ok(Some(WildlandIdentity::Forest(0, signing_key)))
+    pub fn get_default_forest(&self) -> Result<Option<WildlandIdentity>, ForestRetrievalError> {
+        self.lss
+            .get(DEFAULT_FOREST_KEY.to_string())
+            .map_err(|e| e.into())
+            .and_then(|default_forest_value| {
+                default_forest_value.map_or(Ok(None), |default_forest_value| {
+                    let signing_key = SigningKeypair::try_from(default_forest_value)
+                        .map_err(ForestRetrievalError::KeypairParseError)?;
+                    Ok(Some(WildlandIdentity::Forest(0, signing_key)))
+                })
+            })
     }
 }
 
@@ -56,19 +56,19 @@ mod tests {
     use mockall::mock;
     use mockall::predicate::eq;
     use std::rc::Rc;
-    use wildland_local_secure_storage::LSSResult;
+    use wildland_local_secure_storage::LssResult;
 
     mock! {
         #[derive(Debug)]
         TestLSS {}
         impl LocalSecureStorage for TestLSS {
-            fn insert(&self, key: String, value: Vec<u8>) -> LSSResult<Option<Vec<u8>>> {}
-            fn get(&self, key: String) -> LSSResult<Option<Vec<u8>>> {}
-            fn contains_key(&self, key: String) -> LSSResult<bool> {}
-            fn keys(&self) -> LSSResult<Vec<String>> {}
-            fn remove(&self, key: String) -> LSSResult<Option<Vec<u8>>> {}
-            fn len(&self) -> LSSResult<usize> {}
-            fn is_empty(&self) -> LSSResult<bool> {}
+            fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>> {}
+            fn get(&self, key: String) -> LssResult<Option<Vec<u8>>> {}
+            fn contains_key(&self, key: String) -> LssResult<bool> {}
+            fn keys(&self) -> LssResult<Vec<String>> {}
+            fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>> {}
+            fn len(&self) -> LssResult<usize> {}
+            fn is_empty(&self) -> LssResult<bool> {}
         }
     }
 
