@@ -5,4 +5,4 @@ members = ["crates/*"]
 # The following patch resolves the problem with undefined symbol `emscripten_get_now`
 # that occures while compiling rust library to `wasm32-unknown-emscripten` target.
 [patch.crates-io]
-instant = { git = "https://github.com/hoodmane/instant.git", branch = "emscripten-no-leading-underscore"}
+instant = { git = "https://github.com/hoodmane/instant.git", branch = "emscripten-no-leading-underscore" }

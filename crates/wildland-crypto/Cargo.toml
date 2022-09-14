@@ -1,51 +1,51 @@
 [package]
-name = "wildland-crypto"
-version = "0.6.0"
-authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
-edition = "2021"
-license = "GPL-3.0-only"
-repository = "https://gitlab.com/wildland/corex/wildland-core"
-homepage = "https://wildland.io/"
+authors     = ["Golem Foundation Contributors <contact@golem.foundation>"]
 description = "Wildland Crypto"
-keywords = ["crypto"]
-publish = ["wl-dev"]
+edition     = "2021"
+homepage    = "https://wildland.io/"
+keywords    = ["crypto"]
+license     = "GPL-3.0-only"
+name        = "wildland-crypto"
+publish     = ["wl-dev"]
+repository  = "https://gitlab.com/wildland/corex/wildland-core"
+version     = "0.6.0"
 
 [lib]
 crate-type = ["rlib"]
 
 [dependencies]
-serde               = { version = "1.0" }
-rand_core           = { version = "0.6", features = ["std"] }
-rand-8              = { version = "0.8.4", package = "rand" }
-rand-7              = { version = "0.7.3", package = "rand" }
-thiserror           = { version = "1.0.31" }
+rand-7    = { version = "0.7.3", package = "rand" }
+rand-8    = { version = "0.8.4", package = "rand" }
+rand_core = { version = "0.6", features = ["std"] }
+serde     = { version = "1.0" }
+thiserror = { version = "1.0.31" }
 
 # bip39 is used to handle mnemonics
-tiny-bip39          = { version = "0.8.2" }
+tiny-bip39 = { version = "0.8.2" }
 
 # hkdf is used to bridge 64 -> 96 bytes of randomness
 # (gap between bip39 output and ed25519-bip32 input)
-hkdf                = { version = "0.12.0" }
+hkdf = { version = "0.12.0" }
 
 # ed25519-dalek-bip32 is used to generate the tree of keypairs used by WL
 ed25519-dalek-bip32 = { version = "0.2.0" }
 
 # used to derive ed25519 public keys and to generate curve25519 keypairs
-ed25519-dalek       = { version = "1.0.1" }
-crypto_box          = { version = "0.7.2", features=["std"] }
+crypto_box    = { version = "0.7.2", features = ["std"] }
+ed25519-dalek = { version = "1.0.1" }
 
 # used to generate nonce
-salsa20             = { version = "0.9.0" }
+salsa20 = { version = "0.9.0" }
 
-sha2                = { version = "0.10.0" }
-hex                 = { version = "0.4.3" }
-tracing             = { version = "0.1" }
+hex     = { version = "0.4.3" }
+sha2    = { version = "0.10.0" }
+tracing = { version = "0.1" }
 
 [dev-dependencies]
-hex               = { version = "0.4.3" }
-hex-literal       = { version = "0.3.4" }
-serde             = { version = "1", features = ["derive"] }
-serde_json        = { version = "1.0.79" }
+hex         = { version = "0.4.3" }
+hex-literal = { version = "0.3.4" }
+serde       = { version = "1", features = ["derive"] }
+serde_json  = { version = "1.0.79" }
 
 [package.metadata.workspaces]
 independent = true

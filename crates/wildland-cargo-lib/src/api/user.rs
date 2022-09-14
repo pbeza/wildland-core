@@ -47,9 +47,9 @@ impl UserApi {
         Self { user_service }
     }
 
-    // #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn generate_mnemonic(&self) -> CreationResult<MnemonicPayload, CryptoError> {
-        // tracing::trace!("generating mnemonic");
+        tracing::trace!("generating mnemonic");
         generate_random_mnemonic()
             .map_err(CreationError::NotCreated)
             .map(MnemonicPayload::from)

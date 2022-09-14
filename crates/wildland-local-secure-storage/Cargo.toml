@@ -1,14 +1,14 @@
 [package]
-name = "wildland-local-secure-storage"
-version = "0.2.0"
-authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
-edition = "2021"
-license = "GPL-3.0-only"
-repository = "https://gitlab.com/wildland/corex/wildland-core"
-homepage = "https://wildland.io/"
+authors     = ["Golem Foundation Contributors <contact@golem.foundation>"]
 description = "Wildland keystore library"
-keywords = ["storage", "keystore"]
-publish = ["wl-dev"]
+edition     = "2021"
+homepage    = "https://wildland.io/"
+keywords    = ["storage", "keystore"]
+license     = "GPL-3.0-only"
+name        = "wildland-local-secure-storage"
+publish     = ["wl-dev"]
+repository  = "https://gitlab.com/wildland/corex/wildland-core"
+version     = "0.2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
