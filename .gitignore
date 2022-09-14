@@ -2,3 +2,5 @@
 .idea
 target
 .vscode
+**/corex.log*
+lss.yaml
