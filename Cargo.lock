@@ -169,6 +169,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "const_format"
+version = "0.2.26"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "939dc9e2eb9077e0679d2ce32de1ded8531779360b003b4a972a7a39ec263495"
+dependencies = [
+ "const_format_proc_macros",
+]
+
+[[package]]
+name = "const_format_proc_macros"
+version = "0.2.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef196d5d972878a48da7decb7686eded338b4858fbabeed513d63a7c98b2b82d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-xid",
+]
+
+[[package]]
+name = "convert_case"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb4a24b1aaf0fd0ce8b45161144d6f42cd91677fd5940fd431183eb023b3a2b8"
+
+[[package]]
 name = "core-foundation"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -392,30 +418,31 @@ dependencies = [
 
 [[package]]
 name = "ffi-macro"
-version = "0.2.3"
+version = "0.7.1"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "6779d604cf1d986787f90dfdf0e4bc34b21aef8f38aefc0acf93a32a7025b0b6"
+checksum = "dc8c919af31a77e81415b1ef792e01243fd51de8db671a27c0a4d25ab711f80d"
 dependencies = [
  "ffi-parser",
 ]
 
 [[package]]
 name = "ffi-macro-build"
-version = "0.2.2"
+version = "0.5.2"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "d2d9761d3fec4d05077d8e2ba9ccd71e062cf0cf251918e923c45a3949e92b19"
+checksum = "d9e11ed462283d7880cbf04d2df12a60554837259a7eced21982f30aa13b2950"
 dependencies = [
  "ffi-parser",
- "swift-bridge-build",
  "syn",
 ]
 
 [[package]]
 name = "ffi-parser"
-version = "0.3.0"
+version = "0.8.1"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "c4cd7f72fab28fb6bbd1ef0c2293d9bf07566c3be0ff0cf06711a13f3edb454e"
+checksum = "2624647ad0e66230e458c35a976ca44b6e9d07cbd67a803f69ed9dd2c95355c1"
 dependencies = [
+ "const_format",
+ "convert_case",
  "proc-macro2",
  "quote",
  "syn",
@@ -741,9 +768,9 @@ checksum = "879d54834c8c76457ef4293a689b2a8c59b076067ad77b15efafbb05f92a592b"
 
 [[package]]
 name = "itertools"
-version = "0.10.3"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9a9d19fa1e79b6215ff29b9d6880b706147f16e9b1dbb1e4e5947b5b02bc5e3"
+checksum = "d8bf247779e67a9082a4790b45e71ac7cfd1321331a5c856a74a9faebdab78d0"
 dependencies = [
  "either",
 ]
@@ -1636,9 +1663,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.21.0"
+version = "1.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89797afd69d206ccd11fb0ea560a44bbb87731d020670e79416d442919257d42"
+checksum = "0020c875007ad96677dcc890298f4b942882c5d4eb7cc8f439fc3bf813dc9c95"
 dependencies = [
  "autocfg",
  "bytes",
@@ -1970,7 +1997,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "env_logger 0.9.0",
@@ -1992,11 +2019,11 @@ dependencies = [
 
 [[package]]
 name = "wildland-catlib"
-version = "0.4.2"
+version = "0.4.3"
 
 [[package]]
 name = "wildland-corex"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "hex",
  "hex-literal",
@@ -2013,7 +2040,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "crypto_box",
  "ed25519-dalek",
@@ -2035,11 +2062,11 @@ dependencies = [
 
 [[package]]
 name = "wildland-dfs"
-version = "0.2.2"
+version = "0.2.3"
 
 [[package]]
 name = "wildland-http-client"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "dotenv",
  "http",
@@ -2056,7 +2083,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-local-secure-storage"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "rustbreak",
  "tempfile",
