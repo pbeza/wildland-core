@@ -1,56 +1,99 @@
 #include <iostream>
+#include <unordered_map>
 #include "ffi_cxx.h"
 
 class LocalSecureStorageImpl : public LocalSecureStorage
 {
+    /// Inserts a key-value pair into the LSS.
+    /// If the map did not have this key present, None is returned.
+    /// If the map did have this key present, the value is updated, and the old value is returned.
     LssOptionalBytesResult insert(RustString key, RustVec<u8> value)
     {
         std::cout << "LSS insert C++ impl\n";
-        return new_ok_lss_optional_bytes(new_some_bytes(RustVec<u8>{}));
-        // return new_err_lss_optional_bytes(String{"Err"});
+        auto std_key = key.to_string();
+        LssOptionalBytesResult result;
+        if (store.contains(std_key))
+        {
+            result = new_ok_lss_optional_bytes(new_some_bytes(store[std_key]));
+        }
+        else
+        {
+            result = new_ok_lss_optional_bytes(new_none_bytes());
+        }
+        store[std_key] = value;
+        return result;
+        // return new_err_lss_optional_bytes(String{"Err"}); // EXAMPLE: returning error
     }
 
+    /// Returns a copy of the value corresponding to the key.
     LssOptionalBytesResult get(RustString key)
     {
         std::cout << "LSS get C++ impl\n";
-        return new_ok_lss_optional_bytes(new_some_bytes(RustVec<u8>{}));
-        // return new_err_lss_optional_bytes(String{"Err"});
+        auto std_key = key.to_string();
+        if (store.contains(std_key))
+        {
+            return new_ok_lss_optional_bytes(new_some_bytes(store[std_key]));
+        }
+        else
+        {
+            return new_ok_lss_optional_bytes(new_none_bytes());
+        }
     }
 
+    /// Returns true if the map contains a value for the specified key.
     LssBoolResult contains_key(RustString key)
     {
         std::cout << "LSS contains_key C++ impl\n";
-        return new_ok_lss_bool(true);
-        // return new_err_lss_optional_bytes(String{"Err"});
+        auto std_key = key.to_string();
+        return new_ok_lss_bool(store.contains(std_key));
     }
 
+    /// Returns all keys in arbitrary order.
     LssVecOfStringsResult keys()
     {
         std::cout << "LSS keys C++ impl\n";
-        return new_ok_lss_vec_of_strings(RustVec<String>{});
-        // return new_err_lss_optional_bytes(String{"Err"});
+        RustVec<RustString> keys;
+        for (const auto &[k, v] : store)
+        {
+            keys.push(RustString{k});
+        }
+        return new_ok_lss_vec_of_strings(keys);
     }
 
+    /// Removes a key from the map, returning the value at the key if the key was previously in the map.
     LssOptionalBytesResult remove(RustString key)
     {
         std::cout << "LSS remove C++ impl\n";
-        return new_ok_lss_optional_bytes(new_some_bytes(RustVec<u8>{}));
-        // return new_err_lss_optional_bytes(String{"Err"});
+        auto std_key = key.to_string();
+        LssOptionalBytesResult result;
+        if (store.contains(std_key))
+        {
+            result = new_ok_lss_optional_bytes(new_some_bytes(store[std_key]));
+            store.erase(std_key);
+        }
+        else
+        {
+            result = new_ok_lss_optional_bytes(new_none_bytes());
+        }
+        return result;
     }
 
+    /// Returns the number of elements in the map.
     LssUsizeResult len()
     {
         std::cout << "LSS len C++ impl\n";
-        return new_ok_lss_usize(0);
-        // return new_err_lss_optional_bytes(String{"Err"});
+        return new_ok_lss_usize(store.size());
     }
 
+    /// Returns true if the map contains no elements, false otherwise.
     LssBoolResult is_empty()
     {
         std::cout << "LSS is_empty C++ impl\n";
-        return new_ok_lss_bool(true);
-        // return new_err_lss_optional_bytes(String{"Err"});
+        return new_ok_lss_bool(store.empty());
     }
+
+private:
+    std::unordered_map<std::string, RustVec<u8>> store = {};
 };
 
 int main()
