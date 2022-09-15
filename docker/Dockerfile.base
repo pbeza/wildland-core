@@ -55,6 +55,8 @@ RUN cargo clean && cargo build \
 WORKDIR /app/crates/wildland-cargo-lib/
 RUN cp \
     "./_generated_ffi_code/ffi_cxx.h" \
+    "./_generated_ffi_code/ffi_swift.h" \
+    "./_generated_ffi_code/ffi_swift.swift" \
     "./_generated_ffi_code/ffi_swig.i" \
     "${CXX_LIB}" \
     "${FFI_BUILD_DIR}"
