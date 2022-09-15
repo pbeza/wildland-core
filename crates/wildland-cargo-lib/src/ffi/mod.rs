@@ -96,7 +96,6 @@ mod ffi_binding {
     extern "Rust" {
         type VoidType;
 
-        // TODO automate variant creators generation
         type LssOptionalBytesResult;
         fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult;
         fn new_err_lss_optional_bytes(err_val: String) -> LssOptionalBytesResult;
