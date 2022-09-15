@@ -151,8 +151,11 @@ apple:
   tags:
     - macos
   script:
-    - ci/build_apple.sh
-    - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file wildland-build/wildland.xcframework.zip "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/apple/0.0.1/wildland.xcframework.zip"'
+    - CLOUD_CREDENTIALS=`mktemp`
+    - chmod 600 $CLOUD_CREDENTIALS
+    - echo $APPLE_GCS_BUCKET_UPLODAER_ACCT | base64 -d > $CLOUD_CREDENTIALS
+    - CLOUD_CREDENTIALS=$CLOUD_CREDENTIALS ci/build_apple.sh
+    - rm $CLOUD_CREDENTIALS
   artifacts:
     paths:
       - wildland-build/wildland.xcframework.zip
