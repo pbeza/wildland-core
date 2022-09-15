@@ -23,6 +23,6 @@ pub fn create_cargo_lib(lss_path: String) -> CreationResult<CargoLib, LssError> 
     Ok(CargoLib::new(user_api))
 }
 
-pub fn hello_word() -> String {
+pub fn hello_world() -> String {
     String::from("Hello")
 }
