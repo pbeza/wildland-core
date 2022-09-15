@@ -1,7 +1,6 @@
 use crate::LssResult;
-use std::fmt::Debug;
 
-pub trait LocalSecureStorage: Debug {
+pub trait LocalSecureStorage {
     /// Inserts a key-value pair into the LSS.
     /// If the map did not have this key present, None is returned.
     /// If the map did have this key present, the value is updated, and the old value is returned.

@@ -49,8 +49,8 @@ if ($p.ExitCode -ne 0) {
 
 Write-Host "---------- Cargo Build artifacts ----------"
 cp "$env:SWIFT_BRIDGE_OUT_DIR/SwiftBridgeCore.h" "$env:FFI_BUILD_DIR"
-cp "$env:CARGO_LIB_PROJECT_DIR/_generated_cpp/ffi_cxx.h" "$env:FFI_BUILD_DIR"
-cp "$env:CARGO_LIB_PROJECT_DIR/_generated_cpp/ffi_swig.i" "$env:FFI_BUILD_DIR"
+cp "$env:CARGO_LIB_PROJECT_DIR/_generated_ffi_code/ffi_cxx.h" "$env:FFI_BUILD_DIR"
+cp "$env:CARGO_LIB_PROJECT_DIR/_generated_ffi_code/ffi_swig.i" "$env:FFI_BUILD_DIR"
 cp "$env:CARGO_LIB_PROJECT_DIR/_generated_swift/ffi_swift/ffi_swift.h" "$env:FFI_BUILD_DIR"
 cp "$env:CXX_LIB" "$env:FFI_BUILD_DIR"
 

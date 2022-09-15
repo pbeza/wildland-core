@@ -1,13 +1,12 @@
 use crate::{ForestRetrievalError, MasterIdentity, UserCreationError};
 use mockall_double::double;
-use std::rc::Rc;
 use wildland_crypto::{
     error::CryptoError,
     identity::{self, Identity, MnemonicPhrase},
 };
 
 #[double]
-use crate::LSSService;
+use crate::LssService;
 
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     identity::generate_random_mnemonic()
@@ -18,14 +17,13 @@ pub enum CreateUserInput {
     Entropy(Vec<u8>),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct UserService {
-    lss_service: Rc<LSSService>,
+    lss_service: LssService,
 }
 
 impl UserService {
-    #[tracing::instrument(level = "debug", ret)]
-    pub fn new(lss_service: Rc<LSSService>) -> Self {
+    pub fn new(lss_service: LssService) -> Self {
         Self { lss_service }
     }
 
@@ -67,8 +65,9 @@ impl UserService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::create_wildland_forest_identity;
-    use crate::{WildlandIdentity, DEFAULT_FOREST_KEY};
+    use crate::{
+        test_utilities::create_wildland_forest_identity, WildlandIdentity, DEFAULT_FOREST_KEY,
+    };
     use hex_literal::hex;
 
     #[test]
@@ -81,11 +80,11 @@ mod tests {
     fn should_not_create_user_when_it_already_exists() {
         // given
         let forest_wildland_identity = create_wildland_forest_identity();
-        let mut lss_service_mock = LSSService::default();
+        let mut lss_service_mock = LssService::new();
         lss_service_mock
             .expect_get_default_forest()
             .return_once(|| Ok(Some(forest_wildland_identity)));
-        let user_service = UserService::new(Rc::new(lss_service_mock));
+        let user_service = UserService::new(lss_service_mock);
 
         // when
         let result =
@@ -108,7 +107,7 @@ mod tests {
         "
         );
 
-        let mut lss_service_mock = LSSService::default();
+        let mut lss_service_mock = LssService::default();
         lss_service_mock
             .expect_get_default_forest()
             .return_once(|| Ok(None));
@@ -124,7 +123,7 @@ mod tests {
                 wildland_identity.to_string() == "wildland.device.My Mac"
             })
             .returning(|_| Ok(None));
-        let user_service = UserService::new(Rc::new(lss_service_mock));
+        let user_service = UserService::new(lss_service_mock);
 
         // when
         let result = user_service.create_user(
@@ -154,7 +153,7 @@ mod tests {
             "about".to_string(),
         ];
 
-        let mut lss_service_mock = LSSService::default();
+        let mut lss_service_mock = LssService::default();
         lss_service_mock
             .expect_get_default_forest()
             .return_once(|| Ok(None));
@@ -170,7 +169,7 @@ mod tests {
                 wildland_identity.to_string() == "wildland.device.My Mac"
             })
             .returning(|_| Ok(None));
-        let user_service = UserService::new(Rc::new(lss_service_mock));
+        let user_service = UserService::new(lss_service_mock);
 
         // when
         let result = user_service.create_user(
@@ -186,11 +185,11 @@ mod tests {
     fn should_return_true_if_user_exists() {
         // given
         let forest_wildland_identity = create_wildland_forest_identity();
-        let mut lss_service_mock = LSSService::default();
+        let mut lss_service_mock = LssService::default();
         lss_service_mock
             .expect_get_default_forest()
             .return_once(|| Ok(Some(forest_wildland_identity)));
-        let user_service = UserService::new(Rc::new(lss_service_mock));
+        let user_service = UserService::new(lss_service_mock);
 
         // when
         let result = user_service.user_exists();
