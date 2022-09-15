@@ -1,6 +1,6 @@
 use crate::{
     api::user::UserApi, cargo_lib::CargoLib, create_cargo_lib, errors::*, MnemonicPayload,
-    UserPayload,
+    UserPayload, hello_world
 };
 use ffi_macro::binding_wrapper;
 pub use wildland_corex::{
