@@ -156,10 +156,9 @@ apple:
     - echo $APPLE_GCS_BUCKET_UPLODAER_ACCT | base64 -d > $CLOUD_CREDENTIALS
     - CLOUD_CREDENTIALS=$CLOUD_CREDENTIALS ci/build_apple.sh
     - rm $CLOUD_CREDENTIALS
-    - pwd
   artifacts:
     paths:
-      - wildland.xcframework.zip
+      -wildlandx_macos.build/out_dir/wildlandx.xcframework.zip
 
 
 ################
