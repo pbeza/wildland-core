@@ -1,7 +1,6 @@
 #!/bin/sh
 
 set -ex
-env
 DEBUG_OPTS="-g"
 BUILD_ROOT=$(pwd)
 DESTROOT="$BUILD_ROOT/wildlandx_macos.build"
@@ -170,8 +169,6 @@ INPUT=input.swift
           -o $OBJ_OUT
 
     # Link architecture-specific binary
-    pwd
-    ls
     xcrun clang \
           -v \
           -target $arch-apple-macos12.3 \
