@@ -22,3 +22,7 @@ pub fn create_cargo_lib(lss_path: String) -> CreationResult<CargoLib, LssError> 
     let user_api = UserApi::new(user_service);
     Ok(CargoLib::new(user_api))
 }
+
+pub fn hello_word() -> String {
+    String::from("Hello")
+}

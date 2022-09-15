@@ -44,6 +44,7 @@ mod ffi_binding {
     extern "Rust" {
         type VoidType;
 
+        fn hello_word() -> String;
         fn create_cargo_lib(lss_path: String) -> Result<CargoLib, CargoLibCreationExc>;
         fn user_api(self: &CargoLib) -> UserApi;
 
