@@ -15,7 +15,7 @@ PKG_OUT="out_dir"
 UPLOAD_URL="gs://wildland-apple-dev-binaries"
 FETCH_URL="https://xcode-proxy.wildland.dev/wildland-apple-dev-binaries"
 MANIFEST_REPOSITORY="git@gitlab.com:wildland/corex/sdk-apple.git"
-MANIFEST_BRANCH="pisajew/new_approach"
+MANIFEST_BRANCH="master"
 
 RUST_ARCH_X86_64=x86_64-apple-darwin
 RUST_ARCH_ARM64=aarch64-apple-darwin
