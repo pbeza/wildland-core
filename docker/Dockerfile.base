@@ -22,7 +22,6 @@ RUN for crate in \
     wildland-catlib \
     wildland-crypto \
     wildland-dfs\
-    wildland-local-secure-storage\
     ; do cargo new --lib $crate; done
 COPY Cargo.toml /app/
 COPY Cargo.lock /app/
@@ -37,8 +36,6 @@ COPY crates/wildland-crypto/Cargo.toml wildland-crypto/
 COPY crates/wildland-crypto/rust-toolchain wildland-crypto/
 COPY crates/wildland-dfs/Cargo.toml wildland-dfs/
 COPY crates/wildland-dfs/rust-toolchain wildland-dfs/
-COPY crates/wildland-local-secure-storage/Cargo.toml wildland-local-secure-storage/
-COPY crates/wildland-local-secure-storage/rust-toolchain wildland-local-secure-storage/
 
 WORKDIR /app/
 RUN cargo build \

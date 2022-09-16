@@ -1,15 +1,8 @@
-use crate::{ForestRetrievalError, WildlandIdentity};
+use super::{api::LocalSecureStorage, result::LssResult};
+use crate::{ForestRetrievalError, WildlandIdentity, DEFAULT_FOREST_KEY};
 #[cfg(test)]
 use mockall::mock;
-use std::path::PathBuf;
 use wildland_crypto::identity::SigningKeypair;
-use wildland_local_secure_storage::{FileLSS, LocalSecureStorage, LssResult};
-
-pub static DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
-
-pub fn create_file_lss(path: String) -> LssResult<FileLSS> {
-    FileLSS::new(PathBuf::from(path))
-}
 
 #[derive(Clone)]
 pub struct LssService {
@@ -58,13 +51,9 @@ impl LssService {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        lss::LssService,
-        test_utilities::{create_signing_keypair, create_wildland_forest_identity},
-        LocalSecureStorage, DEFAULT_FOREST_KEY,
-    };
+    use super::{LocalSecureStorage, LssResult, LssService, DEFAULT_FOREST_KEY};
+    use crate::test_utilities::{create_signing_keypair, create_wildland_forest_identity};
     use mockall::{mock, predicate::eq};
-    use wildland_local_secure_storage::LssResult;
 
     mock! {
         #[derive(Debug)]
