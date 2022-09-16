@@ -5,7 +5,7 @@ set -ex
 DEBUG_OPTS="-g"
 BUILD_ROOT=$CI_BUILDS_DIR
 DESTROOT="$BUILD_ROOT/wildlandx_macos.build"
-RUST_SRCDIR="$BUILD_ROOT"
+RUST_SRCDIR=$CI_PROJECT_PATH
 SWIFT_BRIDGE_OUTDIR="$RUST_SRCDIR/crates/wildland-cargo-lib/_generated_cpp"
 INPUT="$SWIFT_BRIDGE_OUTDIR/ffi_swift.swift"
 RUST_LIB="libwildland_cargo_lib.a"
