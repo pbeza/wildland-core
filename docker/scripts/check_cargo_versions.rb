@@ -1,7 +1,7 @@
 require 'json'
 require 'semantic'
 
-changed = `cargo workspaces changed --json`.chomp
+changed = `cargo workspaces changed --json --include-merged-tags`.chomp
 
 # Exit code 42 is a conditional CI failure
 

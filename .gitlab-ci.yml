@@ -146,6 +146,23 @@ x86_64 linux:
       allow_failure: true
 
 
+apple:
+  stage: Bridges
+  only:
+    - main
+  tags:
+    - macos
+  script:
+    - CLOUD_CREDENTIALS=`mktemp`
+    - chmod 600 $CLOUD_CREDENTIALS
+    - echo $APPLE_GCS_BUCKET_UPLODAER_ACCT | base64 -d > $CLOUD_CREDENTIALS
+    - CLOUD_CREDENTIALS=$CLOUD_CREDENTIALS ci/build_apple.sh
+    - rm $CLOUD_CREDENTIALS
+  artifacts:
+    paths:
+      - wildlandx_macos.build/out_dir/wildlandx.xcframework.zip
+
+
 ################
 # STAGE: Bindings
 #
