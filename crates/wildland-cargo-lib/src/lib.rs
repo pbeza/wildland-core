@@ -24,5 +24,5 @@ pub fn create_cargo_lib(lss_path: String) -> CreationResult<CargoLib, LssError> 
 }
 
 pub fn hello_world() -> String {
-    String::from("Hello, Piotr")
+    String::from("Hello, Golem :)")
 }
