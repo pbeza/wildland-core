@@ -36,6 +36,7 @@ impl UserPayload {
     }
 }
 
+/// User management API
 #[derive(Clone)]
 pub struct UserApi {
     user_service: UserService,

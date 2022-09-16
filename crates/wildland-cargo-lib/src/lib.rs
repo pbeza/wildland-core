@@ -14,7 +14,6 @@ use wildland_corex::{LocalSecureStorage, LssService, UserService};
 ///
 /// **Arguments**:
 /// - lss: object implementing [`LocalSecureStorage`] trait
-///
 pub fn create_cargo_lib(lss: &'static dyn LocalSecureStorage) -> CargoLib {
     // TODO WILX-219 Memory leak
     _ = logging::init_subscriber();
