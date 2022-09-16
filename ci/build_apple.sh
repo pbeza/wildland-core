@@ -1,5 +1,6 @@
 #!/bin/sh
-
+# Maintainers: 
+#     Piotr Isajew (pisajew@wildland.io)
 set -ex
 DEBUG_OPTS="-g"
 BUILD_ROOT=$CI_BUILDS_DIR
