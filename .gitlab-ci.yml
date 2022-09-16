@@ -148,6 +148,8 @@ x86_64 linux:
 
 apple:
   stage: Bridges
+  only:
+    - main
   tags:
     - macos
   script:
