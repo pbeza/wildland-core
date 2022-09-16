@@ -4,15 +4,55 @@ use crate::{
 };
 use ffi_macro::binding_wrapper;
 pub use wildland_corex::{
-    CoreXError, CryptoError, ForestRetrievalError, LssError, UserCreationError,
+    CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, LssResult,
+    UserCreationError,
 };
 
 type VoidType = ();
 
 pub type UserRetrievalExc = RetrievalError<ForestRetrievalError>;
 pub type MnemonicCreationExc = CreationError<CryptoError>;
-pub type CargoLibCreationExc = CreationError<LssError>;
 pub type UserCreationExc = CreationError<UserCreationError>;
+
+type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
+fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult {
+    Ok(ok_val)
+}
+fn new_err_lss_optional_bytes(err_val: String) -> LssOptionalBytesResult {
+    Err(LssError(err_val))
+}
+
+type LssBoolResult = LssResult<bool>;
+fn new_ok_lss_bool(ok_val: bool) -> LssBoolResult {
+    Ok(ok_val)
+}
+fn new_err_lss_bool(err_val: String) -> LssBoolResult {
+    Err(LssError(err_val))
+}
+
+type OptionalBytes = Option<Vec<u8>>;
+fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes {
+    Some(bytes)
+}
+fn new_none_bytes() -> OptionalBytes {
+    None
+}
+
+type LssVecOfStringsResult = LssResult<Vec<String>>;
+fn new_ok_lss_vec_of_strings(ok_val: Vec<String>) -> LssVecOfStringsResult {
+    Ok(ok_val)
+}
+fn new_err_lss_vec_of_strings(err_val: String) -> LssVecOfStringsResult {
+    Err(LssError(err_val))
+}
+
+type LssUsizeResult = LssResult<usize>;
+fn new_ok_lss_usize(ok_val: usize) -> LssUsizeResult {
+    Ok(ok_val)
+}
+fn new_err_lss_usize(err_val: String) -> LssUsizeResult {
+    Err(LssError(err_val))
+}
 
 #[binding_wrapper]
 mod ffi_binding {
@@ -31,9 +71,6 @@ mod ffi_binding {
         NotFound(_),
         Unexpected(_),
     }
-    enum CargoLibCreationExc {
-        NotCreated(_),
-    }
     enum MnemonicCreationExc {
         NotCreated(_),
     }
@@ -41,10 +78,41 @@ mod ffi_binding {
         NotCreated(_),
     }
 
+    extern "Traits" {
+        type LocalSecureStorage;
+        fn insert(
+            self: &dyn LocalSecureStorage,
+            key: String,
+            value: Vec<u8>,
+        ) -> LssOptionalBytesResult;
+        fn get(self: &dyn LocalSecureStorage, key: String) -> LssOptionalBytesResult;
+        fn contains_key(self: &dyn LocalSecureStorage, key: String) -> LssBoolResult;
+        fn keys(self: &dyn LocalSecureStorage) -> LssVecOfStringsResult;
+        fn remove(self: &dyn LocalSecureStorage, key: String) -> LssOptionalBytesResult;
+        fn len(self: &dyn LocalSecureStorage) -> LssUsizeResult;
+        fn is_empty(self: &dyn LocalSecureStorage) -> LssBoolResult;
+    }
+
     extern "Rust" {
         type VoidType;
 
-        fn create_cargo_lib(lss_path: String) -> Result<CargoLib, CargoLibCreationExc>;
+        type LssOptionalBytesResult;
+        fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult;
+        fn new_err_lss_optional_bytes(err_val: String) -> LssOptionalBytesResult;
+        type LssBoolResult;
+        fn new_ok_lss_bool(ok_val: bool) -> LssBoolResult;
+        fn new_err_lss_bool(err_val: String) -> LssBoolResult;
+        type LssVecOfStringsResult;
+        fn new_ok_lss_vec_of_strings(ok_val: Vec<String>) -> LssVecOfStringsResult;
+        fn new_err_lss_vec_of_strings(err_val: String) -> LssVecOfStringsResult;
+        type OptionalBytes;
+        fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes;
+        fn new_none_bytes() -> OptionalBytes;
+        type LssUsizeResult;
+        fn new_ok_lss_usize(ok_val: usize) -> LssUsizeResult;
+        fn new_err_lss_usize(err_val: String) -> LssUsizeResult;
+
+        fn create_cargo_lib(lss: &'static dyn LocalSecureStorage) -> CargoLib;
         fn user_api(self: &CargoLib) -> UserApi;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;

@@ -1,26 +1,27 @@
-use crate::{ForestRetrievalError, WildlandIdentity};
+use super::{api::LocalSecureStorage, result::LssResult};
+use crate::{ForestRetrievalError, WildlandIdentity, DEFAULT_FOREST_KEY};
 #[cfg(test)]
-use mockall::automock;
-use std::path::PathBuf;
-use std::rc::Rc;
+use mockall::mock;
 use wildland_crypto::identity::SigningKeypair;
-use wildland_local_secure_storage::{FileLSS, LocalSecureStorage, LssResult};
 
-pub static DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
-
-pub fn create_file_lss(path: String) -> LssResult<FileLSS> {
-    FileLSS::new(PathBuf::from(path))
+#[derive(Clone)]
+pub struct LssService {
+    lss: &'static dyn LocalSecureStorage,
 }
 
-#[derive(Clone, Debug)]
-pub struct LSSService {
-    lss: Rc<dyn LocalSecureStorage>,
+#[cfg(test)]
+mock! {
+    pub LssService {
+        pub fn save(&self, wildland_identity: WildlandIdentity) -> LssResult<Option<Vec<u8>>> ;
+        pub fn get_default_forest(&self) -> Result<Option<WildlandIdentity>, ForestRetrievalError>;
+    }
+    impl Clone for LssService {
+        fn clone(&self) -> Self;
+    }
 }
 
-#[cfg_attr(test, automock)]
-impl LSSService {
-    #[tracing::instrument(level = "debug")]
-    pub fn new(lss: Rc<dyn LocalSecureStorage>) -> Self {
+impl LssService {
+    pub fn new(lss: &'static dyn LocalSecureStorage) -> Self {
         tracing::debug!("created new instance");
         Self { lss }
     }
@@ -50,13 +51,9 @@ impl LSSService {
 
 #[cfg(test)]
 mod tests {
-    use crate::lss::LSSService;
+    use super::{LocalSecureStorage, LssResult, LssService, DEFAULT_FOREST_KEY};
     use crate::test_utilities::{create_signing_keypair, create_wildland_forest_identity};
-    use crate::{LocalSecureStorage, DEFAULT_FOREST_KEY};
-    use mockall::mock;
-    use mockall::predicate::eq;
-    use std::rc::Rc;
-    use wildland_local_secure_storage::LssResult;
+    use mockall::{mock, predicate::eq};
 
     mock! {
         #[derive(Debug)]
@@ -82,7 +79,8 @@ mod tests {
             .expect_insert()
             .with(eq(String::from(DEFAULT_FOREST_KEY)), eq(keypair.to_bytes()))
             .return_once(|_key, _value| Ok(None));
-        let lss_service = LSSService::new(Rc::new(lss_mock));
+        let lss_mock_static_ref: &'static MockTestLSS = unsafe { std::mem::transmute(&lss_mock) };
+        let lss_service = LssService::new(lss_mock_static_ref);
 
         // when
         let result = lss_service.save(wildland_identity).unwrap();
@@ -102,7 +100,8 @@ mod tests {
             .expect_get()
             .with(eq(String::from(DEFAULT_FOREST_KEY)))
             .return_once(|_| Ok(Some(keypair_bytes)));
-        let lss_service = LSSService::new(Rc::new(lss_mock));
+        let lss_mock_static_ref: &'static MockTestLSS = unsafe { std::mem::transmute(&lss_mock) };
+        let lss_service = LssService::new(lss_mock_static_ref);
 
         // when
         let result = lss_service.get_default_forest().unwrap().unwrap();
@@ -123,7 +122,8 @@ mod tests {
             .expect_get()
             .with(eq(String::from(DEFAULT_FOREST_KEY)))
             .return_once(|_| Ok(None));
-        let lss_service = LSSService::new(Rc::new(lss_mock));
+        let lss_mock_static_ref: &'static MockTestLSS = unsafe { std::mem::transmute(&lss_mock) };
+        let lss_service = LssService::new(lss_mock_static_ref);
 
         // when
         let result = lss_service.get_default_forest().unwrap();

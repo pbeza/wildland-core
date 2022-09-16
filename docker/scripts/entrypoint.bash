@@ -2,6 +2,9 @@
 
 if [ -n "$1" ]; then
     case $1 in
+        swift)
+            bash /scripts/bindings_swift-x64-86-linux.bash
+            ;;
         cpp)
             bash /scripts/bindings_cpp-x64-86-linux.bash
             ;;
