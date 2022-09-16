@@ -2,7 +2,7 @@
 
 set -ex
 DEBUG_OPTS="-g"
-BUILD_ROOT=$(pwd)
+BUILD_ROOT=$CI_BUILDS_DIR
 DESTROOT="$BUILD_ROOT/wildlandx_macos.build"
 RUST_SRCDIR="$BUILD_ROOT"
 SWIFT_BRIDGE_OUTDIR="$RUST_SRCDIR/crates/wildland-cargo-lib/_generated_cpp"
