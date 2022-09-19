@@ -3,7 +3,7 @@ use crate::{
     cargo_lib::CargoLib,
     create_cargo_lib,
     errors::*,
-    MnemonicPayload, UserPayload,
+    CargoLibCreationError, MnemonicPayload, UserPayload,
 };
 use ffi_macro::binding_wrapper;
 pub use wildland_corex::{
@@ -16,6 +16,7 @@ type VoidType = ();
 pub type UserRetrievalExc = RetrievalError<ForestRetrievalError>;
 pub type MnemonicCreationExc = CreationError<CryptoError>;
 pub type UserCreationExc = CreationError<UserCreationError>;
+pub type CargoLibCreationExc = CreationError<CargoLibCreationError>;
 
 type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
 fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult {
@@ -80,6 +81,9 @@ mod ffi_binding {
     enum UserCreationExc {
         NotCreated(_),
     }
+    enum CargoLibCreationExc {
+        NotCreated(_),
+    }
 
     extern "Traits" {
         type CargoCfgProvider;
@@ -119,7 +123,10 @@ mod ffi_binding {
         fn new_ok_lss_usize(ok_val: usize) -> LssUsizeResult;
         fn new_err_lss_usize(err_val: String) -> LssUsizeResult;
 
-        fn create_cargo_lib(lss: &'static dyn LocalSecureStorage) -> CargoLib;
+        fn create_cargo_lib(
+            lss: &'static dyn LocalSecureStorage,
+            config_provider: &'static dyn CargoCfgProvider,
+        ) -> Result<CargoLib, CargoLibCreationExc>;
         fn user_api(self: &CargoLib) -> UserApi;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;

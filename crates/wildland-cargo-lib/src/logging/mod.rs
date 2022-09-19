@@ -1,17 +1,17 @@
 static mut GUARDS: Vec<WorkerGuard> = vec![];
 
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_core::LevelFilter;
 use tracing_subscriber::{
-    fmt, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter,
+    fmt, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
 };
 
-pub fn init_subscriber() -> anyhow::Result<()> {
-    let fmt_layer = fmt::layer().with_target(false);
-    let filter_layer = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?;
+use crate::api::config::LoggerCfg;
 
-    let filename = std::env::var("RUST_LOGFILE").unwrap_or_else(|_| String::from("corex.log"));
-
-    let file_appender = tracing_appender::rolling::hourly(".", filename);
+pub fn init_subscriber(logger_cfg: LoggerCfg) -> anyhow::Result<()> {
+    let fmt_layer = fmt::layer().with_target(false).with_level(true);
+    let level_filter = LevelFilter::from_level(logger_cfg.log_level.into());
+    let file_appender = tracing_appender::rolling::hourly(".", logger_cfg.log_file);
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
     // Currently required;
@@ -21,7 +21,7 @@ pub fn init_subscriber() -> anyhow::Result<()> {
     }
 
     tracing_subscriber::registry()
-        .with(filter_layer)
+        .with(level_filter)
         .with(fmt_layer)
         .with(Some(fmt::Layer::new().with_writer(non_blocking)))
         .init();

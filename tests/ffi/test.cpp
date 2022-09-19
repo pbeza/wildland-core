@@ -2,12 +2,31 @@
 #include <unordered_map>
 #include "ffi_cxx.h"
 
+class ConfigProviderImpl : public CargoCfgProvider
+{
+    RustVec<u8> get_config() override
+    {
+        std::string config_json = "{ \
+            \"logger\": { \
+                \"log_level\" : \"info\", \
+                \"log_file\" : \"cargo.log\" \
+            } \
+        }";
+        RustVec<u8> result;
+        for (const auto c : config_json)
+        {
+            result.push(c);
+        }
+        return result;
+    }
+};
+
 class LocalSecureStorageImpl : public LocalSecureStorage
 {
     /// Inserts a key-value pair into the LSS.
     /// If the map did not have this key present, None is returned.
     /// If the map did have this key present, the value is updated, and the old value is returned.
-    LssOptionalBytesResult insert(RustString key, RustVec<u8> value)
+    LssOptionalBytesResult insert(RustString key, RustVec<u8> value) override
     {
         std::cout << "LSS insert C++ impl\n";
         auto std_key = key.to_string();
@@ -26,7 +45,7 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Returns a copy of the value corresponding to the key.
-    LssOptionalBytesResult get(RustString key)
+    LssOptionalBytesResult get(RustString key) override
     {
         std::cout << "LSS get C++ impl\n";
         auto std_key = key.to_string();
@@ -41,7 +60,7 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Returns true if the map contains a value for the specified key.
-    LssBoolResult contains_key(RustString key)
+    LssBoolResult contains_key(RustString key) override
     {
         std::cout << "LSS contains_key C++ impl\n";
         auto std_key = key.to_string();
@@ -49,7 +68,7 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Returns all keys in arbitrary order.
-    LssVecOfStringsResult keys()
+    LssVecOfStringsResult keys() override
     {
         std::cout << "LSS keys C++ impl\n";
         RustVec<RustString> keys;
@@ -61,7 +80,7 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
-    LssOptionalBytesResult remove(RustString key)
+    LssOptionalBytesResult remove(RustString key) override
     {
         std::cout << "LSS remove C++ impl\n";
         auto std_key = key.to_string();
@@ -79,14 +98,14 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Returns the number of elements in the map.
-    LssUsizeResult len()
+    LssUsizeResult len() override
     {
         std::cout << "LSS len C++ impl\n";
         return new_ok_lss_usize(store.size());
     }
 
     /// Returns true if the map contains no elements, false otherwise.
-    LssBoolResult is_empty()
+    LssBoolResult is_empty() override
     {
         std::cout << "LSS is_empty C++ impl\n";
         return new_ok_lss_bool(store.empty());
@@ -99,7 +118,17 @@ private:
 int main()
 {
     LocalSecureStorageImpl lss{};
-    CargoLib cargo_lib = create_cargo_lib(lss);
+    ConfigProviderImpl cfg{};
+    CargoLib cargo_lib;
+    try
+    {
+        cargo_lib = create_cargo_lib(lss, cfg);
+    }
+    catch (const CargoLibCreationExc_NotCreatedException &e)
+    {
+        std::cerr << e.reason().to_string() << std::endl;
+    }
+
     UserApi user_api = cargo_lib.user_api();
 
     try
@@ -111,7 +140,7 @@ int main()
         RustVec<String> words_vec = mnemonic.get_vec(); // String (starting with capital letter) is a rust type
         for (uint i = 0; i < words_vec.size(); i++)
         {
-            std::cout << words_vec.at(i).unwrap().to_string() << std::endl;
+            std::cerr << words_vec.at(i).unwrap().to_string() << std::endl;
         }
 
         String device_name = String("My Mac");
@@ -128,16 +157,16 @@ int main()
             }
             catch (const UserRetrievalExc_NotFoundException &e)
             {
-                std::cout << e.reason().to_string() << std::endl;
+                std::cerr << e.reason().to_string() << std::endl;
             }
             catch (const UserRetrievalExc_UnexpectedException &e)
             {
-                std::cout << e.reason().to_string() << std::endl;
+                std::cerr << e.reason().to_string() << std::endl;
             }
         }
         catch (const UserCreationExc_NotCreatedException &e)
         {
-            std::cout << e.reason().to_string() << std::endl;
+            std::cerr << e.reason().to_string() << std::endl;
         }
 
         try
@@ -147,11 +176,11 @@ int main()
         }
         catch (const UserCreationExc_NotCreatedException &e)
         {
-            std::cout << e.reason().to_string() << std::endl;
+            std::cerr << e.reason().to_string() << std::endl;
         }
     }
     catch (const MnemonicCreationExc_NotCreatedException &e)
     {
-        std::cout << e.reason().to_string() << std::endl;
+        std::cerr << e.reason().to_string() << std::endl;
     }
 }
