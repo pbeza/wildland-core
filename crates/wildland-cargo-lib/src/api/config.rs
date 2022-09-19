@@ -43,8 +43,16 @@ fn default_log_file() -> String {
     "cargo.log".to_owned()
 }
 
+fn default_logger() -> LoggerCfg {
+    LoggerCfg {
+        log_level: LogLevel::info(),
+        log_file: default_log_file(),
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub(crate) struct CargoConfig {
+    #[serde(default = "default_logger")]
     pub logger: LoggerCfg,
 }
 
@@ -64,19 +72,19 @@ mod tests {
         let expected = CargoConfig {
             logger: LoggerCfg {
                 log_level: LogLevel::Info,
-                log_file: "corex.log".to_owned(),
+                log_file: "cargo.log".to_owned(),
             },
         };
         assert_eq!(expected, config);
     }
 
     #[test]
-    fn test_deserialize_non_default() {
+    fn test_deserialize_empty_cfg() {
         let json = r#"
             {
                 "logger": {
                     "log_level": "trace",
-                    "lob_file": "some_corex.log"
+                    "log_file": "some_corex.log"
                 }
             }
         "#;
@@ -85,6 +93,25 @@ mod tests {
             logger: LoggerCfg {
                 log_level: LogLevel::Trace,
                 log_file: "some_corex.log".to_owned(),
+            },
+        };
+        assert_eq!(expected, config);
+    }
+
+    #[test]
+    fn test_deserialize_partial_cfg() {
+        let json = r#"
+            {
+                "logger": {
+                    "log_level": "trace"
+                }
+            }
+        "#;
+        let config: CargoConfig = serde_json::from_str(json).unwrap();
+        let expected = CargoConfig {
+            logger: LoggerCfg {
+                log_level: LogLevel::Trace,
+                log_file: "cargo.log".to_owned(),
             },
         };
         assert_eq!(expected, config);

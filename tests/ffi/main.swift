@@ -92,13 +92,17 @@ class LocalSecureStorageImpl : LocalSecureStorage {
 }
 
 print("Swift FFI Test Suite")
-var lss = LocalSecureStorageImpl()
-var cfg = ConfigProviderImpl()
-var cargo_lib = try createCargoLib(lss, cfg)
-var user_api = cargo_lib.userApi()
-var mnemonic = try user_api.generateMnemonic()
-print(mnemonic.getString().toString())
-let _ = try user_api.createUserFromMnemonic(mnemonic, RustString("My Mac"))
-print("User successfully created from mnemonic")
-var user = try user_api.getUser()
-print("User: " + user.getString().toString())
+do {
+    let lss = LocalSecureStorageImpl()
+    let cfg = ConfigProviderImpl()
+    let cargo_lib = try createCargoLib(lss, cfg)
+    let user_api = cargo_lib.userApi()
+    let mnemonic = try user_api.generateMnemonic()
+    print(mnemonic.getString().toString())
+    let _ = try user_api.createUserFromMnemonic(mnemonic, RustString("My Mac"))
+    print("User successfully created from mnemonic")
+    let user = try user_api.getUser()
+    print("User: " + user.getString().toString())
+} catch let err as RustExceptionBase {
+    print(err.reason().toString())
+}
