@@ -1,6 +1,9 @@
 use crate::{
-    api::user::UserApi, cargo_lib::CargoLib, create_cargo_lib, errors::*, MnemonicPayload,
-    UserPayload,
+    api::{config::CargoCfgProvider, user::UserApi},
+    cargo_lib::CargoLib,
+    create_cargo_lib,
+    errors::*,
+    MnemonicPayload, UserPayload,
 };
 use ffi_macro::binding_wrapper;
 pub use wildland_corex::{
@@ -39,6 +42,12 @@ mod ffi_binding {
     }
     enum UserCreationExc {
         NotCreated(_),
+    }
+
+    extern "Traits" {
+        type CargoCfgProvider;
+        /// Returns configuration in json form
+        fn get_config(self: &dyn CargoCfgProvider) -> Vec<u8>;
     }
 
     extern "Rust" {
