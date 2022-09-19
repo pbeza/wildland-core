@@ -22,7 +22,6 @@ RUN for crate in \
     wildland-catlib \
     wildland-crypto \
     wildland-dfs\
-    wildland-local-secure-storage\
     ; do cargo new --lib $crate; done
 COPY Cargo.toml /app/
 COPY Cargo.lock /app/
@@ -37,8 +36,6 @@ COPY crates/wildland-crypto/Cargo.toml wildland-crypto/
 COPY crates/wildland-crypto/rust-toolchain wildland-crypto/
 COPY crates/wildland-dfs/Cargo.toml wildland-dfs/
 COPY crates/wildland-dfs/rust-toolchain wildland-dfs/
-COPY crates/wildland-local-secure-storage/Cargo.toml wildland-local-secure-storage/
-COPY crates/wildland-local-secure-storage/rust-toolchain wildland-local-secure-storage/
 
 WORKDIR /app/
 RUN cargo build \
@@ -54,8 +51,10 @@ RUN cargo clean && cargo build \
 
 WORKDIR /app/crates/wildland-cargo-lib/
 RUN cp \
-    "./_generated_cpp/ffi_cxx.h" \
-    "./_generated_cpp/ffi_swig.i" \
+    "./_generated_ffi_code/ffi_cxx.h" \
+    "./_generated_ffi_code/ffi_swift.h" \
+    "./_generated_ffi_code/ffi_swift.swift" \
+    "./_generated_ffi_code/ffi_swig.i" \
     "${CXX_LIB}" \
     "${FFI_BUILD_DIR}"
 

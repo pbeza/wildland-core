@@ -1,7 +1,12 @@
 use crate::LssResult;
-use std::fmt::Debug;
 
-pub trait LocalSecureStorage: Debug {
+#[derive(Error, Debug, PartialEq, Eq, Clone)]
+#[error("Local Secure Storage error: {0}")]
+pub struct LssError(pub String);
+
+pub type LssResult<T> = Result<T, LssError>;
+
+pub trait LocalSecureStorage {
     /// Inserts a key-value pair into the LSS.
     /// If the map did not have this key present, None is returned.
     /// If the map did have this key present, the value is updated, and the old value is returned.

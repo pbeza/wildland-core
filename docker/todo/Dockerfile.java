@@ -17,19 +17,19 @@ RUN mkdir -p /wildland-core/
 WORKDIR /wildland-core
 
 # Copy from base image instead of building new image on top of it to avoid reinstalling packages after source code changes
-COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_cpp ./_generated_cpp
+COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_ffi_code ./_generated_ffi_code
 COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_swift ./_generated_swift
 COPY --from=wildland-sdk-base ${TARGET}/libwildland_cargo_lib.a ./lib/
 
 RUN mkdir -p _generated_java \
-    && swig -java -c++  -module wildland -outdir _generated_java _generated_cpp/ffi_swig.i \
+    && swig -java -c++  -module wildland -outdir _generated_java _generated_ffi_code/ffi_swig.i \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
-    _generated_cpp/ffi_swig_wrap.cxx \
+    _generated_ffi_code/ffi_swig_wrap.cxx \
     -Llib \
     -lwildland_cargo_lib \
     -I${JDK_INC_DIR} \
     -I${JDK_INC_DIR}/linux \
-    -I_generated_cpp \
+    -I_generated_ffi_code \
     -I_generated_swift \
     -I_generated_swift/ffi_swift \
     -o _generated_java/libwildland.so

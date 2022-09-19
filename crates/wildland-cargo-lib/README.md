@@ -13,4 +13,4 @@ Wildland Cargo Lib support bindings for the following languages:
 
 
 ### Setup
-Use docker images in order to generate the bindings glue code for `Java`, `C#` and `Python`. One can find them in `./docker` directory. For `C++` and `Swift` bindings one can simply run `cargo build --features bindings` and get the glue code from `./_generated_cpp` and `./_generated_swift/` directories. **It requires rust toolchain in version `>1.59.0`**.
+Use docker images in order to generate the bindings glue code for `Java`, `C#` and `Python`. One can find them in `./docker` directory. For `C++` and `Swift` bindings one can simply run `cargo build --features bindings` and get the glue code from `./_generated_ffi_code` and `./_generated_swift/` directories. **It requires rust toolchain in version `>1.59.0`**.
