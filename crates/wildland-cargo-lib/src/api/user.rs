@@ -36,13 +36,13 @@ impl UserPayload {
     }
 }
 
-#[derive(Clone, Debug)]
+/// User management API
+#[derive(Clone)]
 pub struct UserApi {
     user_service: UserService,
 }
 
 impl UserApi {
-    #[tracing::instrument(level = "debug", ret)]
     pub fn new(user_service: UserService) -> Self {
         Self { user_service }
     }

@@ -1,7 +1,6 @@
-use crate::ForestIdentityCreationError;
+use crate::{ForestIdentityCreationError, LssError};
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
-use wildland_local_secure_storage::LssError;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum UserCreationError {
