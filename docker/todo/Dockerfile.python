@@ -14,20 +14,20 @@ RUN mkdir -p /wildland-core/
 WORKDIR /wildland-core
 
 # Copy from base image instead of building new image on top of it to avoid reinstalling packages after source code changes
-COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_cpp ./_generated_cpp
+COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_ffi_code ./_generated_ffi_code
 COPY --from=wildland-sdk-base ${CARGO_LIB_PATH}/_generated_swift ./_generated_swift
 COPY --from=wildland-sdk-base ${TARGET}/libwildland_cargo_lib.a ./lib/
 
 RUN mkdir -p _generated_python \
-    && swig -python -c++ -module wildland -outdir _generated_python _generated_cpp/ffi_swig.i \
+    && swig -python -c++ -module wildland -outdir _generated_python _generated_ffi_code/ffi_swig.i \
     && ${CC} -fpermissive -shared -fPIC --std=c++14 -w \
-    _generated_cpp/ffi_swig_wrap.cxx \
+    _generated_ffi_code/ffi_swig_wrap.cxx \
     -Llib \
     -lwildland_cargo_lib \
     $(python3-config --includes) \
     -I_generated_swift \
     -I_generated_swift/ffi_swift \
-    -I_generated_cpp \
+    -I_generated_ffi_code \
     -o _generated_python/_wildland.so
 
 # Run the test. If everything was completed successfully, `echo $?` should return `0` exit code.

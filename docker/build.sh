@@ -20,7 +20,7 @@ cargo clean \
 
 mkdir -p "${FFI_BUILD_DIR}"
 cp \
-    "$PROJECT_DIR/crates/wildland-cargo-lib/_generated_cpp/ffi_cxx.h" \
-    "$PROJECT_DIR/crates/wildland-cargo-lib/_generated_cpp/ffi_swig.i" \
+    "$PROJECT_DIR/crates/wildland-cargo-lib/_generated_ffi_code/ffi_cxx.h" \
+    "$PROJECT_DIR/crates/wildland-cargo-lib/_generated_ffi_code/ffi_swig.i" \
     "${STATIC_LIB}" \
     "${FFI_BUILD_DIR}"
