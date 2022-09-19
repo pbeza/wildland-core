@@ -160,7 +160,7 @@ apple:
     - rm $CLOUD_CREDENTIALS
   artifacts:
     paths:
-      - wildlandx_macos.build/out_dir/wildlandx.xcframework.zip
+      - $CI_BUILDS_DIR/wildlandx_macos.build/out_dir/wildlandx.xcframework.zip
 
 
 ################
