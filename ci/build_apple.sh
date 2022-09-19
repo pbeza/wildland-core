@@ -3,7 +3,7 @@
 #     Piotr Isajew (pisajew@wildland.io)
 set -ex
 DEBUG_OPTS="-g"
-BUILD_ROOT=$CI_BUILDS_DIR
+BUILD_ROOT=$CI_PROJECT_DIR
 DESTROOT="$BUILD_ROOT/wildlandx_macos.build"
 RUST_SRCDIR=$CI_PROJECT_DIR
 SWIFT_BRIDGE_OUTDIR="$RUST_SRCDIR/crates/wildland-cargo-lib/_generated_cpp"
