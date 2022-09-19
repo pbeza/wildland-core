@@ -150,7 +150,6 @@ apple:
   stage: Bridges
   only:
     - main
-    - merge_requests
   tags:
     - macos
   script:
