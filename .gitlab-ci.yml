@@ -276,7 +276,7 @@ publish crates:
 # improvement for later - create workflow to build the docker image for mdbook
 pages:
   image: rust:latest
-  stage: deploy
+  stage: Deploy
   script:
   # - cargo install mdbook mdbook-toc mdbook-linkcheck mdbook-plantuml
   - cargo install mdbook-linkcheck mdbook-plantuml
