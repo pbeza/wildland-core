@@ -1,15 +1,13 @@
-use crate::{ForestRetrievalError, MasterIdentity, UserCreationError};
-use mockall_double::double;
-use wildland_crypto::{
-    error::CryptoError,
-    identity::{self, Identity, MnemonicPhrase},
-};
+use crate::errors::UserCreationError;
+use wildland_corex::{CryptoError, ForestRetrievalError, Identity, MasterIdentity, MnemonicPhrase};
 
-#[double]
-use crate::LssService;
+#[cfg(test)]
+use crate::test_utils::MockLssService as LssService;
+#[cfg(not(test))]
+use wildland_corex::LssService;
 
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
-    identity::generate_random_mnemonic()
+    wildland_corex::generate_random_mnemonic()
 }
 
 pub enum CreateUserInput {
@@ -65,10 +63,21 @@ impl UserService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        test_utilities::create_wildland_forest_identity, WildlandIdentity, DEFAULT_FOREST_KEY,
-    };
     use hex_literal::hex;
+    use wildland_corex::{SigningKeypair, WildlandIdentity, DEFAULT_FOREST_KEY};
+
+    pub static SIGNING_PUBLIC_KEY: &str =
+        "1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f";
+    pub static SIGNING_SECRET_KEY: &str =
+        "e02cdfa23ad7d94508108ad41410e556c5b0737e9c264d4a2304a7a45894fc57";
+
+    pub fn create_signing_keypair() -> SigningKeypair {
+        SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap()
+    }
+
+    pub fn create_wildland_forest_identity() -> WildlandIdentity {
+        WildlandIdentity::Forest(0, create_signing_keypair())
+    }
 
     #[test]
     fn generated_mnemonic_has_proper_length() {
