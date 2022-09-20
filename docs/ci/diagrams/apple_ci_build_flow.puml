@@ -1,0 +1,29 @@
+@startuml
+skinparam dpi 300
+start
+fork
+partition "target:x86_64" {
+        :build swift bindings;
+        :compile dynamic library;
+        :synthesize framework bundle;
+}
+fork again
+partition "target:arm64" {
+        :build swift bindings;
+        :compile dynamic library;
+        :synthesize wildlandx.framework bundle;
+}
+endfork
+partition "package" {
+                :create wildlandx.xcframework;
+                :zip wildlandx.xcframework;
+}
+if (is main branch?) then (yes)
+partition "upload" {
+  :create Package.swift manifest;
+  :push Package.swift to Sdk Apple repository;
+  :upload wildlandx.xcframework.zip to Google Storage;
+}
+endif
+stop
+@enduml
