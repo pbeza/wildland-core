@@ -9,13 +9,22 @@ RUST_SRCDIR=$CI_PROJECT_DIR
 SWIFT_BRIDGE_OUTDIR="$RUST_SRCDIR/crates/wildland-cargo-lib/_generated_ffi_code"
 INPUT="$SWIFT_BRIDGE_OUTDIR/ffi_swift.swift"
 RUST_LIB="libwildland_cargo_lib.a"
+
+# Name of Swift module for the SDK.
 MODULE="wildlandx"
 ARCHS="x86_64 arm64"
 FW_OUT="$DESTROOT/$MODULE.framework"
 PKG_OUT="out_dir"
+
+# Google storage URL for binary SDK uploads.
 UPLOAD_URL="gs://wildland-apple-dev-binaries"
+
+# URL from which binary packages can be fetched.
 FETCH_URL="https://xcode-proxy.wildland.dev/wildland-apple-dev-binaries"
+
+# GIT repository URL where package manifests should be pushed.
 MANIFEST_REPOSITORY="git@gitlab.com:wildland/corex/sdk-apple.git"
+# Target branch to which package manifests are to be pushed.
 MANIFEST_BRANCH="master"
 
 RUST_ARCH_X86_64=x86_64-apple-darwin
