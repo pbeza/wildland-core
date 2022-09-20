@@ -1,6 +1,15 @@
 
 // This test file is not supported since ffi-macro v.0.2.0
 
+class CargoCfgImpl: CargoCfg {
+    public override func getLogLevel() -> RustString {
+        return RustString("info")
+    }
+    public override func getLogFile() -> OptionalString {
+        return newNoneString()
+    }
+}
+
 class LocalSecureStorageImpl : LocalSecureStorage {
     private var store = [String : RustVec<u8>]()
 
@@ -74,12 +83,17 @@ class LocalSecureStorageImpl : LocalSecureStorage {
 }
 
 print("Swift FFI Test Suite")
-var lss = LocalSecureStorageImpl()
-var cargo_lib = createCargoLib(lss)
-var user_api = cargo_lib.userApi()
-var mnemonic = try user_api.generateMnemonic()
-print(mnemonic.getString().toString())
-let _ = try user_api.createUserFromMnemonic(mnemonic, RustString("My Mac"))
-print("User successfully created from mnemonic")
-var user = try user_api.getUser()
-print("User: " + user.getString().toString())
+do {
+    let lss = LocalSecureStorageImpl()
+    let cfg = CargoCfgImpl()
+    let cargo_lib = try createCargoLib(lss, cfg)
+    let user_api = cargo_lib.userApi()
+    let mnemonic = try user_api.generateMnemonic()
+    print(mnemonic.getString().toString())
+    let _ = try user_api.createUserFromMnemonic(mnemonic, RustString("My Mac"))
+    print("User successfully created from mnemonic")
+    let user = try user_api.getUser()
+    print("User: " + user.getString().toString())
+} catch let err as RustExceptionBase {
+    print(err.reason().toString())
+}

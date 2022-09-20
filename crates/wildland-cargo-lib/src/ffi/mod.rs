@@ -1,6 +1,9 @@
 use crate::{
-    api::user::UserApi, cargo_lib::CargoLib, create_cargo_lib, errors::*, MnemonicPayload,
-    UserPayload,
+    api::{config::CargoCfg, user::UserApi},
+    cargo_lib::CargoLib,
+    create_cargo_lib,
+    errors::*,
+    CargoLibCreationError, MnemonicPayload, UserPayload,
 };
 use ffi_macro::binding_wrapper;
 pub use wildland_corex::{
@@ -13,6 +16,7 @@ type VoidType = ();
 pub type UserRetrievalExc = RetrievalError<ForestRetrievalError>;
 pub type MnemonicCreationExc = CreationError<CryptoError>;
 pub type UserCreationExc = CreationError<UserCreationError>;
+pub type CargoLibCreationExc = CreationError<CargoLibCreationError>;
 
 type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
 fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult {
@@ -35,6 +39,14 @@ fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes {
     Some(bytes)
 }
 fn new_none_bytes() -> OptionalBytes {
+    None
+}
+
+type OptionalString = Option<String>;
+fn new_some_string(s: String) -> OptionalString {
+    Some(s)
+}
+fn new_none_string() -> OptionalString {
     None
 }
 
@@ -77,8 +89,15 @@ mod ffi_binding {
     enum UserCreationExc {
         NotCreated(_),
     }
+    enum CargoLibCreationExc {
+        NotCreated(_),
+    }
 
     extern "Traits" {
+        type CargoCfg;
+        fn get_log_level(self: &dyn CargoCfg) -> String;
+        fn get_log_file(self: &dyn CargoCfg) -> OptionalString;
+
         type LocalSecureStorage;
         fn insert(
             self: &dyn LocalSecureStorage,
@@ -105,14 +124,21 @@ mod ffi_binding {
         type LssVecOfStringsResult;
         fn new_ok_lss_vec_of_strings(ok_val: Vec<String>) -> LssVecOfStringsResult;
         fn new_err_lss_vec_of_strings(err_val: String) -> LssVecOfStringsResult;
-        type OptionalBytes;
-        fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes;
-        fn new_none_bytes() -> OptionalBytes;
         type LssUsizeResult;
         fn new_ok_lss_usize(ok_val: usize) -> LssUsizeResult;
         fn new_err_lss_usize(err_val: String) -> LssUsizeResult;
 
-        fn create_cargo_lib(lss: &'static dyn LocalSecureStorage) -> CargoLib;
+        type OptionalBytes;
+        fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes;
+        fn new_none_bytes() -> OptionalBytes;
+        type OptionalString;
+        fn new_some_string(s: String) -> OptionalString;
+        fn new_none_string() -> OptionalString;
+
+        fn create_cargo_lib(
+            lss: &'static dyn LocalSecureStorage,
+            config: &'static dyn CargoCfg,
+        ) -> Result<CargoLib, CargoLibCreationExc>;
         fn user_api(self: &CargoLib) -> UserApi;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
