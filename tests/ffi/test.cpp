@@ -2,22 +2,15 @@
 #include <unordered_map>
 #include "ffi_cxx.h"
 
-class ConfigProviderImpl : public CargoCfgProvider
+class CargoCfgImpl : public CargoCfg
 {
-    RustVec<u8> get_config() override
+    String get_log_level() override
     {
-        std::string config_json = "{ \
-            \"logger\": { \
-                \"log_level\" : \"info\", \
-                \"log_file\" : \"cargo.log\" \
-            } \
-        }";
-        RustVec<u8> result;
-        for (const auto c : config_json)
-        {
-            result.push(c);
-        }
-        return result;
+        return RustString("debug");
+    }
+    OptionalString get_log_file() override
+    {
+        return new_none_string();
     }
 };
 
@@ -118,7 +111,7 @@ private:
 int main()
 {
     LocalSecureStorageImpl lss{};
-    ConfigProviderImpl cfg{};
+    CargoCfgImpl cfg{};
     CargoLib cargo_lib;
     try
     {

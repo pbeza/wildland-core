@@ -1,21 +1,12 @@
 
 // This test file is not supported since ffi-macro v.0.2.0
 
-class ConfigProviderImpl: CargoCfgProvider {
-    public override func getConfig() -> RustVec<u8> {
-        let config_json = """
-        {
-            "logger": {
-                "log_level" : "info",
-                "log_file" : "cargo.log"
-            }
-        }
-        """
-        let result = RustVec<u8>(u8.createNewRustVec())
-        for c in config_json.utf8 {
-            result.push(c)
-        }
-        return result
+class CargoCfgImpl: CargoCfg {
+    public override func getLogLevel() -> RustString {
+        return RustString("info")
+    }
+    public override func getLogFile() -> OptionalString {
+        return newNoneString()
     }
 }
 
@@ -94,7 +85,7 @@ class LocalSecureStorageImpl : LocalSecureStorage {
 print("Swift FFI Test Suite")
 do {
     let lss = LocalSecureStorageImpl()
-    let cfg = ConfigProviderImpl()
+    let cfg = CargoCfgImpl()
     let cargo_lib = try createCargoLib(lss, cfg)
     let user_api = cargo_lib.userApi()
     let mnemonic = try user_api.generateMnemonic()

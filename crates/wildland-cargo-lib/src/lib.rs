@@ -5,13 +5,14 @@ mod errors;
 pub mod ffi;
 mod logging;
 
-use api::config::{CargoCfgProvider, CargoConfig};
+use api::config::CargoCfg;
 pub use api::user::{MnemonicPayload, UserApi, UserPayload};
 pub use cargo_lib::CargoLib;
-use errors::{CreationError, CreationResult};
-use log::info;
+use errors::CreationResult;
 use thiserror::Error;
 use wildland_corex::{LocalSecureStorage, LssService, UserService};
+
+use crate::errors::CreationError;
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[error("CargoLib creation error: {0}")]
@@ -24,13 +25,11 @@ pub struct CargoLibCreationError(pub String);
 /// - lss: object implementing [`LocalSecureStorage`] trait
 pub fn create_cargo_lib(
     lss: &'static dyn LocalSecureStorage,
-    config_provider: &'static dyn CargoCfgProvider,
+    cfg: &'static dyn CargoCfg,
 ) -> CreationResult<CargoLib, CargoLibCreationError> {
     // TODO WILX-219 Memory leak
-    let cfg: CargoConfig = serde_json::from_slice(&config_provider.get_config())
-        .map_err(|e| CreationError::NotCreated(CargoLibCreationError(e.to_string())))?;
-    _ = logging::init_subscriber(cfg.logger.clone());
-    info!("CargoLib initialized with config: {cfg:?}");
+    logging::init_subscriber(cfg.get_log_level(), cfg.get_log_file())
+        .map_err(|e| CreationError::NotCreated(CargoLibCreationError(e)))?;
     Ok(CargoLib::new(UserApi::new(UserService::new(
         LssService::new(lss),
     ))))

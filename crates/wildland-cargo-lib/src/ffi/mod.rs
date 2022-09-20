@@ -1,5 +1,5 @@
 use crate::{
-    api::{config::CargoCfgProvider, user::UserApi},
+    api::{config::CargoCfg, user::UserApi},
     cargo_lib::CargoLib,
     create_cargo_lib,
     errors::*,
@@ -39,6 +39,14 @@ fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes {
     Some(bytes)
 }
 fn new_none_bytes() -> OptionalBytes {
+    None
+}
+
+type OptionalString = Option<String>;
+fn new_some_string(s: String) -> OptionalString {
+    Some(s)
+}
+fn new_none_string() -> OptionalString {
     None
 }
 
@@ -86,9 +94,9 @@ mod ffi_binding {
     }
 
     extern "Traits" {
-        type CargoCfgProvider;
-        /// Returns configuration in json form
-        fn get_config(self: &dyn CargoCfgProvider) -> Vec<u8>;
+        type CargoCfg;
+        fn get_log_level(self: &dyn CargoCfg) -> String;
+        fn get_log_file(self: &dyn CargoCfg) -> OptionalString;
 
         type LocalSecureStorage;
         fn insert(
@@ -116,16 +124,20 @@ mod ffi_binding {
         type LssVecOfStringsResult;
         fn new_ok_lss_vec_of_strings(ok_val: Vec<String>) -> LssVecOfStringsResult;
         fn new_err_lss_vec_of_strings(err_val: String) -> LssVecOfStringsResult;
-        type OptionalBytes;
-        fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes;
-        fn new_none_bytes() -> OptionalBytes;
         type LssUsizeResult;
         fn new_ok_lss_usize(ok_val: usize) -> LssUsizeResult;
         fn new_err_lss_usize(err_val: String) -> LssUsizeResult;
 
+        type OptionalBytes;
+        fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes;
+        fn new_none_bytes() -> OptionalBytes;
+        type OptionalString;
+        fn new_some_string(s: String) -> OptionalString;
+        fn new_none_string() -> OptionalString;
+
         fn create_cargo_lib(
             lss: &'static dyn LocalSecureStorage,
-            config_provider: &'static dyn CargoCfgProvider,
+            config: &'static dyn CargoCfg,
         ) -> Result<CargoLib, CargoLibCreationExc>;
         fn user_api(self: &CargoLib) -> UserApi;
 
