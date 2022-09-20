@@ -6,7 +6,7 @@ DEBUG_OPTS="-g"
 BUILD_ROOT=$CI_PROJECT_DIR
 DESTROOT="$BUILD_ROOT/wildlandx_macos.build"
 RUST_SRCDIR=$CI_PROJECT_DIR
-SWIFT_BRIDGE_OUTDIR="$RUST_SRCDIR/crates/wildland-cargo-lib/_generated_cpp"
+SWIFT_BRIDGE_OUTDIR="$RUST_SRCDIR/crates/wildland-cargo-lib/_generated_ffi_code"
 INPUT="$SWIFT_BRIDGE_OUTDIR/ffi_swift.swift"
 RUST_LIB="libwildland_cargo_lib.a"
 MODULE="wildlandx"
@@ -237,4 +237,7 @@ xcodebuild -create-xcframework \
 mkdir $PKG_OUT
 ditto -c -k --sequesterRsrc --keepParent wildlandx.xcframework $PKG_OUT/wildlandx.xcframework.zip
 cd $PKG_OUT
-upload_framework wildlandx.xcframework.zip
+
+if [ "$CI_COMMIT_BRANCH" = "main" ]; then
+    upload_framework wildlandx.xcframework.zip
+fi
