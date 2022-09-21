@@ -5,7 +5,6 @@ use crate::{
 use ffi_macro::binding_wrapper;
 pub use wildland_corex::{
     CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, LssResult,
-    UserCreationError,
 };
 
 type VoidType = ();
