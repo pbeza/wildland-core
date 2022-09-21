@@ -8,7 +8,7 @@ license     = "GPL-3.0-only"
 name        = "wildland-http-client"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.4.3"
+version     = "0.4.4"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -23,7 +23,6 @@ tracing    = { version = "0.1" }
 wildland-crypto = { version = "0.6.0", path = "../wildland-crypto", registry = "wl-dev" }
 
 [dev-dependencies]
-dotenv  = { version = "0.15" }
 http    = { version = "0.2" }
 mockito = { version = "0.31" }
 tokio   = { version = "1.17", features = ["macros", "rt-multi-thread"] }
