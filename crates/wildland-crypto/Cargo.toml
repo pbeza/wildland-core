@@ -8,7 +8,7 @@ license     = "GPL-3.0-only"
 name        = "wildland-crypto"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.6.0"
+version     = "0.6.1"
 
 [lib]
 crate-type = ["rlib"]
@@ -17,7 +17,6 @@ crate-type = ["rlib"]
 rand-7    = { version = "0.7.3", package = "rand" }
 rand-8    = { version = "0.8.4", package = "rand" }
 rand_core = { version = "0.6", features = ["std"] }
-serde     = { version = "1.0" }
 thiserror = { version = "1.0.31" }
 
 # bip39 is used to handle mnemonics
