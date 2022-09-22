@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include "ffi_cxx.h"
 
-class CargoCfgImpl : public CargoCfg
+class CargoCfgProviderImpl : public CargoCfgProvider
 {
     String get_log_level() override
     {
@@ -108,16 +108,37 @@ private:
     std::unordered_map<std::string, RustVec<u8>> store = {};
 };
 
+void config_parser_test()
+{
+    RustVec<u8> config_bytes{};
+    std::string raw_config = "{\"log_level\": \"trace\"}";
+    for (const auto ch : raw_config)
+    {
+        config_bytes.push(ch);
+    }
+    LocalSecureStorageImpl lss{};
+    CargoConfig cargo_cfg = parse_config(config_bytes);
+    try
+    {
+        CargoLib cargo_lib = create_cargo_lib(lss, cargo_cfg);
+    }
+    catch (const CargoLibCreationExc_FailureException &e)
+    {
+        std::cout << e.reason().to_string() << std::endl;
+    }
+}
+
 int main()
 {
+    CargoCfgProviderImpl cfg_provider{};
+    CargoConfig cfg = collect_config(cfg_provider);
     LocalSecureStorageImpl lss{};
-    CargoCfgImpl cfg{};
     CargoLib cargo_lib;
     try
     {
         cargo_lib = create_cargo_lib(lss, cfg);
     }
-    catch (const CargoLibCreationExc_NotCreatedException &e)
+    catch (const CargoLibCreationExc_FailureException &e)
     {
         std::cerr << e.reason().to_string() << std::endl;
     }
@@ -130,7 +151,7 @@ int main()
         std::string mnemonic_str = mnemonic.get_string().to_string();
         std::cout << "Generated mnemonic: " << mnemonic_str << std::endl;
 
-        RustVec<String> words_vec = mnemonic.get_vec(); // String (starting with capital letter) is a rust type
+        RustVec<String> words_vec = mnemonic.get_vec();
         for (uint i = 0; i < words_vec.size(); i++)
         {
             std::cerr << words_vec.at(i).unwrap().to_string() << std::endl;
@@ -157,7 +178,7 @@ int main()
                 std::cerr << e.reason().to_string() << std::endl;
             }
         }
-        catch (const UserCreationExc_NotCreatedException &e)
+        catch (const UserCreationExc_FailureException &e)
         {
             std::cerr << e.reason().to_string() << std::endl;
         }
@@ -167,13 +188,15 @@ int main()
             RustVec<u8> entropy;
             user_api.create_user_from_entropy(entropy, device_name);
         }
-        catch (const UserCreationExc_NotCreatedException &e)
+        catch (const UserCreationExc_FailureException &e)
         {
             std::cerr << e.reason().to_string() << std::endl;
         }
     }
-    catch (const MnemonicCreationExc_NotCreatedException &e)
+    catch (const MnemonicCreationExc_FailureException &e)
     {
         std::cerr << e.reason().to_string() << std::endl;
     }
+
+    config_parser_test();
 }

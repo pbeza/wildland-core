@@ -1,5 +1,5 @@
 use crate::{
-    api::{config::CargoCfg, user::UserApi},
+    api::{config::*, user::UserApi},
     cargo_lib::CargoLib,
     create_cargo_lib,
     errors::*,
@@ -14,9 +14,10 @@ pub use wildland_corex::{
 type VoidType = ();
 
 pub type UserRetrievalExc = RetrievalError<ForestRetrievalError>;
-pub type MnemonicCreationExc = CreationError<CryptoError>;
-pub type UserCreationExc = CreationError<UserCreationError>;
-pub type CargoLibCreationExc = CreationError<CargoLibCreationError>;
+pub type MnemonicCreationExc = SingleVariantError<CryptoError>;
+pub type UserCreationExc = SingleVariantError<UserCreationError>;
+pub type CargoLibCreationExc = SingleVariantError<CargoLibCreationError>;
+pub type ConfigParseExc = SingleVariantError<ParseConfigError>;
 
 type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
 fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult {
@@ -84,20 +85,23 @@ mod ffi_binding {
         Unexpected(_),
     }
     enum MnemonicCreationExc {
-        NotCreated(_),
+        Failure(_),
     }
     enum UserCreationExc {
-        NotCreated(_),
+        Failure(_),
     }
     enum CargoLibCreationExc {
-        NotCreated(_),
+        Failure(_),
+    }
+    enum ConfigParseExc {
+        Failure(_),
     }
 
     extern "Traits" {
-        type CargoCfg;
-        fn get_log_level(self: &dyn CargoCfg) -> String;
-        fn get_log_file(self: &dyn CargoCfg) -> OptionalString;
-        fn get_evs_url(self: &dyn CargoCfg) -> String;
+        type CargoCfgProvider;
+        fn get_log_level(self: &dyn CargoCfgProvider) -> String;
+        fn get_log_file(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_evs_url(self: &dyn CargoCfgProvider) -> String;
 
         type LocalSecureStorage;
         fn insert(
@@ -136,9 +140,13 @@ mod ffi_binding {
         fn new_some_string(s: String) -> OptionalString;
         fn new_none_string() -> OptionalString;
 
+        type CargoConfig;
+        fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ConfigParseExc>;
+        fn collect_config(config_provider: &'static dyn CargoCfgProvider) -> CargoConfig;
+
         fn create_cargo_lib(
             lss: &'static dyn LocalSecureStorage,
-            config: &'static dyn CargoCfg,
+            config: CargoConfig,
         ) -> Result<CargoLib, CargoLibCreationExc>;
         fn user_api(self: &CargoLib) -> UserApi;
 
