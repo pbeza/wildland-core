@@ -4,7 +4,7 @@ using static wildland;
 
 namespace Main
 {
-    class CargoCfgImpl : CargoCfg {
+    class CargoCfgProviderImpl : CargoCfgProvider {
         public override RustString get_log_level()
         {
             return new RustString("debug");
@@ -106,7 +106,7 @@ namespace Main
         static void Main(string[] args)
         {
             Console.WriteLine("C# FFI Test Suite");
-            var cargo_lib = wildland.create_cargo_lib(new LocalSecureStorageImpl(), new CargoCfgImpl());
+            var cargo_lib = wildland.create_cargo_lib(new LocalSecureStorageImpl(), wildland.collect_config(new CargoCfgProviderImpl()));
             var user_api = cargo_lib.user_api();
             var mnemonic = user_api.generate_mnemonic();
             Console.WriteLine(mnemonic.get_string().to_string());
