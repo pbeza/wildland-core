@@ -97,6 +97,7 @@ mod ffi_binding {
         type CargoCfg;
         fn get_log_level(self: &dyn CargoCfg) -> String;
         fn get_log_file(self: &dyn CargoCfg) -> OptionalString;
+        fn get_evs_url(self: &dyn CargoCfg) -> String;
 
         type LocalSecureStorage;
         fn insert(

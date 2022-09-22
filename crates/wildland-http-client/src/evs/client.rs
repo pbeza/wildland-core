@@ -21,18 +21,18 @@ pub struct GetStorageRes {
 }
 
 #[derive(Clone, Default, Debug)]
-pub struct EVSClient {
-    _base_url: String,
-    _client: Client,
+pub struct EvsClient {
+    base_url: String,
+    client: Client,
 }
 
-impl EVSClient {
+impl EvsClient {
     #[tracing::instrument(level = "debug", ret)]
-    pub fn _new(base_url: &str) -> Self {
+    pub fn new(base_url: &str) -> Self {
         let client = Client::new();
         Self {
-            _base_url: base_url.to_string(),
-            _client: client,
+            base_url: base_url.to_string(),
+            client: client,
         }
     }
 
@@ -41,19 +41,19 @@ impl EVSClient {
         &self,
         request: ConfirmTokenReq,
     ) -> Result<(), WildlandHttpClientError> {
-        let url = format!("{}/confirm_token", self._base_url);
-        let response = self._client.put(url).json(&request).send().await?;
+        let url = format!("{}/confirm_token", self.base_url);
+        let response = self.client.put(url).json(&request).send().await?;
         handle(response).await?;
         Ok(())
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub async fn _get_storage(
+    pub async fn get_storage(
         &self,
         request: GetStorageReq,
     ) -> Result<GetStorageRes, WildlandHttpClientError> {
-        let url = format!("{}/get_storage", self._base_url);
-        let response = self._client.put(url).json(&request).send().await?;
+        let url = format!("{}/get_storage", self.base_url);
+        let response = self.client.put(url).json(&request).send().await?;
         let response_json = handle(response).await?.json().await?;
         Ok(response_json)
     }
@@ -69,10 +69,10 @@ mod tests {
 
     use super::*;
 
-    fn client() -> EVSClient {
-        EVSClient {
-            _base_url: server_url(),
-            _client: Client::new(),
+    fn client() -> EvsClient {
+        EvsClient {
+            base_url: server_url(),
+            client: Client::new(),
         }
     }
 
@@ -107,7 +107,7 @@ mod tests {
             .create();
 
         // when
-        let response = client()._get_storage(request).await.unwrap();
+        let response = client().get_storage(request).await.unwrap();
 
         // then
         m.assert();

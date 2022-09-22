@@ -1972,6 +1972,7 @@ dependencies = [
  "sha2 0.10.6",
  "swift-bridge",
  "thiserror",
+ "tokio",
  "tracing",
  "tracing-appender",
  "tracing-attributes",
@@ -1979,6 +1980,7 @@ dependencies = [
  "tracing-log",
  "tracing-subscriber",
  "wildland-corex",
+ "wildland-http-client",
 ]
 
 [[package]]

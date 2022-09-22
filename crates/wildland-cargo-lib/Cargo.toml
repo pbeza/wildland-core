@@ -21,20 +21,22 @@ crate-type = ["staticlib", "lib"]
 
 
 [dependencies]
-anyhow             = { version = "1.0" }
-env_logger         = { version = "0.9" }
-ffi-macro          = { version = "0.7.1", registry = "wl-dev", optional = true }
-log                = { version = "0.4" }
-sha2               = { version = "0.10" }
-swift-bridge       = { version = "0.1", optional = true }
-thiserror          = { version = "1.0" }
-tracing            = { version = "0.1" }
-tracing-appender   = { version = "0.2" }
-tracing-attributes = { version = "0.1" }
-tracing-core       = { version = "0.1" }
-tracing-log        = { version = "0.1", features = ["env_logger"] }
-tracing-subscriber = { version = "0.3", features = ["json", "env-filter", "fmt", "std"] }
-wildland-corex     = { version = "0.6.0", path = "../wildland-corex", registry = "wl-dev" }
+anyhow               = { version = "1.0" }
+env_logger           = { version = "0.9" }
+ffi-macro            = { version = "0.7.1", registry = "wl-dev", optional = true }
+log                  = { version = "0.4" }
+sha2                 = { version = "0.10" }
+swift-bridge         = { version = "0.1", optional = true }
+thiserror            = { version = "1.0" }
+tokio                = { version = "1.21", features = ["rt-multi-thread"] }
+tracing              = { version = "0.1" }
+tracing-appender     = { version = "0.2" }
+tracing-attributes   = { version = "0.1" }
+tracing-core         = { version = "0.1" }
+tracing-log          = { version = "0.1", features = ["env_logger"] }
+tracing-subscriber   = { version = "0.3", features = ["json", "env-filter", "fmt", "std"] }
+wildland-corex       = { version = "0.6.0", path = "../wildland-corex", registry = "wl-dev" }
+wildland-http-client = { version = "0.4.4", path = "../wildland-http-client", registry = "wl-dev" }
 
 [package.metadata.workspaces]
 independent = true

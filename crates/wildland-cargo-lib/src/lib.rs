@@ -5,8 +5,8 @@ mod errors;
 pub mod ffi;
 mod logging;
 
-use api::config::CargoCfg;
 pub use api::user::{MnemonicPayload, UserApi, UserPayload};
+use api::{config::CargoCfg, foundation_storage::FoundationStorageApiConfiguration};
 pub use cargo_lib::CargoLib;
 use errors::CreationResult;
 use thiserror::Error;
@@ -30,7 +30,10 @@ pub fn create_cargo_lib(
     // TODO WILX-219 Memory leak
     logging::init_subscriber(cfg.get_log_level(), cfg.get_log_file())
         .map_err(|e| CreationError::NotCreated(CargoLibCreationError(e)))?;
-    Ok(CargoLib::new(UserApi::new(UserService::new(
-        LssService::new(lss),
-    ))))
+    Ok(CargoLib::new(
+        UserApi::new(UserService::new(LssService::new(lss))),
+        FoundationStorageApiConfiguration {
+            evs_url: cfg.get_evs_url(),
+        },
+    ))
 }
