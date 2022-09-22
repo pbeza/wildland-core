@@ -772,9 +772,9 @@ checksum = "879d54834c8c76457ef4293a689b2a8c59b076067ad77b15efafbb05f92a592b"
 
 [[package]]
 name = "itertools"
-version = "0.10.4"
+version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8bf247779e67a9082a4790b45e71ac7cfd1321331a5c856a74a9faebdab78d0"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
 dependencies = [
  "either",
 ]
@@ -802,9 +802,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.132"
+version = "0.2.133"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8371e4e5341c3a96db127eb2465ac681ced4c433e01dd0e938adbef26ba93ba5"
+checksum = "c0f80d65747a3e43d1596c7c5492d95d5edddaabd45a7fcdb02b95f644164966"
 
 [[package]]
 name = "log"
@@ -959,9 +959,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.14.0"
+version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f7254b99e31cad77da24b08ebf628882739a608578bb1bcdfc1f9c21260d7c0"
+checksum = "e82dad04139b71a90c080c8463fe0dc7902db5192d939bd0950f074d014339e1"
 
 [[package]]
 name = "opaque-debug"
@@ -1256,9 +1256,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.11.11"
+version = "0.11.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b75aa69a3f06bbcc66ede33af2af253c6f7a86b1ca0033f60c580a27074fbf92"
+checksum = "431949c384f4e2ae07605ccaa56d1d9d2ecdb5cadd4f9577ccfab29f2e5149fc"
 dependencies = [
  "base64",
  "bytes",
@@ -1272,10 +1272,10 @@ dependencies = [
  "hyper-tls",
  "ipnet",
  "js-sys",
- "lazy_static",
  "log",
  "mime",
  "native-tls",
+ "once_cell",
  "percent-encoding",
  "pin-project-lite",
  "serde",
@@ -1467,9 +1467,9 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "swift-bridge"
-version = "0.1.37"
+version = "0.1.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8172ed8a97b3ae4a427fb8052ecaacc0ef1d0a84f783d267ae2ade720a296050"
+checksum = "12003ee8d3acf09c713b0cf703c2d29b4abbc16a6d51891888169435c1d85d5d"
 dependencies = [
  "swift-bridge-build",
  "swift-bridge-macro",
@@ -1477,9 +1477,9 @@ dependencies = [
 
 [[package]]
 name = "swift-bridge-build"
-version = "0.1.37"
+version = "0.1.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1b9b824c57e17d005099dd74855307e13a3bcdca244cbb42f038ffd8852d220"
+checksum = "1928d495445f00dd90dd6c8f0741267ad2bf5128d27a86246152b8d518c4a8ac"
 dependencies = [
  "proc-macro2",
  "swift-bridge-ir",
@@ -1489,9 +1489,9 @@ dependencies = [
 
 [[package]]
 name = "swift-bridge-ir"
-version = "0.1.37"
+version = "0.1.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3847d0a41942096d205b965b214df6be7aa1df1b5aa94d86defa6da39732402a"
+checksum = "3d7f94bf65c82560487184280ac62aa7c812f3f7d5d43f89cbbb74062df5a681"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1500,9 +1500,9 @@ dependencies = [
 
 [[package]]
 name = "swift-bridge-macro"
-version = "0.1.37"
+version = "0.1.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9586f13277785a00bf3d1d2b3939870284c3ac1516d7b02523776e39689deb8b"
+checksum = "26c693288239952dc638405455b8820e3dbedaaa05ade427a111a586707abfc4"
 dependencies = [
  "proc-macro2",
  "quote",
