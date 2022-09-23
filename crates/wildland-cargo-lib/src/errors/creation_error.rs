@@ -1,23 +1,23 @@
 use super::{ErrDomain, ExceptionTrait, WildlandXDomain};
 use std::fmt::Display;
 
-pub type CreationResult<T, E> = Result<T, CreationError<E>>;
+pub type SingleErrVariantResult<T, E> = Result<T, SingleVariantError<E>>;
 #[derive(Debug, Clone)]
 #[repr(C)]
-pub enum CreationError<T: Clone> {
-    NotCreated(T),
+pub enum SingleVariantError<T: Clone> {
+    Failure(T),
 }
 
-impl<E: Display + Clone + ErrDomain> ExceptionTrait for CreationError<E> {
+impl<E: Display + Clone + ErrDomain> ExceptionTrait for SingleVariantError<E> {
     fn reason(&self) -> String {
         match self {
-            Self::NotCreated(e) => e.to_string(),
+            Self::Failure(e) => e.to_string(),
         }
     }
 
     fn domain(&self) -> WildlandXDomain {
         match self {
-            CreationError::NotCreated(e) => e.domain(),
+            SingleVariantError::Failure(e) => e.domain(),
         }
     }
 }

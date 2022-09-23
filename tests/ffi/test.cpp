@@ -2,12 +2,24 @@
 #include <unordered_map>
 #include "ffi_cxx.h"
 
+class CargoCfgProviderImpl : public CargoCfgProvider
+{
+    String get_log_level() override
+    {
+        return RustString("debug");
+    }
+    OptionalString get_log_file() override
+    {
+        return new_none_string();
+    }
+};
+
 class LocalSecureStorageImpl : public LocalSecureStorage
 {
     /// Inserts a key-value pair into the LSS.
     /// If the map did not have this key present, None is returned.
     /// If the map did have this key present, the value is updated, and the old value is returned.
-    LssOptionalBytesResult insert(RustString key, RustVec<u8> value)
+    LssOptionalBytesResult insert(RustString key, RustVec<u8> value) override
     {
         std::cout << "LSS insert C++ impl\n";
         auto std_key = key.to_string();
@@ -26,7 +38,7 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Returns a copy of the value corresponding to the key.
-    LssOptionalBytesResult get(RustString key)
+    LssOptionalBytesResult get(RustString key) override
     {
         std::cout << "LSS get C++ impl\n";
         auto std_key = key.to_string();
@@ -41,7 +53,7 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Returns true if the map contains a value for the specified key.
-    LssBoolResult contains_key(RustString key)
+    LssBoolResult contains_key(RustString key) override
     {
         std::cout << "LSS contains_key C++ impl\n";
         auto std_key = key.to_string();
@@ -49,7 +61,7 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Returns all keys in arbitrary order.
-    LssVecOfStringsResult keys()
+    LssVecOfStringsResult keys() override
     {
         std::cout << "LSS keys C++ impl\n";
         RustVec<RustString> keys;
@@ -61,7 +73,7 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
-    LssOptionalBytesResult remove(RustString key)
+    LssOptionalBytesResult remove(RustString key) override
     {
         std::cout << "LSS remove C++ impl\n";
         auto std_key = key.to_string();
@@ -79,14 +91,14 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Returns the number of elements in the map.
-    LssUsizeResult len()
+    LssUsizeResult len() override
     {
         std::cout << "LSS len C++ impl\n";
         return new_ok_lss_usize(store.size());
     }
 
     /// Returns true if the map contains no elements, false otherwise.
-    LssBoolResult is_empty()
+    LssBoolResult is_empty() override
     {
         std::cout << "LSS is_empty C++ impl\n";
         return new_ok_lss_bool(store.empty());
@@ -96,10 +108,41 @@ private:
     std::unordered_map<std::string, RustVec<u8>> store = {};
 };
 
+void config_parser_test()
+{
+    RustVec<u8> config_bytes{};
+    std::string raw_config = "{\"log_level\": \"trace\"}";
+    for (const auto ch : raw_config)
+    {
+        config_bytes.push(ch);
+    }
+    LocalSecureStorageImpl lss{};
+    CargoConfig cargo_cfg = parse_config(config_bytes);
+    try
+    {
+        CargoLib cargo_lib = create_cargo_lib(lss, cargo_cfg);
+    }
+    catch (const CargoLibCreationExc_FailureException &e)
+    {
+        std::cout << e.reason().to_string() << std::endl;
+    }
+}
+
 int main()
 {
+    CargoCfgProviderImpl cfg_provider{};
+    CargoConfig cfg = collect_config(cfg_provider);
     LocalSecureStorageImpl lss{};
-    CargoLib cargo_lib = create_cargo_lib(lss);
+    CargoLib cargo_lib;
+    try
+    {
+        cargo_lib = create_cargo_lib(lss, cfg);
+    }
+    catch (const CargoLibCreationExc_FailureException &e)
+    {
+        std::cerr << e.reason().to_string() << std::endl;
+    }
+
     UserApi user_api = cargo_lib.user_api();
 
     try
@@ -108,10 +151,10 @@ int main()
         std::string mnemonic_str = mnemonic.get_string().to_string();
         std::cout << "Generated mnemonic: " << mnemonic_str << std::endl;
 
-        RustVec<String> words_vec = mnemonic.get_vec(); // String (starting with capital letter) is a rust type
+        RustVec<String> words_vec = mnemonic.get_vec();
         for (uint i = 0; i < words_vec.size(); i++)
         {
-            std::cout << words_vec.at(i).unwrap().to_string() << std::endl;
+            std::cerr << words_vec.at(i).unwrap().to_string() << std::endl;
         }
 
         String device_name = String("My Mac");
@@ -128,16 +171,16 @@ int main()
             }
             catch (const UserRetrievalExc_NotFoundException &e)
             {
-                std::cout << e.reason().to_string() << std::endl;
+                std::cerr << e.reason().to_string() << std::endl;
             }
             catch (const UserRetrievalExc_UnexpectedException &e)
             {
-                std::cout << e.reason().to_string() << std::endl;
+                std::cerr << e.reason().to_string() << std::endl;
             }
         }
-        catch (const UserCreationExc_NotCreatedException &e)
+        catch (const UserCreationExc_FailureException &e)
         {
-            std::cout << e.reason().to_string() << std::endl;
+            std::cerr << e.reason().to_string() << std::endl;
         }
 
         try
@@ -145,13 +188,15 @@ int main()
             RustVec<u8> entropy;
             user_api.create_user_from_entropy(entropy, device_name);
         }
-        catch (const UserCreationExc_NotCreatedException &e)
+        catch (const UserCreationExc_FailureException &e)
         {
-            std::cout << e.reason().to_string() << std::endl;
+            std::cerr << e.reason().to_string() << std::endl;
         }
     }
-    catch (const MnemonicCreationExc_NotCreatedException &e)
+    catch (const MnemonicCreationExc_FailureException &e)
     {
-        std::cout << e.reason().to_string() << std::endl;
+        std::cerr << e.reason().to_string() << std::endl;
     }
+
+    config_parser_test();
 }

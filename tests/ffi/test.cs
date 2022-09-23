@@ -4,6 +4,17 @@ using static wildland;
 
 namespace Main
 {
+    class CargoCfgProviderImpl : CargoCfgProvider {
+        public override RustString get_log_level()
+        {
+            return new RustString("debug");
+        }
+        public override OptionalString get_log_file()
+        {
+            return new_none_string();
+        }
+    }
+
     class LocalSecureStorageImpl : LocalSecureStorage {
         private Dictionary <string, Vecu8> store = new Dictionary<string, Vecu8>();
 
@@ -95,7 +106,7 @@ namespace Main
         static void Main(string[] args)
         {
             Console.WriteLine("C# FFI Test Suite");
-            var cargo_lib = wildland.create_cargo_lib(new LocalSecureStorageImpl());
+            var cargo_lib = wildland.create_cargo_lib(new LocalSecureStorageImpl(), wildland.collect_config(new CargoCfgProviderImpl()));
             var user_api = cargo_lib.user_api();
             var mnemonic = user_api.generate_mnemonic();
             Console.WriteLine(mnemonic.get_string().to_string());

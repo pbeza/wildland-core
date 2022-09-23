@@ -6,10 +6,13 @@ pub use retrieval_error::*;
 
 use wildland_corex::{CryptoError, ForestRetrievalError};
 
+use crate::{api::config::ParseConfigError, CargoLibCreationError};
+
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub enum WildlandXDomain {
     CargoUser,
+    CargoConfig,
     Crypto,
     Catlib,
     CoreX,
@@ -61,5 +64,17 @@ impl ErrDomain for ForestRetrievalError {
             ForestRetrievalError::LssError(_) => WildlandXDomain::Lss,
             ForestRetrievalError::KeypairParseError(_) => WildlandXDomain::Crypto,
         }
+    }
+}
+
+impl ErrDomain for CargoLibCreationError {
+    fn domain(&self) -> WildlandXDomain {
+        WildlandXDomain::CargoConfig
+    }
+}
+
+impl ErrDomain for ParseConfigError {
+    fn domain(&self) -> WildlandXDomain {
+        WildlandXDomain::CargoConfig
     }
 }
