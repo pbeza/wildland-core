@@ -7,11 +7,11 @@ Acceptance in progress
 ## Commit message formalization
 
 In the repository, all issues titles, pull request titles and commit messages
-must have prefixed with a tag.
+must be prefixed with a tag.
 
-Currently, we allow tags:
+Currently, following tags are allowed:
 
-* `chore` - dependency updates, ci updates, refactorings,other changes that
+* `chore` - dependency updates, CI updates, refactorings, other changes that
   don't affect the project functionality
 * `test` - adding or removing tests; it does not include changes to deployment
   or CI. These go under `chore.`
@@ -19,9 +19,9 @@ Currently, we allow tags:
 * `feat` - adding new feature to the project
 * `docs` - adding documentation (readmes, mdbook, plantuml etc.)
 
-On merge, we **squash** commits and use one of 5 tags. We are not using the
-scope, as it's basically useless - most of our changes affect everything. The
-summary should describe which components were changed.
+On merge, commits must be **squashed** and one of 5 tags must be used. Scope in
+the project does not matter (i.e. COMPONENT_XYZ) - most of the changes affect
+multiple components. The summary should describe which components were changed.
 
 As for the long commit message:
 

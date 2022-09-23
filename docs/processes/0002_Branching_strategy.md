@@ -104,7 +104,7 @@ official documentation about the process.
 ### Patch Versioning
 
 - Patches will result in a bump of the current version's PATCH number on the
-- affected release branch.
+  affected release branch.
 - Patches will not result in bump in development (release candidates).
 
 ### Patch Application

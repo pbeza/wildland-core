@@ -18,51 +18,51 @@ RFC - Request for Comments
   the current state of each element. Information what it does, why and how, what
   algorithms (from a broad perspective without many implementation details) were
   used, the protocol between the systems, etc. It should be enough information
-  to adapt a new developer to CDL quickly.
-* used by: CDL team
+  to adapt a new developer to the project quickly.
+* used by: Dev Team
 
 ### Configuration
 
 * path: `docs/configuration`
 * purpose: description of all ENV variables and configuration files
-* used by: CDL user
+* used by: Deployment/User
 
 ### Deployment
 
 * path: `docs/deployment`
-* purpose: documentation of how to deploy CDL
-* used by: CDL user
+* purpose: documentation of how to deploy the project or its artifacts
+* used by: Deployment/User
 
 ### Examples
 
 * path: `docs/examples`
-* purpose: a place for tutorials and guides.
-* used by: CDL user
+* purpose: a place for tutorials, code examples and guides.
+* used by: Developer/User
 
 ### Features
 
 * path: `docs/features`
 * purpose: a place for feature (behavior) description. Each feature should have
-  at least one document describing it. Example: ordering.md, materialization.md,
-  routing.md, CDLIM_versioning.md
-* used by: CDL user
+  at least one document describing it. Example: file_ordering.md,
+  partial_delta_synchronization.md
+* used by: Developer/User/Management
 
 ### Processes
 
 * path: `docs/processes`
-* purpose: a place for all our processes. For example: Commit message
+* purpose: a place for all our processes. For example: commit message
   formalization or this process.
-* used by: CDL team
+* used by: Dev Team
 
 ### RFCs
 
 * path: `docs/rfc`
 * purpose: a place for all RFCs.
-* used by: CDL team
+* used by: Dev Team
 
 ## RFC process
 
-RFC describes only **change** to CDL. The change might be:
+RFC describes only **change** to the project. The change might be:
 
 * New feature
 * Modification of existing feature
@@ -118,7 +118,7 @@ additional zeroes (`9999` becomes `09999`).
 The author of the RFC should create a new document in the `rfc` directory.
 This directory has a flat structure, and each RFC should have a filename in
 human-readable format with RFC ordering prefix number and version postfix number.
-For example: `1234_schema_registry_less_CDL_deployment_01.md`.
+For example: `1234_database_scheme.md`.
 
 Version postfix number is increased when RFC describes changes for
 existing RFC; for example, when there is `xxx_feature_01.md`, the author
@@ -135,19 +135,19 @@ Each RFC has to contain Front Matter in the format:
 # Front Matter
 
 ```
-Title           : Schema-Registry-less CDL deployment
+Title           : Schema-Registry-less deployment
 Category        : Feature
-Author(s)       : Wojciech Polak
-Team            : CommonDataLayer
+Author(s)       : Yours Trully
+Team            : Corex Team
 Created         : 2021-06-24
 Deadline        : 2021-06-26
-CDL feature ID  : CDLF-00016-00
+Feature ID      : FEAT-00016-00
 ```
 ````
 
-* CDL feature ID is only required for feature descriptions. If the RFC describes
+* Feature ID is only required for feature descriptions. If the RFC describes
   a process, this field should be omitted.
-* Team field is optional. If missing, it's implied that CDL Team has created it.
+* Team field is optional.
 * RFC format allows other custom fields to be included if necessary, such as why
   RFC has been abandoned.
 * The author should commit the draft to a separate branch, for example,
@@ -203,4 +203,4 @@ describing new goals and changes.
 ### Summary
 
 RFC describes **changes** while `features`/`processes`/`architecture` keep
-up-to-date information about the current state of CDL.
+up-to-date information about the current state of the project.
