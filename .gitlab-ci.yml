@@ -2,6 +2,7 @@ image: registry.gitlab.com/wildland/corex/wildland-core/builder:latest
 
 variables:
   CARGO_FLAGS: ""
+  CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE: 'true'
 
 stages:
   - Test
@@ -37,7 +38,8 @@ cargo test:
     - main
     - merge_requests
   script:
-    - cargo $CARGO_FLAGS test --verbose
+    - rustup install nightly
+    - cargo make test
 
 cargo clippy (lint):
   stage: Test
@@ -48,7 +50,8 @@ cargo clippy (lint):
     - merge_requests
   script:
     - rustup component add clippy
-    - cargo $CARGO_FLAGS clippy --all-targets -- -D warnings
+    - rustup install nightly
+    - cargo make clippy
   allow_failure: true
 
 cargo fmt (format):
@@ -70,7 +73,6 @@ cargo audit:
     - main
     - merge_requests
   script:
-    - cargo $CARGO_FLAGS install cargo-audit
     - cargo $CARGO_FLAGS audit
 
 ###############

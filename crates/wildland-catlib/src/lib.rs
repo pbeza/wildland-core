@@ -129,24 +129,19 @@ impl CatLib {
             .filter(|(id, _)| (**id).starts_with("container-"))
             .map(|(_, container_str)| Container::try_from((*container_str).clone()).unwrap())
             .filter(|container| {
-                container
-                    .paths()
-                    .iter()
-                    .filter(|&container_path| {
-                        let paths_to_check = paths.iter();
-                        for p in paths_to_check {
-                            if include_subdirs {
-                                if container_path.starts_with(p) {
-                                    return true;
-                                }
-                            } else if container_path.eq(p) {
+                container.paths().iter().any(|container_path| {
+                    let paths_to_check = paths.iter();
+                    for p in paths_to_check {
+                        if include_subdirs {
+                            if container_path.starts_with(p) {
                                 return true;
                             }
+                        } else if container_path.eq(p) {
+                            return true;
                         }
-                        false
-                    })
-                    .next()
-                    .is_some()
+                    }
+                    false
+                })
             })
             .collect();
 

@@ -52,7 +52,9 @@ RUN curl https://sh.rustup.rs -sSf | \
 
 RUN cargo install \
 	cargo-release \
-	cargo-workspaces
+	cargo-workspaces \
+	cargo-make \
+	cargo-audit
 
 RUN rustup target add wasm32-unknown-emscripten
 
