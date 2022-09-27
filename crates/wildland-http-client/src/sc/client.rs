@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use reqwest::Client;
 use serde::Serialize;
 
@@ -56,8 +58,12 @@ impl StorageControllerClient {
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub async fn create_storage(&self) -> Result<CreateStorageRes, WildlandHttpClientError> {
-        let response = self.sc_storage_client.create_storage().await?;
-        let response_json = handle(response).await?.json().await?;
+        let response = self
+            .sc_storage_client
+            .create_storage()
+            .await
+            .map_err(Arc::new)?;
+        let response_json = handle(response).await?.json().await.map_err(Arc::new)?;
         Ok(response_json)
     }
 
@@ -70,8 +76,9 @@ impl StorageControllerClient {
         let response = self
             .sc_credentials_client
             .create_credentials(request, &signature)
-            .await?;
-        let response_json = handle(response).await?.json().await?;
+            .await
+            .map_err(Arc::new)?;
+        let response_json = handle(response).await?.json().await.map_err(Arc::new)?;
         Ok(response_json)
     }
 
@@ -84,8 +91,9 @@ impl StorageControllerClient {
         let response = self
             .sc_signature_client
             .signature_request(request, &signature)
-            .await?;
-        let response_json = handle(response).await?.json().await?;
+            .await
+            .map_err(Arc::new)?;
+        let response_json = handle(response).await?.json().await.map_err(Arc::new)?;
         Ok(response_json)
     }
 
@@ -98,8 +106,9 @@ impl StorageControllerClient {
         let response = self
             .sc_metrics_client
             .request_metrics(request, &signature)
-            .await?;
-        let response_json = handle(response).await?.json().await?;
+            .await
+            .map_err(Arc::new)?;
+        let response_json = handle(response).await?.json().await.map_err(Arc::new)?;
         Ok(response_json)
     }
 
@@ -118,8 +127,11 @@ impl StorageControllerClient {
     where
         T: Serialize,
     {
-        let message = serde_json::to_vec(request)
-            .map_err(|source| WildlandHttpClientError::CannotSerializeRequestError { source })?;
+        let message = serde_json::to_vec(request).map_err(|source| {
+            WildlandHttpClientError::CannotSerializeRequestError {
+                source: Arc::new(source),
+            }
+        })?;
         let keypair =
             SigningKeypair::try_from_str(self.get_credential_id(), self.get_credential_secret())?;
         let signature = keypair.sign(&message);

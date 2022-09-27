@@ -21,7 +21,8 @@ RUN for crate in \
     wildland-corex \
     wildland-catlib \
     wildland-crypto \
-    wildland-dfs\
+    wildland-dfs \
+    wildland-http-client \
     ; do cargo new --lib $crate; done
 COPY Cargo.toml /app/
 COPY Cargo.lock /app/
@@ -36,6 +37,8 @@ COPY crates/wildland-crypto/Cargo.toml wildland-crypto/
 COPY crates/wildland-crypto/rust-toolchain wildland-crypto/
 COPY crates/wildland-dfs/Cargo.toml wildland-dfs/
 COPY crates/wildland-dfs/rust-toolchain wildland-dfs/
+COPY crates/wildland-http-client/Cargo.toml wildland-http-client/
+COPY crates/wildland-http-client/rust-toolchain wildland-http-client/
 
 WORKDIR /app/
 RUN cargo build \

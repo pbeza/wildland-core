@@ -5,12 +5,14 @@ pub use creation_error::*;
 pub use retrieval_error::*;
 
 use wildland_corex::{CryptoError, ForestRetrievalError};
+use wildland_http_client::error::WildlandHttpClientError;
 
 use crate::{api::config::ParseConfigError, CargoLibCreationError};
 
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub enum WildlandXDomain {
+    EvsServer,
     CargoUser,
     CargoConfig,
     Crypto,
@@ -18,6 +20,7 @@ pub enum WildlandXDomain {
     CoreX,
     Dfs,
     Lss,
+    ExternalLibError,
 }
 
 pub trait ExceptionTrait {
@@ -76,5 +79,20 @@ impl ErrDomain for CargoLibCreationError {
 impl ErrDomain for ParseConfigError {
     fn domain(&self) -> WildlandXDomain {
         WildlandXDomain::CargoConfig
+    }
+}
+
+impl ExceptionTrait for WildlandHttpClientError {
+    fn reason(&self) -> String {
+        self.to_string()
+    }
+
+    fn domain(&self) -> WildlandXDomain {
+        match self {
+            Self::HttpError(_) => WildlandXDomain::EvsServer,
+            Self::CannotSerializeRequestError { .. } => WildlandXDomain::CargoUser,
+            Self::CommonLibError(_) => WildlandXDomain::Crypto,
+            Self::ReqwestError(_) => WildlandXDomain::ExternalLibError,
+        }
     }
 }

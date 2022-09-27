@@ -1,5 +1,6 @@
-use crate::error::WildlandHttpClientError;
-use crate::response_handler::handle;
+use std::sync::Arc;
+
+use crate::{error::WildlandHttpClientError, response_handler::handle};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -15,7 +16,7 @@ pub struct GetStorageReq {
     pub pubkey: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetStorageRes {
     pub encrypted_credentials: String,
 }
@@ -37,12 +38,18 @@ impl EvsClient {
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub async fn _confirm_token(
+    pub async fn confirm_token(
         &self,
         request: ConfirmTokenReq,
     ) -> Result<(), WildlandHttpClientError> {
         let url = format!("{}/confirm_token", self.base_url);
-        let response = self.client.put(url).json(&request).send().await?;
+        let response = self
+            .client
+            .put(url)
+            .json(&request)
+            .send()
+            .await
+            .map_err(Arc::new)?;
         handle(response).await?;
         Ok(())
     }
@@ -53,8 +60,14 @@ impl EvsClient {
         request: GetStorageReq,
     ) -> Result<GetStorageRes, WildlandHttpClientError> {
         let url = format!("{}/get_storage", self.base_url);
-        let response = self.client.put(url).json(&request).send().await?;
-        let response_json = handle(response).await?.json().await?;
+        let response = self
+            .client
+            .put(url)
+            .json(&request)
+            .send()
+            .await
+            .map_err(Arc::new)?;
+        let response_json = handle(response).await?.json().await.map_err(Arc::new)?;
         Ok(response_json)
     }
 }

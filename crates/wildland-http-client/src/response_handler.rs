@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::error::WildlandHttpClientError;
 use reqwest::{Response, StatusCode};
 
@@ -11,17 +13,17 @@ pub(crate) async fn handle(response: Response) -> Result<Response, WildlandHttpC
         StatusCode::NO_CONTENT => Ok(response),
         StatusCode::UNAUTHORIZED => {
             log::error!("Unauthorized to make given request");
-            let message = response.text().await?;
+            let message = response.text().await.map_err(Arc::new)?;
             Err(HttpError(message))
         }
         StatusCode::FORBIDDEN => {
             log::error!("forbidden to make given request");
-            let message = response.text().await?;
+            let message = response.text().await.map_err(Arc::new)?;
             Err(HttpError(message))
         }
         other_status => {
             log::error!("Request failed with status: {:?}", other_status);
-            let message = response.text().await?;
+            let message = response.text().await.map_err(Arc::new)?;
             Err(HttpError(message))
         }
     }

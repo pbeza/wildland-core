@@ -23,7 +23,7 @@ crate-type = ["staticlib", "lib"]
 [dependencies]
 anyhow               = { version = "1.0" }
 env_logger           = { version = "0.9" }
-ffi-macro            = { version = "0.7.1", registry = "wl-dev", optional = true }
+ffi-macro            = { version = "0.9.0", registry = "wl-dev", optional = true }
 log                  = { version = "0.4" }
 serde                = { version = "1.0", features = ["derive"] }
 serde_json           = { version = "1.0" }
@@ -38,13 +38,13 @@ tracing-core         = { version = "0.1" }
 tracing-log          = { version = "0.1", features = ["env_logger"] }
 tracing-subscriber   = { version = "0.3", features = ["json", "env-filter", "fmt", "std"] }
 wildland-corex       = { version = "0.6.0", path = "../wildland-corex", registry = "wl-dev" }
-wildland-http-client = { version = "0.4.4", path = "../wildland-http-client", registry = "wl-dev" }
+wildland-http-client = { version = "0.4.5", path = "../wildland-http-client", registry = "wl-dev" }
 
 [package.metadata.workspaces]
 independent = true
 
 [build-dependencies]
-ffi-macro-build = { version = "0.5.2", registry = "wl-dev", optional = true }
+ffi-macro-build = { version = "0.5.4", registry = "wl-dev", optional = true }
 
 [dev-dependencies]
 pretty_assertions = { version = "1.3" }

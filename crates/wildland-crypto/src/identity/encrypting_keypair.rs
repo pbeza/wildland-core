@@ -1,6 +1,7 @@
 use super::bytes_key_from_str;
 use crate::error::CryptoError;
-use crypto_box::{PublicKey as EncryptionPublicKey, SecretKey as EncryptionSecretKey};
+use crypto_box::{aead::Aead, PublicKey as EncryptionPublicKey, SecretKey as EncryptionSecretKey};
+use hex::ToHex;
 
 /// Keypair that can be used for encryption.
 /// See crypto-box crate for details.
@@ -36,6 +37,21 @@ impl EncryptingKeypair {
         let secret = EncryptionSecretKey::generate(&mut rng);
         let public = secret.public_key();
         Self { secret, public }
+    }
+
+    #[tracing::instrument(level = "debug", ret, skip(self))]
+    pub fn encode_pub(&self) -> String {
+        self.public.as_bytes().encode_hex::<String>()
+    }
+
+    #[tracing::instrument(level = "debug", ret, skip(self))]
+    pub fn decrypt(&self, ciphertext: String) -> Vec<u8> {
+        // TODO maybe generic fun
+        let salsa_box = crypto_box::Box::new(&self.public, &self.secret);
+        let mut rng = rand_core::OsRng;
+        salsa_box
+            .decrypt(&crypto_box::generate_nonce(&mut rng), ciphertext)
+            .unwrap() // TODO
     }
 }
 

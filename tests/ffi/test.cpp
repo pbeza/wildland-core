@@ -6,11 +6,15 @@ class CargoCfgProviderImpl : public CargoCfgProvider
 {
     String get_log_level() override
     {
-        return RustString("debug");
+        return RustString("info");
     }
     OptionalString get_log_file() override
     {
         return new_none_string();
+    }
+    String get_evs_url() override
+    {
+        return RustString("https://evs_endpoint.com/");
     }
 };
 
@@ -108,10 +112,44 @@ private:
     std::unordered_map<std::string, RustVec<u8>> store = {};
 };
 
+class ConfirmTokenResHandlerImpl : public ConfirmTokenResHandler
+{
+    void callback(ConfirmTokenResp resp) override
+    {
+        std::cout << "confirm token callback" << std::endl;
+        try
+        {
+            resp.check();
+            std::cout << "Free tier process completed" << std::endl;
+        }
+        catch (const std::exception &e)
+        {
+            std::cout << e.what() << std::endl;
+        }
+    }
+};
+class GetStorageResHandlerImpl : public GetStorageResHandler
+{
+    void callback(FreeTierResp resp) override
+    {
+        std::cout << "Get storage callback" << std::endl;
+        try
+        {
+            FreeTierVerification ftv = resp.verification_handle();
+            ConfirmTokenResHandlerImpl resp_handler = ConfirmTokenResHandlerImpl{};
+            ftv.verify_email(RustString("123456"), resp_handler);
+        }
+        catch (const std::exception &e)
+        {
+            std::cout << e.what() << std::endl;
+        }
+    }
+};
+
 void config_parser_test()
 {
     RustVec<u8> config_bytes{};
-    std::string raw_config = "{\"log_level\": \"trace\"}";
+    std::string raw_config = "{\"log_level\": \"trace\", \"evs_url\": \"http://some_evs_endpoint/\"}";
     for (const auto ch : raw_config)
     {
         config_bytes.push(ch);
@@ -144,6 +182,10 @@ int main()
     }
 
     UserApi user_api = cargo_lib.user_api();
+
+    FoundationStorageApi fsa_api = cargo_lib.foundation_storage_api();
+    GetStorageResHandlerImpl resp_handler = GetStorageResHandlerImpl{};
+    fsa_api.request_free_tier_storage("test@email.com", resp_handler);
 
     try
     {

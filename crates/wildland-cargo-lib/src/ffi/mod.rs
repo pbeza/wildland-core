@@ -1,5 +1,5 @@
 use crate::{
-    api::{config::*, user::UserApi},
+    api::{config::*, foundation_storage::*, user::UserApi},
     cargo_lib::CargoLib,
     create_cargo_lib,
     errors::*,
@@ -10,6 +10,7 @@ pub use wildland_corex::{
     CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, LssResult,
     UserCreationError,
 };
+use wildland_http_client::error::WildlandHttpClientError;
 
 type VoidType = ();
 
@@ -18,6 +19,7 @@ pub type MnemonicCreationExc = SingleVariantError<CryptoError>;
 pub type UserCreationExc = SingleVariantError<UserCreationError>;
 pub type CargoLibCreationExc = SingleVariantError<CargoLibCreationError>;
 pub type ConfigParseExc = SingleVariantError<ParseConfigError>;
+pub type WildlandHttpClientExc = WildlandHttpClientError;
 
 type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
 fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult {
@@ -96,14 +98,18 @@ mod ffi_binding {
     enum ConfigParseExc {
         Failure(_),
     }
+    enum WildlandHttpClientExc {
+        HttpError(_),
+        CannotSerializeRequestError(_),
+        CommonLibError(_),
+        ReqwestError(_),
+    }
 
     extern "Traits" {
-        type CargoCfgProvider;
         fn get_log_level(self: &dyn CargoCfgProvider) -> String;
         fn get_log_file(self: &dyn CargoCfgProvider) -> OptionalString;
         fn get_evs_url(self: &dyn CargoCfgProvider) -> String;
 
-        type LocalSecureStorage;
         fn insert(
             self: &dyn LocalSecureStorage,
             key: String,
@@ -115,6 +121,9 @@ mod ffi_binding {
         fn remove(self: &dyn LocalSecureStorage, key: String) -> LssOptionalBytesResult;
         fn len(self: &dyn LocalSecureStorage) -> LssUsizeResult;
         fn is_empty(self: &dyn LocalSecureStorage) -> LssBoolResult;
+
+        fn callback(self: &dyn GetStorageResHandler, resp: FreeTierResp);
+        fn callback(self: &dyn ConfirmTokenResHandler, resp: ConfirmTokenResp);
     }
 
     extern "Rust" {
@@ -149,6 +158,22 @@ mod ffi_binding {
             config: CargoConfig,
         ) -> Result<CargoLib, CargoLibCreationExc>;
         fn user_api(self: &CargoLib) -> UserApi;
+        fn foundation_storage_api(self: &CargoLib) -> FoundationStorageApi;
+
+        fn request_free_tier_storage(
+            self: &FoundationStorageApi,
+            email: String,
+            resp_handler: &'static dyn GetStorageResHandler,
+        );
+        fn verification_handle(
+            self: &FreeTierResp,
+        ) -> Result<FreeTierVerification, WildlandHttpClientExc>;
+        fn verify_email(
+            self: &FreeTierVerification,
+            verification_token: String,
+            resp_handler: &'static dyn ConfirmTokenResHandler,
+        );
+        fn check(self: &ConfirmTokenResp) -> Result<VoidType, WildlandHttpClientExc>;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_user_from_entropy(
