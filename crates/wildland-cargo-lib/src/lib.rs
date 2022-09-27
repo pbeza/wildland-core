@@ -9,3 +9,4 @@ mod test_utils;
 mod user;
 
 pub use api::*;
+pub use config::*;

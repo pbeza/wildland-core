@@ -1,5 +1,8 @@
 use crate::{
-    errors::{CreationError, CreationResult, RetrievalError, RetrievalResult, UserCreationError},
+    errors::{
+        RetrievalError, RetrievalResult, SingleErrVariantResult, SingleVariantError,
+        UserCreationError,
+    },
     user::{generate_random_mnemonic, CreateUserInput, UserService},
 };
 use wildland_corex::{CryptoError, ForestRetrievalError, MnemonicPhrase};
@@ -48,10 +51,10 @@ impl UserApi {
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn generate_mnemonic(&self) -> CreationResult<MnemonicPayload, CryptoError> {
+    pub fn generate_mnemonic(&self) -> SingleErrVariantResult<MnemonicPayload, CryptoError> {
         tracing::trace!("generating mnemonic");
         generate_random_mnemonic()
-            .map_err(CreationError::NotCreated)
+            .map_err(SingleVariantError::Failure)
             .map(MnemonicPayload::from)
     }
 
@@ -60,11 +63,11 @@ impl UserApi {
         &self,
         entropy: Vec<u8>,
         device_name: String,
-    ) -> CreationResult<(), UserCreationError> {
+    ) -> SingleErrVariantResult<(), UserCreationError> {
         tracing::debug!("creating new user");
         self.user_service
             .create_user(CreateUserInput::Entropy(entropy), device_name)
-            .map_err(CreationError::NotCreated)
+            .map_err(SingleVariantError::Failure)
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
@@ -72,14 +75,14 @@ impl UserApi {
         &self,
         mnemonic: &MnemonicPayload,
         device_name: String,
-    ) -> CreationResult<(), UserCreationError> {
+    ) -> SingleErrVariantResult<(), UserCreationError> {
         tracing::debug!("creating new user");
         self.user_service
             .create_user(
                 CreateUserInput::Mnemonic(Box::new(mnemonic.0.clone())),
                 device_name,
             )
-            .map_err(CreationError::NotCreated)
+            .map_err(SingleVariantError::Failure)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
