@@ -8,7 +8,7 @@ license     = "GPL-3.0-only"
 name        = "wildland-corex"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.6.1"
+version     = "0.7.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,7 +18,7 @@ sha2            = { version = "0.10.2" }
 thiserror       = { version = "1.0.31" }
 tracing         = { version = "0.1" }
 wildland-catlib = { version = "0.4.0", path = "../wildland-catlib", registry = "wl-dev" }
-wildland-crypto = { version = "0.6.0", path = "../wildland-crypto", registry = "wl-dev" }
+wildland-crypto = { version = "0.7.0", path = "../wildland-crypto", registry = "wl-dev" }
 wildland-dfs    = { version = "0.2.0", path = "../wildland-dfs", registry = "wl-dev" }
 
 [dev-dependencies]
