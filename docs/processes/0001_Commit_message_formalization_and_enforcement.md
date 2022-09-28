@@ -6,6 +6,10 @@ Acceptance in progress
 
 ## Commit message formalization
 
+In commit message, the line length must be limited to 80 characters per line.
+This applies to all lines in the commit, including, but not limited to the
+list of fixes, features, and commit message itself.
+
 In the repository, all issues titles, pull request titles and commit messages
 must be prefixed with a tag.
 

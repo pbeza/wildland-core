@@ -94,8 +94,8 @@ all parties.
 Until the deadline, everyone is allowed to comment on the RFC. Participants
 should use the scheduled meeting only to decide when there is more than one
 strong opinion about the subject. All issues should be defined and discussed
-via GitHub comments. The deadline meeting should be relatively short if everyone
-agrees on the subject.
+via the comments on git hosting site. The deadline meeting should be relatively
+short if every participant agrees on the subject.
 
 There may be exceptions to this rule - for example, when during a deadline
 meeting, everyone agrees to wait for new information from superiors, etc.
@@ -120,16 +120,20 @@ This directory has a flat structure, and each RFC should have a filename in
 human-readable format with RFC ordering prefix number and version postfix number.
 For example: `1234_database_scheme.md`.
 
-Version postfix number is increased when RFC describes changes for
-existing RFC; for example, when there is `xxx_feature_01.md`, the author
-wants to describe the modification or new approach to the feature (which isn't a
-new feature itself), they should write `yyy_feature_02.md`. In that case,
-however, the ordering number is always different - `xxx` < `yyy`.
-
 Format:
-`<RFC ordering number>_<Human readable name>_<Version postfix number>.md`
+`<RFC ordering number>_<Human readable name>.md`
 
-Each RFC has to contain Front Matter in the format:
+Each RFC should contain at least following sections in the format:
+
+* "Motivation" - explaining the reasoning behind the rfc (what does the rfc
+  solves or why was it brought to the table)
+* "Impact Analysis" - containing, if applies:
+  * work, packages, and tasks needed to implement RFC, rough estimates are also
+    welcome,
+  * breakage of contracts or features if any,
+  * any other action that is requried to properly implement the RFC,
+
+RFC Header Example:
 
 ````text
 # Front Matter

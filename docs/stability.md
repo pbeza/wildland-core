@@ -21,9 +21,9 @@ This document describes state after release 1.1.0
 
 ## Legend
 
-- ⛔ - Experimental API
-- ⚠ - Partially stable API - used only for component
-- ✅ - Stable API
+- [!!!] - Experimental API
+- [???] - Partially stable API - used only for component
+- [---] - Stable API
 
 ## Stability
 

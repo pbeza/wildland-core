@@ -5,6 +5,8 @@
   - [Stability](stability.md)
   - [Versioning](versioning.md)
 - [Architecture](architecture/about)
+- [CI](ci/about.md)
+  - [Apple](ci/apple_ci.md)
 - [Configuration](configuration/about.md)
 - [Deployment](deployment/about.md)
 - [Examples](examples/about.md)
