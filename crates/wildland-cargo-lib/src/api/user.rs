@@ -1,8 +1,11 @@
-use crate::errors::{RetrievalError, RetrievalResult, SingleErrVariantResult, SingleVariantError};
-use wildland_corex::{
-    generate_random_mnemonic, CreateUserInput, CryptoError, ForestRetrievalError, MnemonicPhrase,
-    UserCreationError, UserService,
+use crate::{
+    errors::{
+        RetrievalError, RetrievalResult, SingleErrVariantResult, SingleVariantError,
+        UserCreationError,
+    },
+    user::{generate_random_mnemonic, CreateUserInput, UserService},
 };
+use wildland_corex::{CryptoError, ForestRetrievalError, MnemonicPhrase};
 
 #[derive(Debug, Clone)]
 pub struct MnemonicPayload(MnemonicPhrase);
