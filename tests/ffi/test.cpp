@@ -1,5 +1,8 @@
 #include <iostream>
 #include <unordered_map>
+#include <chrono>
+#include <thread>
+#include <memory>
 #include "ffi_cxx.h"
 
 class CargoCfgProviderImpl : public CargoCfgProvider
@@ -14,7 +17,7 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     }
     String get_evs_url() override
     {
-        return RustString("https://evs_endpoint.com/");
+        return RustString("http://localhost:5000/");
     }
 };
 
@@ -116,28 +119,63 @@ class ConfirmTokenResHandlerImpl : public ConfirmTokenResHandler
 {
     void callback(ConfirmTokenResp resp) override
     {
-        std::cout << "confirm token callback" << std::endl;
+        std::cout << "Confirm token callback" << std::endl;
         try
         {
             resp.check();
             std::cout << "Free tier process completed" << std::endl;
+        }
+        catch (const RustExceptionBase &e)
+        {
+            std::cout << e.reason().to_string() << std::endl;
+        }
+    }
+};
+
+class DebugGetTokenResHandlerImpl : public DebugGetTokenResHandler
+{
+    // handlers must live longer than callback function
+    ConfirmTokenResHandlerImpl resp_handler = ConfirmTokenResHandlerImpl{};
+
+    std::shared_ptr<FreeTierVerification> ftv_ptr = nullptr;
+
+    void callback(DebugGetTokenResp resp) override
+    {
+        std::cout << "Debug get token callback" << std::endl;
+        try
+        {
+            auto token = resp.get_token();
+            std::cout << "Got token: " << token.to_string() << std::endl;
+            ftv_ptr->verify_email(token, resp_handler);
         }
         catch (const std::exception &e)
         {
             std::cout << e.what() << std::endl;
         }
     }
+
+public:
+    void set_ftv_ptr(std::shared_ptr<FreeTierVerification> ftv)
+    {
+        this->ftv_ptr = ftv;
+    }
 };
+
 class GetStorageResHandlerImpl : public GetStorageResHandler
 {
+    // handlers must live longer than callback function
+    DebugGetTokenResHandlerImpl debug_get_token_handler = DebugGetTokenResHandlerImpl{};
+
+    std::shared_ptr<FreeTierVerification> ftv_ptr = nullptr;
+
     void callback(FreeTierResp resp) override
     {
         std::cout << "Get storage callback" << std::endl;
         try
         {
-            FreeTierVerification ftv = resp.verification_handle();
-            ConfirmTokenResHandlerImpl resp_handler = ConfirmTokenResHandlerImpl{};
-            ftv.verify_email(RustString("123456"), resp_handler);
+            ftv_ptr = std::make_shared<FreeTierVerification>(resp.verification_handle());
+            debug_get_token_handler.set_ftv_ptr(ftv_ptr);
+            ftv_ptr->debug_get_token(debug_get_token_handler);
         }
         catch (const std::exception &e)
         {
@@ -187,58 +225,59 @@ int main()
     GetStorageResHandlerImpl resp_handler = GetStorageResHandlerImpl{};
     fsa_api.request_free_tier_storage("test@email.com", resp_handler);
 
-    try
-    {
-        MnemonicPayload mnemonic = user_api.generate_mnemonic(); // TODO WILX-220 MEMLEAK
-        std::string mnemonic_str = mnemonic.get_string().to_string();
-        std::cout << "Generated mnemonic: " << mnemonic_str << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    // try
+    // {
+    //     MnemonicPayload mnemonic = user_api.generate_mnemonic(); // TODO WILX-220 MEMLEAK
+    //     std::string mnemonic_str = mnemonic.get_string().to_string();
+    //     std::cout << "Generated mnemonic: " << mnemonic_str << std::endl;
 
-        RustVec<String> words_vec = mnemonic.get_vec();
-        for (uint i = 0; i < words_vec.size(); i++)
-        {
-            std::cerr << words_vec.at(i).unwrap().to_string() << std::endl;
-        }
+    //     RustVec<String> words_vec = mnemonic.get_vec();
+    //     for (uint i = 0; i < words_vec.size(); i++)
+    //     {
+    //         std::cerr << words_vec.at(i).unwrap().to_string() << std::endl;
+    //     }
 
-        String device_name = String("My Mac");
+    //     String device_name = String("My Mac");
 
-        try
-        {
-            user_api.create_user_from_mnemonic(mnemonic, device_name); // TODO WILX-220 MEMLEAK
-            std::cout << "User successfully created from mnemonic\n";
+    //     try
+    //     {
+    //         user_api.create_user_from_mnemonic(mnemonic, device_name); // TODO WILX-220 MEMLEAK
+    //         std::cout << "User successfully created from mnemonic\n";
 
-            try
-            {
-                UserPayload user = user_api.get_user();
-                std::cout << "User: " << user.get_string().to_string() << std::endl;
-            }
-            catch (const UserRetrievalExc_NotFoundException &e)
-            {
-                std::cerr << e.reason().to_string() << std::endl;
-            }
-            catch (const UserRetrievalExc_UnexpectedException &e)
-            {
-                std::cerr << e.reason().to_string() << std::endl;
-            }
-        }
-        catch (const UserCreationExc_FailureException &e)
-        {
-            std::cerr << e.reason().to_string() << std::endl;
-        }
+    //         try
+    //         {
+    //             UserPayload user = user_api.get_user();
+    //             std::cout << "User: " << user.get_string().to_string() << std::endl;
+    //         }
+    //         catch (const UserRetrievalExc_NotFoundException &e)
+    //         {
+    //             std::cerr << e.reason().to_string() << std::endl;
+    //         }
+    //         catch (const UserRetrievalExc_UnexpectedException &e)
+    //         {
+    //             std::cerr << e.reason().to_string() << std::endl;
+    //         }
+    //     }
+    //     catch (const UserCreationExc_FailureException &e)
+    //     {
+    //         std::cerr << e.reason().to_string() << std::endl;
+    //     }
 
-        try
-        {
-            RustVec<u8> entropy;
-            user_api.create_user_from_entropy(entropy, device_name);
-        }
-        catch (const UserCreationExc_FailureException &e)
-        {
-            std::cerr << e.reason().to_string() << std::endl;
-        }
-    }
-    catch (const MnemonicCreationExc_FailureException &e)
-    {
-        std::cerr << e.reason().to_string() << std::endl;
-    }
+    //     try
+    //     {
+    //         RustVec<u8> entropy;
+    //         user_api.create_user_from_entropy(entropy, device_name);
+    //     }
+    //     catch (const UserCreationExc_FailureException &e)
+    //     {
+    //         std::cerr << e.reason().to_string() << std::endl;
+    //     }
+    // }
+    // catch (const MnemonicCreationExc_FailureException &e)
+    // {
+    //     std::cerr << e.reason().to_string() << std::endl;
+    // }
 
-    config_parser_test();
+    // config_parser_test();
 }

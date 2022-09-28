@@ -18,7 +18,14 @@ pub struct GetStorageReq {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetStorageRes {
-    pub encrypted_credentials: String,
+    pub encrypted_credentials: Option<String>,
+}
+
+// TODO feature flag
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DebugGetTokenReq {
+    pub email: String,
+    pub pubkey: String,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -67,8 +74,49 @@ impl EvsClient {
             .send()
             .await
             .map_err(Arc::new)?;
-        let response_json = handle(response).await?.json().await.map_err(Arc::new)?;
-        Ok(response_json)
+        let response = handle(response).await?;
+        match response {
+            Some(response) => Ok(response.json().await.map_err(Arc::new)?),
+            None => Ok(GetStorageRes {
+                encrypted_credentials: None,
+            }),
+        }
+    }
+
+    // TODO hide behind a feature flag
+    #[tracing::instrument(level = "debug", ret, skip(self))]
+    pub async fn debug_get_token(
+        &self,
+        request: DebugGetTokenReq,
+    ) -> Result<String, WildlandHttpClientError> {
+        let url = format!("{}/debug_get_token", self.base_url);
+        let response = self
+            .client
+            .get(url)
+            .query(&[("email", request.email), ("pubkey", request.pubkey)])
+            .send()
+            .await
+            .map_err(Arc::new)?;
+        let response = handle(response).await?;
+        match response {
+            Some(response) => Ok(String::from_utf8(
+                response
+                    .bytes()
+                    .await
+                    .map_err(|_| {
+                        WildlandHttpClientError::HttpError(
+                            "Could not get response bytes".to_owned(),
+                        )
+                    })?
+                    .to_vec(),
+            )
+            .map_err(|_| {
+                WildlandHttpClientError::HttpError(
+                    "Could not parse response body as utf-8 string".to_owned(),
+                )
+            })?),
+            None => Err(WildlandHttpClientError::NoBody),
+        }
     }
 }
 

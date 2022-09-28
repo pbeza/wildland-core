@@ -6,26 +6,13 @@ use reqwest::{Response, StatusCode};
 use crate::error::WildlandHttpClientError::HttpError;
 
 #[tracing::instrument(level = "debug", ret)]
-pub(crate) async fn handle(response: Response) -> Result<Response, WildlandHttpClientError> {
+pub(crate) async fn handle(
+    response: Response,
+) -> Result<Option<Response>, WildlandHttpClientError> {
     match response.status() {
-        StatusCode::OK => Ok(response),
-        StatusCode::CREATED => Ok(response),
-        StatusCode::NO_CONTENT => Ok(response),
-        StatusCode::UNAUTHORIZED => {
-            log::error!("Unauthorized to make given request");
-            let message = response.text().await.map_err(Arc::new)?;
-            Err(HttpError(message))
-        }
-        StatusCode::FORBIDDEN => {
-            log::error!("forbidden to make given request");
-            let message = response.text().await.map_err(Arc::new)?;
-            Err(HttpError(message))
-        }
-        other_status => {
-            log::error!("Request failed with status: {:?}", other_status);
-            let message = response.text().await.map_err(Arc::new)?;
-            Err(HttpError(message))
-        }
+        StatusCode::OK => Ok(Some(response)),
+        StatusCode::CREATED | StatusCode::ACCEPTED | StatusCode::NO_CONTENT => Ok(None),
+        _ => Err(HttpError(response.text().await.map_err(Arc::new)?)),
     }
 }
 

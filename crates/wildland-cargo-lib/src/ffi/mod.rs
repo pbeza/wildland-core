@@ -72,11 +72,15 @@ fn new_err_lss_usize(err_val: String) -> LssUsizeResult {
 #[binding_wrapper]
 mod ffi_binding {
     enum WildlandXDomain {
+        ExternalServer,
         CargoUser,
+        CargoConfig,
         Crypto,
         Catlib,
         CoreX,
         Dfs,
+        Lss,
+        ExternalLibError,
     }
     extern "ExceptionTrait" {
         fn reason(&self) -> String;
@@ -103,6 +107,7 @@ mod ffi_binding {
         CannotSerializeRequestError(_),
         CommonLibError(_),
         ReqwestError(_),
+        NoBody,
     }
 
     extern "Traits" {
@@ -124,6 +129,7 @@ mod ffi_binding {
 
         fn callback(self: &dyn GetStorageResHandler, resp: FreeTierResp);
         fn callback(self: &dyn ConfirmTokenResHandler, resp: ConfirmTokenResp);
+        fn callback(self: &dyn DebugGetTokenResHandler, resp: DebugGetTokenResp);
     }
 
     extern "Rust" {
@@ -174,6 +180,12 @@ mod ffi_binding {
             resp_handler: &'static dyn ConfirmTokenResHandler,
         );
         fn check(self: &ConfirmTokenResp) -> Result<VoidType, WildlandHttpClientExc>;
+        // TODO hide behind feature flag
+        fn debug_get_token(
+            self: &FreeTierVerification,
+            resp_handler: &'static dyn DebugGetTokenResHandler,
+        );
+        fn get_token(self: &DebugGetTokenResp) -> Result<String, WildlandHttpClientExc>;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_user_from_entropy(

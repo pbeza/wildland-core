@@ -12,4 +12,6 @@ pub enum WildlandHttpClientError {
     CommonLibError(#[from] CryptoError),
     #[error(transparent)]
     ReqwestError(#[from] Arc<reqwest::Error>),
+    #[error("No body in the response")]
+    NoBody,
 }

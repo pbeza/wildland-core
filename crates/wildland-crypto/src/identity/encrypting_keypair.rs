@@ -45,13 +45,16 @@ impl EncryptingKeypair {
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn decrypt(&self, ciphertext: String) -> Vec<u8> {
-        // TODO maybe generic fun
+    pub fn decrypt(&self, cipher_text: Vec<u8>) -> Vec<u8> {
         let salsa_box = crypto_box::Box::new(&self.public, &self.secret);
         let mut rng = rand_core::OsRng;
         salsa_box
-            .decrypt(&crypto_box::generate_nonce(&mut rng), ciphertext)
-            .unwrap() // TODO
+            .decrypt(
+                &crypto_box::generate_nonce(&mut rng),
+                cipher_text.as_slice(),
+            )
+            .map_err(|e| eprintln!("{}", e.to_string()))
+            .unwrap() // TODO avoid unwrap
     }
 }
 

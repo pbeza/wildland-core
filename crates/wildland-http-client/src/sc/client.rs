@@ -63,7 +63,12 @@ impl StorageControllerClient {
             .create_storage()
             .await
             .map_err(Arc::new)?;
-        let response_json = handle(response).await?.json().await.map_err(Arc::new)?;
+        let response_json = handle(response)
+            .await?
+            .ok_or(WildlandHttpClientError::NoBody)?
+            .json()
+            .await
+            .map_err(Arc::new)?;
         Ok(response_json)
     }
 
@@ -78,7 +83,12 @@ impl StorageControllerClient {
             .create_credentials(request, &signature)
             .await
             .map_err(Arc::new)?;
-        let response_json = handle(response).await?.json().await.map_err(Arc::new)?;
+        let response_json = handle(response)
+            .await?
+            .ok_or(WildlandHttpClientError::NoBody)?
+            .json()
+            .await
+            .map_err(Arc::new)?;
         Ok(response_json)
     }
 
@@ -93,7 +103,12 @@ impl StorageControllerClient {
             .signature_request(request, &signature)
             .await
             .map_err(Arc::new)?;
-        let response_json = handle(response).await?.json().await.map_err(Arc::new)?;
+        let response_json = handle(response)
+            .await?
+            .ok_or(WildlandHttpClientError::NoBody)?
+            .json()
+            .await
+            .map_err(Arc::new)?;
         Ok(response_json)
     }
 
@@ -108,7 +123,12 @@ impl StorageControllerClient {
             .request_metrics(request, &signature)
             .await
             .map_err(Arc::new)?;
-        let response_json = handle(response).await?.json().await.map_err(Arc::new)?;
+        let response_json = handle(response)
+            .await?
+            .ok_or(WildlandHttpClientError::NoBody)?
+            .json()
+            .await
+            .map_err(Arc::new)?;
         Ok(response_json)
     }
 

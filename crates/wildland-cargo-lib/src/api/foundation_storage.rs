@@ -4,7 +4,7 @@ use tokio::runtime::Runtime;
 use wildland_corex::EncryptingKeypair;
 use wildland_http_client::{
     error::WildlandHttpClientError,
-    evs::{ConfirmTokenReq, EvsClient, GetStorageReq, GetStorageRes},
+    evs::{ConfirmTokenReq, DebugGetTokenReq, EvsClient, GetStorageReq, GetStorageRes},
 };
 
 pub trait GetStorageResHandler: Sync {
@@ -24,9 +24,18 @@ pub type WildlandHttpResult<T> = Result<T, WildlandHttpClientError>;
 
 impl FreeTierResp {
     pub fn verification_handle(&self) -> WildlandHttpResult<FreeTierVerification> {
-        self.storage_res.clone().map(|_resp| {
-            // TODO
+        log::info!("Checking response of method getting storage");
+        self.storage_res.clone().map(|resp| {
+            log::debug!("{resp:?}"); // TODO remove
+            if let Some(encrypted_credentials) = resp.encrypted_credentials {
+                let decrypted_credentials = self
+                    .encrypting_keypair
+                    .decrypt(encrypted_credentials.into());
+                println!("DECRYPTED: {decrypted_credentials:?}"); // TODO remove
+            }
+
             FreeTierVerification {
+                encrypting_keypair: self.encrypting_keypair.clone(),
                 evs_client: self.evs_client.clone(),
                 rt: self.rt.clone(),
                 email: self.email.clone(),
@@ -37,6 +46,7 @@ impl FreeTierResp {
 
 #[derive(Clone, Debug)]
 pub struct FreeTierVerification {
+    encrypting_keypair: Arc<EncryptingKeypair>,
     evs_client: EvsClient,
     rt: Arc<Runtime>,
     email: String,
@@ -48,6 +58,8 @@ impl FreeTierVerification {
         verification_token: String,
         resp_handler: &'static dyn ConfirmTokenResHandler,
     ) {
+        log::info!("Verifying email");
+
         self.rt.spawn({
             let evs_client = self.evs_client.clone();
             let email = self.email.clone();
@@ -58,10 +70,45 @@ impl FreeTierVerification {
                         verification_token,
                     })
                     .await;
-                resp_handler.callback(ConfirmTokenResp { confirm_res: resp })
+                log::debug!("{resp:?}");
+                resp_handler.callback(ConfirmTokenResp { confirm_res: resp });
             }
         });
     }
+
+    // TODO hide behind feature flag like "debug_query"
+    pub fn debug_get_token(&self, resp_handler: &'static dyn DebugGetTokenResHandler) {
+        log::info!("Debug token retrieval");
+        self.rt.spawn({
+            let evs_client = self.evs_client.clone();
+            let email = self.email.clone();
+            let pubkey = self.encrypting_keypair.encode_pub();
+            async move {
+                let resp = evs_client
+                    .debug_get_token(DebugGetTokenReq { email, pubkey })
+                    .await;
+                log::debug!("{resp:?}");
+                resp_handler.callback(DebugGetTokenResp {
+                    get_token_res: resp,
+                })
+            }
+        });
+    }
+}
+
+#[derive(Clone)]
+pub struct DebugGetTokenResp {
+    get_token_res: Result<String, WildlandHttpClientError>,
+}
+
+impl DebugGetTokenResp {
+    pub fn get_token(&self) -> Result<String, WildlandHttpClientError> {
+        self.get_token_res.clone()
+    }
+}
+
+pub trait DebugGetTokenResHandler: Sync {
+    fn callback(&self, handler: DebugGetTokenResp);
 }
 
 #[derive(Clone)]
@@ -71,6 +118,7 @@ pub struct ConfirmTokenResp {
 
 impl ConfirmTokenResp {
     pub fn check(&self) -> Result<(), WildlandHttpClientError> {
+        log::info!("Checking response of token verification");
         self.confirm_res.clone()
     }
 }

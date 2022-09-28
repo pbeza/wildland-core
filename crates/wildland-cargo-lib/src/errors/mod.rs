@@ -12,7 +12,7 @@ use crate::{api::config::ParseConfigError, CargoLibCreationError};
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub enum WildlandXDomain {
-    EvsServer,
+    ExternalServer,
     CargoUser,
     CargoConfig,
     Crypto,
@@ -89,10 +89,11 @@ impl ExceptionTrait for WildlandHttpClientError {
 
     fn domain(&self) -> WildlandXDomain {
         match self {
-            Self::HttpError(_) => WildlandXDomain::EvsServer,
+            Self::HttpError(_) => WildlandXDomain::ExternalServer,
             Self::CannotSerializeRequestError { .. } => WildlandXDomain::CargoUser,
             Self::CommonLibError(_) => WildlandXDomain::Crypto,
             Self::ReqwestError(_) => WildlandXDomain::ExternalLibError,
+            Self::NoBody => WildlandXDomain::ExternalServer,
         }
     }
 }
