@@ -48,11 +48,10 @@ pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     })
 }
 
-#[tracing::instrument(level = "debug", ret, skip(seed, target))]
+#[tracing::instrument(level = "debug", skip(seed, target))]
 pub(crate) fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
-    let input_key_material = seed;
     let info = [87, 105, 108, 100, 108, 97, 110, 100]; // list(b'Wildland')
-    let hk = Hkdf::<Sha256>::new(None, input_key_material);
+    let hk = Hkdf::<Sha256>::new(None, seed);
     hk.expand(&info, target)
         .expect("Should return 96 bytes of randomness");
 }
