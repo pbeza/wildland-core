@@ -428,18 +428,18 @@ dependencies = [
 
 [[package]]
 name = "ffi-macro"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "83e74e0e43babc4168d30637318b5267d5deb5c2bcc7d34e71bb6f3e9534e245"
+checksum = "91aafd81fb9d4bcbb6a533c46177f339a81d7587903c4d44b9a9e9abb69833ac"
 dependencies = [
  "ffi-parser",
 ]
 
 [[package]]
 name = "ffi-macro-build"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "5bb3bbaa8714d5e3c6f3f24afe8fe4fd019232c424e9abef26ba1032d85bcd4b"
+checksum = "8b442aa9f82e64caf882783ca21f065315f20aaaa86cdc81959066a301c762c0"
 dependencies = [
  "ffi-parser",
  "syn",
@@ -447,9 +447,9 @@ dependencies = [
 
 [[package]]
 name = "ffi-parser"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "ce8c91f0b0300162db1513fe287fd810ce1dd44cd934b7dafdef5823062e1b25"
+checksum = "a02b2cb23e164e83c8b28450386dd7470fadf7de40ce143387b701d134254915"
 dependencies = [
  "const_format",
  "convert_case",
@@ -1961,7 +1961,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "anyhow",
  "env_logger 0.9.1",
