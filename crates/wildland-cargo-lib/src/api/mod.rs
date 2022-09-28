@@ -11,7 +11,13 @@ use crate::{
     logging,
     user::UserService,
 };
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    mem::MaybeUninit,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+};
 use thiserror::Error;
 use wildland_corex::LocalSecureStorage;
 
@@ -26,6 +32,9 @@ pub struct CargoLibCreationError(pub String);
 
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
+type SharedCargoLib = Arc<Mutex<CargoLib>>;
+static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
+
 /// Function creating [`CargoLib`] structure which is the main part of Cargo public API.
 /// All functionalities are exposed to application side through this structure.
 ///
@@ -34,29 +43,27 @@ static INITIALIZED: AtomicBool = AtomicBool::new(false);
 pub fn create_cargo_lib(
     lss: &'static dyn LocalSecureStorage,
     cfg: CargoConfig,
-) -> SingleErrVariantResult<CargoLib, CargoLibCreationError> {
+) -> SingleErrVariantResult<SharedCargoLib, CargoLibCreationError> {
     // TODO WILX-219 Memory leak
 
     if !INITIALIZED.load(Ordering::Relaxed) {
         INITIALIZED.store(true, Ordering::Relaxed);
+
         logging::init_subscriber(cfg.get_log_level(), cfg.get_log_file())
             .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e)))?;
 
         #[cfg(not(test))]
-        return Ok(CargoLib::new(UserApi::new(UserService::new(
-            LssService::new(lss),
-        ))));
+        let cargo_lib = { CargoLib::new(UserApi::new(UserService::new(LssService::new(lss)))) };
 
         #[cfg(test)]
-        {
+        let cargo_lib = {
             let _ = lss;
-            Ok(CargoLib::new(UserApi::new(UserService::new(
-                MockLssService::new(),
-            ))))
+            CargoLib::new(UserApi::new(UserService::new(MockLssService::new())))
+        };
+
+        unsafe {
+            CARGO_LIB.write(Arc::new(Mutex::new(cargo_lib)));
         }
-    } else {
-        Err(SingleVariantError::Failure(CargoLibCreationError(
-            "CargoLib cannot be initialized twice.".to_string(),
-        )))
     }
+    unsafe { Ok(CARGO_LIB.assume_init_ref().clone()) }
 }
