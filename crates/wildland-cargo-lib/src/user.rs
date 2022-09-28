@@ -89,7 +89,7 @@ mod tests {
     fn should_not_create_user_when_it_already_exists() {
         // given
         let forest_wildland_identity = create_wildland_forest_identity();
-        let mut lss_service_mock = LssService::new();
+        let mut lss_service_mock = LssService::default();
         lss_service_mock
             .expect_get_default_forest()
             .return_once(|| Ok(Some(forest_wildland_identity)));

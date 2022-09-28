@@ -1,9 +1,10 @@
 use mockall::mock;
-use wildland_corex::{ForestRetrievalError, LssResult, WildlandIdentity};
+use wildland_corex::{ForestRetrievalError, LocalSecureStorage, LssResult, WildlandIdentity};
 
 #[cfg(test)]
 mock! {
     pub LssService {
+        pub fn new(lss: &'static dyn LocalSecureStorage) -> Self;
         pub fn save(&self, wildland_identity: WildlandIdentity) -> LssResult<Option<Vec<u8>>> ;
         pub fn get_default_forest(&self) -> Result<Option<WildlandIdentity>, ForestRetrievalError>;
     }
