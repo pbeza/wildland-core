@@ -56,7 +56,11 @@ RUN cargo install \
 	cargo-make \
 	cargo-audit
 
-RUN rustup target add wasm32-unknown-emscripten
+RUN 	rustup target add wasm32-unknown-emscripten \
+	&& 	rustup target add x86_64-unknown-linux-gnu
+
+RUN rustup install nightly
+RUN rustup component add clippy
 
 RUN curl -OL https://download.swift.org/swift-5.5.1-release/ubuntu2004/swift-5.5.1-RELEASE/swift-5.5.1-RELEASE-ubuntu20.04.tar.gz \
 	&& tar -xvzf swift-5.5.1-RELEASE-ubuntu20.04.tar.gz \
