@@ -294,5 +294,3 @@ pages:
   artifacts:
     paths:
     - public
-  only:
-  - main
