@@ -1,14 +1,17 @@
 use crate::{
-    api::{config::*, user::UserApi},
+    api::{
+        config::*,
+        create_cargo_lib,
+        user::{MnemonicPayload, UserApi, UserPayload},
+        CargoLibCreationError,
+    },
     cargo_lib::CargoLib,
-    create_cargo_lib,
     errors::*,
-    CargoLibCreationError, MnemonicPayload, UserPayload,
 };
 use ffi_macro::binding_wrapper;
+use std::sync::{Arc, Mutex};
 pub use wildland_corex::{
     CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, LssResult,
-    UserCreationError,
 };
 
 type VoidType = ();
@@ -146,8 +149,8 @@ mod ffi_binding {
         fn create_cargo_lib(
             lss: &'static dyn LocalSecureStorage,
             config: CargoConfig,
-        ) -> Result<CargoLib, CargoLibCreationExc>;
-        fn user_api(self: &CargoLib) -> UserApi;
+        ) -> Result<Arc<Mutex<CargoLib>>, CargoLibCreationExc>;
+        fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_user_from_entropy(
