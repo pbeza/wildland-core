@@ -38,7 +38,6 @@ cargo test:
     - main
     - merge_requests
   script:
-    - rustup install nightly
     - cargo make test
 
 cargo clippy (lint):
@@ -49,8 +48,6 @@ cargo clippy (lint):
     - main
     - merge_requests
   script:
-    - rustup component add clippy
-    - rustup install nightly
     - cargo make clippy
   allow_failure: true
 
@@ -62,7 +59,6 @@ cargo fmt (format):
     - main
     - merge_requests
   script:
-    - rustup component add rustfmt
     - cargo $CARGO_FLAGS fmt -- --check
 
 cargo audit:
