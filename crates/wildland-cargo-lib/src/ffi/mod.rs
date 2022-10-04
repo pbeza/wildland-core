@@ -10,7 +10,6 @@ pub use wildland_corex::{
     CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, LssResult,
     UserCreationError,
 };
-use wildland_http_client::error::WildlandHttpClientError;
 
 type VoidType = ();
 
@@ -19,7 +18,7 @@ pub type MnemonicCreationExc = SingleVariantError<CryptoError>;
 pub type UserCreationExc = SingleVariantError<UserCreationError>;
 pub type CargoLibCreationExc = SingleVariantError<CargoLibCreationError>;
 pub type ConfigParseExc = SingleVariantError<ParseConfigError>;
-pub type WildlandHttpClientExc = WildlandHttpClientError;
+pub type FsaExc = FsaError;
 
 type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
 fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult {
@@ -102,18 +101,19 @@ mod ffi_binding {
     enum ConfigParseExc {
         Failure(_),
     }
-    enum WildlandHttpClientExc {
-        HttpError(_),
-        CannotSerializeRequestError(_),
-        CommonLibError(_),
-        ReqwestError(_),
-        NoBody,
+    enum FsaExc {
+        StorageAlreadyExists,
+        EvsError(_),
+        CryptoError(_),
+        InvalidCredentialsFormat(_),
     }
 
     extern "Traits" {
         fn get_log_level(self: &dyn CargoCfgProvider) -> String;
         fn get_log_file(self: &dyn CargoCfgProvider) -> OptionalString;
         fn get_evs_url(self: &dyn CargoCfgProvider) -> String;
+        fn get_evs_runtime_mode(self: &dyn CargoCfgProvider) -> String;
+        fn get_evs_credentials_payload(self: &dyn CargoCfgProvider) -> String;
 
         fn insert(
             self: &dyn LocalSecureStorage,
@@ -126,10 +126,6 @@ mod ffi_binding {
         fn remove(self: &dyn LocalSecureStorage, key: String) -> LssOptionalBytesResult;
         fn len(self: &dyn LocalSecureStorage) -> LssUsizeResult;
         fn is_empty(self: &dyn LocalSecureStorage) -> LssBoolResult;
-
-        fn callback(self: &dyn GetStorageResHandler, resp: FreeTierResp);
-        fn callback(self: &dyn ConfirmTokenResHandler, resp: ConfirmTokenResp);
-        fn callback(self: &dyn DebugGetTokenResHandler, resp: DebugGetTokenResp);
     }
 
     extern "Rust" {
@@ -169,23 +165,13 @@ mod ffi_binding {
         fn request_free_tier_storage(
             self: &FoundationStorageApi,
             email: String,
-            resp_handler: &'static dyn GetStorageResHandler,
-        );
-        fn verification_handle(
-            self: &FreeTierResp,
-        ) -> Result<FreeTierVerification, WildlandHttpClientExc>;
+        ) -> Result<FreeTierProcessHandle, FsaExc>;
         fn verify_email(
-            self: &FreeTierVerification,
+            self: &FoundationStorageApi,
+            process_handle: &FreeTierProcessHandle,
             verification_token: String,
-            resp_handler: &'static dyn ConfirmTokenResHandler,
-        );
-        fn check(self: &ConfirmTokenResp) -> Result<VoidType, WildlandHttpClientExc>;
-        // TODO hide behind feature flag
-        fn debug_get_token(
-            self: &FreeTierVerification,
-            resp_handler: &'static dyn DebugGetTokenResHandler,
-        );
-        fn get_token(self: &DebugGetTokenResp) -> Result<String, WildlandHttpClientExc>;
+        ) -> Result<VoidType, FsaExc>;
+        type FreeTierProcessHandle;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_user_from_entropy(

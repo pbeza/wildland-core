@@ -1,13 +1,12 @@
-mod creation_error;
 mod retrieval_error;
-
-pub use creation_error::*;
+mod single_variant;
 pub use retrieval_error::*;
+pub use single_variant::*;
 
 use wildland_corex::{CryptoError, ForestRetrievalError};
 use wildland_http_client::error::WildlandHttpClientError;
 
-use crate::{api::config::ParseConfigError, CargoLibCreationError};
+use crate::{api::config::ParseConfigError, foundation_storage::FsaError, CargoLibCreationError};
 
 #[derive(Debug, Clone)]
 #[repr(C)]
@@ -16,9 +15,6 @@ pub enum WildlandXDomain {
     CargoUser,
     CargoConfig,
     Crypto,
-    Catlib,
-    CoreX,
-    Dfs,
     Lss,
     ExternalLibError,
 }
@@ -82,18 +78,25 @@ impl ErrDomain for ParseConfigError {
     }
 }
 
-impl ExceptionTrait for WildlandHttpClientError {
+impl ExceptionTrait for FsaError {
     fn reason(&self) -> String {
         self.to_string()
     }
 
     fn domain(&self) -> WildlandXDomain {
         match self {
-            Self::HttpError(_) => WildlandXDomain::ExternalServer,
-            Self::CannotSerializeRequestError { .. } => WildlandXDomain::CargoUser,
-            Self::CommonLibError(_) => WildlandXDomain::Crypto,
-            Self::ReqwestError(_) => WildlandXDomain::ExternalLibError,
-            Self::NoBody => WildlandXDomain::ExternalServer,
+            FsaError::StorageAlreadyExists => WildlandXDomain::CargoUser,
+            FsaError::EvsError(inner) => match inner {
+                WildlandHttpClientError::HttpError(_) => WildlandXDomain::ExternalServer,
+                WildlandHttpClientError::CannotSerializeRequestError { .. } => {
+                    WildlandXDomain::CargoUser
+                }
+                WildlandHttpClientError::CommonLibError(_) => WildlandXDomain::Crypto,
+                WildlandHttpClientError::ReqwestError(_) => WildlandXDomain::ExternalLibError,
+                WildlandHttpClientError::NoBody => WildlandXDomain::ExternalServer,
+            },
+            FsaError::CryptoError(_) => WildlandXDomain::Crypto,
+            FsaError::InvalidCredentialsFormat(_) => WildlandXDomain::ExternalServer,
         }
     }
 }

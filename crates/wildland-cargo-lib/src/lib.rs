@@ -7,7 +7,6 @@ mod logging;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use api::foundation_storage::FoundationStorageApiConfiguration;
 pub use api::*;
 pub use cargo_lib::CargoLib;
 use errors::SingleErrVariantResult;
@@ -34,13 +33,11 @@ pub fn create_cargo_lib(
     // TODO WILX-219 Memory leak
     if !INITIALIZED.load(Ordering::Relaxed) {
         INITIALIZED.store(true, Ordering::Relaxed);
-        logging::init_subscriber(cfg.log_level, cfg.log_file)
+        logging::init_subscriber(cfg.logger_config)
             .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e)))?;
         Ok(CargoLib::new(
             UserApi::new(UserService::new(LssService::new(lss))),
-            FoundationStorageApiConfiguration {
-                evs_url: cfg.evs_url,
-            },
+            cfg.fsa_config,
         ))
     } else {
         Err(SingleVariantError::Failure(CargoLibCreationError(

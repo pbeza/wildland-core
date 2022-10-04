@@ -1,175 +1,220 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use tokio::runtime::Runtime;
-use wildland_corex::EncryptingKeypair;
+use uuid::Uuid;
+use wildland_corex::{CryptoError, EncryptingKeypair};
 use wildland_http_client::{
     error::WildlandHttpClientError,
-    evs::{ConfirmTokenReq, DebugGetTokenReq, EvsClient, GetStorageReq, GetStorageRes},
+    evs::{ConfirmTokenReq, DebugGetTokenReq, DebugProvisionReq, EvsClient, GetStorageReq},
 };
 
-pub trait GetStorageResHandler: Sync {
-    fn callback(&self, handler: FreeTierResp);
-}
+use crate::FoundationStorageApiConfig;
 
-#[derive(Clone)]
-pub struct FreeTierResp {
-    encrypting_keypair: Arc<EncryptingKeypair>,
-    storage_res: Result<GetStorageRes, WildlandHttpClientError>,
-    evs_client: EvsClient,
-    rt: Arc<Runtime>,
-    email: String,
-}
-
-pub type WildlandHttpResult<T> = Result<T, WildlandHttpClientError>;
-
-impl FreeTierResp {
-    pub fn verification_handle(&self) -> WildlandHttpResult<FreeTierVerification> {
-        log::info!("Checking response of method getting storage");
-        self.storage_res.clone().map(|resp| {
-            log::debug!("{resp:?}"); // TODO remove
-            if let Some(encrypted_credentials) = resp.encrypted_credentials {
-                let decrypted_credentials = self
-                    .encrypting_keypair
-                    .decrypt(encrypted_credentials.into());
-                println!("DECRYPTED: {decrypted_credentials:?}"); // TODO remove
-            }
-
-            FreeTierVerification {
-                encrypting_keypair: self.encrypting_keypair.clone(),
-                evs_client: self.evs_client.clone(),
-                rt: self.rt.clone(),
-                email: self.email.clone(),
-            }
-        })
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct FreeTierVerification {
-    encrypting_keypair: Arc<EncryptingKeypair>,
-    evs_client: EvsClient,
-    rt: Arc<Runtime>,
-    email: String,
-}
-
-impl FreeTierVerification {
-    pub fn verify_email(
-        &self,
-        verification_token: String,
-        resp_handler: &'static dyn ConfirmTokenResHandler,
-    ) {
-        log::info!("Verifying email");
-
-        self.rt.spawn({
-            let evs_client = self.evs_client.clone();
-            let email = self.email.clone();
-            async move {
-                let resp = evs_client
-                    .confirm_token(ConfirmTokenReq {
-                        email,
-                        verification_token,
-                    })
-                    .await;
-                log::debug!("{resp:?}");
-                resp_handler.callback(ConfirmTokenResp { confirm_res: resp });
-            }
-        });
-    }
-
-    // TODO hide behind feature flag like "debug_query"
-    pub fn debug_get_token(&self, resp_handler: &'static dyn DebugGetTokenResHandler) {
-        log::info!("Debug token retrieval");
-        self.rt.spawn({
-            let evs_client = self.evs_client.clone();
-            let email = self.email.clone();
-            let pubkey = self.encrypting_keypair.encode_pub();
-            async move {
-                let resp = evs_client
-                    .debug_get_token(DebugGetTokenReq { email, pubkey })
-                    .await;
-                log::debug!("{resp:?}");
-                resp_handler.callback(DebugGetTokenResp {
-                    get_token_res: resp,
-                })
-            }
-        });
-    }
-}
-
-#[derive(Clone)]
-pub struct DebugGetTokenResp {
-    get_token_res: Result<String, WildlandHttpClientError>,
-}
-
-impl DebugGetTokenResp {
-    pub fn get_token(&self) -> Result<String, WildlandHttpClientError> {
-        self.get_token_res.clone()
-    }
-}
-
-pub trait DebugGetTokenResHandler: Sync {
-    fn callback(&self, handler: DebugGetTokenResp);
-}
-
-#[derive(Clone)]
-pub struct ConfirmTokenResp {
-    confirm_res: Result<(), WildlandHttpClientError>,
-}
-
-impl ConfirmTokenResp {
-    pub fn check(&self) -> Result<(), WildlandHttpClientError> {
-        log::info!("Checking response of token verification");
-        self.confirm_res.clone()
-    }
-}
-
-pub trait ConfirmTokenResHandler: Sync {
-    fn callback(&self, handler: ConfirmTokenResp);
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct StorageCredentials {
+    pub id: Uuid,
+    #[serde(rename = "credentialID")]
+    credential_id: String,
+    #[serde(rename = "credentialSecret")]
+    credential_secret: String,
 }
 
 #[derive(Clone)]
 pub struct FoundationStorageApi {
-    rt: Arc<Runtime>,
-    evs_client: EvsClient,
+    api_impl: Rc<dyn FoundationStorageApiImpl>,
 }
 
-pub struct FoundationStorageApiConfiguration {
-    pub evs_url: String,
+trait FoundationStorageApiImpl {
+    fn request_free_tier_storage(&self, email: String) -> Result<FreeTierProcessHandle, FsaError>;
+    fn verify_email(
+        &self,
+        process_handle: &FreeTierProcessHandle,
+        verification_token: String,
+    ) -> Result<(), FsaError>;
+}
+
+#[repr(C)]
+#[derive(Error, Debug, Clone)]
+pub enum FsaError {
+    #[error("Storage already exists for given email address")]
+    StorageAlreadyExists,
+    #[error("Evs Error: {0}")]
+    EvsError(WildlandHttpClientError),
+    #[error("Crypto error: {0}")]
+    CryptoError(CryptoError),
+    #[error("Credentials are expected to be JSON with fields: id, credentialID, credentialSecret")]
+    InvalidCredentialsFormat(String),
+}
+
+#[derive(Clone)]
+pub struct FreeTierProcessHandle {
+    email: String,
+    encrypting_keypair: Rc<EncryptingKeypair>,
 }
 
 impl FoundationStorageApi {
-    pub fn new(config: FoundationStorageApiConfiguration) -> Self {
-        Self {
-            rt: Arc::new(Runtime::new().unwrap()), // TODO unwrap
-            evs_client: EvsClient::new(&config.evs_url),
+    pub fn new(config: FoundationStorageApiConfig) -> Self {
+        let rt = Rc::new(Runtime::new().expect("Could not initialize tokio multithreaded runtime"));
+        match config {
+            FoundationStorageApiConfig::Prod { evs_url } => Self {
+                api_impl: Rc::new(FoundationStorageApiProdImpl {
+                    rt,
+                    evs_client: EvsClient::new(&evs_url),
+                }),
+            },
+            FoundationStorageApiConfig::Debug {
+                evs_url,
+                evs_credentials_payload,
+            } => Self {
+                api_impl: Rc::new(FoundationStorageApiDebugImpl {
+                    rt,
+                    evs_client: EvsClient::new(&evs_url),
+                    payload: evs_credentials_payload,
+                }),
+            },
         }
     }
 
     pub fn request_free_tier_storage(
         &self,
         email: String,
-        resp_handler: &'static dyn GetStorageResHandler,
-    ) {
-        let encrypting_keypair = EncryptingKeypair::new();
-        let encoded_pub_key = encrypting_keypair.encode_pub();
-        self.rt.spawn({
-            let evs_client = self.evs_client.clone();
-            let rt = self.rt.clone();
-            async move {
-                let resp = evs_client
-                    .get_storage(GetStorageReq {
-                        email: email.clone(),
-                        pubkey: encoded_pub_key,
-                    })
-                    .await;
-                resp_handler.callback(FreeTierResp {
-                    encrypting_keypair: Arc::new(encrypting_keypair),
-                    storage_res: resp,
-                    evs_client,
-                    rt,
-                    email,
-                });
-            }
-        });
+    ) -> Result<FreeTierProcessHandle, FsaError> {
+        self.api_impl.request_free_tier_storage(email)
     }
+
+    pub fn verify_email(
+        &self,
+        process_handle: &FreeTierProcessHandle,
+        verification_token: String,
+    ) -> Result<(), FsaError> {
+        self.api_impl
+            .verify_email(process_handle, verification_token)
+    }
+}
+
+struct FoundationStorageApiProdImpl {
+    rt: Rc<Runtime>,
+    evs_client: EvsClient,
+}
+
+impl FoundationStorageApiImpl for FoundationStorageApiProdImpl {
+    fn request_free_tier_storage(&self, email: String) -> Result<FreeTierProcessHandle, FsaError> {
+        self.rt
+            .block_on(request_free_tier_storage(email, &self.evs_client))
+    }
+
+    fn verify_email(
+        &self,
+        process_handle: &FreeTierProcessHandle,
+        verification_token: String,
+    ) -> Result<(), FsaError> {
+        self.rt.block_on(confirm_token_and_get_storage(
+            &self.evs_client,
+            &process_handle,
+            verification_token,
+        ))
+    }
+}
+
+struct FoundationStorageApiDebugImpl {
+    rt: Rc<Runtime>,
+    evs_client: EvsClient,
+    payload: String,
+}
+
+impl FoundationStorageApiImpl for FoundationStorageApiDebugImpl {
+    fn request_free_tier_storage(&self, email: String) -> Result<FreeTierProcessHandle, FsaError> {
+        self.rt
+            .block_on(request_free_tier_storage(email, &self.evs_client))
+    }
+
+    fn verify_email(
+        &self,
+        process_handle: &FreeTierProcessHandle,
+        verification_token: String,
+    ) -> Result<(), FsaError> {
+        let _ = verification_token;
+        self.rt.block_on(async {
+            let verification_token = self
+                .evs_client
+                .debug_get_token(DebugGetTokenReq {
+                    pubkey: process_handle.encrypting_keypair.encode_pub(),
+                    email: process_handle.email.clone(),
+                })
+                .await
+                .map_err(FsaError::EvsError)?;
+
+            self.evs_client
+                .debug_provision(DebugProvisionReq {
+                    email: process_handle.email.clone(),
+                    payload: self.payload.clone(),
+                })
+                .await
+                .map_err(FsaError::EvsError)?;
+
+            confirm_token_and_get_storage(&self.evs_client, &process_handle, verification_token)
+                .await
+        })
+    }
+}
+
+async fn request_free_tier_storage(
+    email: String,
+    evs_client: &EvsClient,
+) -> Result<FreeTierProcessHandle, FsaError> {
+    let encrypting_keypair = EncryptingKeypair::new();
+    evs_client
+        .get_storage(GetStorageReq {
+            email: email.clone(),
+            pubkey: encrypting_keypair.encode_pub(),
+        })
+        .await
+        .map_err(FsaError::EvsError)
+        .and_then(|resp| match resp.encrypted_credentials {
+            Some(_) => Err(FsaError::StorageAlreadyExists),
+            None => Ok(FreeTierProcessHandle {
+                email,
+                encrypting_keypair: Rc::new(encrypting_keypair),
+            }),
+        })
+}
+
+async fn confirm_token_and_get_storage(
+    evs_client: &EvsClient,
+    process_handle: &FreeTierProcessHandle,
+    verification_token: String,
+) -> Result<(), FsaError> {
+    evs_client
+        .confirm_token(ConfirmTokenReq {
+            email: process_handle.email.clone(),
+            verification_token,
+        })
+        .await
+        .map_err(FsaError::EvsError)?;
+
+    evs_client
+        .get_storage(GetStorageReq {
+            email: process_handle.email.clone(),
+            pubkey: process_handle.encrypting_keypair.encode_pub(),
+        })
+        .await
+        .map_err(FsaError::EvsError)
+        .and_then(|resp| match resp.encrypted_credentials {
+            Some(payload) => {
+                let payload = payload.replace('\n', ""); // make sure that content is properly encoded
+                let decoded = base64::decode(payload).unwrap();
+                let decrypted = process_handle
+                    .encrypting_keypair
+                    .decrypt(decoded)
+                    .map_err(|e| FsaError::CryptoError(e))?;
+                let _storage_credentials: StorageCredentials =
+                    serde_json::from_slice(&decrypted)
+                        .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
+                // TODO do sth with credentials
+                Ok(())
+            }
+            None => Err(FsaError::EvsError(WildlandHttpClientError::NoBody)),
+        })
 }

@@ -1,6 +1,6 @@
-use crate::api::{
-    foundation_storage::{FoundationStorageApi, FoundationStorageApiConfiguration},
-    user::UserApi,
+use crate::{
+    api::{foundation_storage::FoundationStorageApi, user::UserApi},
+    FoundationStorageApiConfig,
 };
 
 /// Structure aggregating and exposing public API of CargoLib library.
@@ -11,7 +11,7 @@ pub struct CargoLib {
 }
 
 impl CargoLib {
-    pub fn new(user_api: UserApi, fsa_config: FoundationStorageApiConfiguration) -> Self {
+    pub fn new(user_api: UserApi, fsa_config: FoundationStorageApiConfig) -> Self {
         Self {
             user_api,
             foundation_storage_api: FoundationStorageApi::new(fsa_config),

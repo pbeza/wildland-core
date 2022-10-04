@@ -21,11 +21,16 @@ pub struct GetStorageRes {
     pub encrypted_credentials: Option<String>,
 }
 
-// TODO feature flag
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DebugGetTokenReq {
     pub email: String,
     pub pubkey: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DebugProvisionReq {
+    pub email: String,
+    pub payload: String,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -83,7 +88,6 @@ impl EvsClient {
         }
     }
 
-    // TODO hide behind a feature flag
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub async fn debug_get_token(
         &self,
@@ -117,6 +121,24 @@ impl EvsClient {
             })?),
             None => Err(WildlandHttpClientError::NoBody),
         }
+    }
+
+    #[tracing::instrument(level = "debug", ret, skip(self))]
+    pub async fn debug_provision(
+        &self,
+        request: DebugProvisionReq,
+    ) -> Result<(), WildlandHttpClientError> {
+        let url = format!("{}/debug_provision", self.base_url);
+        let response = self
+            .client
+            .put(url)
+            .query(&[("email", request.email), ("credentials", request.payload)])
+            .send()
+            .await
+            .map_err(Arc::new)?;
+        handle(response).await?;
+
+        Ok(())
     }
 }
 
