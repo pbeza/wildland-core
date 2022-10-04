@@ -85,7 +85,7 @@ mod tests {
             "evs_credentials_payload": "some_payload"
         }"#;
 
-        let config: CargoConfig = serde_json::from_str(&config_str).unwrap();
+        let config: CargoConfig = serde_json::from_str(config_str).unwrap();
 
         assert_eq!(
             config,
@@ -111,7 +111,7 @@ mod tests {
             "evs_credentials_payload": "some_payload"
         }"#;
 
-        let config: CargoConfig = serde_json::from_str(&config_str).unwrap();
+        let config: CargoConfig = serde_json::from_str(config_str).unwrap();
 
         assert_eq!(
             config,

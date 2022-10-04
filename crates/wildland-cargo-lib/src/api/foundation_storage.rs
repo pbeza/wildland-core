@@ -112,7 +112,7 @@ impl FoundationStorageApiImpl for FoundationStorageApiProdImpl {
     ) -> Result<(), FsaError> {
         self.rt.block_on(confirm_token_and_get_storage(
             &self.evs_client,
-            &process_handle,
+            process_handle,
             verification_token,
         ))
     }
@@ -154,7 +154,7 @@ impl FoundationStorageApiImpl for FoundationStorageApiDebugImpl {
                 .await
                 .map_err(FsaError::EvsError)?;
 
-            confirm_token_and_get_storage(&self.evs_client, &process_handle, verification_token)
+            confirm_token_and_get_storage(&self.evs_client, process_handle, verification_token)
                 .await
         })
     }
@@ -208,7 +208,7 @@ async fn confirm_token_and_get_storage(
                 let decrypted = process_handle
                     .encrypting_keypair
                     .decrypt(decoded)
-                    .map_err(|e| FsaError::CryptoError(e))?;
+                    .map_err(FsaError::CryptoError)?;
                 let _storage_credentials: StorageCredentials =
                     serde_json::from_slice(&decrypted)
                         .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;

@@ -45,7 +45,7 @@ impl EvsClient {
         let client = Client::new();
         Self {
             base_url: base_url.to_string(),
-            client: client,
+            client,
         }
     }
 
@@ -170,7 +170,7 @@ mod tests {
         let m = mock("PUT", "/confirm_token").create();
 
         // when
-        let response = client()._confirm_token(request).await;
+        let response = client().confirm_token(request).await;
 
         // then
         m.assert();
@@ -194,6 +194,9 @@ mod tests {
 
         // then
         m.assert();
-        assert_eq!(response.encrypted_credentials, ENCRYPTED_CREDENTIALS);
+        assert_eq!(
+            response.encrypted_credentials.unwrap(),
+            ENCRYPTED_CREDENTIALS
+        );
     }
 }

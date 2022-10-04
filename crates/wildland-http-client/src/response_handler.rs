@@ -28,7 +28,7 @@ mod tests {
     #[tokio::test]
     async fn should_return_response_when_status_is_200() {
         // when
-        let result = handle(response(200)).await.unwrap();
+        let result = handle(response(200)).await.unwrap().unwrap();
 
         // then
         assert_eq!(result.status(), 200);
@@ -36,23 +36,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn should_return_response_when_status_is_201() {
+    async fn should_return_none_response_when_status_is_201() {
         // when
         let result = handle(response(201)).await.unwrap();
 
         // then
-        assert_eq!(result.status(), 201);
-        assert_eq!(result.text().await.unwrap(), RESPONSE);
+        assert!(result.is_none());
     }
 
     #[tokio::test]
-    async fn should_return_response_when_status_is_204() {
+    async fn should_return_none_response_when_status_is_204() {
         // when
         let result = handle(response(204)).await.unwrap();
 
         // then
-        assert_eq!(result.status(), 204);
-        assert_eq!(result.text().await.unwrap(), RESPONSE);
+        assert!(result.is_none());
     }
 
     #[tokio::test]
