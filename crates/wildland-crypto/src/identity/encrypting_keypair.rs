@@ -47,7 +47,7 @@ impl EncryptingKeypair {
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn decrypt(&self, cipher_text: Vec<u8>) -> Result<Vec<u8>, CryptoError> {
         let salsa_box = crypto_box::Box::new(&self.public, &self.secret);
-        // TODO once must be the same during encryption (evs side) and decryption (corex side)
+        // TODO nonce must be the same during encryption (evs side) and decryption (corex side)
         // The below one is only a placeholder
         // alternative: choose algorithm not requiring nonce (sealed_box)
         let mut rng = rand_core::OsRng;
