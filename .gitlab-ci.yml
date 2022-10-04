@@ -272,9 +272,6 @@ publish crates:
     # Specifying registry is required (bug: https://github.com/crate-ci/cargo-release/issues/429)
     - RUST_LOG=debug cargo $CARGO_FLAGS release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release
 
-
-# currently docker image must be prepared on the job
-# improvement for later - create workflow to build the docker image for mdbook
 pages:
   image: rust:latest
   stage: Deploy
@@ -288,6 +285,7 @@ pages:
   - apt update
   - apt install plantuml -y
   - ./mdbook build
+  - cargo doc --target-dir public/lld/
   artifacts:
     paths:
     - public
