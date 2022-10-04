@@ -271,3 +271,25 @@ publish crates:
     - echo $EXCLUDES
     # Specifying registry is required (bug: https://github.com/crate-ci/cargo-release/issues/429)
     - RUST_LOG=debug cargo $CARGO_FLAGS release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release
+
+
+# currently docker image must be prepared on the job
+# improvement for later - create workflow to build the docker image for mdbook
+pages:
+  image: rust:latest
+  stage: Deploy
+  script:
+  # - cargo install mdbook mdbook-toc mdbook-linkcheck mdbook-plantuml
+  - cargo install mdbook-linkcheck mdbook-plantuml
+  - wget https://github.com/badboy/mdbook-toc/releases/download/0.9.0/mdbook-toc-0.9.0-x86_64-unknown-linux-gnu.tar.gz
+  - wget https://github.com/rust-lang/mdBook/releases/download/v0.4.21/mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz
+  - tar -axvf mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz
+  - tar -axvf mdbook-toc-0.9.0-x86_64-unknown-linux-gnu.tar.gz
+  - apt update
+  - apt install plantuml -y
+  - ./mdbook build
+  artifacts:
+    paths:
+    - public
+  only:
+  - main
