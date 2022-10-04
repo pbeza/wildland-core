@@ -276,21 +276,18 @@ pages:
   image: rust:latest
   stage: Deploy
   script:
-  # todo:esavier !!! see: wilx-229
-  # this is commented out since we are waiting for the commit with
-  # documentation scaffolding, this branch have nothing to build with mdbook
-  # only the cargo docs are  built and deployed
-  #
   # - cargo install mdbook mdbook-toc mdbook-linkcheck mdbook-plantuml
-  # - cargo install mdbook-linkcheck mdbook-plantuml
-  # - wget https://github.com/badboy/mdbook-toc/releases/download/0.9.0/mdbook-toc-0.9.0-x86_64-unknown-linux-gnu.tar.gz
-  # - wget https://github.com/rust-lang/mdBook/releases/download/v0.4.21/mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz
-  # - tar -axvf mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz
-  # - tar -axvf mdbook-toc-0.9.0-x86_64-unknown-linux-gnu.tar.gz
-  # - apt update
-  # - apt install plantuml -y
-  # - ./mdbook build
+  - cargo install mdbook-linkcheck mdbook-plantuml
+  - wget https://github.com/badboy/mdbook-toc/releases/download/0.9.0/mdbook-toc-0.9.0-x86_64-unknown-linux-gnu.tar.gz
+  - wget https://github.com/rust-lang/mdBook/releases/download/v0.4.21/mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz
+  - tar -axvf mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz
+  - tar -axvf mdbook-toc-0.9.0-x86_64-unknown-linux-gnu.tar.gz
+  - apt update
+  - apt install plantuml -y
+  - ./mdbook build
   - cargo doc --target-dir public/lld/
   artifacts:
     paths:
     - public
+  only:
+  - main
