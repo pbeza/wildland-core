@@ -151,7 +151,7 @@ void foundation_storage_test(CargoLib &cargo_lib)
     {
         FoundationStorageApi fsa_api = cargo_lib.foundation_storage_api();
         auto process_handle = fsa_api.request_free_tier_storage("test@email.com");
-        auto verification_token = RustString{"in debug version this token is replaced for the one from configuration"};
+        auto verification_token = RustString{"in debug version this token is replaced for the one retrieved from evs debug endpoint"};
         fsa_api.verify_email(process_handle, verification_token);
     }
     catch (const RustExceptionBase &e)
