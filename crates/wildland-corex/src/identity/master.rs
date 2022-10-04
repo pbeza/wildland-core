@@ -50,10 +50,8 @@ impl MasterIdentity {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        generate_random_mnemonic, ForestIdentityCreationError, MasterIdentity, WildlandIdentity,
-    };
-    use wildland_crypto::identity::Identity;
+    use crate::{ForestIdentityCreationError, MasterIdentity, WildlandIdentity};
+    use wildland_crypto::identity::{generate_random_mnemonic, Identity};
 
     fn create_crypto_identity() -> Identity {
         generate_random_mnemonic()

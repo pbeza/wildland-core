@@ -1,14 +1,16 @@
 mod error;
 mod identity;
 mod lss;
-mod user;
 
 pub use error::*;
 pub use identity::{master::*, wildland::*};
 pub use lss::*;
-pub use user::{generate_random_mnemonic, CreateUserInput, UserService};
 pub use wildland_crypto::{
-    error::CryptoError, identity::encrypting_keypair::EncryptingKeypair, identity::MnemonicPhrase,
+    error::CryptoError,
+    identity::{
+        encrypting_keypair::EncryptingKeypair, generate_random_mnemonic, Identity, MnemonicPhrase,
+        SigningKeypair,
+    },
 };
 
 pub type CorexResult<T> = Result<T, CoreXError>;

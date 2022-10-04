@@ -8,7 +8,7 @@ license     = "GPL-3.0-only"
 name        = "wildland-http-client"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.4.5"
+version     = "0.4.6"
 
 [dependencies]
 log        = { version = "0.4" }
@@ -18,7 +18,7 @@ serde_json = { version = "1.0" }
 thiserror  = { version = "1.0" }
 tracing    = { version = "0.1" }
 # currently versioning is not in best shape, thus its bound to patch
-wildland-crypto = { version = "0.6.0", path = "../wildland-crypto", registry = "wl-dev" }
+wildland-crypto = { version = "0.7.0", path = "../wildland-crypto", registry = "wl-dev" }
 
 [dev-dependencies]
 http    = { version = "0.2" }

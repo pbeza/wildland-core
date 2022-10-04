@@ -1,7 +1,9 @@
 mod retrieval_error;
 mod single_variant;
+mod user;
 pub use retrieval_error::*;
 pub use single_variant::*;
+pub use user::*;
 
 use wildland_corex::{CryptoError, ForestRetrievalError};
 use wildland_http_client::error::WildlandHttpClientError;
@@ -33,21 +35,21 @@ impl ErrDomain for CryptoError {
         WildlandXDomain::Crypto
     }
 }
-impl ErrDomain for wildland_corex::UserCreationError {
+impl ErrDomain for UserCreationError {
     fn domain(&self) -> WildlandXDomain {
         match self {
-            wildland_corex::UserCreationError::UserAlreadyExists => WildlandXDomain::CargoUser,
-            wildland_corex::UserCreationError::MnemonicGenerationError(_)
-            | wildland_corex::UserCreationError::IdentityGenerationError(_)
-            | wildland_corex::UserCreationError::ForestIdentityCreationError(_)
-            | wildland_corex::UserCreationError::EntropyTooLow
-            | wildland_corex::UserCreationError::ForestRetrievalError(
-                ForestRetrievalError::KeypairParseError(_),
-            ) => WildlandXDomain::Crypto,
-            wildland_corex::UserCreationError::LssError(_)
-            | wildland_corex::UserCreationError::ForestRetrievalError(
-                ForestRetrievalError::LssError(_),
-            ) => WildlandXDomain::Lss,
+            UserCreationError::UserAlreadyExists => WildlandXDomain::CargoUser,
+            UserCreationError::MnemonicGenerationError(_)
+            | UserCreationError::IdentityGenerationError(_)
+            | UserCreationError::ForestIdentityCreationError(_)
+            | UserCreationError::EntropyTooLow
+            | UserCreationError::ForestRetrievalError(ForestRetrievalError::KeypairParseError(_)) => {
+                WildlandXDomain::Crypto
+            }
+            UserCreationError::LssError(_)
+            | UserCreationError::ForestRetrievalError(ForestRetrievalError::LssError(_)) => {
+                WildlandXDomain::Lss
+            }
         }
     }
 }

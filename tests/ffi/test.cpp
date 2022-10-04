@@ -1,8 +1,6 @@
 #include <iostream>
 #include <unordered_map>
-#include <chrono>
-#include <thread>
-#include <memory>
+#include <cassert>
 #include "ffi_cxx.h"
 
 class CargoCfgProviderImpl : public CargoCfgProvider
@@ -137,15 +135,16 @@ void config_parser_test() // test
     CargoConfig cargo_cfg = parse_config(config_bytes);
     try
     {
-        CargoLib cargo_lib = create_cargo_lib(lss, cargo_cfg);
+        SharedMutexCargoLib cargo_lib = create_cargo_lib(lss, cargo_cfg);
     }
     catch (const CargoLibCreationExc_FailureException &e)
     {
         std::cout << e.reason().to_string() << std::endl;
+        assert(false);
     }
 }
 
-void foundation_storage_test(CargoLib &cargo_lib)
+void foundation_storage_test(SharedMutexCargoLib &cargo_lib)
 {
     try
     {
@@ -165,7 +164,7 @@ int main()
     CargoCfgProviderImpl cfg_provider{};
     CargoConfig cfg = collect_config(cfg_provider);
     LocalSecureStorageImpl lss{};
-    CargoLib cargo_lib;
+    SharedMutexCargoLib cargo_lib;
     try
     {
         cargo_lib = create_cargo_lib(lss, cfg);
@@ -173,13 +172,13 @@ int main()
     catch (const CargoLibCreationExc_FailureException &e)
     {
         std::cerr << e.reason().to_string() << std::endl;
+        assert(false);
     }
 
     foundation_storage_test(cargo_lib);
 
     UserApi user_api = cargo_lib.user_api();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     try
     {
         MnemonicPayload mnemonic = user_api.generate_mnemonic(); // TODO WILX-220 MEMLEAK
@@ -207,21 +206,25 @@ int main()
             catch (const UserRetrievalExc_NotFoundException &e)
             {
                 std::cerr << e.reason().to_string() << std::endl;
+                assert(false);
             }
             catch (const UserRetrievalExc_UnexpectedException &e)
             {
                 std::cerr << e.reason().to_string() << std::endl;
+                assert(false);
             }
         }
         catch (const UserCreationExc_FailureException &e)
         {
             std::cerr << e.reason().to_string() << std::endl;
+            assert(false);
         }
 
         try
         {
             RustVec<u8> entropy;
-            user_api.create_user_from_entropy(entropy, device_name);
+            user_api.create_user_from_entropy(entropy, device_name); // Expected to fail
+            assert(false);
         }
         catch (const UserCreationExc_FailureException &e)
         {
@@ -231,6 +234,7 @@ int main()
     catch (const MnemonicCreationExc_FailureException &e)
     {
         std::cerr << e.reason().to_string() << std::endl;
+        assert(false);
     }
 
     config_parser_test();
