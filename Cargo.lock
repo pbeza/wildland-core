@@ -1919,7 +1919,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.14.1"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -1952,7 +1952,7 @@ version = "0.4.3"
 
 [[package]]
 name = "wildland-corex"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "hex",
  "mockall",
@@ -1966,7 +1966,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "crypto_box",
  "ed25519-dalek",
@@ -1992,7 +1992,7 @@ version = "0.2.3"
 
 [[package]]
 name = "wildland-http-client"
-version = "0.4.6"
+version = "0.5.0"
 dependencies = [
  "http",
  "log",
