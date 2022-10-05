@@ -153,6 +153,8 @@ mod tests {
 
     #[rstest]
     fn container_with_paths(catlib: CatLib) {
+        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+
         let mut container = make_container(&catlib);
         container.add_path("/foo/bar".to_string()).unwrap();
         container.add_path("/bar/baz".to_string()).unwrap();
@@ -161,7 +163,7 @@ mod tests {
         assert!(container.paths().contains(&"/bar/baz".to_string()));
 
         // Try to find that container in the database
-        let containers = catlib
+        let containers = forest
             .find_containers(vec!["/foo/bar".to_string()], false)
             .unwrap();
         assert_eq!(containers.len(), 1);
@@ -172,7 +174,7 @@ mod tests {
 
         // Try to fetch the same (one) container, using two different paths. The result
         // should be only one (not two) containers.
-        let containers = catlib
+        let containers = forest
             .find_containers(vec!["/foo/bar".to_string(), "/bar/baz".to_string()], false)
             .unwrap();
         assert_eq!(containers.len(), 1);
@@ -180,6 +182,8 @@ mod tests {
 
     #[rstest]
     fn multiple_containers_with_paths(catlib: CatLib) {
+        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+
         let mut container = make_container(&catlib);
         container.add_path("/foo/bar".to_string()).unwrap();
         container.add_path("/bar/baz".to_string()).unwrap();
@@ -193,13 +197,13 @@ mod tests {
         container.add_path("/what/ever".to_string()).unwrap();
 
         // try to find the first container
-        let containers = catlib
+        let containers = forest
             .find_containers(vec!["/foo/bar".to_string()], false)
             .unwrap();
         assert_eq!(containers.len(), 1);
 
         // try to find the first and the second containers, using shared path
-        let containers = catlib
+        let containers = forest
             .find_containers(vec!["/bar/baz".to_string()], false)
             .unwrap();
         assert_eq!(containers.len(), 2);
@@ -240,6 +244,8 @@ mod tests {
 
     #[rstest]
     fn multiple_containers_with_subpaths(catlib: CatLib) {
+        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+
         let mut container = make_container(&catlib);
         container.add_path("/foo/bar1".to_string()).unwrap();
 
@@ -252,24 +258,24 @@ mod tests {
         container.add_path("/baz/qux1".to_string()).unwrap();
         container.add_path("/baz/qux2".to_string()).unwrap();
 
-        let containers = catlib.find_containers(vec!["/foo".into()], false);
+        let containers = forest.find_containers(vec!["/foo".into()], false);
         assert_eq!(containers.err(), Some(CatlibError::NoRecordsFound));
 
-        let containers = catlib
+        let containers = forest
             .find_containers(vec!["/foo/bar1".into()], true)
             .unwrap();
         assert_eq!(containers.len(), 1);
 
-        let containers = catlib.find_containers(vec!["/foo".into()], true).unwrap();
+        let containers = forest.find_containers(vec!["/foo".into()], true).unwrap();
         assert_eq!(containers.len(), 2);
 
-        let containers = catlib.find_containers(vec!["/bar".into()], true).unwrap();
+        let containers = forest.find_containers(vec!["/bar".into()], true).unwrap();
         assert_eq!(containers.len(), 2);
 
-        let containers = catlib.find_containers(vec!["/baz".into()], true).unwrap();
+        let containers = forest.find_containers(vec!["/baz".into()], true).unwrap();
         assert_eq!(containers.len(), 1);
 
-        let containers = catlib.find_containers(vec!["/".into()], true).unwrap();
+        let containers = forest.find_containers(vec!["/".into()], true).unwrap();
         assert_eq!(containers.len(), 3);
     }
 }

@@ -121,6 +121,53 @@ impl IForest for Forest {
 
         Ok(bridge)
     }
+
+    fn find_bridge(&self, path: ContainerPath) -> CatlibResult<Bridge> {
+        self.db.load()?;
+        let data = self.db.read(|db| db.clone()).map_err(CatlibError::from)?;
+
+        let bridges: Vec<Bridge> = data
+            .iter()
+            .filter(|(id, _)| (**id).starts_with("bridge-"))
+            .map(|(_, bridge_str)| Bridge::try_from((*bridge_str).clone()).unwrap())
+            .filter(|bridge| bridge.forest().unwrap().uuid() == self.uuid() && bridge.path() == path)
+            .collect();
+
+        match bridges.len() {
+            0 => Err(CatlibError::NoRecordsFound),
+            1 => Ok(bridges[0].clone()),
+            _ => Err(CatlibError::MalformedDatabaseEntry),
+        }
+    }
+
+    fn find_containers(
+        &self,
+        paths: Vec<String>,
+        include_subdirs: bool,
+    ) -> CatlibResult<Vec<Container>> {
+        self.db.load()?;
+        let data = self.db.read(|db| db.clone()).map_err(CatlibError::from)?;
+
+        let containers: Vec<Container> = data
+            .iter()
+            .filter(|(id, _)| (**id).starts_with("container-"))
+            .map(|(_, container_str)| Container::try_from((*container_str).clone()).unwrap())
+            .filter(|container| {
+                container.forest().unwrap().uuid() == self.uuid() &&
+                container.paths().iter().any(|container_path| {
+                    paths.iter().any(|path| {
+                        (include_subdirs && container_path.starts_with(path))
+                            || container_path.eq(path)
+                    })
+                })
+            })
+            .collect();
+
+        match containers.len() {
+            0 => Err(CatlibError::NoRecordsFound),
+            _ => Ok(containers),
+        }
+    }
 }
 
 impl Model for Forest {

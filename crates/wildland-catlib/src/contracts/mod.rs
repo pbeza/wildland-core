@@ -26,6 +26,7 @@ pub type Signers = HashSet<Identity>;
 pub type ContainerPath = String;
 pub type ContainerPaths = HashSet<ContainerPath>;
 
+
 pub trait IForest {
     fn uuid(&self) -> String;
     fn owner(&self) -> Identity;
@@ -42,6 +43,12 @@ pub trait IForest {
         path: ContainerPath,
         link_data: Vec<u8>,
     ) -> CatlibResult<Bridge>;
+    fn find_bridge(&self, path: ContainerPath) -> CatlibResult<Bridge>;
+    fn find_containers(
+        &self,
+        paths: Vec<String>,
+        include_subdirs: bool,
+    ) -> CatlibResult<Vec<Container>>;
 }
 
 pub trait IContainer {

@@ -110,11 +110,11 @@ mod tests {
             .create_bridge("/other/forest".to_string(), vec![])
             .unwrap();
 
-        catlib.find_bridge("/other/forest".to_string()).unwrap();
+        forest.find_bridge("/other/forest".to_string()).unwrap();
 
         bridge.delete().unwrap();
 
-        let bridge = catlib.find_bridge("/other/forest".to_string());
+        let bridge = forest.find_bridge("/other/forest".to_string());
 
         assert_eq!(bridge.err(), Some(CatlibError::NoRecordsFound));
     }
