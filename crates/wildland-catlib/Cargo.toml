@@ -8,11 +8,24 @@ license     = "GPL-3.0-only"
 name        = "wildland-catlib"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.4.3"
+version     = "0.5.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+directories = "4.0.1"
+rand = "0.8.5"
+ron = "0.8.0"
+rstest = "0.15.0"
+rustbreak = { version = "2.0.0", features = ["serde_yaml", "ron_enc", "yaml_enc", "mmap"] }
+serde = { version = "1.0.144", features = ["derive"] }
+serde_yaml = "0.9.11"
+tempfile = "3.3.0"
+thiserror = "1.0.35"
+uuid = { version = "1.1.2", features = ["v4"] }
+
+[dev-dependencies]
+mocktopus = "0.7.11"
 
 [package.metadata.workspaces]
 independent = true
