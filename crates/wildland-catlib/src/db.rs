@@ -83,6 +83,8 @@ pub(crate) fn fetch_storages_by_container_uuid(
 }
 
 pub(crate) fn save_model(db: Rc<StoreDb>, key: String, data: String) -> CatlibResult<()> {
+    db.load()?;
+
     db.write(|db| db.insert(key, data))
         .map_err(CatlibError::from)?;
 
@@ -90,6 +92,8 @@ pub(crate) fn save_model(db: Rc<StoreDb>, key: String, data: String) -> CatlibRe
 }
 
 pub(crate) fn delete_model(db: Rc<StoreDb>, key: String) -> CatlibResult<()> {
+    db.load()?;
+
     db.write(|db| db.remove_entry(&key))
         .map_err(CatlibError::from)?;
 
@@ -98,7 +102,6 @@ pub(crate) fn delete_model(db: Rc<StoreDb>, key: String) -> CatlibResult<()> {
 
 #[cfg(test)]
 pub(crate) fn init_catlib(random: uuid::Bytes) -> crate::CatLib {
-    use crate::CatLib;
     use mocktopus::mocking::*;
 
     let uuid = uuid::Builder::from_random_bytes(random).into_uuid();
