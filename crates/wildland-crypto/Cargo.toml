@@ -30,11 +30,11 @@ hkdf = { version = "0.12.0" }
 ed25519-dalek-bip32 = { version = "0.2.0" }
 
 # used to derive ed25519 public keys and to generate curve25519 keypairs
-crypto_box    = { version = "0.7.2", features = ["std"] }
+crypto_box    = { version = "0.8", features = ["std"] }
 ed25519-dalek = { version = "1.0.1" }
 
 # used to generate nonce
-salsa20 = { version = "0.9.0" }
+salsa20 = { version = "0.10" }
 
 hex     = { version = "0.4.3" }
 sha2    = { version = "0.10.0" }

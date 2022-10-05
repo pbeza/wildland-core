@@ -8,6 +8,16 @@ class CargoCfgProviderImpl: CargoCfgProvider {
     public override func getLogFile() -> OptionalString {
         return newNoneString()
     }
+
+    public override func getEvsUrl() -> RustString {
+        return RustString("http://localhost:5000/");
+    }
+    public override func getEvsRuntimeMode() -> RustString {
+        return RustString("PROD");
+    }
+    public override func getEvsCredentialsPayload() -> RustString {
+        return RustString(""); // irrelevant in case of evs prod mode
+    }
 }
 
 class LocalSecureStorageImpl : LocalSecureStorage {

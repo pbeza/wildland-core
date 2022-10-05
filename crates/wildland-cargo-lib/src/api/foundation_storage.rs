@@ -2,7 +2,6 @@ use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tokio::runtime::Runtime;
 use uuid::Uuid;
 use wildland_corex::{CryptoError, EncryptingKeypair};
 use wildland_http_client::{
@@ -56,11 +55,9 @@ pub struct FreeTierProcessHandle {
 
 impl FoundationStorageApi {
     pub fn new(config: FoundationStorageApiConfig) -> Self {
-        let rt = Rc::new(Runtime::new().expect("Could not initialize tokio multithreaded runtime"));
         match config {
             FoundationStorageApiConfig::Prod { evs_url } => Self {
                 api_impl: Rc::new(FoundationStorageApiProdImpl {
-                    rt,
                     evs_client: EvsClient::new(&evs_url),
                 }),
             },
@@ -69,7 +66,6 @@ impl FoundationStorageApi {
                 evs_credentials_payload,
             } => Self {
                 api_impl: Rc::new(FoundationStorageApiDebugImpl {
-                    rt,
                     evs_client: EvsClient::new(&evs_url),
                     payload: evs_credentials_payload,
                 }),
@@ -95,14 +91,12 @@ impl FoundationStorageApi {
 }
 
 struct FoundationStorageApiProdImpl {
-    rt: Rc<Runtime>,
     evs_client: EvsClient,
 }
 
 impl FoundationStorageApiImpl for FoundationStorageApiProdImpl {
     fn request_free_tier_storage(&self, email: String) -> Result<FreeTierProcessHandle, FsaError> {
-        self.rt
-            .block_on(request_free_tier_storage(email, &self.evs_client))
+        request_free_tier_storage(email, &self.evs_client)
     }
 
     fn verify_email(
@@ -110,24 +104,18 @@ impl FoundationStorageApiImpl for FoundationStorageApiProdImpl {
         process_handle: &FreeTierProcessHandle,
         verification_token: String,
     ) -> Result<(), FsaError> {
-        self.rt.block_on(confirm_token_and_get_storage(
-            &self.evs_client,
-            process_handle,
-            verification_token,
-        ))
+        confirm_token_and_get_storage(&self.evs_client, process_handle, verification_token)
     }
 }
 
 struct FoundationStorageApiDebugImpl {
-    rt: Rc<Runtime>,
     evs_client: EvsClient,
     payload: String,
 }
 
 impl FoundationStorageApiImpl for FoundationStorageApiDebugImpl {
     fn request_free_tier_storage(&self, email: String) -> Result<FreeTierProcessHandle, FsaError> {
-        self.rt
-            .block_on(request_free_tier_storage(email, &self.evs_client))
+        request_free_tier_storage(email, &self.evs_client)
     }
 
     fn verify_email(
@@ -136,31 +124,26 @@ impl FoundationStorageApiImpl for FoundationStorageApiDebugImpl {
         verification_token: String,
     ) -> Result<(), FsaError> {
         let _ = verification_token;
-        self.rt.block_on(async {
-            let verification_token = self
-                .evs_client
-                .debug_get_token(DebugGetTokenReq {
-                    pubkey: process_handle.encrypting_keypair.encode_pub(),
-                    email: process_handle.email.clone(),
-                })
-                .await
-                .map_err(FsaError::EvsError)?;
+        let verification_token = self
+            .evs_client
+            .debug_get_token(DebugGetTokenReq {
+                pubkey: process_handle.encrypting_keypair.encode_pub(),
+                email: process_handle.email.clone(),
+            })
+            .map_err(FsaError::EvsError)?;
 
-            self.evs_client
-                .debug_provision(DebugProvisionReq {
-                    email: process_handle.email.clone(),
-                    payload: self.payload.clone(),
-                })
-                .await
-                .map_err(FsaError::EvsError)?;
+        self.evs_client
+            .debug_provision(DebugProvisionReq {
+                email: process_handle.email.clone(),
+                payload: self.payload.clone(),
+            })
+            .map_err(FsaError::EvsError)?;
 
-            confirm_token_and_get_storage(&self.evs_client, process_handle, verification_token)
-                .await
-        })
+        confirm_token_and_get_storage(&self.evs_client, process_handle, verification_token)
     }
 }
 
-async fn request_free_tier_storage(
+fn request_free_tier_storage(
     email: String,
     evs_client: &EvsClient,
 ) -> Result<FreeTierProcessHandle, FsaError> {
@@ -170,7 +153,6 @@ async fn request_free_tier_storage(
             email: email.clone(),
             pubkey: encrypting_keypair.encode_pub(),
         })
-        .await
         .map_err(FsaError::EvsError)
         .and_then(|resp| match resp.encrypted_credentials {
             Some(_) => Err(FsaError::StorageAlreadyExists),
@@ -181,7 +163,7 @@ async fn request_free_tier_storage(
         })
 }
 
-async fn confirm_token_and_get_storage(
+fn confirm_token_and_get_storage(
     evs_client: &EvsClient,
     process_handle: &FreeTierProcessHandle,
     verification_token: String,
@@ -191,7 +173,6 @@ async fn confirm_token_and_get_storage(
             email: process_handle.email.clone(),
             verification_token,
         })
-        .await
         .map_err(FsaError::EvsError)?;
 
     evs_client
@@ -199,7 +180,6 @@ async fn confirm_token_and_get_storage(
             email: process_handle.email.clone(),
             pubkey: process_handle.encrypting_keypair.encode_pub(),
         })
-        .await
         .map_err(FsaError::EvsError)
         .and_then(|resp| match resp.encrypted_credentials {
             Some(payload) => {

@@ -1,6 +1,9 @@
 use super::bytes_key_from_str;
 use crate::error::CryptoError;
-use crypto_box::{aead::Aead, PublicKey as EncryptionPublicKey, SecretKey as EncryptionSecretKey};
+use crypto_box::{
+    aead::{Aead, AeadCore},
+    PublicKey as EncryptionPublicKey, SecretKey as EncryptionSecretKey,
+};
 use hex::ToHex;
 
 /// Keypair that can be used for encryption.
@@ -46,14 +49,14 @@ impl EncryptingKeypair {
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn decrypt(&self, cipher_text: Vec<u8>) -> Result<Vec<u8>, CryptoError> {
-        let salsa_box = crypto_box::Box::new(&self.public, &self.secret);
+        let salsa_box = crypto_box::SalsaBox::new(&self.public, &self.secret);
         // TODO nonce must be the same during encryption (evs side) and decryption (corex side)
         // The below one is only a placeholder
         // alternative: choose algorithm not requiring nonce (sealed_box)
         let mut rng = rand_core::OsRng;
         salsa_box
             .decrypt(
-                &crypto_box::generate_nonce(&mut rng),
+                &crypto_box::SalsaBox::generate_nonce(&mut rng),
                 cipher_text.as_slice(),
             )
             .map_err(|_| CryptoError::DecryptionError)

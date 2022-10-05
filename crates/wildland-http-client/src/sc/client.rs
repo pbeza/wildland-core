@@ -1,6 +1,5 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
-use reqwest::Client;
 use serde::Serialize;
 
 use wildland_crypto::identity::signing_keypair::SigningKeypair;
@@ -34,23 +33,18 @@ pub struct StorageControllerClient {
 impl StorageControllerClient {
     #[tracing::instrument(level = "debug", ret)]
     pub fn new(base_url: &str) -> Self {
-        let client = Client::new();
         Self {
             sc_storage_client: SCStorageClient {
                 base_url: base_url.into(),
-                client: client.clone(),
             },
             sc_signature_client: SCSignatureClient {
                 base_url: base_url.into(),
-                client: client.clone(),
             },
             sc_credentials_client: SCCredentialsClient {
                 base_url: base_url.into(),
-                client: client.clone(),
             },
             sc_metrics_client: SCMetricsClient {
                 base_url: base_url.into(),
-                client,
             },
             ..Default::default()
         }
@@ -58,17 +52,11 @@ impl StorageControllerClient {
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub async fn create_storage(&self) -> Result<CreateStorageRes, WildlandHttpClientError> {
-        let response = self
-            .sc_storage_client
-            .create_storage()
-            .await
-            .map_err(Arc::new)?;
-        let response_json = handle(response)
-            .await?
+        let response = self.sc_storage_client.create_storage().map_err(Rc::new)?;
+        let response_json = handle(response)?
             .ok_or(WildlandHttpClientError::NoBody)?
             .json()
-            .await
-            .map_err(Arc::new)?;
+            .map_err(Rc::new)?;
         Ok(response_json)
     }
 
@@ -81,14 +69,11 @@ impl StorageControllerClient {
         let response = self
             .sc_credentials_client
             .create_credentials(request, &signature)
-            .await
-            .map_err(Arc::new)?;
-        let response_json = handle(response)
-            .await?
+            .map_err(Rc::new)?;
+        let response_json = handle(response)?
             .ok_or(WildlandHttpClientError::NoBody)?
             .json()
-            .await
-            .map_err(Arc::new)?;
+            .map_err(Rc::new)?;
         Ok(response_json)
     }
 
@@ -101,14 +86,11 @@ impl StorageControllerClient {
         let response = self
             .sc_signature_client
             .signature_request(request, &signature)
-            .await
-            .map_err(Arc::new)?;
-        let response_json = handle(response)
-            .await?
+            .map_err(Rc::new)?;
+        let response_json = handle(response)?
             .ok_or(WildlandHttpClientError::NoBody)?
             .json()
-            .await
-            .map_err(Arc::new)?;
+            .map_err(Rc::new)?;
         Ok(response_json)
     }
 
@@ -121,14 +103,11 @@ impl StorageControllerClient {
         let response = self
             .sc_metrics_client
             .request_metrics(request, &signature)
-            .await
-            .map_err(Arc::new)?;
-        let response_json = handle(response)
-            .await?
+            .map_err(Rc::new)?;
+        let response_json = handle(response)?
             .ok_or(WildlandHttpClientError::NoBody)?
             .json()
-            .await
-            .map_err(Arc::new)?;
+            .map_err(Rc::new)?;
         Ok(response_json)
     }
 
@@ -149,7 +128,7 @@ impl StorageControllerClient {
     {
         let message = serde_json::to_vec(request).map_err(|source| {
             WildlandHttpClientError::CannotSerializeRequestError {
-                source: Arc::new(source),
+                source: Rc::new(source),
             }
         })?;
         let keypair =

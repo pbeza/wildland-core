@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
 
@@ -7,11 +7,11 @@ pub enum WildlandHttpClientError {
     #[error("{0}")]
     HttpError(String),
     #[error("Cannot serialize request")]
-    CannotSerializeRequestError { source: Arc<serde_json::Error> },
+    CannotSerializeRequestError { source: Rc<serde_json::Error> },
     #[error(transparent)]
     CommonLibError(#[from] CryptoError),
     #[error(transparent)]
-    ReqwestError(#[from] Arc<reqwest::Error>),
+    ReqwestError(#[from] Rc<minreq::Error>),
     #[error("No body in the response")]
     NoBody,
 }

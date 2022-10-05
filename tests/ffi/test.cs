@@ -13,6 +13,18 @@ namespace Main
         {
             return new_none_string();
         }
+
+        public override RustString get_evs_url() {
+            return new RustString("http://localhost:5000/");
+        }
+        public override RustString get_evs_runtime_mode()
+        {
+            return new RustString("PROD");
+        }
+        public override RustString get_evs_credentials_payload()
+        {
+            return new RustString(""); // irrelevant in case of evs prod mode
+        }
     }
 
     class LocalSecureStorageImpl : LocalSecureStorage {

@@ -1,5 +1,5 @@
 use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
-use reqwest::{Client, Error, Response};
+use minreq::{Error, Response};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,23 +30,21 @@ pub struct UsageReq {
 #[derive(Clone, Default, Debug)]
 pub(crate) struct SCMetricsClient {
     pub(crate) base_url: String,
-    pub(crate) client: Client,
 }
 
 impl SCMetricsClient {
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub(crate) async fn request_metrics(
+    pub(crate) fn request_metrics(
         &self,
         request: RequestMetricsReq,
         signature: &str,
     ) -> Result<Response, Error> {
         let url = format!("{}/metrics", self.base_url);
-        self.client
-            .post(url)
-            .header(WILDLAND_SIGNATURE_HEADER, signature)
-            .json(&request)
+        minreq::post(url)
+            .with_header(WILDLAND_SIGNATURE_HEADER, signature)
+            .with_json(&request)
+            .unwrap() // TODO
             .send()
-            .await
     }
 }
 
@@ -61,7 +59,6 @@ mod tests {
     fn client() -> SCMetricsClient {
         SCMetricsClient {
             base_url: server_url(),
-            client: Client::new(),
         }
     }
 
@@ -91,10 +88,8 @@ mod tests {
 
         let response = client()
             .request_metrics(request, SIGNATURE)
-            .await
             .unwrap()
             .json::<RequestMetricsRes>()
-            .await
             .unwrap();
 
         m.assert();

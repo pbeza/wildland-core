@@ -1,7 +1,6 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::{error::WildlandHttpClientError, response_handler::handle};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,52 +35,45 @@ pub struct DebugProvisionReq {
 #[derive(Clone, Default, Debug)]
 pub struct EvsClient {
     base_url: String,
-    client: Client,
+    // client: Client,
 }
 
 impl EvsClient {
     #[tracing::instrument(level = "debug", ret)]
     pub fn new(base_url: &str) -> Self {
-        let client = Client::new();
+        // let client = Client::new();
         Self {
             base_url: base_url.to_string(),
-            client,
+            // client,
         }
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub async fn confirm_token(
-        &self,
-        request: ConfirmTokenReq,
-    ) -> Result<(), WildlandHttpClientError> {
+    pub fn confirm_token(&self, request: ConfirmTokenReq) -> Result<(), WildlandHttpClientError> {
         let url = format!("{}/confirm_token", self.base_url);
-        let response = self
-            .client
-            .put(url)
-            .json(&request)
+        let response = minreq::put(url)
+            .with_json(&request)
+            .unwrap() // TODO
             .send()
-            .await
-            .map_err(Arc::new)?;
-        handle(response).await?;
+            .map_err(Rc::new)?;
+        handle(response)?;
         Ok(())
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub async fn get_storage(
+    pub fn get_storage(
         &self,
         request: GetStorageReq,
     ) -> Result<GetStorageRes, WildlandHttpClientError> {
         let url = format!("{}/get_storage", self.base_url);
-        let response = self
-            .client
-            .put(url)
-            .json(&request)
+        let response = minreq::put(url)
+            .with_json(&request)
+            .unwrap() //TODO
             .send()
-            .await
-            .map_err(Arc::new)?;
-        let response = handle(response).await?;
+            .map_err(Rc::new)?;
+        let response = handle(response)?;
         match response {
-            Some(response) => Ok(response.json().await.map_err(Arc::new)?),
+            Some(response) => Ok(response.json().map_err(Rc::new)?),
             None => Ok(GetStorageRes {
                 encrypted_credentials: None,
             }),
@@ -89,54 +81,41 @@ impl EvsClient {
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub async fn debug_get_token(
+    pub fn debug_get_token(
         &self,
         request: DebugGetTokenReq,
     ) -> Result<String, WildlandHttpClientError> {
         let url = format!("{}/debug_get_token", self.base_url);
-        let response = self
-            .client
-            .get(url)
-            .query(&[("email", request.email), ("pubkey", request.pubkey)])
+        let response = minreq::get(url)
+            .with_param("email", request.email)
+            .with_param("pubkey", request.pubkey)
             .send()
-            .await
-            .map_err(Arc::new)?;
-        let response = handle(response).await?;
+            .map_err(Rc::new)?;
+        let response = handle(response)?;
         match response {
-            Some(response) => Ok(String::from_utf8(
-                response
-                    .bytes()
-                    .await
-                    .map_err(|_| {
-                        WildlandHttpClientError::HttpError(
-                            "Could not get response bytes".to_owned(),
-                        )
-                    })?
-                    .to_vec(),
-            )
-            .map_err(|_| {
-                WildlandHttpClientError::HttpError(
-                    "Could not parse response body as utf-8 string".to_owned(),
-                )
-            })?),
+            Some(response) => Ok(String::from_utf8(response.as_bytes().to_vec()).map_err(
+                |_| {
+                    WildlandHttpClientError::HttpError(
+                        "Could not parse response body as utf-8 string".to_owned(),
+                    )
+                },
+            )?),
             None => Err(WildlandHttpClientError::NoBody),
         }
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub async fn debug_provision(
+    pub fn debug_provision(
         &self,
         request: DebugProvisionReq,
     ) -> Result<(), WildlandHttpClientError> {
         let url = format!("{}/debug_provision", self.base_url);
-        let response = self
-            .client
-            .put(url)
-            .query(&[("email", request.email), ("credentials", request.payload)])
+        let response = minreq::put(url)
+            .with_param("email", request.email)
+            .with_param("credentials", request.payload)
             .send()
-            .await
-            .map_err(Arc::new)?;
-        handle(response).await?;
+            .map_err(Rc::new)?;
+        handle(response)?;
 
         Ok(())
     }
@@ -155,7 +134,6 @@ mod tests {
     fn client() -> EvsClient {
         EvsClient {
             base_url: server_url(),
-            client: Client::new(),
         }
     }
 
@@ -170,7 +148,7 @@ mod tests {
         let m = mock("PUT", "/confirm_token").create();
 
         // when
-        let response = client().confirm_token(request).await;
+        let response = client().confirm_token(request);
 
         // then
         m.assert();
@@ -190,7 +168,7 @@ mod tests {
             .create();
 
         // when
-        let response = client().get_storage(request).await.unwrap();
+        let response = client().get_storage(request).unwrap();
 
         // then
         m.assert();
