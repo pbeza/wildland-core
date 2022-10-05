@@ -1,8 +1,7 @@
 //
 // Wildland Project
 //
-// Copyright © 2022 Golem Foundation,
-//               Michał Kluczek <michal@wildland.io>
+// Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,7 +17,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::{db::delete_model, db::save_model, error::*};
+use crate::{db::delete_model, db::save_model};
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
@@ -53,7 +52,7 @@ impl Forest {
     }
 }
 
-impl crate::contracts::Forest for Forest {
+impl IForest for Forest {
     fn add_signer(&mut self, signer: Identity) -> CatlibResult<bool> {
         let added = self.signers.insert(signer);
         self.save()?;
@@ -64,6 +63,23 @@ impl crate::contracts::Forest for Forest {
         let deleted = self.signers.remove(&signer);
         self.save()?;
         Ok(deleted)
+    }
+
+    fn containers(&self) -> CatlibResult<Vec<Container>> {
+        self.db.load()?;
+        let data = self.db.read(|db| db.clone()).map_err(CatlibError::from)?;
+
+        let containers: Vec<Container> = data
+            .iter()
+            .filter(|(id, _)| (**id).starts_with("container-"))
+            .map(|(_, container_str)| Container::try_from((*container_str).clone()).unwrap())
+            .filter(|container| container.forest().is_ok() && container.forest().unwrap().uuid() == self.uuid())
+            .collect();
+
+        match containers.len() {
+            0 => Err(CatlibError::NoRecordsFound),
+            _ => Ok(containers),
+        }
     }
 
     fn remove(&mut self) -> CatlibResult<bool> {

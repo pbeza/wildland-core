@@ -1,8 +1,7 @@
 //
 // Wildland Project
 //
-// Copyright © 2022 Golem Foundation,
-//               Michał Kluczek <michal@wildland.io>
+// Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,22 +18,20 @@
 
 #![cfg_attr(test, feature(proc_macro_hygiene))]
 
-use bridge::Bridge;
-use container::Container;
-use contracts::common::*;
-use contracts::*;
-use contracts::{
-    Bridge as IBridge, Container as IContainer, Forest as IForest, Storage as IStorage,
-};
-use db::*;
+pub use contracts::*;
+pub use contracts::common::*;
+pub use error::*;
+pub use bridge::Bridge;
+pub use container::Container;
+pub use forest::Forest;
+pub use storage::Storage;
 use directories::ProjectDirs;
-use forest::Forest;
 use rustbreak::deser::Ron;
 use rustbreak::PathDatabase;
 use std::path::PathBuf;
 use std::rc::Rc;
-use storage::Storage;
 use uuid::Uuid;
+use db::*;
 
 mod bridge;
 mod container;
@@ -44,13 +41,11 @@ mod error;
 mod forest;
 mod storage;
 
-pub(crate) use error::*;
-
 pub fn get_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
-type Identity = Vec<u8>;
+pub type Identity = Vec<u8>;
 type CatLibData = std::collections::HashMap<String, String>;
 type StoreDb = PathDatabase<CatLibData, Ron>;
 
@@ -82,13 +77,6 @@ impl CatLib {
         forest.save()?;
 
         Ok(forest)
-    }
-
-    pub fn create_container(&self, forest_uuid: String) -> CatlibResult<Container> {
-        let mut container = Container::new(forest_uuid, self.db.clone());
-        container.save()?;
-
-        Ok(container)
     }
 
     pub fn get_forest(&self, uuid: String) -> CatlibResult<Forest> {
@@ -149,17 +137,10 @@ impl CatLib {
             .map(|(_, container_str)| Container::try_from((*container_str).clone()).unwrap())
             .filter(|container| {
                 container.paths().iter().any(|container_path| {
-                    let paths_to_check = paths.iter();
-                    for p in paths_to_check {
-                        if include_subdirs {
-                            if container_path.starts_with(p) {
-                                return true;
-                            }
-                        } else if container_path.eq(p) {
-                            return true;
-                        }
-                    }
-                    false
+                    paths.iter().any(|path| {
+                        (include_subdirs && container_path.starts_with(path))
+                            || container_path.eq(path)
+                    })
                 })
             })
             .collect();

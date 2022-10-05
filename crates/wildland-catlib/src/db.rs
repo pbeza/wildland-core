@@ -1,8 +1,7 @@
 //
 // Wildland Project
 //
-// Copyright © 2022 Golem Foundation,
-//               Michał Kluczek <michal@wildland.io>
+// Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,15 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    container::Container,
-    contracts::Container as IContainer,
-    contracts::Storage as IStorage,
-    error::{CatlibError, CatlibResult},
-    forest::Forest,
-    storage::Storage,
-    StoreDb,
-};
+use super::*;
 use std::rc::Rc;
 
 pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: String) -> CatlibResult<Forest> {
@@ -115,6 +106,7 @@ pub(crate) fn init_catlib(random: uuid::Bytes) -> crate::CatLib {
     // that every test will have it's own, random UUID.
     crate::use_default_database.mock_safe(move || {
         let path = dir.join(format!("{}-{}", uuid, "db.ron"));
+        println!("{}", path.to_str().unwrap());
         let db = CatLib::new(path).db;
         db.load().unwrap();
 

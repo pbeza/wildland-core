@@ -1,8 +1,7 @@
 //
 // Wildland Project
 //
-// Copyright © 2022 Golem Foundation,
-//               Michał Kluczek <michal@wildland.io>
+// Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,7 +17,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::error::*;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
@@ -58,7 +56,7 @@ impl Storage {
     }
 }
 
-impl crate::contracts::Storage for Storage {
+impl IStorage for Storage {
     fn uuid(&self) -> String {
         self.uuid.clone()
     }
@@ -86,13 +84,13 @@ impl Model for Storage {
     fn save(&mut self) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
-            format!("storage-{}", self.uuid),
+            format!("storage-{}", self.uuid()),
             ron::to_string(self).unwrap(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("storage-{}", self.uuid))
+        delete_model(self.db.clone(), format!("storage-{}", self.uuid()))
     }
 }
 
@@ -101,7 +99,7 @@ mod tests {
     use std::collections::HashSet;
 
     use crate::container::Container;
-    use crate::contracts::Storage as IStorage;
+    use crate::contracts::IStorage;
     use crate::storage::Storage;
     use crate::*;
     use rstest::*;
@@ -124,7 +122,7 @@ mod tests {
 
     fn _container(catlib: &CatLib) -> Container {
         let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
-        catlib.create_container(forest.uuid()).unwrap()
+        forest.create_container().unwrap()
     }
 
     #[fixture]

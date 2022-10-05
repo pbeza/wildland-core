@@ -1,8 +1,7 @@
 //
 // Wildland Project
 //
-// Copyright © 2022 Golem Foundation,
-//               Michał Kluczek <michal@wildland.io>
+// Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,8 +17,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::error::*;
-use crate::storage::Storage;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
@@ -52,7 +49,7 @@ impl Container {
     }
 }
 
-impl crate::contracts::Container for Container {
+impl IContainer for Container {
     fn uuid(&self) -> String {
         self.uuid.clone()
     }
@@ -111,7 +108,7 @@ impl Model for Container {
 mod tests {
     use std::collections::HashSet;
 
-    use crate::contracts::Container;
+    use crate::contracts::IContainer;
     use crate::*;
     use rstest::*;
     use uuid::Bytes;
@@ -135,12 +132,6 @@ mod tests {
     fn make_container(catlib: &CatLib) -> crate::container::Container {
         let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
 
-        catlib.create_container(forest.uuid()).unwrap()
-    }
-
-    fn make_container_from_forest(catlib: &CatLib) -> crate::container::Container {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
-
         forest.create_container().unwrap()
     }
 
@@ -154,7 +145,7 @@ mod tests {
 
     #[rstest]
     fn fetch_created_container_from_forest_obj(catlib: CatLib) {
-        let container = make_container_from_forest(&catlib);
+        let container = make_container(&catlib);
         let container = catlib.get_container(container.uuid()).unwrap();
 
         assert_eq!(container.forest().unwrap().owner(), b"owner");

@@ -1,8 +1,7 @@
 //
 // Wildland Project
 //
-// Copyright © 2022 Golem Foundation,
-//               Michał Kluczek <michal@wildland.io>
+// Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,7 +17,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::error::*;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
@@ -53,7 +51,7 @@ impl Bridge {
     }
 }
 
-impl crate::contracts::Bridge for Bridge {
+impl IBridge for Bridge {
     fn uuid(&self) -> String {
         self.uuid.clone()
     }
