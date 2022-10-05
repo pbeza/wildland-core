@@ -5,6 +5,8 @@
   - [Stability](stability.md)
   - [Versioning](versioning.md)
 - [Architecture](architecture/about)
+- [Development](development/about.md)
+  - [cargo.toml formatting](development/cargo_toml_formatting.md)
 - [CI](ci/about.md)
   - [Apple](ci/apple_ci.md)
 - [Configuration](configuration/about.md)
