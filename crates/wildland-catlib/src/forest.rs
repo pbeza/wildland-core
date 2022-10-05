@@ -21,6 +21,7 @@ use crate::{db::delete_model, db::save_model};
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
+/// Create Forest object from its representation in Rust Object Notation
 impl TryFrom<String> for Forest {
     type Error = ron::error::SpannedError;
 
@@ -73,7 +74,9 @@ impl IForest for Forest {
             .iter()
             .filter(|(id, _)| (**id).starts_with("container-"))
             .map(|(_, container_str)| Container::try_from((*container_str).clone()).unwrap())
-            .filter(|container| container.forest().is_ok() && container.forest().unwrap().uuid() == self.uuid())
+            .filter(|container| {
+                container.forest().is_ok() && container.forest().unwrap().uuid() == self.uuid()
+            })
             .collect();
 
         match containers.len() {
@@ -130,7 +133,9 @@ impl IForest for Forest {
             .iter()
             .filter(|(id, _)| (**id).starts_with("bridge-"))
             .map(|(_, bridge_str)| Bridge::try_from((*bridge_str).clone()).unwrap())
-            .filter(|bridge| bridge.forest().unwrap().uuid() == self.uuid() && bridge.path() == path)
+            .filter(|bridge| {
+                bridge.forest().unwrap().uuid() == self.uuid() && bridge.path() == path
+            })
             .collect();
 
         match bridges.len() {
@@ -153,13 +158,13 @@ impl IForest for Forest {
             .filter(|(id, _)| (**id).starts_with("container-"))
             .map(|(_, container_str)| Container::try_from((*container_str).clone()).unwrap())
             .filter(|container| {
-                container.forest().unwrap().uuid() == self.uuid() &&
-                container.paths().iter().any(|container_path| {
-                    paths.iter().any(|path| {
-                        (include_subdirs && container_path.starts_with(path))
-                            || container_path.eq(path)
+                container.forest().unwrap().uuid() == self.uuid()
+                    && container.paths().iter().any(|container_path| {
+                        paths.iter().any(|path| {
+                            (include_subdirs && container_path.starts_with(path))
+                                || container_path.eq(path)
+                        })
                     })
-                })
             })
             .collect();
 

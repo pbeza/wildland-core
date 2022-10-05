@@ -16,9 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use rustbreak::{deser::Ron, PathDatabase};
+
 use super::CatlibResult;
 
-pub trait Model {
+pub type Identity = Vec<u8>;
+pub(crate) type CatLibData = std::collections::HashMap<String, String>;
+pub(crate) type StoreDb = PathDatabase<CatLibData, Ron>;
+
+pub(crate) trait Model {
     fn delete(&mut self) -> CatlibResult<()>;
     fn save(&mut self) -> CatlibResult<()>;
+}
+
+pub fn get_version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
 }

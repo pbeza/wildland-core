@@ -20,6 +20,7 @@ use super::*;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
+/// Create String object from its representation in Rust Object Notation
 impl TryFrom<String> for Storage {
     type Error = ron::error::SpannedError;
 

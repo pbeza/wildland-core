@@ -20,6 +20,7 @@ use super::*;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
+/// Create Container object from its representation in Rust Object Notation
 impl TryFrom<String> for Container {
     type Error = ron::error::SpannedError;
 
@@ -254,9 +255,13 @@ mod tests {
         container.add_path("/bar/baz1".to_string()).unwrap();
 
         let mut container = make_container(&catlib);
-        container.add_path("/bar/baz2".to_string()).unwrap();
-        container.add_path("/baz/qux1".to_string()).unwrap();
-        container.add_path("/baz/qux2".to_string()).unwrap();
+        container
+            .add_path("/bar/baz2".to_string())
+            .unwrap()
+            .add_path("/baz/qux1".to_string())
+            .unwrap()
+            .add_path("/baz/qux2".to_string())
+            .unwrap();
 
         let containers = forest.find_containers(vec!["/foo".into()], false);
         assert_eq!(containers.err(), Some(CatlibError::NoRecordsFound));
