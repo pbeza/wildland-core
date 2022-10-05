@@ -3,27 +3,16 @@ authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
 language = "en"
 multilingual = false
 src = "docs"
-<<<<<<< HEAD
-title = "Wildland Medium Level Documentation"
-=======
 title = "Wildland documentation"
->>>>>>> origin/main
 
 [build]
 build-dir = "public/mld"
 create-missing = true
 use-default-preprocessors = true
 
-<<<<<<< HEAD
-
-[output.html]
-default-theme = "dark"
-preferred-dark-theme = "navy"
-=======
 [output.html]
 default-theme = "dark"
 preferred-dark-theme = "ayu"
->>>>>>> origin/main
 curly-quotes = true
 mathjax-support = false
 copy-fonts = true
@@ -45,11 +34,7 @@ level = 0         # the depth to start folding
 editable = false         # allows editing the source code
 copyable = true          # include the copy button for copying code snippets
 copy-js = true           # includes the JavaScript for the code editor
-<<<<<<< HEAD
-line-numbers = false     # displays line numbers for editable code
-=======
 line-numbers = true     # displays line numbers for editable code
->>>>>>> origin/main
 runnable = true          # displays a run button for rust code
 
 [output.html.search]
