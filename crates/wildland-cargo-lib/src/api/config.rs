@@ -14,8 +14,8 @@ pub struct ParseConfigError(pub String);
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct CargoConfig {
-    log_level: String,
-    log_file: Option<String>,
+    pub log_level: String,
+    pub log_file: Option<String>,
 }
 
 impl CargoCfgProvider for CargoConfig {

@@ -1,11 +1,9 @@
 use crate::{
     api::{
+        cargo_lib::*,
         config::*,
-        create_cargo_lib,
         user::{MnemonicPayload, UserApi, UserPayload},
-        CargoLibCreationError,
     },
-    cargo_lib::CargoLib,
     errors::*,
 };
 use ffi_macro::binding_wrapper;
@@ -22,51 +20,63 @@ pub type UserCreationExc = SingleVariantError<UserCreationError>;
 pub type CargoLibCreationExc = SingleVariantError<CargoLibCreationError>;
 pub type ConfigParseExc = SingleVariantError<ParseConfigError>;
 
-type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
-fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult {
+pub type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
+/// constructor of `LssResult<Option<Vec<u8>>>` (aka [`LssOptionalBytesResult`]) with Ok variant
+pub fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult {
     Ok(ok_val)
 }
-fn new_err_lss_optional_bytes(err_val: String) -> LssOptionalBytesResult {
+/// constructor of `LssResult<Option<Vec<u8>>>` (aka [`LssOptionalBytesResult`]) with Err variant
+pub fn new_err_lss_optional_bytes(err_val: String) -> LssOptionalBytesResult {
     Err(LssError(err_val))
 }
 
-type LssBoolResult = LssResult<bool>;
-fn new_ok_lss_bool(ok_val: bool) -> LssBoolResult {
+pub type LssBoolResult = LssResult<bool>;
+/// constructor of `LssResult<bool>` (aka [`LssBoolResult`]) with Ok variant
+pub fn new_ok_lss_bool(ok_val: bool) -> LssBoolResult {
     Ok(ok_val)
 }
-fn new_err_lss_bool(err_val: String) -> LssBoolResult {
+/// constructor of `LssResult<bool>` (aka [`LssBoolResult`]) with Err variant
+pub fn new_err_lss_bool(err_val: String) -> LssBoolResult {
     Err(LssError(err_val))
 }
 
-type OptionalBytes = Option<Vec<u8>>;
-fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes {
+pub type OptionalBytes = Option<Vec<u8>>;
+/// constructor of `Option<Vec<u8>>` (aka [`OptionalBytes`]) with Some value
+pub fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes {
     Some(bytes)
 }
-fn new_none_bytes() -> OptionalBytes {
+/// constructor of `Option<Vec<u8>>` (aka [`OptionalBytes`]) with None value
+pub fn new_none_bytes() -> OptionalBytes {
     None
 }
 
-type OptionalString = Option<String>;
+pub type OptionalString = Option<String>;
+/// constructor of `Option<String>` (aka [`OptionalString`]) with Some value
 fn new_some_string(s: String) -> OptionalString {
     Some(s)
 }
+/// constructor of `Option<String>` (aka [`OptionalString`]) with None value
 fn new_none_string() -> OptionalString {
     None
 }
 
-type LssVecOfStringsResult = LssResult<Vec<String>>;
+pub type LssVecOfStringsResult = LssResult<Vec<String>>;
+/// constructor of `LssResult<Vec<String>>` (aka [`LssVecOfStringsResult`]) with Ok variant
 fn new_ok_lss_vec_of_strings(ok_val: Vec<String>) -> LssVecOfStringsResult {
     Ok(ok_val)
 }
+/// constructor of `LssResult<Vec<String>>` (aka [`LssVecOfStringsResult`]) with Err variant
 fn new_err_lss_vec_of_strings(err_val: String) -> LssVecOfStringsResult {
     Err(LssError(err_val))
 }
 
-type LssUsizeResult = LssResult<usize>;
+pub type LssUsizeResult = LssResult<usize>;
+/// constructor of `LssResult<usize>` (aka [`LssUsizeResult`]) with Ok variant
 fn new_ok_lss_usize(ok_val: usize) -> LssUsizeResult {
     Ok(ok_val)
 }
-fn new_err_lss_usize(err_val: String) -> LssUsizeResult {
+/// constructor of `LssResult<usize>` (aka [`LssUsizeResult`]) with Err variant
+pub fn new_err_lss_usize(err_val: String) -> LssUsizeResult {
     Err(LssError(err_val))
 }
 

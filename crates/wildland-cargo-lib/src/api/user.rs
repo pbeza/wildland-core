@@ -46,7 +46,7 @@ pub struct UserApi {
 }
 
 impl UserApi {
-    pub fn new(user_service: UserService) -> Self {
+    pub(crate) fn new(user_service: UserService) -> Self {
         Self { user_service }
     }
 
