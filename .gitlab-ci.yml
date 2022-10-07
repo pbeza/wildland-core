@@ -82,8 +82,6 @@ pre-build:
 
 x86_64_linux:
   stage: Bridges
-  except:
-    - docs/*
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
@@ -174,8 +172,6 @@ apple:
 
 csharp x86_64 linux:
   stage: Bindings
-  except:
-    - docs/*
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
@@ -204,8 +200,6 @@ csharp x86_64 linux:
 
 webassembly emscripten linux:
   stage: Bindings
-  except:
-    - docs/*
   script:
     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
