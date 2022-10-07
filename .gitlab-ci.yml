@@ -269,11 +269,10 @@ pages-publish:
   stage: Deploy
   needs:
     - job: pages-mld
-      artifacts: true
     - job: pages-lld
-      artifacts: true
   dependencies: 
-    - pages-create
+    - pages-lld
+    - pages-mld
   script:
     - echo -n $DOCS_WILDLAND_GCS_UPLOADER_KEY | base64 -d > /credentials.json
     - gcloud auth activate-service-account --key-file=/credentials.json
