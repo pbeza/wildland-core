@@ -17,8 +17,6 @@ stages:
 
 cargo versions bump:
   stage: Test
-  except:
-    - docs/*
   script:
     # Check if cargo workspaced changed returns an empty list.
     # If it doesn't, it means that most likely you forgot to run ./bump.sh
