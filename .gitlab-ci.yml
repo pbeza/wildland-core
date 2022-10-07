@@ -34,9 +34,6 @@ cargo test:
   except:
     - tags
     - docs/*
-  only:
-    - main
-    - merge_requests
   script:
     - rustup component add rustfmt clippy
     - cargo $CARGO_FLAGS fmt -- --check
@@ -45,11 +42,9 @@ cargo test:
     - cargo $CARGO_FLAGS install cargo-audit
     - cargo $CARGO_FLAGS audit
   only:
-    changes:
-      - Dockerfile
-      - docker/scripts/*
-      - dockerfiles/**/*
-      - more_scripts/*.{rb,py,sh}
+    - main
+    - merge_requests
+
 
 ###############
 # STAGE: Build
@@ -273,9 +268,9 @@ pages-publish:
   image: google/cloud-sdk
   stage: Deploy
   needs:
-    - pages-mld
+    - job: pages-mld
       artifacts: true
-    - pages-lld
+    - job: pages-lld
       artifacts: true
   dependencies: 
     - pages-create
