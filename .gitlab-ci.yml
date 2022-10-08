@@ -2,6 +2,7 @@ image: registry.gitlab.com/wildland/corex/wildland-core/builder:latest
 
 variables:
   CARGO_FLAGS: ""
+  CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE: 'true'
 
 stages:
   - build
