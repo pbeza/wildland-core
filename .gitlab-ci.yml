@@ -34,11 +34,17 @@ cargo versions bump:
 
 cargo test and build:
   stage: build
+  image: rustlang/rust:nightly
   needs:
     - job: cargo versions bump
   except:
     - tags
   script:
+    # lets print the current version and auxiliaries:
+    - cargo -V
+    - rustup show active-toolchain
+    - pwd
+    # install potentially missing stuff
     - rustup component add rustfmt clippy
     # most of those need a build anyway so stacking them is okay
     - cargo $CARGO_FLAGS fmt -- --check
@@ -49,7 +55,6 @@ cargo test and build:
     # those two barely do something extra, it should be rather fast to rebuild
     - cargo $CARGO_FLAGS build
     - cargo build --features "bindings"
-    # just checking stuf
   only:
     - main
     - merge_requests
@@ -59,7 +64,7 @@ cargo test and build:
     untracked: false
     expire_in: "7 days"
     paths:
-      - "$CI_BUILDS_DIR"
+      - "/builds/wildland/corex/wildland-core"
 
 ###############
 # STAGE: Bridges
@@ -250,7 +255,7 @@ pages-mld:
       - main
 
 pages-lld:
-  image: rust:nightly
+  image: rustlang/rust:nightly
   stage: deploy
   script:
     - cargo doc --target-dir public/lld/

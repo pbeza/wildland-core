@@ -94,6 +94,8 @@ for arch in $ARCHS; do
     mkdir $DESTDIR
     cd $RUST_SRCDIR
     eval rustarch="\$RUST_ARCH_$(echo $arch | tr '[:lower:]' '[:upper:]')"
+    rustup toolchain install nightly-${rustarch}
+    rustup target add ${rustarch}
     cargo build --target $rustarch --target-dir "$DESTDIR" --features bindings
     cd $curdir
     # Prepare glue module

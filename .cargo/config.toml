@@ -1,0 +1,44 @@
+[registries]
+wl-dev = { index = "https://crates.wildland.dev/git/index" }
+
+[build]
+incremental = true
+
+[env]
+ENV_VAR_NAME = "value"
+ENV_VAR_NAME_2 = { value = "value", force = true }
+ENV_VAR_NAME_3 = { value = "relative/path", relative = true }
+
+[future-incompat-report]
+frequency = 'always'
+
+[net]
+retry = 3
+git-fetch-with-cli = true
+
+[profile.debug]
+opt-level = 0
+debug = true
+debug-assertions = true
+overflow-checks = true
+lto = false
+panic = 'unwind'
+incremental = true
+codegen-units = 16
+rpath = false
+
+[profile.release]
+opt-level = 2
+debug = true
+debug-assertions = true
+overflow-checks = true
+lto = true
+panic = 'unwind'
+incremental = true
+codegen-units = 1
+rpath = false
+
+[term]
+quiet = false
+verbose = false
+color = 'auto'
