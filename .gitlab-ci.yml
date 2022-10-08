@@ -250,7 +250,7 @@ pages-mld:
       - main
 
 pages-lld:
-  image: rust:latest
+  image: rust:nightly
   stage: deploy
   script:
     - cargo doc --target-dir public/lld/
