@@ -4,19 +4,21 @@ variables:
   CARGO_FLAGS: ""
 
 stages:
-  - Test
-  - Build
-  - Bridges
-  - Bindings
-  - Deploy
+  - build
+  - bridges
+  - bindings
+  - deploy
 
 ###############
-# STAGE: Test
+# STAGE: Build
 #
-# This stage contains code sanity checks as well as automated tests.
+# This stage is a sanity check for cargo build commands.
+# Although this stage does not generate any artifacts, its purpose is to ensure that the project
+# compiles before moving to the next, much more resource intensive (due to parallel execution)
+# stage.
 
 cargo versions bump:
-  stage: Test
+  stage: build
   script:
     # Check if cargo workspaced changed returns an empty list.
     # If it doesn't, it means that most likely you forgot to run ./bump.sh
@@ -29,42 +31,39 @@ cargo versions bump:
   allow_failure:
     exit_codes: 42
 
-cargo test:
-  stage: Test
-  except:
-    - tags
-    - docs/*
+cargo test and build:
+  stage: build
+  # except: todo:esavier
+  #   - tags
+  #   - docs/*
   script:
     - rustup component add rustfmt clippy
+    # most of those need a build anyway so stacking them is okay
     - cargo $CARGO_FLAGS fmt -- --check
     - cargo $CARGO_FLAGS test --verbose
     - cargo $CARGO_FLAGS clippy --all-targets -- -D warnings
     - cargo $CARGO_FLAGS install cargo-audit
     - cargo $CARGO_FLAGS audit
-  only:
-    - main
-    - merge_requests
-
-
-###############
-# STAGE: Build
-#
-# This stage is a sanity check for cargo build commands.
-# Although this stage does not generate any artifacts, its purpose is to ensure that the project
-# compiles before moving to the next, much more resource intensive (due to parallel execution)
-# stage.
-
-pre-build:
-  stage: Build
-  except:
-    - tags
-    - docs/*
-  only:
-    - main
-    - merge_requests
-  script:
+    # those two barely do something extra, it should be rather fast to rebuild
     - cargo $CARGO_FLAGS build
     - cargo build --features "bindings"
+    # just checking stuf
+    - ls -lahitr
+  # only:
+  #   - main
+  #   - merge_requests
+
+# pre-build: todo:esavier:remove
+#   stage: build
+#   except:
+#     - tags
+#     - docs/*
+#   only:
+#     - main
+#     - merge_requests
+#   script:
+#     - cargo $CARGO_FLAGS build
+#     - cargo build --features "bindings"
 
 ###############
 # STAGE: Bridges
@@ -76,7 +75,7 @@ pre-build:
 # (ie. C#) binding for pc-windows target and thus, the libraries would not be reusable.
 
 x86_64_linux:
-  stage: Bridges
+  stage: bridges
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
@@ -112,7 +111,7 @@ x86_64_linux:
 
 
 apple:
-  stage: Bridges
+  stage: bridges
   except:
     - docs/*
   only:
@@ -166,7 +165,7 @@ apple:
 #      allow_failure: true
 
 csharp x86_64 linux:
-  stage: Bindings
+  stage: bindings
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
@@ -194,7 +193,7 @@ csharp x86_64 linux:
       allow_failure: true
 
 webassembly emscripten linux:
-  stage: Bindings
+  stage: bindings
   script:
     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
@@ -220,7 +219,7 @@ webassembly emscripten linux:
 # This stage is the last stage in which the crates are published to the registry. 
 
 publish crates:
-  stage: Deploy
+  stage: deploy
   except:
     - tags
     - docs/*
@@ -242,31 +241,31 @@ publish crates:
 
 pages-mld:
   image: registry.gitlab.com/wildland/corex/wildland-core/esv_mdbook:0.3.2
-  stage: Deploy
+  stage: deploy
   script:
     - mdbook build
   artifacts:
     paths:
       - public
     untracked: true
-  # only:
-  # - main
+  only:
+  - main
 
 pages-lld:
   image: rust:latest
-  stage: Deploy
+  stage: deploy
   script:
     - cargo doc --target-dir public/lld/
   artifacts:
     paths:
       - public
     untracked: true
-  # only:
-  # - main
+  only:
+  - main
 
 pages-publish:
   image: google/cloud-sdk
-  stage: Deploy
+  stage: deploy
   needs:
     - job: pages-mld
     - job: pages-lld
@@ -279,5 +278,5 @@ pages-publish:
     # - gsutil rm -rf gs://docs.wildland.dev/public
     - gsutil -m rsync -d -r public/ gs://docs.wildland.dev/
     - gsutil ls gs://docs.wildland.dev/
-  # only:
-  # - main
+  only:
+  - main
