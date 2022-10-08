@@ -34,7 +34,7 @@ cargo versions bump:
 cargo test and build:
   stage: build
   needs:
-    - job: cargo version bump
+    - job: cargo versions bump
   except:
     - tags
   script:
@@ -53,10 +53,10 @@ cargo test and build:
     - main
     - merge_requests
   artifacts:
-    name: build-${CI_JOB_ID}
+    name: build-artifacts
     untracked: false
     expire_in: "7 days"
-    expose_as: build-${CI_JOB_ID}
+    expose_as: build-artifacts
     paths:
       - "."
 
