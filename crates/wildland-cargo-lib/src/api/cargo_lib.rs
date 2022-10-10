@@ -30,16 +30,15 @@ type SharedCargoLib = Arc<Mutex<CargoLib>>;
 static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 
 /// Structure aggregating and exposing public API of CargoLib library.
+/// All functionalities are exposed to application side through this structure.
+///
+/// It can be created with [`create_cargo_lib`] function.
+///
 #[derive(Clone)]
 pub struct CargoLib {
     user_api: UserApi,
 }
 
-/// Structure which is the main part of Cargo public API.
-/// All functionalities are exposed to application side through this structure.
-///
-/// It can be created with [`create_cargo_lib`] function.
-///
 impl CargoLib {
     pub(crate) fn new(user_api: UserApi) -> Self {
         Self { user_api }
