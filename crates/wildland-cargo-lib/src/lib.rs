@@ -3,7 +3,7 @@
 //! "sharing logic".
 //!
 //! All types and functions that are supposed to be exported from Rust library to other languages
-//! are included within [`ffi`] which is used by the **RustyBind** crate for generating
+//! are included within [`ffi`] module which is used by the **RustyBind** crate for generating
 //! glue code and bindings to other languages.
 //!
 //! All Cargo functionalities can be accessed via [`api::CargoLib`] object. It aggregates and gives
