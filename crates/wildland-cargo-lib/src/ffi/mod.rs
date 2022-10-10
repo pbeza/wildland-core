@@ -154,7 +154,9 @@ mod ffi_binding {
 
         type CargoConfig;
         fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ConfigParseExc>;
-        fn collect_config(config_provider: &'static dyn CargoCfgProvider) -> CargoConfig;
+        fn collect_config(
+            config_provider: &'static dyn CargoCfgProvider,
+        ) -> Result<CargoConfig, ConfigParseExc>;
 
         fn create_cargo_lib(
             lss: &'static dyn LocalSecureStorage,

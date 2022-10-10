@@ -18,8 +18,6 @@ use wildland_corex::LocalSecureStorage;
 #[cfg(not(test))]
 use wildland_corex::LssService;
 
-use super::CargoCfgProvider;
-
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[error("CargoLib creation error: {0}")]
 pub struct CargoLibCreationError(pub String);
@@ -64,6 +62,7 @@ impl CargoLib {
 /// ```
 /// # use wildland_corex::{LocalSecureStorage, LssResult};
 /// # use wildland_cargo_lib::api::{config::CargoConfig, cargo_lib::create_cargo_lib};
+/// # use tracing::Level;
 /// #
 /// struct TestLss{};
 ///
@@ -81,7 +80,7 @@ impl CargoLib {
 /// let lss = TestLss{};
 ///
 /// let cfg = CargoConfig{
-///     log_level: "debug".to_string(),
+///     log_level: Level::DEBUG,
 ///     log_file: None,
 /// };
 ///
@@ -97,7 +96,7 @@ pub fn create_cargo_lib(
     if !INITIALIZED.load(Ordering::Relaxed) {
         INITIALIZED.store(true, Ordering::Relaxed);
 
-        logging::init_subscriber(cfg.get_log_level(), cfg.get_log_file())
+        logging::init_subscriber(cfg.log_level, cfg.log_file)
             .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e)))?;
 
         let cargo_lib = Arc::new(Mutex::new(CargoLib::new(UserApi::new(UserService::new(

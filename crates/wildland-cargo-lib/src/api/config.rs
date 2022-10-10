@@ -16,13 +16,32 @@
 //!
 //! It can be also provided via type implementing [`CargoCfgProvider`].
 
-use serde::Deserialize;
+use std::str::FromStr;
+
+use serde::{
+    de::{Error, Unexpected},
+    Deserialize, Deserializer,
+};
 use thiserror::Error;
+use tracing::Level;
 
 use crate::errors::{SingleErrVariantResult, SingleVariantError};
 
 pub trait CargoCfgProvider {
+    /// Must return one of (case-insensitive):
+    /// - "error"
+    /// - "warn"
+    /// - "info"
+    /// - "debug"
+    /// - "trace"
+    /// or number equivalent:
+    /// - "1" - error
+    /// - "2" - warn
+    /// - "3" - info
+    /// - "4" - debug
+    /// - "5" - trace
     fn get_log_level(&self) -> String;
+
     fn get_log_file(&self) -> Option<String>;
 }
 
@@ -38,28 +57,32 @@ pub struct ParseConfigError(pub String);
 ///
 #[derive(Debug, Deserialize, Clone)]
 pub struct CargoConfig {
-    pub log_level: String,
+    #[serde(deserialize_with = "log_level_deserialize")]
+    pub log_level: Level,
     pub log_file: Option<String>,
 }
 
-impl CargoCfgProvider for CargoConfig {
-    fn get_log_level(&self) -> String {
-        self.log_level.clone()
-    }
-
-    fn get_log_file(&self) -> Option<String> {
-        self.log_file.clone()
-    }
+fn log_level_deserialize<'de, D>(deserializer: D) -> Result<Level, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    Level::from_str(s.as_ref()).map_err(|_e| {
+        Error::invalid_value(Unexpected::Str(&s), &"trace | debug | info | warn | error")
+    })
 }
 
 /// Uses an implementation of [`CargoCfgProvider`] to collect a configuration storing structure ([`CargoConfig`])
 /// which then can be passed to [`super::cargo_lib::create_cargo_lib`] in order to instantiate main API object ([`super::CargoLib`])
 ///
-pub fn collect_config(config_provider: &'static dyn CargoCfgProvider) -> CargoConfig {
-    CargoConfig {
-        log_level: config_provider.get_log_level(),
+pub fn collect_config(
+    config_provider: &'static dyn CargoCfgProvider,
+) -> SingleErrVariantResult<CargoConfig, ParseConfigError> {
+    Ok(CargoConfig {
+        log_level: Level::from_str(config_provider.get_log_level().as_str())
+            .map_err(|e| SingleVariantError::Failure(ParseConfigError(e.to_string())))?,
         log_file: config_provider.get_log_file(),
-    }
+    })
 }
 
 /// Parses bytes representing JSON formatted configuration of [`super::CargoLib`]
