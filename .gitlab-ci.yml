@@ -2,6 +2,7 @@ image: registry.gitlab.com/wildland/corex/wildland-core/builder:latest
 
 variables:
   CARGO_FLAGS: ""
+  CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE: 'true'
 
 stages:
   - Test
@@ -33,7 +34,6 @@ cargo test:
   stage: Test
   except:
     - tags
-    - docs/*
   only:
     - main
     - merge_requests
@@ -63,7 +63,6 @@ pre-build:
   stage: Build
   except:
     - tags
-    - docs/*
   only:
     - main
     - merge_requests
@@ -118,8 +117,6 @@ x86_64_linux:
 
 apple:
   stage: Bridges
-  except:
-    - docs/*
   only:
     - main
     - merge_requests

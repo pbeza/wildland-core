@@ -1,0 +1,6 @@
+[tasks.test]
+toolchain = "nightly"
+
+[tasks.clippy]
+toolchain = "nightly"
+
