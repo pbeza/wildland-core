@@ -16,6 +16,9 @@ stages:
 #
 # This stage contains code sanity checks as well as automated tests.
 
+###############
+# temporarily disabled since it does not really work as intended
+###############
 #cargo versions bump:
 #  stage: Test
 #  script:
@@ -253,8 +256,8 @@ pages-create:
     paths:
       - public
     untracked: true
-  # only:
-  # - main
+  only:
+  - main
 
 
 pages-publish:
@@ -267,5 +270,5 @@ pages-publish:
     - gcloud auth activate-service-account --key-file=/credentials.json
     - gsutil cp public/* gs://docs.wildland.dev/
     - gsutil ls gs://docs.wildland.dev/
-  # only:
-  # - main
+  only:
+  - main
