@@ -29,8 +29,6 @@ cargo versions bump:
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
     - if: $CI_COMMIT_BRANCH == "main"
-  allow_failure:
-    exit_codes: 42
 
 cargo test and build:
   stage: build
