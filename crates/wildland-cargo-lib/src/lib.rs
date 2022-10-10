@@ -8,6 +8,8 @@
 //!
 //! All Cargo functionalities can be accessed via [`api::CargoLib`] object. It aggregates and gives
 //! access to API objects responsible for narrowed domains like [`api::UserApi`].
+//!
+//! [`api::CargoLib`] must be initialized with some set of parameters (see [`api::config`]).
 
 pub mod api;
 mod errors;

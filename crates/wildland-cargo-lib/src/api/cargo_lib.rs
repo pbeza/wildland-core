@@ -62,19 +62,20 @@ impl CargoLib {
 /// - cfg: [`CargoConfig`] structure with config variables (logger, endpoints, etc.)
 ///
 /// ```
-/// use wildland_corex::{LocalSecureStorage, LssResult};
-/// use wildland_cargo_lib::api::{config::CargoConfig, cargo_lib::create_cargo_lib};
-///
+/// # use wildland_corex::{LocalSecureStorage, LssResult};
+/// # use wildland_cargo_lib::api::{config::CargoConfig, cargo_lib::create_cargo_lib};
+/// #
 /// struct TestLss{};
 ///
 /// impl LocalSecureStorage for TestLss {
-///     fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>>{todo!()}
-///     fn get(&self, key: String) -> LssResult<Option<Vec<u8>>>{todo!()}
-///     fn contains_key(&self, key: String) -> LssResult<bool>{todo!()}
-///     fn keys(&self) -> LssResult<Vec<String>>{todo!()}
-///     fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>>{todo!()}
-///     fn len(&self) -> LssResult<usize>{todo!()}
-///     fn is_empty(&self) -> LssResult<bool>{todo!()}
+/// // ...implementation here
+/// #    fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>>{todo!()}
+/// #    fn get(&self, key: String) -> LssResult<Option<Vec<u8>>>{todo!()}
+/// #    fn contains_key(&self, key: String) -> LssResult<bool>{todo!()}
+/// #    fn keys(&self) -> LssResult<Vec<String>>{todo!()}
+/// #    fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>>{todo!()}
+/// #    fn len(&self) -> LssResult<usize>{todo!()}
+/// #    fn is_empty(&self) -> LssResult<bool>{todo!()}
 /// }
 ///
 /// let lss = TestLss{};

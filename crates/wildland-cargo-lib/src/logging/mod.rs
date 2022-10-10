@@ -6,7 +6,7 @@ use tracing_subscriber::{
     fmt, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
 };
 
-pub fn init_subscriber(log_level: String, log_file: Option<String>) -> Result<(), String> {
+pub(crate) fn init_subscriber(log_level: String, log_file: Option<String>) -> Result<(), String> {
     let fmt_layer = fmt::layer().with_target(false).with_level(true);
     let level_filter =
         LevelFilter::from_level(Level::from_str(log_level.as_str()).map_err(|e| e.to_string())?);
