@@ -16,19 +16,19 @@ stages:
 #
 # This stage contains code sanity checks as well as automated tests.
 
-cargo versions bump:
-  stage: Test
-  script:
-    # Check if cargo workspaced changed returns an empty list.
-    # If it doesn't, it means that most likely you forgot to run ./bump.sh
-    - gem install semantic
-    - ruby docker/scripts/check_cargo_versions.rb || EXIT_CODE=$?
-    - exit $EXIT_CODE
-  rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-    - if: $CI_COMMIT_BRANCH == "main"
-  allow_failure:
-    exit_codes: 42
+#cargo versions bump:
+#  stage: Test
+#  script:
+#    # Check if cargo workspaced changed returns an empty list.
+#    # If it doesn't, it means that most likely you forgot to run ./bump.sh
+#    - gem install semantic
+#    - ruby docker/scripts/check_cargo_versions.rb || EXIT_CODE=$?
+#    - exit $EXIT_CODE
+#  rules:
+#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+#    - if: $CI_COMMIT_BRANCH == "main"
+#  allow_failure:
+#    exit_codes: 42
 
 cargo test:
   stage: Test
