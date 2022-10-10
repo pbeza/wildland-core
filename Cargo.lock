@@ -2175,7 +2175,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-catlib"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "directories",
  "mocktopus",
@@ -2192,7 +2192,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-corex"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "hex",
  "mockall",
