@@ -80,3 +80,9 @@ impl ErrDomain for ParseConfigError {
         WildlandXDomain::CargoConfig
     }
 }
+
+impl ErrDomain for String {
+    fn domain(&self) -> WildlandXDomain {
+        WildlandXDomain::CargoUser
+    }
+}
