@@ -20,31 +20,16 @@ pub struct GetStorageRes {
     pub encrypted_credentials: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DebugGetTokenReq {
-    pub email: String,
-    pub pubkey: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DebugProvisionReq {
-    pub email: String,
-    pub payload: String,
-}
-
 #[derive(Clone, Default, Debug)]
 pub struct EvsClient {
     base_url: String,
-    // client: Client,
 }
 
 impl EvsClient {
     #[tracing::instrument(level = "debug", ret)]
     pub fn new(base_url: &str) -> Self {
-        // let client = Client::new();
         Self {
             base_url: base_url.to_string(),
-            // client,
         }
     }
 
@@ -78,46 +63,6 @@ impl EvsClient {
                 encrypted_credentials: None,
             }),
         }
-    }
-
-    #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn debug_get_token(
-        &self,
-        request: DebugGetTokenReq,
-    ) -> Result<String, WildlandHttpClientError> {
-        let url = format!("{}/debug_get_token", self.base_url);
-        let response = minreq::get(url)
-            .with_param("email", request.email)
-            .with_param("pubkey", request.pubkey)
-            .send()
-            .map_err(Rc::new)?;
-        let response = handle(response)?;
-        match response {
-            Some(response) => Ok(String::from_utf8(response.as_bytes().to_vec()).map_err(
-                |_| {
-                    WildlandHttpClientError::HttpError(
-                        "Could not parse response body as utf-8 string".to_owned(),
-                    )
-                },
-            )?),
-            None => Err(WildlandHttpClientError::NoBody),
-        }
-    }
-
-    #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn debug_provision(
-        &self,
-        request: DebugProvisionReq,
-    ) -> Result<(), WildlandHttpClientError> {
-        let url = format!("{}/debug_provision", self.base_url);
-        let response = minreq::put(url)
-            .with_param("email", request.email)
-            .with_param("credentials", request.payload)
-            .send()
-            .map_err(Rc::new)?;
-        handle(response)?;
-
-        Ok(())
     }
 }
 

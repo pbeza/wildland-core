@@ -116,8 +116,6 @@ mod ffi_binding {
         fn get_log_level(self: &dyn CargoCfgProvider) -> String;
         fn get_log_file(self: &dyn CargoCfgProvider) -> OptionalString;
         fn get_evs_url(self: &dyn CargoCfgProvider) -> String;
-        fn get_evs_runtime_mode(self: &dyn CargoCfgProvider) -> String;
-        fn get_evs_credentials_payload(self: &dyn CargoCfgProvider) -> String;
 
         fn insert(
             self: &dyn LocalSecureStorage,

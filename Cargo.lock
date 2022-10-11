@@ -1478,6 +1478,7 @@ dependencies = [
  "env_logger 0.9.1",
  "ffi-macro",
  "ffi-macro-build",
+ "hex",
  "hex-literal",
  "log",
  "mockall",
@@ -1545,6 +1546,7 @@ version = "0.2.3"
 name = "wildland-http-client"
 version = "0.5.0"
 dependencies = [
+ "hex",
  "http",
  "log",
  "minreq",

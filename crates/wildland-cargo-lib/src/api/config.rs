@@ -7,8 +7,6 @@ pub trait CargoCfgProvider {
     fn get_log_level(&self) -> String;
     fn get_log_file(&self) -> Option<String>;
     fn get_evs_url(&self) -> String;
-    fn get_evs_runtime_mode(&self) -> String;
-    fn get_evs_credentials_payload(&self) -> String;
 }
 
 #[derive(PartialEq, Eq, Error, Debug, Clone)]
@@ -16,15 +14,8 @@ pub trait CargoCfgProvider {
 pub struct ParseConfigError(pub String);
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
-#[serde(tag = "evs_runtime_mode")]
-pub enum FoundationStorageApiConfig {
-    #[serde(rename = "PROD")]
-    Prod { evs_url: String },
-    #[serde(rename = "DEBUG")]
-    Debug {
-        evs_url: String,
-        evs_credentials_payload: String,
-    },
+pub struct FoundationStorageApiConfig {
+    pub evs_url: String,
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
@@ -47,19 +38,8 @@ pub fn collect_config(config_provider: &'static dyn CargoCfgProvider) -> CargoCo
             log_level: config_provider.get_log_level(),
             log_file: config_provider.get_log_file(),
         },
-        fsa_config: match config_provider
-            .get_evs_runtime_mode()
-            .to_lowercase()
-            .as_ref()
-        {
-            "debug" | "dbg" => FoundationStorageApiConfig::Debug {
-                evs_url: config_provider.get_evs_url(),
-                evs_credentials_payload: config_provider.get_evs_credentials_payload(),
-            },
-            "prod" | "production" | "release" => FoundationStorageApiConfig::Prod {
-                evs_url: config_provider.get_evs_url(),
-            },
-            _ => panic!("Invalid value for evs_runtime_mode param (Expected: debug | dbg | prod | production | release)")
+        fsa_config: FoundationStorageApiConfig {
+            evs_url: config_provider.get_evs_url(),
         },
     }
 }
@@ -90,9 +70,8 @@ mod tests {
         assert_eq!(
             config,
             CargoConfig {
-                fsa_config: FoundationStorageApiConfig::Debug {
+                fsa_config: FoundationStorageApiConfig {
                     evs_url: "some_url".to_owned(),
-                    evs_credentials_payload: "some_payload".to_owned()
                 },
                 logger_config: LoggerConfig {
                     log_level: "trace".to_owned(),
@@ -116,7 +95,7 @@ mod tests {
         assert_eq!(
             config,
             CargoConfig {
-                fsa_config: FoundationStorageApiConfig::Prod {
+                fsa_config: FoundationStorageApiConfig {
                     evs_url: "some_url".to_owned(),
                 },
                 logger_config: LoggerConfig {

@@ -15,17 +15,7 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     }
     String get_evs_url() override
     {
-        return RustString("http://localhost:5000/");
-    }
-    String get_evs_runtime_mode() override
-    {
-        return String{"DEBUG"};
-    }
-    String get_evs_credentials_payload() override
-    {
-        return RustString{"{\"id\": \"21f527a0-5909-4b00-9494-2de8cfb6ace1\","
-                          "\"credentialID\": \"7b20c5c2fa565ee9797d58f788169630d57c36ec8d618456728be7353c943ee8\","
-                          "\"credentialSecret\": \"ff5ea13d0e881aa1a1e909a37bf02073934eacbda663508613910e1d86ecd406\"}"};
+        return RustString("http://localhost:5001/");
     }
 };
 
@@ -126,7 +116,7 @@ private:
 void config_parser_test() // test
 {
     RustVec<u8> config_bytes{};
-    std::string raw_config = "{\"log_level\": \"trace\", \"evs_runtime_mode\": \"PROD\", \"evs_url\": \"http://some_evs_endpoint/\"}";
+    std::string raw_config = "{\"log_level\": \"trace\", \"evs_url\": \"http://some_evs_endpoint/\"}";
     for (const auto ch : raw_config)
     {
         config_bytes.push(ch);
@@ -150,8 +140,10 @@ void foundation_storage_test(SharedMutexCargoLib &cargo_lib)
     {
         FoundationStorageApi fsa_api = cargo_lib.foundation_storage_api();
         auto process_handle = fsa_api.request_free_tier_storage("test@email.com");
-        auto verification_token = RustString{"in debug version this token is replaced for the one retrieved from evs debug endpoint"};
-        fsa_api.verify_email(process_handle, verification_token);
+        std::cout << "Provide a verification token:\n";
+        std::string verification_token;
+        std::cin >> verification_token;
+        fsa_api.verify_email(process_handle, RustString{verification_token});
     }
     catch (const RustExceptionBase &e)
     {
