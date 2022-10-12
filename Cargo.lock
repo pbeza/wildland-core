@@ -2156,7 +2156,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.15.1"
+version = "0.15.2"
 dependencies = [
  "anyhow",
  "env_logger 0.9.1",
@@ -2198,7 +2198,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-corex"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "hex",
  "log",
