@@ -2156,7 +2156,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.15.0"
+version = "0.15.1"
 dependencies = [
  "anyhow",
  "env_logger 0.9.1",
@@ -2181,7 +2181,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-catlib"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "directories",
  "mocktopus",
@@ -2198,7 +2198,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-corex"
-version = "0.7.2"
+version = "0.7.3"
 dependencies = [
  "hex",
  "mockall",
