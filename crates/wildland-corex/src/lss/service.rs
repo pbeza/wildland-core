@@ -23,6 +23,7 @@ impl LssService {
 
     #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_default_forest(&self) -> Result<Option<WildlandIdentity>, ForestRetrievalError> {
+        log::trace!("Getting default forest.");
         self.lss
             .get(DEFAULT_FOREST_KEY.to_string())
             .map_err(|e| e.into())
