@@ -88,6 +88,15 @@ do {
     let cfg = collectConfig(CargoCfgProviderImpl())
     let cargo_lib = try createCargoLib(lss, cfg)
     let user_api = cargo_lib.userApi()
+
+    // Mnemonic can be restored or generated randomly
+    let mnemonic_vec = RustVec<RustString>(RustString.createNewRustVec())
+    let words = ["update", "inherit", "giant", "spray", "expire", "enforce", "animal", "ship", "congress", "weather", "camp", "endless"]
+    for w in words {
+        mnemonic_vec.push(RustString(w))
+    }
+    let restored_mnemonic = try user_api.createMnemonicFromVec(mnemonic_vec)
+
     let mnemonic = try user_api.generateMnemonic()
     print(mnemonic.getString().toString())
     let _ = try user_api.createUserFromMnemonic(mnemonic, RustString("My Mac"))
