@@ -16,6 +16,7 @@ type VoidType = ();
 
 pub type UserRetrievalExc = RetrievalError<ForestRetrievalError>;
 pub type MnemonicCreationExc = SingleVariantError<CryptoError>;
+pub type StringExc = SingleVariantError<String>; // Used for simple errors originating inside CargoLib (not in dependant modules)
 pub type UserCreationExc = SingleVariantError<UserCreationError>;
 pub type CargoLibCreationExc = SingleVariantError<CargoLibCreationError>;
 pub type ConfigParseExc = SingleVariantError<ParseConfigError>;
@@ -109,6 +110,9 @@ mod ffi_binding {
     enum ConfigParseExc {
         Failure(_),
     }
+    enum StringExc {
+        Failure(_),
+    }
 
     extern "Traits" {
         type CargoCfgProvider;
@@ -165,6 +169,10 @@ mod ffi_binding {
         fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
+        fn create_mnemonic_from_vec(
+            self: &UserApi,
+            words: Vec<String>,
+        ) -> Result<MnemonicPayload, StringExc>;
         fn create_user_from_entropy(
             self: &UserApi,
             entropy: Vec<u8>,
