@@ -14,6 +14,7 @@ version     = "0.7.3"
 
 [dependencies]
 hex             = { version = "0.4.3" }
+log             = { version = "0.4" }
 sha2            = { version = "0.10.2" }
 thiserror       = { version = "1.0.31" }
 tracing         = { version = "0.1" }

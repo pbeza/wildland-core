@@ -59,6 +59,9 @@ impl CargoLib {
 /// program execution (static lifetime).
 /// - cfg: [`CargoConfig`] structure with config variables (logger, endpoints, etc.)
 ///
+/// CargoLib expects to get references with static lifetimes so it is important not to inline
+/// objects (e.g. LSS) initialization along with createCargoLib call.
+///
 /// ```
 /// # use wildland_corex::{LocalSecureStorage, LssResult};
 /// # use wildland_cargo_lib::api::{config::CargoConfig, cargo_lib::create_cargo_lib};
