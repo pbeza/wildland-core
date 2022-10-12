@@ -15,7 +15,7 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     }
     String get_evs_url() override
     {
-        return RustString("http://localhost:5001/");
+        return RustString("http://localhost:5000/");
     }
 };
 
