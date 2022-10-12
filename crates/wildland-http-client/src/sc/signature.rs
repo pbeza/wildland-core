@@ -33,8 +33,7 @@ impl SCSignatureClient {
         let url = format!("{}/signature/request", self.base_url);
         minreq::post(url)
             .with_header(WILDLAND_SIGNATURE_HEADER, signature)
-            .with_json(&request)
-            .unwrap() // TODO
+            .with_json(&request)?
             .send()
     }
 }

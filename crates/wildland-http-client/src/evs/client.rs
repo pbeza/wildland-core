@@ -38,7 +38,7 @@ impl EvsClient {
         let url = format!("{}/confirm_token", self.base_url);
         let response = minreq::put(url)
             .with_json(&request)
-            .unwrap() // TODO
+            .map_err(|e| WildlandHttpClientError::HttpLibError(Rc::new(e)))?
             .send()
             .map_err(Rc::new)?;
         handle(response)?;
@@ -53,7 +53,7 @@ impl EvsClient {
         let url = format!("{}/get_storage", self.base_url);
         let response = minreq::put(url)
             .with_json(&request)
-            .unwrap() //TODO
+            .map_err(|e| WildlandHttpClientError::HttpLibError(Rc::new(e)))?
             .send()
             .map_err(Rc::new)?;
         let response = handle(response)?;

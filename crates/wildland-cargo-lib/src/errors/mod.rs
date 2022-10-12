@@ -94,7 +94,7 @@ impl ExceptionTrait for FsaError {
                     WildlandXDomain::CargoUser
                 }
                 WildlandHttpClientError::CommonLibError(_) => WildlandXDomain::Crypto,
-                WildlandHttpClientError::ReqwestError(_) => WildlandXDomain::ExternalLibError,
+                WildlandHttpClientError::HttpLibError(_) => WildlandXDomain::ExternalLibError,
                 WildlandHttpClientError::NoBody => WildlandXDomain::ExternalServer,
             },
             FsaError::CryptoError(_) => WildlandXDomain::Crypto,

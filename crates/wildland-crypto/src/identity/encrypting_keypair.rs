@@ -46,7 +46,7 @@ impl EncryptingKeypair {
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn decrypt(&self, cipher_text: Vec<u8>) -> Result<Vec<u8>, CryptoError> {
-        // TODO The only crate which allowed to decrypt credentials (encrypted with python NaCL SealedBox )
+        // TODO WILX-269 The only crate which allowed to decrypt credentials (encrypted with python NaCL SealedBox )
         // was sodiumoxide. However, this library is hard to use (compile) on all desired platforms.
         // Suggested solution: use the same pure Rust library (crypto_box) for encoding and decoding on both sides. Python may spawn
         // a small Rust process with only responsibility of encrypting a message. That would ensure compatibility of sender and receiver.
