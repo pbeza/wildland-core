@@ -31,12 +31,14 @@ impl UserService {
         input: CreateUserInput,
         device_name: String,
     ) -> Result<(), UserCreationError> {
+        log::trace!("Checking whether user exists.");
         if self
             .user_exists()
             .map_err(UserCreationError::ForestRetrievalError)?
         {
             return Err(UserCreationError::UserAlreadyExists);
         }
+        log::trace!("User does not exist yet");
         let crypto_identity = match input {
             CreateUserInput::Mnemonic(mnemonic) => Identity::try_from(mnemonic.as_ref())?,
             CreateUserInput::Entropy(entropy) => Identity::try_from(entropy.as_slice())?,
