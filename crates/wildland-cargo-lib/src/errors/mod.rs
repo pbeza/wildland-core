@@ -8,7 +8,7 @@ pub use user::*;
 
 use wildland_corex::{CryptoError, ForestRetrievalError};
 
-use crate::{api::CargoLibCreationError, config::ParseConfigError};
+use crate::api::{cargo_lib::CargoLibCreationError, config::ParseConfigError};
 
 #[derive(Debug, Clone)]
 #[repr(C)]
