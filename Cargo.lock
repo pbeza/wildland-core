@@ -421,38 +421,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ffi-macro"
-version = "0.11.0"
-source = "registry+https://crates.wildland.dev/git/index"
-checksum = "91aafd81fb9d4bcbb6a533c46177f339a81d7587903c4d44b9a9e9abb69833ac"
-dependencies = [
- "ffi-parser",
-]
-
-[[package]]
-name = "ffi-macro-build"
-version = "0.5.6"
-source = "registry+https://crates.wildland.dev/git/index"
-checksum = "8b442aa9f82e64caf882783ca21f065315f20aaaa86cdc81959066a301c762c0"
-dependencies = [
- "ffi-parser",
- "syn",
-]
-
-[[package]]
-name = "ffi-parser"
-version = "0.12.0"
-source = "registry+https://crates.wildland.dev/git/index"
-checksum = "a02b2cb23e164e83c8b28450386dd7470fadf7de40ce143387b701d134254915"
-dependencies = [
- "const_format",
- "convert_case",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "float-cmp"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1448,6 +1416,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusty-bind"
+version = "0.2.1"
+source = "registry+https://crates.wildland.dev/git/index"
+checksum = "6c24e027b347fe3bf1ba3ffb910d8a1ed570317f3944cd791f3975f89742bf12"
+dependencies = [
+ "rusty-bind-parser",
+]
+
+[[package]]
+name = "rusty-bind-build"
+version = "0.1.2"
+source = "registry+https://crates.wildland.dev/git/index"
+checksum = "26c1d3634d9e8eda5f84a2177c4a26869016f10600d1ab4e9a908f9cb507fb8e"
+dependencies = [
+ "rusty-bind-parser",
+ "syn",
+]
+
+[[package]]
+name = "rusty-bind-parser"
+version = "0.2.0"
+source = "registry+https://crates.wildland.dev/git/index"
+checksum = "e713d5ba61f3b231ee07a11af4efd13cbe4c922d6c7e36f74c554d7fa99098b4"
+dependencies = [
+ "const_format",
+ "convert_case",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2156,15 +2156,15 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.15.2"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "env_logger 0.9.1",
- "ffi-macro",
- "ffi-macro-build",
  "hex-literal",
  "log",
  "mockall",
+ "rusty-bind",
+ "rusty-bind-build",
  "serde",
  "serde_json",
  "sha2 0.10.6",
