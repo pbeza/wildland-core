@@ -8,7 +8,9 @@ pub use user::*;
 use wildland_corex::{CryptoError, ForestRetrievalError};
 use wildland_http_client::error::WildlandHttpClientError;
 
-use crate::{api::config::ParseConfigError, foundation_storage::FsaError, CargoLibCreationError};
+use crate::api::{
+    cargo_lib::CargoLibCreationError, config::ParseConfigError, foundation_storage::FsaError,
+};
 
 #[derive(Debug, Clone)]
 #[repr(C)]
@@ -100,5 +102,11 @@ impl ExceptionTrait for FsaError {
             FsaError::CryptoError(_) => WildlandXDomain::Crypto,
             FsaError::InvalidCredentialsFormat(_) => WildlandXDomain::ExternalServer,
         }
+    }
+}
+
+impl ErrDomain for String {
+    fn domain(&self) -> WildlandXDomain {
+        WildlandXDomain::CargoUser
     }
 }

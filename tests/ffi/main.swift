@@ -96,8 +96,20 @@ print("Swift FFI Test Suite")
 do {
     let lss = LocalSecureStorageImpl()
     let cfg = collectConfig(CargoCfgProviderImpl())
+    // CargoLib expects to get references with static lifetime so it is important not to inline
+    // objects (e.g. LSS) initialization along with createCargoLib call
+    // DO NOT: createCargoLib(LocalSecureStorageImpl(), CargoCfgProviderImpl())
     let cargo_lib = try createCargoLib(lss, cfg)
     let user_api = cargo_lib.userApi()
+
+    // Mnemonic can be restored or generated randomly
+    let mnemonic_vec = RustVec<RustString>(RustString.createNewRustVec())
+    let words = ["update", "inherit", "giant", "spray", "expire", "enforce", "animal", "ship", "congress", "weather", "camp", "endless"]
+    for w in words {
+        mnemonic_vec.push(RustString(w))
+    }
+    let restored_mnemonic = try user_api.createMnemonicFromVec(mnemonic_vec)
+
     let mnemonic = try user_api.generateMnemonic()
     print(mnemonic.getString().toString())
     let _ = try user_api.createUserFromMnemonic(mnemonic, RustString("My Mac"))

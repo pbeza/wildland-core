@@ -6,9 +6,9 @@ use tracing_subscriber::{
     fmt, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
 };
 
-use crate::LoggerConfig;
+use crate::api::config::LoggerConfig;
 
-pub fn init_subscriber(cfg: LoggerConfig) -> Result<(), String> {
+pub(crate) fn init_subscriber(cfg: LoggerConfig) -> Result<(), String> {
     let fmt_layer = fmt::layer().with_target(false).with_level(true);
     let level_filter = LevelFilter::from_level(
         Level::from_str(cfg.log_level.as_str()).map_err(|e| e.to_string())?,

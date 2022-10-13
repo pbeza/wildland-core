@@ -9,7 +9,7 @@ use wildland_http_client::{
     evs::{ConfirmTokenReq, EvsClient, GetStorageReq},
 };
 
-use crate::FoundationStorageApiConfig;
+use super::config::FoundationStorageApiConfig;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StorageCredentials {

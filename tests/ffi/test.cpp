@@ -17,6 +17,10 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     {
         return RustString("http://localhost:5000/");
     }
+    String get_sc_url() override
+    {
+        return RustString("http://TODO:5555/");
+    }
 };
 
 class LocalSecureStorageImpl : public LocalSecureStorage
@@ -122,15 +126,14 @@ void config_parser_test() // test
         config_bytes.push(ch);
     }
     LocalSecureStorageImpl lss{};
-    CargoConfig cargo_cfg = parse_config(config_bytes);
     try
     {
+        CargoConfig cargo_cfg = parse_config(config_bytes);
         SharedMutexCargoLib cargo_lib = create_cargo_lib(lss, cargo_cfg);
     }
-    catch (const CargoLibCreationExc_FailureException &e)
+    catch (const RustExceptionBase &e)
     {
         std::cout << e.reason().to_string() << std::endl;
-        assert(false);
     }
 }
 
