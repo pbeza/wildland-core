@@ -8,7 +8,7 @@ pub use user::*;
 
 use wildland_corex::{CryptoError, ForestRetrievalError};
 
-use crate::{api::CargoLibCreationError, config::ParseConfigError};
+use crate::api::{cargo_lib::CargoLibCreationError, config::ParseConfigError};
 
 #[derive(Debug, Clone)]
 #[repr(C)]
@@ -78,5 +78,11 @@ impl ErrDomain for CargoLibCreationError {
 impl ErrDomain for ParseConfigError {
     fn domain(&self) -> WildlandXDomain {
         WildlandXDomain::CargoConfig
+    }
+}
+
+impl ErrDomain for String {
+    fn domain(&self) -> WildlandXDomain {
+        WildlandXDomain::CargoUser
     }
 }

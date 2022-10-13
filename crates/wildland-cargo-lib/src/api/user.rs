@@ -46,7 +46,7 @@ pub struct UserApi {
 }
 
 impl UserApi {
-    pub fn new(user_service: UserService) -> Self {
+    pub(crate) fn new(user_service: UserService) -> Self {
         Self { user_service }
     }
 
@@ -56,6 +56,20 @@ impl UserApi {
         generate_random_mnemonic()
             .map_err(SingleVariantError::Failure)
             .map(MnemonicPayload::from)
+    }
+
+    /// Creates [`MnemonicPayload`] basing on a vector of words. The result may be used for creation
+    /// User with [`create_user_from_mnemonic`].
+    ///
+    #[tracing::instrument(level = "debug", ret, skip(self))]
+    pub fn create_mnemonic_from_vec(
+        &self,
+        words: Vec<String>,
+    ) -> SingleErrVariantResult<MnemonicPayload, String> {
+        tracing::trace!("creating mnemonic from vec");
+        Ok(MnemonicPayload(MnemonicPhrase::try_from(words).map_err(
+            |_| SingleVariantError::Failure("Invalid mnemonic words".to_owned()),
+        )?))
     }
 
     #[tracing::instrument(level = "debug", skip(self, entropy))]
