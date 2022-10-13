@@ -88,7 +88,7 @@ impl FoundationStorageApi {
         &self,
         process_handle: &FreeTierProcessHandle,
         verification_token: String,
-    ) -> Result<(), FsaError> {
+    ) -> Result<FoundationStorageTemplate, FsaError> {
         self.evs_client
             .confirm_token(ConfirmTokenReq {
                 email: process_handle.email.clone(),
@@ -114,10 +114,7 @@ impl FoundationStorageApi {
                     let storage_credentials: StorageCredentials =
                         serde_json::from_slice(&decrypted)
                             .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
-                    wildland_corex::storage::write_foundation_storage_template(
-                        storage_credentials.into_storage_template(self.sc_url.clone()),
-                    ); // TODO result
-                    Ok(())
+                    Ok(storage_credentials.into_storage_template(self.sc_url.clone()))
                 }
                 None => Err(FsaError::EvsError(WildlandHttpClientError::NoBody)),
             })

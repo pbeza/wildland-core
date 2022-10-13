@@ -79,7 +79,7 @@ impl CargoLib {
 ///
 /// ```
 /// # use wildland_corex::{LocalSecureStorage, LssResult};
-/// # use wildland_cargo_lib::api::{config::CargoConfig, cargo_lib::create_cargo_lib};
+/// # use wildland_cargo_lib::api::{config::*, cargo_lib::create_cargo_lib};
 /// # use tracing::Level;
 /// #
 /// struct TestLss{};
@@ -98,8 +98,14 @@ impl CargoLib {
 /// let lss = TestLss{};
 ///
 /// let cfg = CargoConfig{
-///     log_level: Level::DEBUG,
-///     log_file: None,
+///     logger_config: LoggerConfig {
+///         log_level: Level::DEBUG,
+///         log_file: None,
+///     },
+///     fsa_config: FoundationStorageApiConfig {
+///         evs_url: "some_url".to_owned(),
+///         sc_url: "some_url".to_owned(),
+///     },
 /// };
 ///
 /// let lss: &'static TestLss = unsafe { std::mem::transmute(&lss) };

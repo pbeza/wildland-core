@@ -10,7 +10,8 @@ use crate::{
 use ffi_macro::binding_wrapper;
 use std::sync::{Arc, Mutex};
 pub use wildland_corex::{
-    CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, LssResult,
+    storage::FoundationStorageTemplate, CoreXError, CryptoError, ForestRetrievalError,
+    LocalSecureStorage, LssError, LssResult,
 };
 
 type VoidType = ();
@@ -189,8 +190,10 @@ mod ffi_binding {
             self: &FoundationStorageApi,
             process_handle: &FreeTierProcessHandle,
             verification_token: String,
-        ) -> Result<VoidType, FsaExc>;
+        ) -> Result<FoundationStorageTemplate, FsaExc>;
         type FreeTierProcessHandle;
+
+        type FoundationStorageTemplate;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_mnemonic_from_vec(

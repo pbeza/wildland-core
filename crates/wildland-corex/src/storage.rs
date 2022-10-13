@@ -7,5 +7,3 @@ pub struct FoundationStorageTemplate {
     pub credential_secret: String,
     pub sc_url: String,
 }
-
-pub fn write_foundation_storage_template(fst: FoundationStorageTemplate) {}

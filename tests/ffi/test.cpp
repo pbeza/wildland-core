@@ -146,7 +146,8 @@ void foundation_storage_test(SharedMutexCargoLib &cargo_lib)
         std::cout << "Provide a verification token:\n";
         std::string verification_token;
         std::cin >> verification_token;
-        fsa_api.verify_email(process_handle, RustString{verification_token});
+        // TODO may be used for creating container
+        FoundationStorageTemplate storage_template = fsa_api.verify_email(process_handle, RustString{verification_token});
     }
     catch (const RustExceptionBase &e)
     {

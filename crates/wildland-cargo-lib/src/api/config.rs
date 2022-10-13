@@ -7,7 +7,9 @@
 //! let config_json = r#"
 //!     {
 //!         "log_level": "debug",
-//!         "log_file": "optional file path - it turns on file logging if provided"
+//!         "log_file": "optional file path - it turns on file logging if provided",
+//!         "evs_url": "some_url",
+//!         "sc_url": "some_url"
 //!     }
 //! "#;
 //!
@@ -119,6 +121,8 @@ pub fn parse_config(raw_content: Vec<u8>) -> SingleErrVariantResult<CargoConfig,
 #[cfg(test)]
 mod tests {
 
+    use tracing::Level;
+
     use super::{CargoConfig, FoundationStorageApiConfig, LoggerConfig};
 
     #[test]
@@ -127,8 +131,7 @@ mod tests {
             "log_level": "trace",
             "evs_runtime_mode": "DEBUG",
             "evs_url": "some_url",
-            "sc_url": "some_url",
-            "evs_credentials_payload": "some_payload"
+            "sc_url": "some_url"
         }"#;
 
         let config: CargoConfig = serde_json::from_str(config_str).unwrap();
@@ -141,7 +144,7 @@ mod tests {
                     sc_url: "some_url".to_owned(),
                 },
                 logger_config: LoggerConfig {
-                    log_level: "trace".to_owned(),
+                    log_level: Level::TRACE,
                     log_file: None
                 }
             }
@@ -154,8 +157,7 @@ mod tests {
             "log_level": "trace",
             "evs_runtime_mode": "PROD",
             "evs_url": "some_url",
-            "sc_url": "some_url",
-            "evs_credentials_payload": "some_payload"
+            "sc_url": "some_url"
         }"#;
 
         let config: CargoConfig = serde_json::from_str(config_str).unwrap();
@@ -168,7 +170,7 @@ mod tests {
                     sc_url: "some_url".to_owned(),
                 },
                 logger_config: LoggerConfig {
-                    log_level: "trace".to_owned(),
+                    log_level: Level::TRACE,
                     log_file: None
                 }
             }
