@@ -2181,6 +2181,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-catlib"
+version = "0.5.3"
 dependencies = [
  "directories",
  "mocktopus",

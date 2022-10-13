@@ -38,8 +38,8 @@ stages:
 cargo test and build:
   stage: build
   image: rustlang/rust:nightly
-  needs:
-    - job: cargo versions bump
+  # needs:
+  #   - job: cargo versions bump
   except:
     - tags
   script:
@@ -253,9 +253,9 @@ pages-mld:
     paths:
       - public
     untracked: true
-  only:
-    refs:
-      - main
+  # only:
+  #   refs:
+  #     - main
 
 pages-lld:
   image: rustlang/rust:nightly
@@ -266,9 +266,9 @@ pages-lld:
     paths:
       - public
     untracked: true
-  only:
-    refs:
-      - main
+  # only:
+  #   refs:
+  #     - main
 
 pages-publish:
   image: google/cloud-sdk
@@ -285,6 +285,6 @@ pages-publish:
     # - gsutil rm -rf gs://docs.wildland.dev/public
     - gsutil -m rsync -d -r public/ gs://docs.wildland.dev/
     - gsutil ls gs://docs.wildland.dev/
-  only:
-    refs:
-      - main
+  # only:
+  #   refs:
+  #     - main
