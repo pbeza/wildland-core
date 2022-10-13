@@ -3,7 +3,7 @@ use std::rc::Rc;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
-use wildland_corex::{CryptoError, EncryptingKeypair};
+use wildland_corex::{storage::FoundationStorageTemplate, CryptoError, EncryptingKeypair};
 use wildland_http_client::{
     error::WildlandHttpClientError,
     evs::{ConfirmTokenReq, EvsClient, GetStorageReq},
@@ -18,6 +18,17 @@ pub struct StorageCredentials {
     credential_id: String,
     #[serde(rename = "credentialSecret")]
     credential_secret: String,
+}
+
+impl StorageCredentials {
+    fn into_storage_template(self, sc_url: String) -> FoundationStorageTemplate {
+        FoundationStorageTemplate {
+            id: self.id,
+            credential_id: self.credential_id,
+            credential_secret: self.credential_secret,
+            sc_url,
+        }
+    }
 }
 
 #[repr(C)]
@@ -42,12 +53,14 @@ pub struct FreeTierProcessHandle {
 #[derive(Clone)]
 pub struct FoundationStorageApi {
     evs_client: EvsClient,
+    sc_url: String,
 }
 
 impl FoundationStorageApi {
     pub fn new(config: FoundationStorageApiConfig) -> Self {
         Self {
             evs_client: EvsClient::new(&config.evs_url),
+            sc_url: config.sc_url,
         }
     }
 
@@ -98,10 +111,12 @@ impl FoundationStorageApi {
                         .decrypt(decoded)
                         .map_err(FsaError::CryptoError)?;
                     let decrypted = hex::decode(decrypted_hex).unwrap();
-                    let _storage_credentials: StorageCredentials =
+                    let storage_credentials: StorageCredentials =
                         serde_json::from_slice(&decrypted)
                             .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
-                    // TODO do sth with credentials
+                    wildland_corex::storage::write_foundation_storage_template(
+                        storage_credentials.into_storage_template(self.sc_url.clone()),
+                    ); // TODO result
                     Ok(())
                 }
                 None => Err(FsaError::EvsError(WildlandHttpClientError::NoBody)),

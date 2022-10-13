@@ -7,6 +7,7 @@ pub trait CargoCfgProvider {
     fn get_log_level(&self) -> String;
     fn get_log_file(&self) -> Option<String>;
     fn get_evs_url(&self) -> String;
+    fn get_sc_url(&self) -> String;
 }
 
 #[derive(PartialEq, Eq, Error, Debug, Clone)]
@@ -16,6 +17,7 @@ pub struct ParseConfigError(pub String);
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct FoundationStorageApiConfig {
     pub evs_url: String,
+    pub sc_url: String,
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
@@ -40,6 +42,7 @@ pub fn collect_config(config_provider: &'static dyn CargoCfgProvider) -> CargoCo
         },
         fsa_config: FoundationStorageApiConfig {
             evs_url: config_provider.get_evs_url(),
+            sc_url: config_provider.get_sc_url(),
         },
     }
 }
@@ -62,6 +65,7 @@ mod tests {
             "log_level": "trace",
             "evs_runtime_mode": "DEBUG",
             "evs_url": "some_url",
+            "sc_url": "some_url",
             "evs_credentials_payload": "some_payload"
         }"#;
 
@@ -72,6 +76,7 @@ mod tests {
             CargoConfig {
                 fsa_config: FoundationStorageApiConfig {
                     evs_url: "some_url".to_owned(),
+                    sc_url: "some_url".to_owned(),
                 },
                 logger_config: LoggerConfig {
                     log_level: "trace".to_owned(),
@@ -87,6 +92,7 @@ mod tests {
             "log_level": "trace",
             "evs_runtime_mode": "PROD",
             "evs_url": "some_url",
+            "sc_url": "some_url",
             "evs_credentials_payload": "some_payload"
         }"#;
 
@@ -97,6 +103,7 @@ mod tests {
             CargoConfig {
                 fsa_config: FoundationStorageApiConfig {
                     evs_url: "some_url".to_owned(),
+                    sc_url: "some_url".to_owned(),
                 },
                 logger_config: LoggerConfig {
                     log_level: "trace".to_owned(),

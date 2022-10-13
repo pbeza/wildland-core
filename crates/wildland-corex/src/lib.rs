@@ -1,6 +1,7 @@
 mod error;
 mod identity;
 mod lss;
+pub mod storage;
 
 pub use error::*;
 pub use identity::{master::*, wildland::*};
