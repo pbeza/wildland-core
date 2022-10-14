@@ -6,7 +6,7 @@ use crate::{
     },
     errors::*,
 };
-use ffi_macro::binding_wrapper;
+use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
 pub use wildland_corex::{
     CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, LssResult,
