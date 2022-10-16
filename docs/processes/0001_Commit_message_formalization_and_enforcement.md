@@ -45,6 +45,14 @@ feat: [WILX-0123] add lazers
 In case the commit is not connected to any task in jira, the `[TASK]`
 can be dropped.
 
+```text
+fix: stray cats
+
+* fix: added code to handle stray cats
+* docs: documented stray cats and their ability to shoot lazers
+```
+
+
 ## Commit message enforcement
 
 Commit message format is enforced via one of CI Actions/Workflows

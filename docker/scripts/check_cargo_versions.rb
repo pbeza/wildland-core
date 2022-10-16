@@ -6,13 +6,15 @@ changed = `cargo workspaces changed --json --include-merged-tags`.chomp
 # Exit code 42 is a conditional CI failure
 
 # This may happen if there were no crates changes yet we are in the same HEAD (rare occasions when re-running the pipeline)
-changed == 'Current HEAD is already released, skipping change detection' and exit 42
+# changed == 'Current HEAD is already released, skipping change detection' and exit 42
+puts 'Current HEAD is already released, skipping change detection' and exit 0
 
 changed = JSON.parse(changed)
 
 # There are no changes, yet we are running this pipeline, perhaps we didn't touch any crates.
 # Still, better throw 42 to grab the reviewer's attention.
-changed.size == 0 and exit 42
+# esavier: no its not, stop doing that
+changed.size == 0 and puts 'No changes detected' and exit 0
 
 changed.each { |e|
 	crate, current_version = e['name'], e['version']

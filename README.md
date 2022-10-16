@@ -11,7 +11,7 @@ https://wildland.io/
 ## Full Documentation
 
 Current renders of the documentation can be found here:
-https://wildland.gitlab.io/corex/wildland-core/
+https://docs.wildland.dev/
 
 where definitions are as follows:
 HLD - High Level Documentation - concepts, introductions, and abstractions

@@ -2213,7 +2213,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "crypto_box",
  "ed25519-dalek",
@@ -2235,11 +2235,11 @@ dependencies = [
 
 [[package]]
 name = "wildland-dfs"
-version = "0.2.3"
+version = "0.2.5"
 
 [[package]]
 name = "wildland-http-client"
-version = "0.4.6"
+version = "0.4.8"
 dependencies = [
  "http",
  "log",

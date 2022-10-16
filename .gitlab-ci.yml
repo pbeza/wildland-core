@@ -5,16 +5,18 @@ variables:
   CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE: 'true'
 
 stages:
-  - Test
-  - Build
-  - Bridges
-  - Bindings
-  - Deploy
+  - build
+  - bridges
+  - bindings
+  - deploy
 
 ###############
-# STAGE: Test
+# STAGE: Build
 #
-# This stage contains code sanity checks as well as automated tests.
+# This stage is a sanity check for cargo build commands.
+# Although this stage does not generate any artifacts, its purpose is to ensure that the project
+# compiles before moving to the next, much more resource intensive (due to parallel execution)
+# stage.
 
 ###############
 # temporarily disabled since it does not really work as intended
@@ -33,45 +35,39 @@ stages:
 #  allow_failure:
 #    exit_codes: 42
 
-cargo test:
-  stage: Test
+cargo test and build:
+  stage: build
+  image: rustlang/rust:nightly
+  # needs:
+  #   - job: cargo versions bump
   except:
     - tags
-  only:
-    - main
-    - merge_requests
   script:
+    # lets print the current version and auxiliaries:
+    - cargo -V
+    - rustup show active-toolchain
+    - pwd
+    # install potentially missing stuff
     - rustup component add rustfmt clippy
+    # most of those need a build anyway so stacking them is okay
     - cargo $CARGO_FLAGS fmt -- --check
     - cargo $CARGO_FLAGS test --verbose
     - cargo $CARGO_FLAGS clippy --all-targets -- -D warnings
     - cargo $CARGO_FLAGS install cargo-audit
     - cargo $CARGO_FLAGS audit
-  only:
-    changes:
-      - Dockerfile
-      - docker/scripts/*
-      - dockerfiles/**/*
-      - more_scripts/*.{rb,py,sh}
-
-###############
-# STAGE: Build
-#
-# This stage is a sanity check for cargo build commands.
-# Although this stage does not generate any artifacts, its purpose is to ensure that the project
-# compiles before moving to the next, much more resource intensive (due to parallel execution)
-# stage.
-
-pre-build:
-  stage: Build
-  except:
-    - tags
+    # those two barely do something extra, it should be rather fast to rebuild
+    - cargo $CARGO_FLAGS build
+    - cargo build --features "bindings"
   only:
     - main
     - merge_requests
-  script:
-    - cargo $CARGO_FLAGS build
-    - cargo build --features "bindings"
+  artifacts:
+    name: build-artifacts-$CI_JOB_NAME
+    expose_as: "wl-build"
+    untracked: false
+    expire_in: "7 days"
+    paths:
+      - "/builds/wildland/corex/wildland-core"
 
 ###############
 # STAGE: Bridges
@@ -83,10 +79,14 @@ pre-build:
 # (ie. C#) binding for pc-windows target and thus, the libraries would not be reusable.
 
 x86_64_linux:
-  stage: Bridges
+  stage: bridges
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
+  needs:
+    - job: cargo test and build
+  dependencies: 
+    - cargo test and build
   script:
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
@@ -119,7 +119,7 @@ x86_64_linux:
 
 
 apple:
-  stage: Bridges
+  stage: bridges
   only:
     - main
     - merge_requests
@@ -171,7 +171,7 @@ apple:
 #      allow_failure: true
 
 csharp x86_64 linux:
-  stage: Bindings
+  stage: bindings
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
@@ -199,7 +199,7 @@ csharp x86_64 linux:
       allow_failure: true
 
 webassembly emscripten linux:
-  stage: Bindings
+  stage: bindings
   script:
     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
@@ -225,10 +225,9 @@ webassembly emscripten linux:
 # This stage is the last stage in which the crates are published to the registry. 
 
 publish crates:
-  stage: Deploy
+  stage: deploy
   except:
     - tags
-    - docs/*
   only:
     - main
   dependencies: [] # Disable artifacts passing
@@ -245,30 +244,47 @@ publish crates:
     # Specifying registry is required (bug: https://github.com/crate-ci/cargo-release/issues/429)
     - RUST_LOG=debug cargo $CARGO_FLAGS release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release
 
-
-pages-create:
+pages-mld:
   image: registry.gitlab.com/wildland/corex/wildland-core/esv_mdbook:0.3.2
-  stage: Deploy
+  stage: deploy
   script:
     - mdbook build
+  artifacts:
+    paths:
+      - public
+    untracked: true
+  # only:
+  #   refs:
+  #     - main
+
+pages-lld:
+  image: rustlang/rust:nightly
+  stage: deploy
+  script:
     - cargo doc --target-dir public/lld/
   artifacts:
     paths:
       - public
     untracked: true
-  only:
-  - main
-
+  # only:
+  #   refs:
+  #     - main
 
 pages-publish:
   image: google/cloud-sdk
-  stage: Deploy
+  stage: deploy
+  needs:
+    - job: pages-mld
+    - job: pages-lld
   dependencies: 
-    - pages-create
+    - pages-lld
+    - pages-mld
   script:
     - echo -n $DOCS_WILDLAND_GCS_UPLOADER_KEY | base64 -d > /credentials.json
     - gcloud auth activate-service-account --key-file=/credentials.json
-    - gsutil cp public/* gs://docs.wildland.dev/
+    # - gsutil rm -rf gs://docs.wildland.dev/public
+    - gsutil -m rsync -d -r public/ gs://docs.wildland.dev/
     - gsutil ls gs://docs.wildland.dev/
-  only:
-  - main
+  # only:
+  #   refs:
+  #     - main
