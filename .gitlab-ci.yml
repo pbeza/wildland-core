@@ -4,6 +4,9 @@ variables:
   CARGO_FLAGS: ""
   CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE: 'true'
   CARGO_HOME: $CI_PROJECT_DIR/cargo
+  CACHE_COMPRESSION_LEVEL: 'fastest'
+  FF_USE_FASTZIP: 'true'
+  GIT_STRATEGY: 'clone'
 
 stages:
   - Build
@@ -21,27 +24,7 @@ stages:
 # compiles before moving to the Bridges stage which **much** more resource intensive due
 # to parallel build of multiple targets.
 #
-x86_64 build:
-  stage: Build
-  tags:
-    - docker
-    - linux
-    - metal
-  except:
-    - tags
-  only:
-    - main
-    - merge_requests
-  cache:
-    key: build-cache-$CI_COMMIT_REF_SLUG
-    paths:
-      - cargo/
-      - target/
-    policy: push
-  script:
-    - cargo make build
-
-x86_64 linux bindings:
+x86_64 linux build:
   stage: Build
   tags:
     - docker
@@ -59,7 +42,27 @@ x86_64 linux bindings:
       - target/
     policy: push
   script:
-    - cargo build --features bindings --target x86_64-unknown-linux-gnu
+    - cargo make build
+
+x86_64 bindings build:
+  stage: Build
+  tags:
+    - docker
+    - linux
+    - metal
+  except:
+    - tags
+  only:
+    - main
+    - merge_requests
+  cache:
+    key: x86_64-bindings-build-cache-$CI_COMMIT_REF_SLUG
+    paths:
+      - cargo/
+      - target/
+    policy: push
+  script:
+    - cargo make --no-workspace bindings-linux
 
 ###############
 # STAGE: Test
@@ -105,12 +108,16 @@ cargo test:
 
 cargo clippy (lint):
   stage: Test
+  needs: ['x86_64 linux build']
   tags:
     - docker
     - linux
     - metal
   cache:
-    key: build-cache-$CI_COMMIT_REF_SLUG
+    key: x86_64-linux-build-cache-$CI_COMMIT_REF_SLUG
+    paths:
+      - cargo/
+      - target/
     policy: pull
   except:
     - tags
@@ -138,12 +145,16 @@ cargo fmt (format):
 
 cargo audit:
   stage: Test
+  needs: ['x86_64 linux build']
   tags:
     - docker
     - linux
     - metal
   cache:
-    key: build-cache-$CI_COMMIT_REF_SLUG
+    key: x86_64-linux-build-cache-$CI_COMMIT_REF_SLUG
+    paths:
+      - cargo/
+      - target/
     policy: pull
   except:
     - tags
@@ -151,7 +162,7 @@ cargo audit:
     - main
     - merge_requests
   script:
-    - cargo audit
+    - cargo make audit
 
 ###############
 # STAGE: Bridges
@@ -162,7 +173,7 @@ cargo audit:
 # Windows libraries are not generated in this stage as we do not plan to support more than one
 # (ie. C#) binding for pc-windows target and thus, the libraries would not be reusable.
 
-x86_64_linux:
+x86_64_linux ffi:
   stage: Bridges
   tags:
     - docker
@@ -171,11 +182,16 @@ x86_64_linux:
   script:
     - bash docker/base.sh
   cache:
-    key: lib-x86_64-linux-gnu-$CI_PIPELINE_ID
-    paths:
-      - ffi_build/
-      - ffi_tests/
-    policy: push
+    - key: x86_64-bindings-build-cache-$CI_COMMIT_REF_SLUG
+      paths:
+        - cargo/
+        - target/
+      policy: pull
+    - key: lib-x86_64-linux-gnu-$CI_PIPELINE_ID
+      paths:
+        - ffi_build/
+        - ffi_tests/
+      policy: push
   only:
     - main
     - merge_requests
@@ -233,7 +249,7 @@ apple:
 
 csharp x86_64 linux:
   stage: Bindings
-  needs: ['x86_64_linux']
+  needs: ['x86_64_linux ffi']
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
@@ -261,7 +277,7 @@ csharp x86_64 linux:
 
 webassembly emscripten linux:
   stage: Bindings
-  needs: ['cargo test']
+  needs: ['cargo test', 'x86_64 linux build']
   script:
     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
