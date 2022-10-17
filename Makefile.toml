@@ -2,3 +2,13 @@
 install_crate = "clippy"
 command = "cargo"
 args = ["clippy", "--all-targets", "--", "-D", "warnings"]
+
+[tasks.bindings-linux]
+description = "Build Cargo bindings for x86_64 linux"
+command = 'cargo'
+args = [
+	'build',
+	'--package',  'wildland-cargo-lib',
+	'--features', 'bindings',
+	'--target',   'x86_64-unknown-linux-gnu'
+]
