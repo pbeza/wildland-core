@@ -1,4 +1,4 @@
-use super::{ErrDomain, ExceptionTrait, WildlandXDomain};
+use super::ExceptionTrait;
 use std::fmt::Display;
 
 pub type RetrievalResult<T, E> = Result<T, RetrievalError<E>>;
@@ -9,18 +9,11 @@ pub enum RetrievalError<E: Clone> {
     Unexpected(E),
 }
 
-impl<E: Display + Clone + ErrDomain> ExceptionTrait for RetrievalError<E> {
+impl<E: Display + Clone> ExceptionTrait for RetrievalError<E> {
     fn reason(&self) -> String {
         match self {
             RetrievalError::NotFound(s) => s.to_string(),
             RetrievalError::Unexpected(e) => e.to_string(),
-        }
-    }
-
-    fn domain(&self) -> WildlandXDomain {
-        match self {
-            RetrievalError::NotFound(_) => WildlandXDomain::CargoUser,
-            RetrievalError::Unexpected(e) => e.domain(),
         }
     }
 }
