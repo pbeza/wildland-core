@@ -78,9 +78,8 @@ impl TryFrom<&MnemonicPhrase> for Identity {
     /// Only English language is accepted.
     #[tracing::instrument(level = "debug")]
     fn try_from(mnemonic_phrase: &MnemonicPhrase) -> Result<Self, Self::Error> {
-        let mnemonic =
-            Mnemonic::from_phrase(&mnemonic_phrase.join(" "), English) // TODO WILX-220 Memory leak
-                .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?;
+        let mnemonic = Mnemonic::from_phrase(&mnemonic_phrase.join(" "), English)
+            .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?;
 
         Self::from_mnemonic(mnemonic)
     }
