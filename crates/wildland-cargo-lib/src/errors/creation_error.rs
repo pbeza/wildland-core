@@ -1,4 +1,4 @@
-use super::{ErrDomain, ExceptionTrait, WildlandXDomain};
+use super::ExceptionTrait;
 use std::fmt::Display;
 
 pub type SingleErrVariantResult<T, E> = Result<T, SingleVariantError<E>>;
@@ -8,16 +8,10 @@ pub enum SingleVariantError<T: Clone> {
     Failure(T),
 }
 
-impl<E: Display + Clone + ErrDomain> ExceptionTrait for SingleVariantError<E> {
+impl<E: Display + Clone> ExceptionTrait for SingleVariantError<E> {
     fn reason(&self) -> String {
         match self {
             Self::Failure(e) => e.to_string(),
-        }
-    }
-
-    fn domain(&self) -> WildlandXDomain {
-        match self {
-            SingleVariantError::Failure(e) => e.domain(),
         }
     }
 }
