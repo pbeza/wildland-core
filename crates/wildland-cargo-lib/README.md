@@ -1,6 +1,6 @@
 # Wildland Cargo Lib
-TODO:WILX-207
 
+High level interface for the Cargo clients. It is built on top of the Wildland CoreX library and provides Cargo specific abstractions like "user", "device" or "sharing logic".
 
 ## Bindings
 Wildland Cargo Lib support bindings for the following languages:
