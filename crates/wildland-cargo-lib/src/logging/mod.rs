@@ -15,10 +15,8 @@ pub(crate) fn init_subscriber(log_level: Level, log_file: Option<String>) -> Res
 
 pub fn default_with_file_copy(log_level: tracing::Level, filename: String, is_ansi: bool) {
     let file_appender = tracing_appender::rolling::hourly(".", filename);
-    // let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     let subscriber = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env().add_directive(log_level.into()))
-        // .with(fmt::Layer::new().with_ansi(is_ansi).with_writer(file_appender.and(std::io::stderr)));
         .with(
             fmt::Layer::new()
                 .with_ansi(false)
