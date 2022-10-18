@@ -177,7 +177,7 @@ int main()
 
     try
     {
-        MnemonicPayload mnemonic = user_api.generate_mnemonic(); // TODO WILX-220 MEMLEAK
+        MnemonicPayload mnemonic = user_api.generate_mnemonic();
         std::string mnemonic_str = mnemonic.get_string().to_string();
         std::cout << "Generated mnemonic: " << mnemonic_str << std::endl;
 
@@ -191,7 +191,7 @@ int main()
 
         try
         {
-            user_api.create_user_from_mnemonic(mnemonic, device_name); // TODO WILX-220 MEMLEAK
+            user_api.create_user_from_mnemonic(mnemonic, device_name);
             std::cout << "User successfully created from mnemonic\n";
 
             try

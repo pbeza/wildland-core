@@ -86,20 +86,8 @@ pub fn new_err_lss_usize(err_val: String) -> LssUsizeResult {
 
 #[binding_wrapper]
 mod ffi_binding {
-    enum WildlandXDomain {
-        ExternalServer,
-        CargoUser,
-        CargoConfig,
-        Crypto,
-        Catlib,
-        CoreX,
-        Dfs,
-        Lss,
-        ExternalLibError,
-    }
     extern "ExceptionTrait" {
         fn reason(&self) -> String;
-        fn domain(&self) -> WildlandXDomain;
     }
     enum UserRetrievalExc {
         NotFound(_),

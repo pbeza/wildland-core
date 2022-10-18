@@ -115,8 +115,6 @@ pub fn create_cargo_lib(
     lss: &'static dyn LocalSecureStorage,
     cfg: CargoConfig,
 ) -> SingleErrVariantResult<SharedCargoLib, CargoLibCreationError> {
-    // TODO WILX-219 Memory leak
-
     if !INITIALIZED.load(Ordering::Relaxed) {
         INITIALIZED.store(true, Ordering::Relaxed);
 
