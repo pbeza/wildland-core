@@ -39,3 +39,9 @@ In case user wishes to change its default name, can be steered by changing
 default to `corex.log.<datetime>.`
 
 In addition, file-based logs will rotate each hour by default.
+
+## Examples
+
+### WASM
+
+WASM example project can be found in [this directory](./tests/ffi/wasm/) and it's readme file is located [here](./tests/ffi/wasm/README.md).
