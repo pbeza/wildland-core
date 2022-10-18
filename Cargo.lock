@@ -1417,18 +1417,18 @@ dependencies = [
 
 [[package]]
 name = "rusty-bind"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "6c24e027b347fe3bf1ba3ffb910d8a1ed570317f3944cd791f3975f89742bf12"
+checksum = "d73ab100b325b2e50fe1c9cdd9bf5185acdbd2d50ccd2a1c5b25cc30544fb97b"
 dependencies = [
  "rusty-bind-parser",
 ]
 
 [[package]]
 name = "rusty-bind-build"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "26c1d3634d9e8eda5f84a2177c4a26869016f10600d1ab4e9a908f9cb507fb8e"
+checksum = "08b0eacbe3ae909492cd1f4ac61d0762b04494761fcc6c42e734a2ee595c0769"
 dependencies = [
  "rusty-bind-parser",
  "syn",
@@ -1436,9 +1436,9 @@ dependencies = [
 
 [[package]]
 name = "rusty-bind-parser"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "e713d5ba61f3b231ee07a11af4efd13cbe4c922d6c7e36f74c554d7fa99098b4"
+checksum = "404cee963a305689b01d6b24178037fefc170fc422695d52220e50e0fd75c97f"
 dependencies = [
  "const_format",
  "convert_case",
