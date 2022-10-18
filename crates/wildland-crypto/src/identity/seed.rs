@@ -28,7 +28,6 @@ use sha2::Sha256;
 /// Generate a new random mnemonic phrase
 #[tracing::instrument(level = "debug", ret)]
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
-    // TODO WILX-220 Memory leak
     Mnemonic::new(
         MnemonicType::for_word_count(MNEMONIC_LEN)
             .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?,

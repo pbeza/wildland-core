@@ -3,75 +3,166 @@ image: registry.gitlab.com/wildland/corex/wildland-core/builder:latest
 variables:
   CARGO_FLAGS: ""
   CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE: 'true'
+  CARGO_HOME: $CI_PROJECT_DIR/cargo
+  CACHE_COMPRESSION_LEVEL: 'fastest'
+  FF_USE_FASTZIP: 'true'
+  GIT_STRATEGY: 'clone'
 
 stages:
-  - Test
   - Build
+  - Test
   - Bridges
   - Bindings
   - Deploy
+
+###############
+# STAGE: Build
+# This stage generates build artifacts which are used as a cache for further stages jobs.
+# Jobs in this stage will run in parallel with some tests which do not dependant on those artifacts.
+#
+# The bindings build is a sanity build check. Its purpose is to ensure that the project
+# compiles before moving to the Bridges stage which **much** more resource intensive due
+# to parallel build of multiple targets.
+#
+x86_64 linux build:
+  stage: Build
+  tags:
+    - docker
+    - linux
+    - metal
+  except:
+    - tags
+  only:
+    - main
+    - merge_requests
+  cache:
+    key: x86_64-linux-build-cache-$CI_COMMIT_REF_SLUG
+    paths:
+      - cargo/
+      - target/
+    policy: push
+  script:
+    - cargo make build
+
+x86_64 bindings build:
+  stage: Build
+  tags:
+    - docker
+    - linux
+    - metal
+  except:
+    - tags
+  only:
+    - main
+    - merge_requests
+  cache:
+    key: x86_64-bindings-build-cache-$CI_COMMIT_REF_SLUG
+    paths:
+      - cargo/
+      - target/
+    policy: push
+  script:
+    - cargo make --no-workspace bindings-linux
 
 ###############
 # STAGE: Test
 #
 # This stage contains code sanity checks as well as automated tests.
 
-###############
-# temporarily disabled since it does not really work as intended
-###############
-#cargo versions bump:
-#  stage: Test
-#  script:
-#    # Check if cargo workspaced changed returns an empty list.
-#    # If it doesn't, it means that most likely you forgot to run ./bump.sh
-#    - gem install semantic
-#    - ruby docker/scripts/check_cargo_versions.rb || EXIT_CODE=$?
-#    - exit $EXIT_CODE
-#  rules:
-#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-#    - if: $CI_COMMIT_BRANCH == "main"
-#  allow_failure:
-#    exit_codes: 42
+cargo versions bump:
+  stage: Test
+  tags:
+    - docker
+    - linux
+    - metal
+  needs: []
+  cache:
+    key: build-cache-$CI_COMMIT_REF_SLUG
+    policy: push
+  script:
+    # Check if cargo workspaced changed returns an empty list.
+    # If it doesn't, it means that most likely you forgot to run ./bump.sh
+    - gem install semantic
+    - ruby docker/scripts/check_cargo_versions.rb || EXIT_CODE=$?
+    - exit $EXIT_CODE
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - if: $CI_COMMIT_BRANCH == "main"
+  allow_failure:
+    exit_codes: 42
 
 cargo test:
   stage: Test
+  tags:
+    - docker
+    - linux
+    - metal
+  needs: []
   except:
     - tags
   only:
     - main
     - merge_requests
   script:
-    - rustup component add rustfmt clippy
-    - cargo $CARGO_FLAGS fmt -- --check
-    - cargo $CARGO_FLAGS test --verbose
-    - cargo $CARGO_FLAGS clippy --all-targets -- -D warnings
-    - cargo $CARGO_FLAGS install cargo-audit
-    - cargo $CARGO_FLAGS audit
-  only:
-    changes:
-      - Dockerfile
-      - docker/scripts/*
-      - dockerfiles/**/*
-      - more_scripts/*.{rb,py,sh}
+    - cargo make test
 
-###############
-# STAGE: Build
-#
-# This stage is a sanity check for cargo build commands.
-# Although this stage does not generate any artifacts, its purpose is to ensure that the project
-# compiles before moving to the next, much more resource intensive (due to parallel execution)
-# stage.
-
-pre-build:
-  stage: Build
+cargo clippy (lint):
+  stage: Test
+  needs: ['x86_64 linux build']
+  tags:
+    - docker
+    - linux
+    - metal
+  cache:
+    key: x86_64-linux-build-cache-$CI_COMMIT_REF_SLUG
+    paths:
+      - cargo/
+      - target/
+    policy: pull
   except:
     - tags
   only:
     - main
     - merge_requests
   script:
-    - cargo $CARGO_FLAGS build
-    - cargo build --features "bindings"
+    - cargo make clippy
+
+cargo fmt (format):
+  stage: Test
+  tags:
+    - docker
+    - linux
+    - metal
+  needs: []
+  except:
+    - tags
+  only:
+    - main
+    - merge_requests
+  script:
+    - rustup component add rustfmt
+    - cargo fmt -- --check
+
+cargo audit:
+  stage: Test
+  needs: ['x86_64 linux build']
+  tags:
+    - docker
+    - linux
+    - metal
+  cache:
+    key: x86_64-linux-build-cache-$CI_COMMIT_REF_SLUG
+    paths:
+      - cargo/
+      - target/
+    policy: pull
+  except:
+    - tags
+  only:
+    - main
+    - merge_requests
+  script:
+    - cargo make audit
 
 ###############
 # STAGE: Bridges
@@ -82,41 +173,28 @@ pre-build:
 # Windows libraries are not generated in this stage as we do not plan to support more than one
 # (ie. C#) binding for pc-windows target and thus, the libraries would not be reusable.
 
-x86_64_linux:
+x86_64_linux ffi:
   stage: Bridges
-  image:
-    name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [""]
-  script:
-    - mkdir -p /kaniko/.docker
-    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-    - >-
-      /kaniko/executor
-      --context "${CI_PROJECT_DIR}"
-      --dockerfile "${CI_PROJECT_DIR}/docker/Dockerfile.base"
-      --no-push
-      --build-arg BUILD_TARGET=x86_64-unknown-linux-gnu
-      --single-snapshot
-      --snapshotMode time
-    - mv /ffi_build ${CI_PROJECT_DIR}
-    - mv /ffi_tests ${CI_PROJECT_DIR}
-  cache:
-    key: lib-x86_64-linux-gnu-$CI_PIPELINE_ID
-    paths:
-      - ffi_build/
-      - ffi_tests/
-    policy: push
   tags:
     - docker
     - linux
-    - x64
-  rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
-      when: manual
-      allow_failure: true
-
+    - metal
+  script:
+    - bash docker/base.sh
+  cache:
+    - key: x86_64-bindings-build-cache-$CI_COMMIT_REF_SLUG
+      paths:
+        - cargo/
+        - target/
+      policy: pull
+    - key: lib-x86_64-linux-gnu-$CI_PIPELINE_ID
+      paths:
+        - ffi_build/
+        - ffi_tests/
+      policy: push
+  only:
+    - main
+    - merge_requests
 
 apple:
   stage: Bridges
@@ -134,7 +212,6 @@ apple:
   artifacts:
     paths:
       - wildlandx_macos.build/out_dir/wildlandx.xcframework.zip
-
 
 ################
 # STAGE: Bindings
@@ -172,6 +249,7 @@ apple:
 
 csharp x86_64 linux:
   stage: Bindings
+  needs: ['x86_64_linux ffi']
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
@@ -192,14 +270,14 @@ csharp x86_64 linux:
   tags:
     - docker
     - linux
-    - x64
-  rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_COMMIT_BRANCH == "main"
-      when: manual
-      allow_failure: true
+    - metal
+  only:
+    - main
+    - merge_requests
 
 webassembly emscripten linux:
   stage: Bindings
+  needs: ['cargo test', 'x86_64 linux build']
   script:
     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
@@ -213,11 +291,10 @@ webassembly emscripten linux:
   tags:
     - docker
     - linux
-    - x64
-  rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_COMMIT_BRANCH == "main"
-      when: manual
-      allow_failure: true
+    - metal
+  only:
+    - main
+    - merge_requests
 
 ###############
 # STAGE: Deploy
@@ -226,6 +303,10 @@ webassembly emscripten linux:
 
 publish crates:
   stage: Deploy
+  tags:
+    - docker
+    - linux
+    - metal
   except:
     - tags
     - docs/*
@@ -245,10 +326,13 @@ publish crates:
     # Specifying registry is required (bug: https://github.com/crate-ci/cargo-release/issues/429)
     - RUST_LOG=debug cargo $CARGO_FLAGS release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release
 
-
 pages-create:
   image: registry.gitlab.com/wildland/corex/wildland-core/esv_mdbook:0.3.2
   stage: Deploy
+  tags:
+    - docker
+    - linux
+    - metal
   script:
     - mdbook build
     - cargo doc --target-dir public/lld/
@@ -259,11 +343,14 @@ pages-create:
   only:
   - main
 
-
 pages-publish:
   image: google/cloud-sdk
   stage: Deploy
-  dependencies: 
+  tags:
+    - docker
+    - linux
+    - metal
+  dependencies:
     - pages-create
   script:
     - echo -n $DOCS_WILDLAND_GCS_UPLOADER_KEY | base64 -d > /credentials.json
