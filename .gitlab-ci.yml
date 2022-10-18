@@ -346,6 +346,7 @@ pages-create:
 pages-publish:
   image: google/cloud-sdk
   stage: Deploy
+  when: manual
   tags:
     - docker
     - linux
