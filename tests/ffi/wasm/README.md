@@ -19,6 +19,8 @@ Run `./build_wasm.sh` command in directory of this *README.md* file. This script
 
 Example usage of wasm package is shown in the [`wasm_test.js`](./wasm_test.js) file which can be run with command `node wasm_test.js`.
 
+Technical docs of Rust CargoLib content can be found [here](https://docs.wildland.dev/lld/doc/wildland_cargo_lib/index.html).
+
 Expected sample output:
 
 ```bash
