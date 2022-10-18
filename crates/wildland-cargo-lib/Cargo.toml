@@ -35,9 +35,6 @@ tracing              = { version = "0.1" }
 tracing-appender     = { version = "0.2" }
 tracing-attributes   = { version = "0.1" }
 tracing-core         = { version = "0.1" }
-tracing-error        = { version = "0.2" }
-tracing-futures      = { version = "0.2", features = ["futures-01"] }
-tracing-journald     = { version = "0.3" }
 tracing-log          = { version = "0.1", features = ["env_logger"] }
 tracing-subscriber   = { version = "0.3", features = ["json", "env-filter", "fmt", "std", "registry"] }
 uuid                 = { version = "1.2", features = ["serde"] }
