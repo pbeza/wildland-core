@@ -9,7 +9,7 @@ license     = "GPL-3.0-only"
 name        = "wildland-cargo-lib"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.16.1"
+version     = "0.17.0"
 
 
 [features]
@@ -24,7 +24,7 @@ crate-type = ["staticlib", "lib"]
 anyhow             = { version = "1.0" }
 env_logger         = { version = "0.9" }
 log                = { version = "0.4" }
-rusty-bind         = { version = "0.2.1", registry = "wl-dev", optional = true }
+rusty-bind         = { version = "0.3.0", registry = "wl-dev", optional = true }
 serde              = { version = "1.0", features = ["derive"] }
 serde_json         = { version = "1.0" }
 sha2               = { version = "0.10" }
@@ -42,7 +42,7 @@ wildland-corex     = { version = "0.7.0", path = "../wildland-corex", registry =
 independent = true
 
 [build-dependencies]
-rusty-bind-build = { version = "0.1.2", registry = "wl-dev", optional = true }
+rusty-bind-build = { version = "0.1.3", registry = "wl-dev", optional = true }
 
 [dev-dependencies]
 hex-literal = { version = "0.3.4" }
