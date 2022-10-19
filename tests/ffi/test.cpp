@@ -169,7 +169,7 @@ int main()
 
             try
             {
-                UserPayload user = user_api.get_user();
+                CargoUser user = user_api.get_user();
                 std::cout << "User: " << user.get_string().to_string() << std::endl;
             }
             catch (const UserRetrievalExc_NotFoundException &e)

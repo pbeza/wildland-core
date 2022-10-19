@@ -50,8 +50,8 @@
 //! # use wildland_catlib::CatLib;
 //! # use std::collections::HashSet;
 //! # use crate::wildland_catlib::*;
-//! let forest_owner = b"alice".to_vec();
-//! let signer = b"bob".to_vec();
+//! let forest_owner = Identity([1; 32]);
+//! let signer = Identity([2; 32]);
 //!
 //! let catlib = CatLib::default();
 //! let forest = catlib.create_forest(
@@ -88,7 +88,7 @@ use uuid::Uuid;
 
 mod bridge;
 mod container;
-mod contracts;
+pub mod contracts;
 mod db;
 mod error;
 mod forest;
@@ -129,11 +129,11 @@ impl CatLib {
     /// ## Example
     ///
     /// ```rust
-    /// # use wildland_catlib::CatLib;
+    /// # use wildland_catlib::{CatLib, Identity};
     /// # use std::collections::HashSet;
     /// # use crate::wildland_catlib::IForest;
-    /// let forest_owner = b"alice".to_vec();
-    /// let signer = b"bob".to_vec();
+    /// let forest_owner = Identity([1; 32]);
+    /// let signer = Identity([2; 32]);
     ///
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(

@@ -1,11 +1,11 @@
 use crate::{
     errors::{
         RetrievalError, RetrievalResult, SingleErrVariantResult, SingleVariantError,
-        UserCreationError,
+        UserCreationError, UserRetrievalError,
     },
     user::{generate_random_mnemonic, CreateUserInput, UserService},
 };
-use wildland_corex::{CryptoError, ForestRetrievalError, MnemonicPhrase};
+use wildland_corex::{CryptoError, MnemonicPhrase};
 
 #[derive(Debug, Clone)]
 pub struct MnemonicPayload(MnemonicPhrase);
@@ -30,12 +30,30 @@ impl From<MnemonicPhrase> for MnemonicPayload {
 }
 
 #[derive(Clone, Debug)]
-pub struct UserPayload;
+pub struct CargoUser {
+    pub this_device: String,
+    pub all_devices: Vec<String>,
+}
 
-impl UserPayload {
+impl CargoUser {
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn get_string(&self) -> String {
-        "User Payload".to_string()
+        let CargoUser {
+            this_device,
+            all_devices,
+        } = &self;
+        let all_devices_str = all_devices
+            .iter()
+            .map(|d| format!("    {d}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!(
+            "
+This device: {this_device}
+All devices:
+{all_devices_str}
+"
+        )
     }
 }
 
@@ -100,16 +118,15 @@ impl UserApi {
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn get_user(&self) -> RetrievalResult<UserPayload, ForestRetrievalError> {
-        self.user_service
-            .user_exists()
-            .map_err(RetrievalError::Unexpected)
-            .and_then(|exist| {
-                if exist {
-                    Ok(UserPayload)
-                } else {
-                    Err(RetrievalError::NotFound("User not found.".to_string()))
-                }
-            })
+    pub fn get_user(&self) -> RetrievalResult<CargoUser, UserRetrievalError> {
+        tracing::debug!("getting user");
+        let user = self
+            .user_service
+            .get_user()
+            .map_err(RetrievalError::Unexpected)?;
+        match user {
+            Some(user) => Ok(user),
+            None => Err(RetrievalError::NotFound("User not found.".to_string())),
+        }
     }
 }

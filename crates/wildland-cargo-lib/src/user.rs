@@ -1,16 +1,13 @@
-use std::collections::HashMap;
+use std::str::FromStr;
 
-use crate::errors::UserCreationError;
+use crate::errors::UserRetrievalError;
+use crate::{api::user::CargoUser, errors::UserCreationError};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use wildland_corex::{
-    CatLibService, CryptoError, ForestRetrievalError, Identity, MasterIdentity, MnemonicPhrase,
-    PubKey,
+    CatLibService, CatlibError, CryptoError, Identity, MasterIdentity, MnemonicPhrase, PubKey,
 };
-
-#[cfg(test)]
-use crate::test_utils::MockLssService as LssService;
-#[cfg(not(test))]
-use wildland_corex::LssService;
+use wildland_corex::{IForest, LssError, LssService};
 
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     wildland_corex::generate_random_mnemonic()
@@ -21,15 +18,24 @@ pub enum CreateUserInput {
     Entropy(Vec<u8>),
 }
 
-// TODO move out
-
 #[derive(Serialize, Deserialize)]
 struct DeviceMetadata {
     name: String,
+    pubkey: PubKey,
 }
 #[derive(Serialize, Deserialize)]
 struct UserMetaData {
-    devices: HashMap<PubKey, DeviceMetadata>,
+    devices: Vec<DeviceMetadata>,
+}
+
+impl UserMetaData {
+    fn get_device_metadata(&self, device_pubkey: PubKey) -> Option<&DeviceMetadata> {
+        self.devices.iter().find(|d| d.pubkey == device_pubkey)
+    }
+
+    fn get_all_devices(&self) -> impl Iterator<Item = &DeviceMetadata> {
+        self.devices.iter()
+    }
 }
 
 #[derive(Clone)]
@@ -53,12 +59,11 @@ impl UserService {
         device_name: String,
     ) -> Result<(), UserCreationError> {
         log::trace!("Checking whether user exists.");
-        if self
-            .user_exists()
-            .map_err(UserCreationError::ForestRetrievalError)?
-        {
-            return Err(UserCreationError::UserAlreadyExists);
-        }
+        match self.get_user() {
+            Ok(_) => return Err(UserCreationError::UserAlreadyExists),
+            Err(UserRetrievalError::ForestNotFound) => Ok(()),
+            Err(e) => Err(UserCreationError::UserRetrievalError(e)),
+        }?;
         log::trace!("User does not exist yet");
         let crypto_identity = match input {
             CreateUserInput::Mnemonic(mnemonic) => Identity::try_from(mnemonic.as_ref())?,
@@ -70,175 +75,78 @@ impl UserService {
             .map_err(UserCreationError::ForestIdentityCreationError)?;
         let device_identity = master_identity.create_device_identity(device_name.clone());
 
-        self.catlib_service.add_forest(
+        let forest = self.catlib_service.add_forest(
             &default_forest_identity,
             &device_identity,
             UserMetaData {
-                devices: HashMap::from([(
-                    device_identity.get_public_key(),
-                    DeviceMetadata { name: device_name },
-                )]),
+                devices: vec![DeviceMetadata {
+                    name: device_name,
+                    pubkey: device_identity.get_public_key(),
+                }],
             },
-        );
+        )?;
 
-        self.lss_service.save(default_forest_identity)?;
-        self.lss_service.save(device_identity)?;
+        self.lss_service.save_forest_uuid(&forest)?;
+
+        self.lss_service.save(&default_forest_identity)?;
+        self.lss_service.save(&device_identity)?;
 
         Ok(())
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn user_exists(&self) -> Result<bool, ForestRetrievalError> {
-        self.lss_service
-            .get_default_forest()
-            .map(|forest| forest.is_some())
-    }
-}
+    pub fn get_user(&self) -> Result<Option<CargoUser>, UserRetrievalError> {
+        let default_forest_uuid = self.get_default_forest_uuid()?;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use hex_literal::hex;
-    use wildland_corex::{SigningKeypair, WildlandIdentity, DEFAULT_FOREST_KEY};
+        match self.catlib_service.get_forest(default_forest_uuid) {
+            Ok(forest) => {
+                let user_metadata: UserMetaData =
+                    serde_json::from_slice(&forest.data()).map_err(|e| {
+                        CatlibError::Generic(format!(
+                            "Could not parse forest data retrieved from Catlib: {e}"
+                        ))
+                    })?;
 
-    pub static SIGNING_PUBLIC_KEY: &str =
-        "1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f";
-    pub static SIGNING_SECRET_KEY: &str =
-        "e02cdfa23ad7d94508108ad41410e556c5b0737e9c264d4a2304a7a45894fc57";
+                let device_identity = self
+                    .lss_service
+                    .get_this_device_identity()?
+                    .ok_or(UserRetrievalError::DeviceMetadataNotFound)?;
 
-    pub fn create_signing_keypair() -> SigningKeypair {
-        SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap()
-    }
-
-    pub fn create_wildland_forest_identity() -> WildlandIdentity {
-        WildlandIdentity::Forest(0, create_signing_keypair())
-    }
-
-    #[test]
-    fn generated_mnemonic_has_proper_length() {
-        let mnemonic = generate_random_mnemonic().unwrap();
-        assert_eq!(mnemonic.len(), 12);
-    }
-
-    #[test]
-    fn should_not_create_user_when_it_already_exists() {
-        // given
-        let forest_wildland_identity = create_wildland_forest_identity();
-        let mut lss_service_mock = LssService::default();
-        lss_service_mock
-            .expect_get_default_forest()
-            .return_once(|| Ok(Some(forest_wildland_identity)));
-        let user_service = UserService::new(lss_service_mock);
-
-        // when
-        let result =
-            user_service.create_user(CreateUserInput::Entropy(vec![]), "My Mac".to_string());
-
-        // then
-        assert_eq!(result.unwrap_err(), UserCreationError::UserAlreadyExists);
+                match user_metadata.get_device_metadata(device_identity.get_public_key()) {
+                    Some(device_metadata) => Ok(Some(CargoUser {
+                        this_device: device_metadata.name.clone(),
+                        all_devices: user_metadata
+                            .get_all_devices()
+                            .map(|dm| dm.name.clone())
+                            .collect(),
+                    })),
+                    None => Err(UserRetrievalError::DeviceMetadataNotFound),
+                }
+            }
+            Err(CatlibError::NoRecordsFound) => Ok(None),
+            Err(err) => Err(UserRetrievalError::CatlibError(err)),
+        }
     }
 
-    #[test]
-    fn should_create_user_from_entropy() {
-        // given
-        let entropy = hex!(
-            "
-            65426aa1176159d1929caea10514cddd
-            d11235741001f125922f258a58716b58
-            da63e3060fe461fe37e4ed201d76b132
-            e35830929b0f4764e577d3da09ecb6d2
-            12
-        "
-        );
+    fn get_default_forest_uuid(&self) -> Result<Uuid, UserRetrievalError> {
+        let forest_identity = self
+            .lss_service
+            .get_default_forest()?
+            .ok_or(UserRetrievalError::ForestNotFound)?;
 
-        let mut lss_service_mock = LssService::default();
-        lss_service_mock
-            .expect_get_default_forest()
-            .return_once(|| Ok(None));
-        lss_service_mock
-            .expect_save()
-            .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.to_string() == DEFAULT_FOREST_KEY
-            })
-            .returning(|_| Ok(None));
-        lss_service_mock
-            .expect_save()
-            .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.to_string() == "wildland.device.My Mac"
-            })
-            .returning(|_| Ok(None));
-        let user_service = UserService::new(lss_service_mock);
-
-        // when
-        let result = user_service.create_user(
-            CreateUserInput::Entropy(entropy.to_vec()),
-            "My Mac".to_string(),
-        );
-
-        // then
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn should_create_user_from_mnemonic() {
-        // given
-        let mnemonic: MnemonicPhrase = [
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "about".to_string(),
-        ];
-
-        let mut lss_service_mock = LssService::default();
-        lss_service_mock
-            .expect_get_default_forest()
-            .return_once(|| Ok(None));
-        lss_service_mock
-            .expect_save()
-            .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.to_string() == DEFAULT_FOREST_KEY
-            })
-            .returning(|_| Ok(None));
-        lss_service_mock
-            .expect_save()
-            .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.to_string() == "wildland.device.My Mac"
-            })
-            .returning(|_| Ok(None));
-        let user_service = UserService::new(lss_service_mock);
-
-        // when
-        let result = user_service.create_user(
-            CreateUserInput::Mnemonic(Box::new(mnemonic)),
-            "My Mac".to_string(),
-        );
-
-        // then
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn should_return_true_if_user_exists() {
-        // given
-        let forest_wildland_identity = create_wildland_forest_identity();
-        let mut lss_service_mock = LssService::default();
-        lss_service_mock
-            .expect_get_default_forest()
-            .return_once(|| Ok(Some(forest_wildland_identity)));
-        let user_service = UserService::new(lss_service_mock);
-
-        // when
-        let result = user_service.user_exists();
-
-        // then
-        assert!(result.unwrap());
+        let forest_uuid_bytes = self
+            .lss_service
+            .get_forest_uuid_by_identity(&forest_identity)?
+            .ok_or(UserRetrievalError::ForestNotFound)?;
+        let forest_uuid_string = String::from_utf8(forest_uuid_bytes).map_err(|e| {
+            LssError(format!(
+                "Invalid bytes of forest uuid retrieved from LSS: {e}"
+            ))
+        })?;
+        Ok(Uuid::from_str(forest_uuid_string.as_str()).map_err(|e| {
+            LssError(format!(
+                "Could not parse uuid from raw bytes retrieved from LSS: {e}"
+            ))
+        })?)
     }
 }

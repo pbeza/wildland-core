@@ -1,5 +1,3 @@
-#[cfg(test)]
-use crate::test_utils::MockLssService as LssService;
 use crate::{
     api::{config::CargoConfig, user::UserApi},
     errors::{SingleErrVariantResult, SingleVariantError},
@@ -14,9 +12,7 @@ use std::{
     },
 };
 use thiserror::Error;
-use wildland_corex::LocalSecureStorage;
-#[cfg(not(test))]
-use wildland_corex::LssService;
+use wildland_corex::{LocalSecureStorage, LssService};
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[error("CargoLib creation error: {0}")]

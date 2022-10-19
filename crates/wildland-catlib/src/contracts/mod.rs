@@ -102,8 +102,8 @@ pub trait IForest {
     /// # use crate::wildland_catlib::*;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
+    ///                  Identity([1; 32]),
+    ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
     /// let mut container = forest.create_container().unwrap();
@@ -128,8 +128,8 @@ pub trait IForest {
     /// # use crate::wildland_catlib::*;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
+    ///                  Identity([1; 32]),
+    ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
     /// forest.create_bridge("/other/forest".to_string(), vec![]);
@@ -205,8 +205,8 @@ pub trait IContainer {
     /// # use crate::wildland_catlib::*;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
+    ///                  Identity([1; 32]),
+    ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
     /// let mut container = forest.create_container().unwrap();
@@ -232,8 +232,8 @@ pub trait IContainer {
     /// # use crate::wildland_catlib::*;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
+    ///                  Identity([1; 32]),
+    ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
     /// let mut container = forest.create_container().unwrap();
@@ -270,8 +270,8 @@ pub trait IContainer {
     /// # use crate::wildland_catlib::*;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
+    ///                  Identity([1; 32]),
+    ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
     /// let mut container = forest.create_container().unwrap();

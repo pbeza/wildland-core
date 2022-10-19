@@ -104,7 +104,7 @@ mod tests {
     #[rstest]
     fn create_bridge(catlib: CatLib) {
         let forest = catlib
-            .create_forest(b"owner".to_vec(), Signers::new(), vec![])
+            .create_forest(Identity([1; 32]), Signers::new(), vec![])
             .unwrap();
 
         let mut bridge = forest

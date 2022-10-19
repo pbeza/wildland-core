@@ -1,11 +1,15 @@
 use super::{api::LocalSecureStorage, result::LssResult};
-use crate::{ForestRetrievalError, WildlandIdentity, DEFAULT_FOREST_KEY};
+use crate::{ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY};
+use wildland_catlib::{Forest, IForest, Identity};
 use wildland_crypto::identity::SigningKeypair;
 
 #[derive(Clone)]
 pub struct LssService {
     lss: &'static dyn LocalSecureStorage,
 }
+
+const THIS_DEVICE_KEYPAIR_KEY: &str = "wildland.device.keypair";
+const THIS_DEVICE_NAME_KEY: &str = "wildland.device.name";
 
 impl LssService {
     pub fn new(lss: &'static dyn LocalSecureStorage) -> Self {
@@ -14,11 +18,49 @@ impl LssService {
     }
 
     #[tracing::instrument(level = "debug", skip(self, wildland_identity))]
-    pub fn save(&self, wildland_identity: WildlandIdentity) -> LssResult<Option<Vec<u8>>> {
-        self.lss.insert(
-            wildland_identity.to_string(),
-            wildland_identity.get_keypair_bytes(),
-        )
+    pub fn save(&self, wildland_identity: &WildlandIdentity) -> LssResult<Option<Vec<u8>>> {
+        let key = match wildland_identity {
+            WildlandIdentity::Forest(_, _) => wildland_identity.to_string(),
+            WildlandIdentity::Device(device_name, _) => {
+                self.lss.insert(
+                    THIS_DEVICE_NAME_KEY.to_string(),
+                    device_name.as_bytes().into(),
+                )?;
+                THIS_DEVICE_KEYPAIR_KEY.to_owned()
+            }
+        };
+        self.lss.insert(key, wildland_identity.get_keypair_bytes())
+    }
+
+    #[tracing::instrument(level = "debug", skip(self))]
+    pub fn get_this_device_name(&self) -> LssResult<Option<String>> {
+        self.lss
+            .get(THIS_DEVICE_NAME_KEY.to_owned())
+            .and_then(|optional_bytes| {
+                optional_bytes.map_or(Ok(None), |bytes| {
+                    let device_name = String::from_utf8(bytes).map_err(|e| {
+                        LssError(format!("Could not parse LSS entry as device keypair: {e}"))
+                    })?;
+                    Ok(Some(device_name))
+                })
+            })
+    }
+
+    #[tracing::instrument(level = "debug", skip(self))]
+    pub fn get_this_device_identity(&self) -> LssResult<Option<WildlandIdentity>> {
+        self.lss
+            .get(THIS_DEVICE_KEYPAIR_KEY.to_owned())
+            .and_then(|this_device_id| {
+                this_device_id.map_or(Ok(None), |this_device_id| {
+                    let device_keypair = SigningKeypair::try_from(this_device_id).map_err(|e| {
+                        LssError(format!("Could not parse LSS entry as device keypair: {e}"))
+                    })?;
+                    let device_name = self.get_this_device_name()?.ok_or_else(|| {
+                        LssError("Could not retrieve device name from LSS".to_owned())
+                    })?;
+                    Ok(Some(WildlandIdentity::Device(device_name, device_keypair)))
+                })
+            })
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
@@ -34,6 +76,21 @@ impl LssService {
                     Ok(Some(WildlandIdentity::Forest(0, signing_key)))
                 })
             })
+    }
+
+    #[tracing::instrument(level = "debug", skip(self, forest))]
+    pub fn save_forest_uuid(&self, forest: &Forest) -> LssResult<Option<Vec<u8>>> {
+        self.lss
+            .insert(forest.owner().encode(), forest.uuid().as_bytes().into())
+    }
+
+    #[tracing::instrument(level = "debug", skip(self, forest_identity))]
+    pub fn get_forest_uuid_by_identity(
+        &self,
+        forest_identity: &WildlandIdentity,
+    ) -> LssResult<Option<Vec<u8>>> {
+        self.lss
+            .get(Identity::from(forest_identity.get_public_key()).encode())
     }
 }
 
@@ -71,7 +128,7 @@ mod tests {
         let lss_service = LssService::new(lss_mock_static_ref);
 
         // when
-        let result = lss_service.save(wildland_identity).unwrap();
+        let result = lss_service.save(&wildland_identity).unwrap();
 
         // then
         assert!(result.is_none())

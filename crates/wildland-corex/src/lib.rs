@@ -7,6 +7,7 @@ pub use catlib_service::*;
 pub use error::*;
 pub use identity::{master::*, wildland::*};
 pub use lss::*;
+pub use wildland_catlib::{contracts::*, CatlibError, Forest};
 pub use wildland_crypto::{
     error::CryptoError,
     identity::{

@@ -1,5 +1,7 @@
 use thiserror::Error;
-use wildland_corex::{CryptoError, ForestIdentityCreationError, ForestRetrievalError, LssError};
+use wildland_corex::{
+    CatlibError, CryptoError, ForestIdentityCreationError, ForestRetrievalError, LssError,
+};
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum UserCreationError {
@@ -9,14 +11,16 @@ pub enum UserCreationError {
     MnemonicGenerationError(CryptoError),
     #[error("Identity generation error: {0}")]
     IdentityGenerationError(CryptoError),
-    #[error("Could not retrieve user's forest: {0}")]
-    ForestRetrievalError(ForestRetrievalError),
+    #[error("Could not check if user already exists: {0}")]
+    UserRetrievalError(UserRetrievalError),
     #[error("Could not create a new forest identity: {0}")]
     ForestIdentityCreationError(ForestIdentityCreationError),
     #[error(transparent)]
     LssError(#[from] LssError),
     #[error("Too low entropy")]
     EntropyTooLow,
+    #[error("Generic error: {0}")]
+    CatlibError(String),
 }
 
 impl From<CryptoError> for UserCreationError {
@@ -35,4 +39,29 @@ impl From<CryptoError> for UserCreationError {
             ),
         }
     }
+}
+
+impl From<CatlibError> for UserCreationError {
+    fn from(catlib_err: CatlibError) -> Self {
+        match catlib_err {
+            CatlibError::NoRecordsFound
+            | CatlibError::MalformedDatabaseEntry
+            | CatlibError::Generic(_) => UserCreationError::CatlibError(catlib_err.to_string()),
+            CatlibError::RecordAlreadyExists => UserCreationError::UserAlreadyExists,
+        }
+    }
+}
+
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
+pub enum UserRetrievalError {
+    #[error(transparent)]
+    ForestRetrievalError(#[from] ForestRetrievalError),
+    #[error("Default forest not found in LSS")]
+    ForestNotFound,
+    #[error(transparent)]
+    LssError(#[from] LssError),
+    #[error(transparent)]
+    CatlibError(#[from] CatlibError),
+    #[error("Metadata of this device has not been found in Forest")]
+    DeviceMetadataNotFound,
 }

@@ -2237,6 +2237,7 @@ dependencies = [
  "tracing-journald",
  "tracing-log",
  "tracing-subscriber",
+ "uuid",
  "wildland-corex",
 ]
 
@@ -2245,6 +2246,7 @@ name = "wildland-catlib"
 version = "0.5.5"
 dependencies = [
  "directories",
+ "hex",
  "mocktopus",
  "rand 0.8.5",
  "ron 0.8.0",
@@ -2269,6 +2271,7 @@ dependencies = [
  "sha2 0.10.6",
  "thiserror",
  "tracing",
+ "uuid",
  "wildland-catlib",
  "wildland-crypto",
  "wildland-dfs",

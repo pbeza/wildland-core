@@ -121,8 +121,8 @@ mod tests {
         // Create a dummy forest to which containers will be bound
         catlib
             .create_forest(
-                b"owner".to_vec(),
-                HashSet::from([b"signer".to_vec()]),
+                Identity([1; 32]),
+                HashSet::from([Identity([2; 32])]),
                 vec![],
             )
             .unwrap();
@@ -131,7 +131,7 @@ mod tests {
     }
 
     fn make_container(catlib: &CatLib) -> crate::container::Container {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
         forest.create_container().unwrap()
     }
@@ -141,7 +141,7 @@ mod tests {
         let container = make_container(&catlib);
         let container = catlib.get_container(container.uuid()).unwrap();
 
-        assert_eq!(container.forest().unwrap().owner(), b"owner");
+        assert_eq!(container.forest().unwrap().owner(), Identity([1; 32]));
     }
 
     #[rstest]
@@ -149,12 +149,12 @@ mod tests {
         let container = make_container(&catlib);
         let container = catlib.get_container(container.uuid()).unwrap();
 
-        assert_eq!(container.forest().unwrap().owner(), b"owner");
+        assert_eq!(container.forest().unwrap().owner(), Identity([1; 32]));
     }
 
     #[rstest]
     fn container_with_paths(catlib: CatLib) {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
         let mut container = make_container(&catlib);
         container.add_path("/foo/bar".to_string()).unwrap();
@@ -183,7 +183,7 @@ mod tests {
 
     #[rstest]
     fn multiple_containers_with_paths(catlib: CatLib) {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
         let mut container = make_container(&catlib);
         container.add_path("/foo/bar".to_string()).unwrap();
@@ -245,7 +245,7 @@ mod tests {
 
     #[rstest]
     fn multiple_containers_with_subpaths(catlib: CatLib) {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
         let mut container = make_container(&catlib);
         container.add_path("/foo/bar1".to_string()).unwrap();

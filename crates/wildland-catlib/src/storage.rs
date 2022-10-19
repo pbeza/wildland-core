@@ -112,8 +112,8 @@ mod tests {
         // Create a dummy forest and container to which storages will be bound
         catlib
             .create_forest(
-                b"owner".to_vec(),
-                HashSet::from([b"signer".to_vec()]),
+                Identity([1; 32]),
+                HashSet::from([Identity([2; 32])]),
                 vec![],
             )
             .unwrap();
@@ -122,7 +122,7 @@ mod tests {
     }
 
     fn _container(catlib: &CatLib) -> Container {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
         forest.create_container().unwrap()
     }
 

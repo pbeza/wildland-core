@@ -1,20 +1,14 @@
 use crate::{
-    api::{
-        cargo_lib::*,
-        config::*,
-        user::{MnemonicPayload, UserApi, UserPayload},
-    },
+    api::{cargo_lib::*, config::*, user::*},
     errors::*,
 };
 use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
-pub use wildland_corex::{
-    CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, LssResult,
-};
+pub use wildland_corex::{CoreXError, CryptoError, LocalSecureStorage, LssError, LssResult};
 
 type VoidType = ();
 
-pub type UserRetrievalExc = RetrievalError<ForestRetrievalError>;
+pub type UserRetrievalExc = RetrievalError<UserRetrievalError>;
 pub type MnemonicCreationExc = SingleVariantError<CryptoError>;
 pub type StringExc = SingleVariantError<String>; // Used for simple errors originating inside CargoLib (not in dependant modules)
 pub type UserCreationExc = SingleVariantError<UserCreationError>;
@@ -175,11 +169,11 @@ mod ffi_binding {
             mnemonic: &MnemonicPayload,
             device_name: String,
         ) -> Result<VoidType, UserCreationExc>;
-        fn get_user(self: &UserApi) -> Result<UserPayload, UserRetrievalExc>;
+        fn get_user(self: &UserApi) -> Result<CargoUser, UserRetrievalExc>;
 
         fn get_string(self: &MnemonicPayload) -> String;
         fn get_vec(self: &MnemonicPayload) -> Vec<String>;
 
-        fn get_string(self: &UserPayload) -> String;
+        fn get_string(self: &CargoUser) -> String;
     }
 }
