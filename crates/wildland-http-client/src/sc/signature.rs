@@ -52,8 +52,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn should_receive_signed_url() {
+    #[test]
+    fn should_receive_signed_url() {
         // given
         let request = SignatureRequestReq {
             credential_id: CREDENTIALS_ID.into(),

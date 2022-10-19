@@ -59,8 +59,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn storage_credentials_can_be_created() {
+    #[test]
+    fn storage_credentials_can_be_created() {
         // given
         let request = CreateCredentialsReq {
             credential_id: CREDENTIALS_ID.to_string(),

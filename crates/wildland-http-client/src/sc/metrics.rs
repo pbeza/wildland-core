@@ -61,8 +61,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn should_get_storage_metrics() {
+    #[test]
+    fn should_get_storage_metrics() {
         let request = RequestMetricsReq {
             credential_id: CREDENTIALS_ID.to_string(),
             timestamp: TIMESTAMP.to_string(),

@@ -38,8 +38,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn storage_can_be_created() {
+    #[test]
+    fn storage_can_be_created() {
         let m = mock("POST", "/storage/create")
             .with_body(
                 json!({

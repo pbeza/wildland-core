@@ -82,8 +82,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn should_confirm_token() {
+    #[test]
+    fn should_confirm_token() {
         // given
         let request = ConfirmTokenReq {
             email: EMAIL.into(),
@@ -100,8 +100,8 @@ mod tests {
         response.unwrap();
     }
 
-    #[tokio::test]
-    async fn should_get_storage() {
+    #[test]
+    fn should_get_storage() {
         // given
         let request = GetStorageReq {
             email: EMAIL.into(),
