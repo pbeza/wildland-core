@@ -1,5 +1,5 @@
 use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
-use reqwest::{Client, Error, Response};
+use minreq::{Error, Response};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,23 +21,20 @@ pub struct SignatureRequestRes {
 #[derive(Clone, Default, Debug)]
 pub(crate) struct SCSignatureClient {
     pub(crate) base_url: String,
-    pub(crate) client: Client,
 }
 
 impl SCSignatureClient {
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub(crate) async fn signature_request(
+    pub(crate) fn signature_request(
         &self,
         request: SignatureRequestReq,
         signature: &str,
     ) -> Result<Response, Error> {
         let url = format!("{}/signature/request", self.base_url);
-        self.client
-            .post(url)
-            .header(WILDLAND_SIGNATURE_HEADER, signature)
-            .json(&request)
+        minreq::post(url)
+            .with_header(WILDLAND_SIGNATURE_HEADER, signature)
+            .with_json(&request)?
             .send()
-            .await
     }
 }
 
@@ -52,12 +49,11 @@ mod tests {
     fn client() -> SCSignatureClient {
         SCSignatureClient {
             base_url: server_url(),
-            client: Client::new(),
         }
     }
 
-    #[tokio::test]
-    async fn should_receive_signed_url() {
+    #[test]
+    fn should_receive_signed_url() {
         // given
         let request = SignatureRequestReq {
             credential_id: CREDENTIALS_ID.into(),
@@ -73,10 +69,8 @@ mod tests {
         // when
         let response = client()
             .signature_request(request, SIGNATURE)
-            .await
             .unwrap()
             .json::<SignatureRequestRes>()
-            .await
             .unwrap();
 
         // then

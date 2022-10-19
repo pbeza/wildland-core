@@ -2,6 +2,7 @@ use crate::{
     api::{
         cargo_lib::*,
         config::*,
+        foundation_storage::*,
         user::{MnemonicPayload, UserApi, UserPayload},
     },
     errors::*,
@@ -9,7 +10,8 @@ use crate::{
 use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
 pub use wildland_corex::{
-    CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, LssResult,
+    storage::FoundationStorageTemplate, CoreXError, CryptoError, ForestRetrievalError,
+    LocalSecureStorage, LssError, LssResult,
 };
 
 type VoidType = ();
@@ -20,6 +22,7 @@ pub type StringExc = SingleVariantError<String>; // Used for simple errors origi
 pub type UserCreationExc = SingleVariantError<UserCreationError>;
 pub type CargoLibCreationExc = SingleVariantError<CargoLibCreationError>;
 pub type ConfigParseExc = SingleVariantError<ParseConfigError>;
+pub type FsaExc = FsaError;
 
 pub type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
 /// constructor of `LssResult<Option<Vec<u8>>>` (aka [`LssOptionalBytesResult`]) with Ok variant
@@ -102,16 +105,22 @@ mod ffi_binding {
     enum ConfigParseExc {
         Failure(_),
     }
+    enum FsaExc {
+        StorageAlreadyExists,
+        EvsError(_),
+        CryptoError(_),
+        InvalidCredentialsFormat(_),
+    }
     enum StringExc {
         Failure(_),
     }
 
     extern "Traits" {
-        type CargoCfgProvider;
         fn get_log_level(self: &dyn CargoCfgProvider) -> String;
         fn get_log_file(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_evs_url(self: &dyn CargoCfgProvider) -> String;
+        fn get_sc_url(self: &dyn CargoCfgProvider) -> String;
 
-        type LocalSecureStorage;
         fn insert(
             self: &dyn LocalSecureStorage,
             key: String,
@@ -159,6 +168,20 @@ mod ffi_binding {
             config: CargoConfig,
         ) -> Result<Arc<Mutex<CargoLib>>, CargoLibCreationExc>;
         fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
+        fn foundation_storage_api(self: &Arc<Mutex<CargoLib>>) -> FoundationStorageApi;
+
+        fn request_free_tier_storage(
+            self: &FoundationStorageApi,
+            email: String,
+        ) -> Result<FreeTierProcessHandle, FsaExc>;
+        fn verify_email(
+            self: &FoundationStorageApi,
+            process_handle: &FreeTierProcessHandle,
+            verification_token: String,
+        ) -> Result<FoundationStorageTemplate, FsaExc>;
+        type FreeTierProcessHandle;
+
+        type FoundationStorageTemplate;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_mnemonic_from_vec(
