@@ -1,4 +1,4 @@
-use reqwest::{Client, Error, Response};
+use minreq::{Error, Response};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,14 +14,13 @@ pub struct CreateStorageRes {
 #[derive(Clone, Default, Debug)]
 pub(crate) struct SCStorageClient {
     pub(crate) base_url: String,
-    pub(crate) client: Client,
 }
 
 impl SCStorageClient {
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub(crate) async fn create_storage(&self) -> Result<Response, Error> {
+    pub(crate) fn create_storage(&self) -> Result<Response, Error> {
         let url = format!("{}/storage/create", self.base_url);
-        self.client.post(url).send().await
+        minreq::post(url).send()
     }
 }
 
@@ -36,12 +35,11 @@ mod tests {
     fn client() -> SCStorageClient {
         SCStorageClient {
             base_url: server_url(),
-            client: Client::new(),
         }
     }
 
-    #[tokio::test]
-    async fn storage_can_be_created() {
+    #[test]
+    fn storage_can_be_created() {
         let m = mock("POST", "/storage/create")
             .with_body(
                 json!({
@@ -55,10 +53,8 @@ mod tests {
 
         let response = client()
             .create_storage()
-            .await
             .unwrap()
             .json::<CreateStorageRes>()
-            .await
             .unwrap();
 
         m.assert();

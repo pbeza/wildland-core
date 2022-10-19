@@ -1,5 +1,5 @@
 use crate::sc::constants::WILDLAND_SIGNATURE_HEADER;
-use reqwest::{Client, Error, Response};
+use minreq::{Error, Response};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -25,23 +25,20 @@ pub struct CreateCredentialsRes {
 #[derive(Clone, Default, Debug)]
 pub(crate) struct SCCredentialsClient {
     pub(crate) base_url: String,
-    pub(crate) client: Client,
 }
 
 impl SCCredentialsClient {
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub(crate) async fn create_credentials(
+    pub(crate) fn create_credentials(
         &self,
         request: CreateCredentialsReq,
         signature: &str,
     ) -> Result<Response, Error> {
         let url = format!("{}/credential/create", self.base_url);
-        self.client
-            .post(url)
-            .header(WILDLAND_SIGNATURE_HEADER, signature)
-            .json(&request)
+        minreq::post(url)
+            .with_header(WILDLAND_SIGNATURE_HEADER, signature)
+            .with_json(&request)?
             .send()
-            .await
     }
 }
 
@@ -59,12 +56,11 @@ mod tests {
     fn client() -> SCCredentialsClient {
         SCCredentialsClient {
             base_url: server_url(),
-            client: Client::new(),
         }
     }
 
-    #[tokio::test]
-    async fn storage_credentials_can_be_created() {
+    #[test]
+    fn storage_credentials_can_be_created() {
         // given
         let request = CreateCredentialsReq {
             credential_id: CREDENTIALS_ID.to_string(),
@@ -88,10 +84,8 @@ mod tests {
         // when
         let response = client()
             .create_credentials(request, SIGNATURE)
-            .await
             .unwrap()
             .json::<CreateCredentialsRes>()
-            .await
             .unwrap();
 
         // then

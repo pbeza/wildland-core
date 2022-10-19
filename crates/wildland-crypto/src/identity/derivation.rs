@@ -238,7 +238,10 @@ impl Identity {
 
 #[cfg(test)]
 mod tests {
-    use crypto_box::aead::Aead;
+    use crypto_box::{
+        aead::{Aead, AeadCore},
+        SalsaBox,
+    };
     use hex::encode;
     use hex_literal::hex;
     use salsa20::XNonce;
@@ -261,7 +264,7 @@ mod tests {
         bob_keypair: &EncryptingKeypair,
     ) -> Vec<u8> {
         let salsa_box =
-            crypto_box::Box::new(&alice_keypair.public.clone(), &bob_keypair.secret.clone());
+            crypto_box::SalsaBox::new(&alice_keypair.public.clone(), &bob_keypair.secret.clone());
 
         salsa_box.encrypt(nonce, MSG).unwrap()
     }
@@ -274,7 +277,7 @@ mod tests {
         bob_keypair: &EncryptingKeypair,
     ) -> crypto_box::aead::Result<Vec<u8>> {
         let salsa_box =
-            crypto_box::Box::new(&bob_keypair.public.clone(), &alice_keypair.secret.clone());
+            crypto_box::SalsaBox::new(&bob_keypair.public.clone(), &alice_keypair.secret.clone());
 
         salsa_box.decrypt(nonce, ciphertext)
     }
@@ -285,7 +288,7 @@ mod tests {
         let alice_keypair: EncryptingKeypair = user.encryption_keypair(0, 0).unwrap();
         let bob_keypair: EncryptingKeypair = user.encryption_keypair(1, 0).unwrap();
         let mut rng = rand_core::OsRng;
-        let nonce = crypto_box::generate_nonce(&mut rng);
+        let nonce = SalsaBox::generate_nonce(&mut rng);
 
         let ciphertext = encrypt(&nonce, &alice_keypair, &bob_keypair);
         let result = decrypt(ciphertext.as_slice(), &nonce, &bob_keypair, &alice_keypair);
