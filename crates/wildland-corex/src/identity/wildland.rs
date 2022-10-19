@@ -1,7 +1,9 @@
 use crate::WildlandIdentity::{Device, Forest};
-use std::fmt;
-use std::fmt::{Display, Formatter};
-use wildland_crypto::identity::SigningKeypair;
+use std::fmt::{self, Display, Formatter};
+use wildland_crypto::identity::{
+    signing_keypair::{PubKey, SecKey},
+    SigningKeypair,
+};
 
 #[derive(Debug)]
 pub enum WildlandIdentity {
@@ -28,16 +30,16 @@ impl WildlandIdentity {
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn get_public_key(&self) -> Vec<u8> {
+    pub fn get_public_key(&self) -> PubKey {
         match self {
-            Forest(_, keypair) | Device(_, keypair) => keypair.public().into(),
+            Forest(_, keypair) | Device(_, keypair) => keypair.public(),
         }
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn get_private_key(&self) -> Vec<u8> {
+    pub fn get_private_key(&self) -> SecKey {
         match self {
-            Forest(_, keypair) | Device(_, keypair) => keypair.secret().into(),
+            Forest(_, keypair) | Device(_, keypair) => keypair.secret(),
         }
     }
 

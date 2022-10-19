@@ -24,6 +24,9 @@ use rand_7::{CryptoRng, RngCore};
 
 use super::bytes_key_from_str;
 
+pub type PubKey = [u8; 32];
+pub type SecKey = [u8; 32];
+
 #[derive(Debug)]
 pub struct SigningKeypair(ed25519_dalek::Keypair);
 
@@ -49,7 +52,7 @@ impl SigningKeypair {
     }
 
     #[tracing::instrument(level = "debug", skip(pubkey, seckey))]
-    pub fn try_from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Result<Self, CryptoError> {
+    pub fn try_from_bytes_slices(pubkey: PubKey, seckey: SecKey) -> Result<Self, CryptoError> {
         Ok(Self(
             ed25519_dalek::Keypair::from_bytes([seckey, pubkey].concat().as_slice())
                 .map_err(|e| CryptoError::InvalidSignatureBytesError(e.to_string()))?,
@@ -64,7 +67,7 @@ impl SigningKeypair {
     }
 
     #[tracing::instrument(level = "debug", skip(secret_key_bytes))]
-    pub fn try_from_secret_bytes(secret_key_bytes: &[u8; 32]) -> Result<Self, CryptoError> {
+    pub fn try_from_secret_bytes(secret_key_bytes: &SecKey) -> Result<Self, CryptoError> {
         let sec_key = ed25519_dalek::SecretKey::from_bytes(secret_key_bytes)
             .map_err(|e| CryptoError::InvalidSignatureBytesError(e.to_string()))?;
         let pub_key = ed25519_dalek::PublicKey::from(&sec_key);
@@ -75,12 +78,12 @@ impl SigningKeypair {
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn public(&self) -> [u8; 32] {
+    pub fn public(&self) -> PubKey {
         self.0.public.to_bytes()
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn secret(&self) -> [u8; 32] {
+    pub fn secret(&self) -> SecKey {
         self.0.secret.to_bytes()
     }
 

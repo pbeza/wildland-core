@@ -94,6 +94,7 @@ mod error;
 mod forest;
 mod storage;
 
+#[derive(Clone)]
 pub struct CatLib {
     db: Rc<StoreDb>,
 }

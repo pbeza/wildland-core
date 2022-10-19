@@ -1,5 +1,11 @@
+use std::collections::HashMap;
+
 use crate::errors::UserCreationError;
-use wildland_corex::{CryptoError, ForestRetrievalError, Identity, MasterIdentity, MnemonicPhrase};
+use serde::{Deserialize, Serialize};
+use wildland_corex::{
+    CatLibService, CryptoError, ForestRetrievalError, Identity, MasterIdentity, MnemonicPhrase,
+    PubKey,
+};
 
 #[cfg(test)]
 use crate::test_utils::MockLssService as LssService;
@@ -15,14 +21,29 @@ pub enum CreateUserInput {
     Entropy(Vec<u8>),
 }
 
+// TODO move out
+
+#[derive(Serialize, Deserialize)]
+struct DeviceMetadata {
+    name: String,
+}
+#[derive(Serialize, Deserialize)]
+struct UserMetaData {
+    devices: HashMap<PubKey, DeviceMetadata>,
+}
+
 #[derive(Clone)]
 pub struct UserService {
     lss_service: LssService,
+    catlib_service: CatLibService,
 }
 
 impl UserService {
     pub fn new(lss_service: LssService) -> Self {
-        Self { lss_service }
+        Self {
+            lss_service,
+            catlib_service: CatLibService::new(),
+        }
     }
 
     #[tracing::instrument(level = "debug", skip(input, self))]
@@ -47,10 +68,22 @@ impl UserService {
         let default_forest_identity = master_identity
             .create_forest_identity(0)
             .map_err(UserCreationError::ForestIdentityCreationError)?;
-        let device_identity = master_identity.create_device_identity(device_name);
+        let device_identity = master_identity.create_device_identity(device_name.clone());
+
+        self.catlib_service.add_forest(
+            &default_forest_identity,
+            &device_identity,
+            UserMetaData {
+                devices: HashMap::from([(
+                    device_identity.get_public_key(),
+                    DeviceMetadata { name: device_name },
+                )]),
+            },
+        );
 
         self.lss_service.save(default_forest_identity)?;
         self.lss_service.save(device_identity)?;
+
         Ok(())
     }
 
