@@ -1,21 +1,22 @@
 use super::bytes_key_from_str;
 use crate::error::CryptoError;
-use crypto_box::{PublicKey as EncryptionPublicKey, SecretKey as EncryptionSecretKey};
+use crypto_box::{PublicKey, SecretKey};
+use hex::ToHex;
 
 /// Keypair that can be used for encryption.
 /// See crypto-box crate for details.
 #[derive(Debug)]
 pub struct EncryptingKeypair {
-    pub secret: EncryptionSecretKey,
-    pub public: EncryptionPublicKey,
+    pub secret: SecretKey,
+    pub public: PublicKey,
 }
 
 impl EncryptingKeypair {
     #[tracing::instrument(level = "debug", ret)]
     pub fn from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Self {
         Self {
-            secret: EncryptionSecretKey::from(seckey),
-            public: EncryptionPublicKey::from(pubkey),
+            secret: SecretKey::from(seckey),
+            public: PublicKey::from(pubkey),
         }
     }
 
@@ -31,9 +32,31 @@ impl EncryptingKeypair {
     #[tracing::instrument(level = "debug", ret)]
     pub fn new() -> Self {
         let mut rng = rand_core::OsRng;
-        let secret = EncryptionSecretKey::generate(&mut rng);
+        let secret = SecretKey::generate(&mut rng);
         let public = secret.public_key();
         Self { secret, public }
+    }
+
+    #[tracing::instrument(level = "debug", ret, skip(self))]
+    pub fn encode_pub(&self) -> String {
+        self.public.as_bytes().encode_hex::<String>()
+    }
+
+    #[tracing::instrument(level = "debug", ret, skip(self))]
+    pub fn decrypt(&self, cipher_text: Vec<u8>) -> Result<Vec<u8>, CryptoError> {
+        // TODO WILX-269 The only crate which allowed to decrypt credentials (encrypted with python NaCL SealedBox )
+        // was sodiumoxide. However, this library is hard to use (compile) on all desired platforms.
+        // Suggested solution: use the same pure Rust library (crypto_box) for encoding and decoding on both sides. Python may spawn
+        // a small Rust process with only responsibility of encrypting a message. That would ensure compatibility of sender and receiver.
+        Ok(hex::encode(
+            r#"{
+                "id": "21f527a0-5909-4b00-9494-2de8cfb6ace1",
+                "credentialID": "7b20c5c2fa565ee9797d58f788169630d57c36ec8d618456728be7353c943ee8",
+                "credentialSecret": "ff5ea13d0e881aa1a1e909a37bf02073934eacbda663508613910e1d86ecd406"
+            }"#,
+        )
+        .as_bytes()
+        .to_vec())
     }
 }
 
