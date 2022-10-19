@@ -6,7 +6,7 @@ use wildland_crypto::identity::signing_keypair::SigningKeypair;
 
 use crate::{
     error::WildlandHttpClientError,
-    response_handler::handle,
+    response_handler::check_status_code,
     sc::credentials::{CreateCredentialsReq, CreateCredentialsRes, SCCredentialsClient},
     sc::metrics::{RequestMetricsReq, RequestMetricsRes, SCMetricsClient},
     sc::signature::{SCSignatureClient, SignatureRequestReq, SignatureRequestRes},
@@ -53,10 +53,7 @@ impl StorageControllerClient {
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub async fn create_storage(&self) -> Result<CreateStorageRes, WildlandHttpClientError> {
         let response = self.sc_storage_client.create_storage().map_err(Rc::new)?;
-        let response_json = handle(response)?
-            .ok_or(WildlandHttpClientError::NoBody)?
-            .json()
-            .map_err(Rc::new)?;
+        let response_json = check_status_code(response)?.json().map_err(Rc::new)?;
         Ok(response_json)
     }
 
@@ -70,10 +67,7 @@ impl StorageControllerClient {
             .sc_credentials_client
             .create_credentials(request, &signature)
             .map_err(Rc::new)?;
-        let response_json = handle(response)?
-            .ok_or(WildlandHttpClientError::NoBody)?
-            .json()
-            .map_err(Rc::new)?;
+        let response_json = check_status_code(response)?.json().map_err(Rc::new)?;
         Ok(response_json)
     }
 
@@ -87,10 +81,7 @@ impl StorageControllerClient {
             .sc_signature_client
             .signature_request(request, &signature)
             .map_err(Rc::new)?;
-        let response_json = handle(response)?
-            .ok_or(WildlandHttpClientError::NoBody)?
-            .json()
-            .map_err(Rc::new)?;
+        let response_json = check_status_code(response)?.json().map_err(Rc::new)?;
         Ok(response_json)
     }
 
@@ -104,10 +95,7 @@ impl StorageControllerClient {
             .sc_metrics_client
             .request_metrics(request, &signature)
             .map_err(Rc::new)?;
-        let response_json = handle(response)?
-            .ok_or(WildlandHttpClientError::NoBody)?
-            .json()
-            .map_err(Rc::new)?;
+        let response_json = check_status_code(response)?.json().map_err(Rc::new)?;
         Ok(response_json)
     }
 

@@ -12,6 +12,4 @@ pub enum WildlandHttpClientError {
     CommonLibError(#[from] CryptoError),
     #[error(transparent)]
     HttpLibError(#[from] Rc<minreq::Error>),
-    #[error("No body in the response")]
-    NoBody,
 }

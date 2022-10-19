@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{error::WildlandHttpClientError, response_handler::handle};
+use crate::{error::WildlandHttpClientError, response_handler::check_status_code};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -41,7 +41,7 @@ impl EvsClient {
             .map_err(|e| WildlandHttpClientError::HttpLibError(Rc::new(e)))?
             .send()
             .map_err(Rc::new)?;
-        handle(response)?;
+        check_status_code(response)?;
         Ok(())
     }
 
@@ -56,10 +56,11 @@ impl EvsClient {
             .map_err(|e| WildlandHttpClientError::HttpLibError(Rc::new(e)))?
             .send()
             .map_err(Rc::new)?;
-        let response = handle(response)?;
-        match response {
-            Some(response) => Ok(response.json().map_err(Rc::new)?),
-            None => Ok(GetStorageRes {
+        let response = check_status_code(response)?;
+        match response.status_code {
+            200 => Ok(response.json().map_err(Rc::new)?),
+            // Status 2xx without body
+            _ => Ok(GetStorageRes {
                 encrypted_credentials: None,
             }),
         }

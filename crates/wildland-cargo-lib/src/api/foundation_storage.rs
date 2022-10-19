@@ -116,7 +116,9 @@ impl FoundationStorageApi {
                             .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
                     Ok(storage_credentials.into_storage_template(self.sc_url.clone()))
                 }
-                None => Err(FsaError::EvsError(WildlandHttpClientError::NoBody)),
+                None => Err(FsaError::EvsError(WildlandHttpClientError::HttpError(
+                    "No body with credentials".into(),
+                ))),
             })
     }
 }
