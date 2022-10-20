@@ -9,7 +9,7 @@ license     = "GPL-3.0-only"
 name        = "wildland-cargo-lib"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.17.0"
+version     = "0.17.1"
 
 
 [features]
