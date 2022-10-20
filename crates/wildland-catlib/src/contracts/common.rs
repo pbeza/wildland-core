@@ -26,7 +26,7 @@ pub(crate) type PubKey = [u8; 32];
 pub struct Identity(pub PubKey);
 impl Identity {
     pub fn encode(&self) -> String {
-        hex::encode(&self.0)
+        hex::encode(self.0)
     }
 }
 impl From<PubKey> for Identity {
