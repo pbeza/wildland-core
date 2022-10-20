@@ -116,11 +116,25 @@ mod ffi_binding {
     }
 
     extern "Traits" {
-        fn get_log_level(self: &dyn CargoCfgProvider) -> String;
-        fn get_log_file(self: &dyn CargoCfgProvider) -> OptionalString;
+
+        // # traits required for main configuration
+        //
         fn get_evs_url(self: &dyn CargoCfgProvider) -> String;
         fn get_sc_url(self: &dyn CargoCfgProvider) -> String;
 
+        // # traits required for logging configuration
+        //
+        fn get_log_level(self: &dyn CargoCfgProvider) -> String;
+        fn get_log_use_ansi(self: &dyn CargoCfgProvider) -> bool;
+        fn get_log_file(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn log_file_enabled(self: &dyn CargoCfgProvider) -> bool;
+        fn log_file_path(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn log_file_rotate_directory(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn oslog_category(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn oslog_sybsystem(self: &dyn CargoCfgProvider) -> OptionalString;
+
+        // # traits required for lss:
+        //
         fn insert(
             self: &dyn LocalSecureStorage,
             key: String,

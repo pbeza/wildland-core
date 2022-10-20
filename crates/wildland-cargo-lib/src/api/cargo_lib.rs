@@ -97,10 +97,15 @@ impl CargoLib {
 ///
 /// let lss = TestLss{};
 ///
-/// let cfg = CargoConfig{
+/// let cfg = CargoConfig{     
 ///     logger_config: LoggerConfig {
-///         log_level: Level::DEBUG,
-///         log_file: None,
+///         log_level: Level::TRACE,
+///         log_use_ansi: false,
+///         log_file_path: Some("cargo_lib_log".to_owned()),
+///         log_file_rotate_directory: Some(".".to_owned()),
+///         log_file_enabled: true,
+///         oslog_category: None,
+///         oslog_sybsystem: None,
 ///     },
 ///     fsa_config: FoundationStorageApiConfig {
 ///         evs_url: "some_url".to_owned(),
@@ -119,7 +124,7 @@ pub fn create_cargo_lib(
         INITIALIZED.store(true, Ordering::Relaxed);
 
         logging::init_subscriber(cfg.logger_config)
-            .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e)))?;
+            .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e.to_string())))?;
 
         let cargo_lib = Arc::new(Mutex::new(CargoLib::new(
             UserApi::new(UserService::new(LssService::new(lss))),
