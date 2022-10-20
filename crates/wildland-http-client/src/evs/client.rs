@@ -1,6 +1,6 @@
-use crate::error::WildlandHttpClientError;
-use crate::response_handler::handle;
-use reqwest::Client;
+use std::rc::Rc;
+
+use crate::{error::WildlandHttpClientError, response_handler::check_status_code};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -15,47 +15,55 @@ pub struct GetStorageReq {
     pub pubkey: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetStorageRes {
-    pub encrypted_credentials: String,
+    pub encrypted_credentials: Option<String>,
 }
 
 #[derive(Clone, Default, Debug)]
-pub struct EVSClient {
-    _base_url: String,
-    _client: Client,
+pub struct EvsClient {
+    base_url: String,
 }
 
-impl EVSClient {
+impl EvsClient {
     #[tracing::instrument(level = "debug", ret)]
-    pub fn _new(base_url: &str) -> Self {
-        let client = Client::new();
+    pub fn new(base_url: &str) -> Self {
         Self {
-            _base_url: base_url.to_string(),
-            _client: client,
+            base_url: base_url.to_string(),
         }
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub async fn _confirm_token(
-        &self,
-        request: ConfirmTokenReq,
-    ) -> Result<(), WildlandHttpClientError> {
-        let url = format!("{}/confirm_token", self._base_url);
-        let response = self._client.put(url).json(&request).send().await?;
-        handle(response).await?;
+    pub fn confirm_token(&self, request: ConfirmTokenReq) -> Result<(), WildlandHttpClientError> {
+        let url = format!("{}/confirm_token", self.base_url);
+        let response = minreq::put(url)
+            .with_json(&request)
+            .map_err(|e| WildlandHttpClientError::HttpLibError(Rc::new(e)))?
+            .send()
+            .map_err(Rc::new)?;
+        check_status_code(response)?;
         Ok(())
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub async fn _get_storage(
+    pub fn get_storage(
         &self,
         request: GetStorageReq,
     ) -> Result<GetStorageRes, WildlandHttpClientError> {
-        let url = format!("{}/get_storage", self._base_url);
-        let response = self._client.put(url).json(&request).send().await?;
-        let response_json = handle(response).await?.json().await?;
-        Ok(response_json)
+        let url = format!("{}/get_storage", self.base_url);
+        let response = minreq::put(url)
+            .with_json(&request)
+            .map_err(|e| WildlandHttpClientError::HttpLibError(Rc::new(e)))?
+            .send()
+            .map_err(Rc::new)?;
+        let response = check_status_code(response)?;
+        match response.status_code {
+            200 => Ok(response.json().map_err(Rc::new)?),
+            // Status 2xx without body
+            _ => Ok(GetStorageRes {
+                encrypted_credentials: None,
+            }),
+        }
     }
 }
 
@@ -69,15 +77,14 @@ mod tests {
 
     use super::*;
 
-    fn client() -> EVSClient {
-        EVSClient {
-            _base_url: server_url(),
-            _client: Client::new(),
+    fn client() -> EvsClient {
+        EvsClient {
+            base_url: server_url(),
         }
     }
 
-    #[tokio::test]
-    async fn should_confirm_token() {
+    #[test]
+    fn should_confirm_token() {
         // given
         let request = ConfirmTokenReq {
             email: EMAIL.into(),
@@ -87,15 +94,15 @@ mod tests {
         let m = mock("PUT", "/confirm_token").create();
 
         // when
-        let response = client()._confirm_token(request).await;
+        let response = client().confirm_token(request);
 
         // then
         m.assert();
         response.unwrap();
     }
 
-    #[tokio::test]
-    async fn should_get_storage() {
+    #[test]
+    fn should_get_storage() {
         // given
         let request = GetStorageReq {
             email: EMAIL.into(),
@@ -107,10 +114,13 @@ mod tests {
             .create();
 
         // when
-        let response = client()._get_storage(request).await.unwrap();
+        let response = client().get_storage(request).unwrap();
 
         // then
         m.assert();
-        assert_eq!(response.encrypted_credentials, ENCRYPTED_CREDENTIALS);
+        assert_eq!(
+            response.encrypted_credentials.unwrap(),
+            ENCRYPTED_CREDENTIALS
+        );
     }
 }

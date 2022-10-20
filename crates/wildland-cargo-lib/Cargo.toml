@@ -13,7 +13,7 @@ version     = "0.17.0"
 
 
 [features]
-bindings = ["swift-bridge", "rusty-bind", "rusty-bind-build"]
+bindings = ["rusty-bind", "rusty-bind-build"]
 
 
 [lib]
@@ -21,26 +21,25 @@ crate-type = ["staticlib", "lib"]
 
 
 [dependencies]
-anyhow             = { version = "1.0" }
-env_logger         = { version = "0.9" }
-log                = { version = "0.4" }
-rusty-bind         = { version = "0.3.0", registry = "wl-dev", optional = true }
-serde              = { version = "1.0", features = ["derive"] }
-serde_json         = { version = "1.0" }
-sha2               = { version = "0.10" }
-swift-bridge       = { version = "0.1", optional = true }
-thiserror          = { version = "1.0" }
-tracing            = { version = "0.1" }
-tracing-appender   = { version = "0.2" }
-tracing-attributes = { version = "0.1" }
-tracing-core       = { version = "0.1" }
-tracing-error      = { version = "0.2" }
-tracing-futures    = { version = "0.2", features = ["futures-01"] }
-tracing-journald   = { version = "0.3" }
-tracing-log        = { version = "0.1", features = ["env_logger"] }
-tracing-subscriber = { version = "0.3", features = ["json", "env-filter", "fmt", "std", "registry"] }
-uuid               = { version = "1.2" }
-wildland-corex     = { version = "0.7.0", path = "../wildland-corex", registry = "wl-dev" }
+anyhow               = { version = "1.0" }
+base64               = { version = "0.13.0" }
+env_logger           = { version = "0.9" }
+hex                  = { version = "0.4" }
+log                  = { version = "0.4" }
+rusty-bind           = { version = "0.2.1", registry = "wl-dev", optional = true }
+serde                = { version = "1.0", features = ["derive"] }
+serde_json           = { version = "1.0" }
+sha2                 = { version = "0.10" }
+thiserror            = { version = "1.0" }
+tracing              = { version = "0.1" }
+tracing-appender     = { version = "0.2" }
+tracing-attributes   = { version = "0.1" }
+tracing-core         = { version = "0.1" }
+tracing-log          = { version = "0.1", features = ["env_logger"] }
+tracing-subscriber   = { version = "0.3", features = ["json", "env-filter", "fmt", "std", "registry"] }
+uuid                 = { version = "1.2", features = ["serde"] }
+wildland-corex       = { version = "0.7.0", path = "../wildland-corex", registry = "wl-dev" }
+wildland-http-client = { version = "0.5.0", path = "../wildland-http-client", registry = "wl-dev" }
 
 [package.metadata.workspaces]
 independent = true

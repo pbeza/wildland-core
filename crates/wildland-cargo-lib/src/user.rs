@@ -1,13 +1,15 @@
 use std::str::FromStr;
 
-use crate::errors::UserRetrievalError;
-use crate::{api::user::CargoUser, errors::UserCreationError};
+use crate::{
+    api::user::CargoUser,
+    errors::{UserCreationError, UserRetrievalError},
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use wildland_corex::{
-    CatLibService, CatlibError, CryptoError, Identity, MasterIdentity, MnemonicPhrase, PubKey,
+    CatLibService, CatlibError, CryptoError, IForest, Identity, LssError, LssService,
+    MasterIdentity, MnemonicPhrase, PubKey,
 };
-use wildland_corex::{IForest, LssError, LssService};
 
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     wildland_corex::generate_random_mnemonic()

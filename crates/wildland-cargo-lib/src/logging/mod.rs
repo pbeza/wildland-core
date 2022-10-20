@@ -1,13 +1,14 @@
 use std::io::{self};
-use tracing::Level;
 use tracing_subscriber::{fmt, prelude::__tracing_subscriber_SubscriberExt, EnvFilter};
 
-pub(crate) fn init_subscriber(log_level: Level, log_file: Option<String>) -> Result<(), String> {
+use crate::api::config::LoggerConfig;
+
+pub(crate) fn init_subscriber(cfg: LoggerConfig) -> Result<(), String> {
     let is_ansi = std::env::vars_os().any(|(k, _)| k == "ANSI");
-    if let Some(logfile) = log_file {
-        default_with_file_copy(log_level, logfile, is_ansi);
+    if let Some(logfile) = cfg.log_file {
+        default_with_file_copy(cfg.log_level, logfile, is_ansi);
     } else {
-        default_without_file_copy(log_level, is_ansi);
+        default_without_file_copy(cfg.log_level, is_ansi);
     };
     tracing::debug!("logger initialized");
     Ok(())

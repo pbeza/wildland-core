@@ -2,16 +2,18 @@ mod catlib_service;
 mod error;
 mod identity;
 mod lss;
+pub mod storage;
 
 pub use catlib_service::*;
 pub use error::*;
 pub use identity::{master::*, wildland::*};
 pub use lss::*;
-pub use wildland_catlib::{contracts::*, CatlibError, Forest};
+pub use wildland_catlib::{contracts::*, CatlibError, Forest, PubKey};
 pub use wildland_crypto::{
     error::CryptoError,
     identity::{
-        generate_random_mnemonic, signing_keypair::PubKey, Identity, MnemonicPhrase, SigningKeypair,
+        encrypting_keypair::EncryptingKeypair, generate_random_mnemonic, Identity, MnemonicPhrase,
+        SigningKeypair,
     },
 };
 

@@ -7,11 +7,19 @@ class CargoCfgProviderImpl : public CargoCfgProvider
 {
     String get_log_level() override
     {
-        return RustString("debug");
+        return RustString("info");
     }
     OptionalString get_log_file() override
     {
         return new_none_string();
+    }
+    String get_evs_url() override
+    {
+        return RustString("http://localhost:5000/");
+    }
+    String get_sc_url() override
+    {
+        return RustString("http://TODO:5555/");
     }
 };
 
@@ -109,24 +117,41 @@ private:
     std::unordered_map<std::string, RustVec<u8>> store = {};
 };
 
-void config_parser_test()
+void config_parser_test() // test
 {
     RustVec<u8> config_bytes{};
-    std::string raw_config = "{\"log_level\": \"trace\"}";
+    std::string raw_config = "{\"log_level\": \"trace\", \"evs_url\": \"http://some_evs_endpoint/\"}";
     for (const auto ch : raw_config)
     {
         config_bytes.push(ch);
     }
     LocalSecureStorageImpl lss{};
-    CargoConfig cargo_cfg = parse_config(config_bytes);
     try
     {
+        CargoConfig cargo_cfg = parse_config(config_bytes);
         SharedMutexCargoLib cargo_lib = create_cargo_lib(lss, cargo_cfg);
     }
-    catch (const CargoLibCreationExc_FailureException &e)
+    catch (const RustExceptionBase &e)
     {
         std::cout << e.reason().to_string() << std::endl;
-        assert(false);
+    }
+}
+
+void foundation_storage_test(SharedMutexCargoLib &cargo_lib)
+{
+    try
+    {
+        FoundationStorageApi fsa_api = cargo_lib.foundation_storage_api();
+        auto process_handle = fsa_api.request_free_tier_storage("test@email.com");
+        std::cout << "Provide a verification token:\n";
+        std::string verification_token;
+        std::cin >> verification_token;
+        // TODO may be used for creating container
+        FoundationStorageTemplate storage_template = fsa_api.verify_email(process_handle, RustString{verification_token});
+    }
+    catch (const RustExceptionBase &e)
+    {
+        std::cerr << e.reason().to_string() << std::endl;
     }
 }
 
@@ -145,6 +170,8 @@ int main()
         std::cerr << e.reason().to_string() << std::endl;
         assert(false);
     }
+
+    foundation_storage_test(cargo_lib);
 
     UserApi user_api = cargo_lib.user_api();
 

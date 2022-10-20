@@ -35,6 +35,8 @@ pub enum CryptoError {
     IdentityGenerationError(String),
     #[error("Too low entropy")]
     EntropyTooLow,
+    #[error("Could not decrypt content")]
+    DecryptionError,
 }
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]

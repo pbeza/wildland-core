@@ -100,8 +100,7 @@ pub struct CatLib {
 }
 
 impl CatLib {
-    #[allow(dead_code)]
-    fn new(path: PathBuf) -> Self {
+    pub fn new(path: PathBuf) -> Self {
         let db = PathDatabase::create_at_path(path.clone(), CatLibData::new());
 
         if db.is_err() {

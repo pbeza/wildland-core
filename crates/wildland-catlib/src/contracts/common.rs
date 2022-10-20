@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 
 use super::CatlibResult;
 
-pub(crate) type PubKey = [u8; 32];
+pub type PubKey = [u8; 32];
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Serialize, Deserialize)]
 pub struct Identity(pub PubKey);
 impl Identity {

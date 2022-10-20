@@ -1,5 +1,6 @@
 pub mod cargo_lib;
 pub mod config;
+pub mod foundation_storage;
 pub mod user;
 
 pub use self::{
