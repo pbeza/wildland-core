@@ -16,7 +16,7 @@ pub use wildland_crypto::{
 
 pub type CorexResult<T> = Result<T, CoreXError>;
 
-pub static DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
+pub const DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
 
 #[cfg(test)]
 pub mod test_utilities {

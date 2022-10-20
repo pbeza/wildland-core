@@ -10,8 +10,8 @@ use crate::{
 use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
 pub use wildland_corex::{
-    storage::FoundationStorageTemplate, CoreXError, CryptoError, ForestRetrievalError,
-    LocalSecureStorage, LssError, LssResult,
+    storage::StorageTemplate, CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage,
+    LssError, LssResult,
 };
 
 type VoidType = ();
@@ -178,10 +178,10 @@ mod ffi_binding {
             self: &FoundationStorageApi,
             process_handle: &FreeTierProcessHandle,
             verification_token: String,
-        ) -> Result<FoundationStorageTemplate, FsaExc>;
+        ) -> Result<StorageTemplate, FsaExc>;
         type FreeTierProcessHandle;
 
-        type FoundationStorageTemplate;
+        type StorageTemplate;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_mnemonic_from_vec(

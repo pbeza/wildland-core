@@ -3,11 +3,19 @@ use std::rc::Rc;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
-use wildland_corex::{storage::FoundationStorageTemplate, CryptoError, EncryptingKeypair};
+use wildland_corex::{
+    storage::{FoundationStorageTemplate, StorageTemplate},
+    CryptoError, EncryptingKeypair, LssError,
+};
 use wildland_http_client::{
     error::WildlandHttpClientError,
     evs::{ConfirmTokenReq, EvsClient, GetStorageReq},
 };
+
+#[cfg(test)]
+use crate::test_utils::MockLssService as LssService;
+#[cfg(not(test))]
+use wildland_corex::LssService;
 
 use super::config::FoundationStorageApiConfig;
 
@@ -42,6 +50,8 @@ pub enum FsaError {
     CryptoError(CryptoError),
     #[error("Credentials are expected to be JSON with fields: id, credentialID, credentialSecret")]
     InvalidCredentialsFormat(String),
+    #[error(transparent)]
+    LssError(#[from] LssError),
 }
 
 #[derive(Clone)]
@@ -54,13 +64,15 @@ pub struct FreeTierProcessHandle {
 pub struct FoundationStorageApi {
     evs_client: EvsClient,
     sc_url: String,
+    lss_service: LssService,
 }
 
 impl FoundationStorageApi {
-    pub fn new(config: FoundationStorageApiConfig) -> Self {
+    pub fn new(config: FoundationStorageApiConfig, lss_service: LssService) -> Self {
         Self {
             evs_client: EvsClient::new(&config.evs_url),
             sc_url: config.sc_url,
+            lss_service,
         }
     }
 
@@ -88,7 +100,7 @@ impl FoundationStorageApi {
         &self,
         process_handle: &FreeTierProcessHandle,
         verification_token: String,
-    ) -> Result<FoundationStorageTemplate, FsaError> {
+    ) -> Result<StorageTemplate, FsaError> {
         self.evs_client
             .confirm_token(ConfirmTokenReq {
                 email: process_handle.email.clone(),
@@ -114,7 +126,13 @@ impl FoundationStorageApi {
                     let storage_credentials: StorageCredentials =
                         serde_json::from_slice(&decrypted)
                             .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
-                    Ok(storage_credentials.into_storage_template(self.sc_url.clone()))
+
+                    let storage_template: StorageTemplate = storage_credentials
+                        .into_storage_template(self.sc_url.clone())
+                        .into();
+                    self.lss_service.save_storage_template(&storage_template)?;
+
+                    Ok(storage_template)
                 }
                 None => Err(FsaError::EvsError(WildlandHttpClientError::HttpError(
                     "No body with credentials".into(),
