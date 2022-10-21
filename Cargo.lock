@@ -1763,7 +1763,6 @@ name = "wildland-corex"
 version = "0.7.6"
 dependencies = [
  "hex",
- "log",
  "mockall",
  "serde",
  "serde_json",
