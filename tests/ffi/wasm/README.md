@@ -5,10 +5,21 @@ This directory consists of files needed to compile **CargoLib** and run it with 
 ## Compile
 
 **Requirements**:
+- rustc compiler (min. version 1.63)
 - cargo with `wasm32-unknown-emscripten` target installed
+
+    Install with command:
+    ```
+    rustup target add wasm32-unknown-emscripten
+    ```
 - available emscripten compiler (`em++`)
 
     follow the instructions https://emscripten.org/docs/getting_started/downloads.html#installation-instructions-using-the-emsdk-recommended
+
+    Install on **ubuntu** with command:
+    ```
+    sudo apt install emscripten
+    ```
 
 Run `./build_wasm.sh` command in directory of this *README.md* file. This script will compile **CargoLib** to `wasm32-unknown-emscripten` target. Then compiled library along with generated C++ glue code and handwritten *main.cpp* (includes dependencies) file are used as an input for emscripten in order to generate wasm package and JS glue code. The result is two files: `wildland.wasm` and `wildland.js`.
 
