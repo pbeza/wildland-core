@@ -58,6 +58,19 @@ All devices:
 }
 
 /// User management API
+///
+/// [`CargoUser`] can be created with the following methods:
+/// - [`UserApi::create_user_from_entropy`]
+/// - [`UserApi::create_user_from_mnemonic`]
+///
+///  Creating a new user means:
+/// - checking if one does not exist yet
+/// - generating forest identity
+/// - generating device identity
+/// - saving forest in CatLib
+/// - saving forest uuid (CatLib key) in LSS
+/// - saving forest and device identities (keypairs) in LSS
+///
 #[derive(Clone)]
 pub struct UserApi {
     user_service: UserService,
@@ -77,7 +90,7 @@ impl UserApi {
     }
 
     /// Creates [`MnemonicPayload`] basing on a vector of words. The result may be used for creation
-    /// User with [`create_user_from_mnemonic`].
+    /// User with [`UserApi::create_user_from_mnemonic`].
     ///
     #[tracing::instrument(level = "debug", skip(self))]
     pub fn create_mnemonic_from_vec(

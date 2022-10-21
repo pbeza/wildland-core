@@ -96,6 +96,9 @@ impl UserService {
         Ok(())
     }
 
+    /// Retrieves default forest keypair from LSS and then basing on that reads User metadata from CatLib.
+    /// Result is presented in from of [`crate::api::user::CargoUser`].
+    ///
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub(crate) fn get_user(&self) -> Result<Option<CargoUser>, UserRetrievalError> {
         let default_forest_uuid = self.get_default_forest_uuid()?;
@@ -130,6 +133,8 @@ impl UserService {
         }
     }
 
+    /// Retrieves default forest uuid from LSS
+    ///
     #[tracing::instrument(level = "debug", ret, skip(self))]
     fn get_default_forest_uuid(&self) -> Result<Uuid, UserRetrievalError> {
         let forest_identity = self.lss_service.get_default_forest()?.ok_or_else(|| {
