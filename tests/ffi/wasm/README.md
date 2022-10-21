@@ -14,9 +14,9 @@ This directory consists of files needed to compile **CargoLib** and run it with 
     ```
 - available emscripten compiler (`em++`)
 
-    follow the instructions https://emscripten.org/docs/getting_started/downloads.html#installation-instructions-using-the-emsdk-recommended
+    Follow the instructions https://emscripten.org/docs/getting_started/downloads.html#installation-instructions-using-the-emsdk-recommended
 
-    Install on **ubuntu** with command:
+    or install on **ubuntu** with command:
     ```
     sudo apt install emscripten
     ```
