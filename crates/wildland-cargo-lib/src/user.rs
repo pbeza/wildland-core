@@ -38,14 +38,16 @@ impl UserMetaData {
     }
 }
 
+/// This struct contains User functionalities but in contrast to [`super::api::UserApi`] it is not exposed through FFI
+///
 #[derive(Clone)]
-pub struct UserService {
+pub(crate) struct UserService {
     lss_service: LssService,
     catlib_service: CatLibService,
 }
 
 impl UserService {
-    pub fn new(lss_service: LssService) -> Self {
+    pub(crate) fn new(lss_service: LssService) -> Self {
         Self {
             lss_service,
             catlib_service: CatLibService::new(),
@@ -53,7 +55,7 @@ impl UserService {
     }
 
     #[tracing::instrument(level = "debug", skip(input, self))]
-    pub fn create_user(
+    pub(crate) fn create_user(
         &self,
         input: CreateUserInput,
         device_name: String,
@@ -95,7 +97,7 @@ impl UserService {
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn get_user(&self) -> Result<Option<CargoUser>, UserRetrievalError> {
+    pub(crate) fn get_user(&self) -> Result<Option<CargoUser>, UserRetrievalError> {
         let default_forest_uuid = self.get_default_forest_uuid()?;
 
         match self.catlib_service.get_forest(default_forest_uuid) {
