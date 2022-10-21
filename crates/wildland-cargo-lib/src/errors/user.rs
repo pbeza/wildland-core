@@ -56,8 +56,8 @@ impl From<CatlibError> for UserCreationError {
 pub enum UserRetrievalError {
     #[error(transparent)]
     ForestRetrievalError(#[from] ForestRetrievalError),
-    #[error("Default forest not found in LSS")]
-    ForestNotFound,
+    #[error("Default forest not found in LSS: {0}")]
+    ForestNotFound(String),
     #[error(transparent)]
     LssError(#[from] LssError),
     #[error(transparent)]

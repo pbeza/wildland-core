@@ -7,7 +7,7 @@ class CargoCfgProviderImpl : public CargoCfgProvider
 {
     String get_log_level() override
     {
-        return RustString("info");
+        return RustString("trace");
     }
     OptionalString get_log_file() override
     {

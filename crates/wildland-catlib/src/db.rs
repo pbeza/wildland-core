@@ -19,7 +19,7 @@
 use super::*;
 use std::rc::Rc;
 
-pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: String) -> CatlibResult<Forest> {
+pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: Uuid) -> CatlibResult<Forest> {
     db.load()?;
     let data = db.read(|db| db.clone()).map_err(CatlibError::from)?;
 
@@ -36,7 +36,7 @@ pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: String) -> CatlibResul
     }
 }
 
-pub(crate) fn fetch_container_by_uuid(db: Rc<StoreDb>, uuid: String) -> CatlibResult<Container> {
+pub(crate) fn fetch_container_by_uuid(db: Rc<StoreDb>, uuid: Uuid) -> CatlibResult<Container> {
     db.load()?;
     let data = db.read(|db| db.clone()).map_err(CatlibError::from)?;
 
@@ -55,7 +55,7 @@ pub(crate) fn fetch_container_by_uuid(db: Rc<StoreDb>, uuid: String) -> CatlibRe
 
 pub(crate) fn fetch_storages_by_container_uuid(
     db: Rc<StoreDb>,
-    uuid: String,
+    uuid: Uuid,
 ) -> CatlibResult<Vec<Storage>> {
     db.load()?;
     let data = db.read(|db| db.clone()).map_err(CatlibError::from)?;

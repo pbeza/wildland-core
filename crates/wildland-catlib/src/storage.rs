@@ -31,9 +31,9 @@ impl TryFrom<String> for Storage {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Storage {
-    uuid: String,
-    container_uuid: String,
-    template_uuid: Option<String>,
+    uuid: Uuid,
+    container_uuid: Uuid,
+    template_uuid: Option<Uuid>,
     data: Vec<u8>,
 
     #[serde(skip, default = "use_default_database")]
@@ -42,13 +42,13 @@ pub struct Storage {
 
 impl Storage {
     pub fn new(
-        container_uuid: String,
-        template_uuid: Option<String>,
+        container_uuid: Uuid,
+        template_uuid: Option<Uuid>,
         data: Vec<u8>,
         db: Rc<StoreDb>,
     ) -> Self {
         Storage {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: Uuid::new_v4(),
             container_uuid,
             template_uuid,
             data,
@@ -58,16 +58,16 @@ impl Storage {
 }
 
 impl IStorage for Storage {
-    fn uuid(&self) -> String {
-        self.uuid.clone()
+    fn uuid(&self) -> Uuid {
+        self.uuid
     }
 
-    fn template_uuid(&self) -> Option<String> {
-        self.template_uuid.clone()
+    fn template_uuid(&self) -> Option<Uuid> {
+        self.template_uuid
     }
 
     fn container(&self) -> CatlibResult<crate::container::Container> {
-        fetch_container_by_uuid(self.db.clone(), self.container_uuid.clone())
+        fetch_container_by_uuid(self.db.clone(), self.container_uuid)
     }
 
     fn data(&self) -> Vec<u8> {

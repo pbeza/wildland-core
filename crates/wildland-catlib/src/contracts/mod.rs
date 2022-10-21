@@ -28,7 +28,7 @@ pub type ContainerPaths = HashSet<ContainerPath>;
 
 pub trait IForest {
     /// Return UUID object identifier
-    fn uuid(&self) -> String;
+    fn uuid(&self) -> Uuid;
 
     /// Return Forest owner
     fn owner(&self) -> Identity;
@@ -176,7 +176,7 @@ pub trait IForest {
 
 pub trait IContainer {
     /// Return UUID object identifier
-    fn uuid(&self) -> String;
+    fn uuid(&self) -> Uuid;
 
     /// Return [`Forest`] that contains the [`Container`].
     ///
@@ -278,16 +278,15 @@ pub trait IContainer {
     /// container.add_path("/foo/bar".to_string());
     /// container.create_storage(Some(String::from("free-storage-1")), vec![]).unwrap();
     /// ```
-    fn create_storage(&self, template_uuid: Option<String>, data: Vec<u8>)
-        -> CatlibResult<Storage>;
+    fn create_storage(&self, template_uuid: Option<Uuid>, data: Vec<u8>) -> CatlibResult<Storage>;
 }
 
 pub trait IStorage {
     /// Return UUID object identifier
-    fn uuid(&self) -> String;
+    fn uuid(&self) -> Uuid;
 
     /// Return Template UUID
-    fn template_uuid(&self) -> Option<String>;
+    fn template_uuid(&self) -> Option<Uuid>;
 
     /// Return [`Container`] that contains the [`Storage`].
     ///
@@ -306,7 +305,7 @@ pub trait IStorage {
 
 pub trait IBridge {
     /// Return UUID object identifier
-    fn uuid(&self) -> String;
+    fn uuid(&self) -> Uuid;
 
     // Returns [`Bridge`]'s path
     fn path(&self) -> ContainerPath;

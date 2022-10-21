@@ -36,6 +36,6 @@ impl CatLibService {
 
     #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_forest(&self, forest_uuid: Uuid) -> Result<Forest, CatlibError> {
-        self.catlib.get_forest(forest_uuid.to_string())
+        self.catlib.get_forest(forest_uuid)
     }
 }

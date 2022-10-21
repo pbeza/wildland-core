@@ -153,7 +153,7 @@ impl CatLib {
     }
 
     /// Return [`Forest`] object by Forest UUID.
-    pub fn get_forest(&self, uuid: String) -> CatlibResult<Forest> {
+    pub fn get_forest(&self, uuid: Uuid) -> CatlibResult<Forest> {
         fetch_forest_by_uuid(self.db.clone(), uuid)
     }
 
@@ -184,7 +184,7 @@ impl CatLib {
     }
 
     /// Return [`Container`] object by Container UUID.
-    pub fn get_container(&self, uuid: String) -> CatlibResult<Container> {
+    pub fn get_container(&self, uuid: Uuid) -> CatlibResult<Container> {
         fetch_container_by_uuid(self.db.clone(), uuid)
     }
 
@@ -194,7 +194,7 @@ impl CatLib {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseEntry`] if more than one [`Forest`] was found.
-    pub fn find_storages_with_template(&self, template_id: String) -> CatlibResult<Vec<Storage>> {
+    pub fn find_storages_with_template(&self, template_id: Uuid) -> CatlibResult<Vec<Storage>> {
         self.db.load()?;
         let data = self.db.read(|db| db.clone()).map_err(CatlibError::from)?;
 
@@ -219,10 +219,7 @@ impl CatLib {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseEntry`] if more than one [`Forest`] was found.
-    pub fn find_containers_with_template(
-        &self,
-        template_id: String,
-    ) -> CatlibResult<Vec<Container>> {
+    pub fn find_containers_with_template(&self, template_id: Uuid) -> CatlibResult<Vec<Container>> {
         let storages = self.find_storages_with_template(template_id)?;
 
         storages.iter().map(|storage| storage.container()).collect()

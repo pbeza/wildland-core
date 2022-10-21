@@ -49,6 +49,13 @@ impl WildlandIdentity {
             Forest(_, keypair) | Device(_, keypair) => keypair.to_bytes(),
         }
     }
+
+    #[tracing::instrument(level = "debug", skip(self))]
+    pub fn get_keypair(&self) -> SigningKeypair {
+        match self {
+            Forest(_, keypair) | Device(_, keypair) => SigningKeypair::from(keypair),
+        }
+    }
 }
 
 #[cfg(test)]

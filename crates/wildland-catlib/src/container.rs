@@ -31,8 +31,8 @@ impl TryFrom<String> for Container {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Container {
-    uuid: String,
-    forest_uuid: String,
+    uuid: Uuid,
+    forest_uuid: Uuid,
     paths: ContainerPaths,
 
     #[serde(skip, default = "use_default_database")]
@@ -40,9 +40,9 @@ pub struct Container {
 }
 
 impl Container {
-    pub fn new(forest_uuid: String, db: Rc<StoreDb>) -> Self {
+    pub fn new(forest_uuid: Uuid, db: Rc<StoreDb>) -> Self {
         Container {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: Uuid::new_v4(),
             forest_uuid,
             db,
             paths: ContainerPaths::new(),
@@ -51,12 +51,12 @@ impl Container {
 }
 
 impl IContainer for Container {
-    fn uuid(&self) -> String {
-        self.uuid.clone()
+    fn uuid(&self) -> Uuid {
+        self.uuid
     }
 
     fn forest(&self) -> CatlibResult<crate::forest::Forest> {
-        fetch_forest_by_uuid(self.db.clone(), self.forest_uuid.clone())
+        fetch_forest_by_uuid(self.db.clone(), self.forest_uuid)
     }
 
     fn paths(&self) -> ContainerPaths {
@@ -79,11 +79,7 @@ impl IContainer for Container {
         fetch_storages_by_container_uuid(self.db.clone(), self.uuid())
     }
 
-    fn create_storage(
-        &self,
-        template_uuid: Option<String>,
-        data: Vec<u8>,
-    ) -> CatlibResult<Storage> {
+    fn create_storage(&self, template_uuid: Option<Uuid>, data: Vec<u8>) -> CatlibResult<Storage> {
         let mut storage = Storage::new(self.uuid(), template_uuid, data, self.db.clone());
         storage.save()?;
 

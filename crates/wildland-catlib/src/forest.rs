@@ -32,7 +32,7 @@ impl TryFrom<String> for Forest {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Forest {
-    uuid: String,
+    uuid: Uuid,
     signers: Signers,
     owner: Identity,
     data: Vec<u8>,
@@ -44,7 +44,7 @@ pub struct Forest {
 impl Forest {
     pub fn new(owner: Identity, signers: Signers, data: Vec<u8>, db: Rc<StoreDb>) -> Self {
         Forest {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: Uuid::new_v4(),
             signers,
             owner,
             data,
@@ -90,8 +90,8 @@ impl IForest for Forest {
         Ok(true)
     }
 
-    fn uuid(&self) -> String {
-        self.uuid.clone()
+    fn uuid(&self) -> Uuid {
+        self.uuid
     }
 
     fn owner(&self) -> Identity {

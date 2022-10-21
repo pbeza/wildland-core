@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use crate::{
     api::user::CargoUser,
     errors::{UserCreationError, UserRetrievalError},
@@ -7,8 +5,8 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use wildland_corex::{
-    CatLibService, CatlibError, CryptoError, IForest, Identity, LssError, LssService,
-    MasterIdentity, MnemonicPhrase, PubKey,
+    CatLibService, CatlibError, CryptoError, IForest, Identity, LssService, MasterIdentity,
+    MnemonicPhrase, PubKey,
 };
 
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
@@ -63,7 +61,7 @@ impl UserService {
         log::trace!("Checking whether user exists.");
         match self.get_user() {
             Ok(_) => return Err(UserCreationError::UserAlreadyExists),
-            Err(UserRetrievalError::ForestNotFound) => Ok(()),
+            Err(UserRetrievalError::ForestNotFound(_)) => Ok(()),
             Err(e) => Err(UserCreationError::UserRetrievalError(e)),
         }?;
         log::trace!("User does not exist yet");
@@ -90,8 +88,8 @@ impl UserService {
 
         self.lss_service.save_forest_uuid(&forest)?;
 
-        self.lss_service.save(&default_forest_identity)?;
-        self.lss_service.save(&device_identity)?;
+        self.lss_service.save_identity(&default_forest_identity)?;
+        self.lss_service.save_identity(&device_identity)?;
 
         Ok(())
     }
@@ -131,24 +129,19 @@ impl UserService {
     }
 
     fn get_default_forest_uuid(&self) -> Result<Uuid, UserRetrievalError> {
-        let forest_identity = self
-            .lss_service
-            .get_default_forest()?
-            .ok_or(UserRetrievalError::ForestNotFound)?;
+        let forest_identity =
+            self.lss_service
+                .get_default_forest()?
+                .ok_or(UserRetrievalError::ForestNotFound(
+                    "Forest identity keypair not found".to_owned(),
+                ))?;
 
-        let forest_uuid_bytes = self
-            .lss_service
+        println!("{:?}", forest_identity.get_public_key());
+
+        self.lss_service
             .get_forest_uuid_by_identity(&forest_identity)?
-            .ok_or(UserRetrievalError::ForestNotFound)?;
-        let forest_uuid_string = String::from_utf8(forest_uuid_bytes).map_err(|e| {
-            LssError(format!(
-                "Invalid bytes of forest uuid retrieved from LSS: {e}"
+            .ok_or(UserRetrievalError::ForestNotFound(
+                "Forest uuid not found".to_owned(),
             ))
-        })?;
-        Ok(Uuid::from_str(forest_uuid_string.as_str()).map_err(|e| {
-            LssError(format!(
-                "Could not parse uuid from raw bytes retrieved from LSS: {e}"
-            ))
-        })?)
     }
 }

@@ -31,8 +31,8 @@ impl TryFrom<String> for Bridge {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Bridge {
-    uuid: String,
-    forest_uuid: String,
+    uuid: Uuid,
+    forest_uuid: Uuid,
     path: ContainerPath,
     link: Vec<u8>,
 
@@ -41,9 +41,9 @@ pub struct Bridge {
 }
 
 impl Bridge {
-    pub fn new(forest_uuid: String, path: ContainerPath, link: Vec<u8>, db: Rc<StoreDb>) -> Self {
+    pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>, db: Rc<StoreDb>) -> Self {
         Bridge {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: Uuid::new_v4(),
             forest_uuid,
             path,
             link,
@@ -53,8 +53,8 @@ impl Bridge {
 }
 
 impl IBridge for Bridge {
-    fn uuid(&self) -> String {
-        self.uuid.clone()
+    fn uuid(&self) -> Uuid {
+        self.uuid
     }
 
     fn path(&self) -> ContainerPath {
