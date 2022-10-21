@@ -141,7 +141,7 @@ mod tests {
         container.create_storage(None, vec![]).unwrap()
     }
 
-    fn make_storage_with_template(container: &Container, template_id: String) -> Storage {
+    fn make_storage_with_template(container: &Container, template_id: Uuid) -> Storage {
         container.create_storage(Some(template_id), vec![]).unwrap()
     }
 
@@ -170,17 +170,17 @@ mod tests {
     fn create_storage_with_template_id(catlib: CatLib) {
         let container = _container(&catlib);
         make_storage(&container); // Create storage w/o template id on purpose
-        make_storage_with_template(&container, "template-id-1".to_string());
-        make_storage_with_template(&container, "template-id-1".to_string());
-        make_storage_with_template(&container, "template-id-2".to_string());
+        make_storage_with_template(&container, Uuid::from_u128(1));
+        make_storage_with_template(&container, Uuid::from_u128(1));
+        make_storage_with_template(&container, Uuid::from_u128(2));
 
         let storages = catlib
-            .find_storages_with_template("template-id-1".to_string())
+            .find_storages_with_template(Uuid::from_u128(1))
             .unwrap();
         assert_eq!(storages.len(), 2);
 
         let storages = catlib
-            .find_storages_with_template("template-id-2".to_string())
+            .find_storages_with_template(Uuid::from_u128(2))
             .unwrap();
         assert_eq!(storages.len(), 1);
     }

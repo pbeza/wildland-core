@@ -129,19 +129,14 @@ impl UserService {
     }
 
     fn get_default_forest_uuid(&self) -> Result<Uuid, UserRetrievalError> {
-        let forest_identity =
-            self.lss_service
-                .get_default_forest()?
-                .ok_or(UserRetrievalError::ForestNotFound(
-                    "Forest identity keypair not found".to_owned(),
-                ))?;
+        let forest_identity = self.lss_service.get_default_forest()?.ok_or_else(|| {
+            UserRetrievalError::ForestNotFound("Forest identity keypair not found".to_owned())
+        })?;
 
         println!("{:?}", forest_identity.get_public_key());
 
         self.lss_service
             .get_forest_uuid_by_identity(&forest_identity)?
-            .ok_or(UserRetrievalError::ForestNotFound(
-                "Forest uuid not found".to_owned(),
-            ))
+            .ok_or_else(|| UserRetrievalError::ForestNotFound("Forest uuid not found".to_owned()))
     }
 }

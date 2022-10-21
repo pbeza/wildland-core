@@ -50,6 +50,7 @@
 //! # use wildland_catlib::CatLib;
 //! # use std::collections::HashSet;
 //! # use crate::wildland_catlib::*;
+//! # use uuid::Uuid;
 //! let forest_owner = Identity([1; 32]);
 //! let signer = Identity([2; 32]);
 //!
@@ -64,7 +65,7 @@
 //! container.add_path("/foo/bar".to_string());
 //! container.add_path("/bar/baz".to_string());
 //!
-//! let storage_template_id = String::from("free-storage-1");
+//! let storage_template_id = Uuid::from_u128(1);
 //! let storage_data = b"credentials_and_whatnot".to_vec();
 //! container.create_storage(Some(storage_template_id), storage_data);
 //! ```

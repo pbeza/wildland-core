@@ -215,24 +215,24 @@ mod tests {
         let beta = make_container(&catlib);
 
         alpha
-            .create_storage(Some("template-1".into()), vec![])
+            .create_storage(Some(Uuid::from_u128(1)), vec![])
             .unwrap();
         alpha
-            .create_storage(Some("template-2".into()), vec![])
+            .create_storage(Some(Uuid::from_u128(2)), vec![])
             .unwrap();
 
-        beta.create_storage(Some("template-1".into()), vec![])
+        beta.create_storage(Some(Uuid::from_u128(1)), vec![])
             .unwrap();
 
         let containers = catlib
-            .find_containers_with_template("template-2".into())
+            .find_containers_with_template(Uuid::from_u128(2))
             .unwrap();
 
         assert_eq!(containers.len(), 1);
         assert_eq!(containers[0].uuid(), alpha.uuid());
 
         let containers = catlib
-            .find_containers_with_template("template-1".into())
+            .find_containers_with_template(Uuid::from_u128(1))
             .unwrap();
 
         assert_eq!(containers.len(), 2);

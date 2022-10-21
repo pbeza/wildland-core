@@ -37,9 +37,9 @@ impl<'de> Deserialize<'de> for SigningKeypair {
         D: serde::Deserializer<'de>,
     {
         let hex_encoded_str = String::deserialize(deserializer)?;
-        let bytes = hex::decode(hex_encoded_str).map_err(|e| serde::de::Error::custom(e))?;
+        let bytes = hex::decode(hex_encoded_str).map_err(serde::de::Error::custom)?;
         Ok(Self(
-            ed25519_dalek::Keypair::from_bytes(&bytes).map_err(|e| serde::de::Error::custom(e))?,
+            ed25519_dalek::Keypair::from_bytes(&bytes).map_err(serde::de::Error::custom)?,
         ))
     }
 }

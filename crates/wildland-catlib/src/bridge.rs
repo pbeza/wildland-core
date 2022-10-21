@@ -62,7 +62,7 @@ impl IBridge for Bridge {
     }
 
     fn forest(&self) -> CatlibResult<crate::forest::Forest> {
-        fetch_forest_by_uuid(self.db.clone(), self.forest_uuid.clone())
+        fetch_forest_by_uuid(self.db.clone(), self.forest_uuid)
     }
 
     fn link(&self) -> Vec<u8> {

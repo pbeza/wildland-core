@@ -268,6 +268,7 @@ pub trait IContainer {
     /// # use wildland_catlib::CatLib;
     /// # use std::collections::HashSet;
     /// # use crate::wildland_catlib::*;
+    /// # use uuid::Uuid;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
@@ -276,7 +277,7 @@ pub trait IContainer {
     ///              ).unwrap();
     /// let mut container = forest.create_container().unwrap();
     /// container.add_path("/foo/bar".to_string());
-    /// container.create_storage(Some(String::from("free-storage-1")), vec![]).unwrap();
+    /// container.create_storage(Some(Uuid::from_u128(1)), vec![]).unwrap();
     /// ```
     fn create_storage(&self, template_uuid: Option<Uuid>, data: Vec<u8>) -> CatlibResult<Storage>;
 }
