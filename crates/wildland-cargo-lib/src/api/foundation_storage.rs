@@ -3,10 +3,7 @@ use std::rc::Rc;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
-use wildland_corex::{
-    storage::{FoundationStorageTemplate, StorageTemplate},
-    CryptoError, EncryptingKeypair, LssError,
-};
+use wildland_corex::{storage::*, CryptoError, EncryptingKeypair, LssError};
 use wildland_http_client::{
     error::WildlandHttpClientError,
     evs::{ConfirmTokenReq, EvsClient, GetStorageReq},
@@ -36,6 +33,30 @@ impl StorageCredentials {
             credential_secret: self.credential_secret,
             sc_url,
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FoundationStorageTemplate {
+    pub id: Uuid,
+    pub credential_id: String,
+    pub credential_secret: String,
+    pub sc_url: String,
+}
+
+impl StorageTemplateTrait for FoundationStorageTemplate {
+    fn uuid(&self) -> Uuid {
+        self.id
+    }
+
+    fn data(&self) -> Vec<u8> {
+        serde_json::to_vec(self).unwrap()
+    }
+}
+
+impl Into<StorageTemplate> for FoundationStorageTemplate {
+    fn into(self) -> StorageTemplate {
+        StorageTemplate::with_template(Rc::new(self))
     }
 }
 

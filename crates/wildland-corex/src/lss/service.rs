@@ -1,14 +1,8 @@
 use super::{api::LocalSecureStorage, result::LssResult};
-use crate::{
-    storage::{StorageTemplate, StorageTemplateType},
-    ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY,
-};
-use uuid::Uuid;
+use crate::{storage::StorageTemplate, ForestRetrievalError, WildlandIdentity, DEFAULT_FOREST_KEY};
 use wildland_crypto::identity::SigningKeypair;
 
 const STORAGE_TEMPLATE_PREFIX: &str = "wildland.storage_template.";
-const FOUNDATION_STORAGE_TEMPLATE_UUID_KEY: &str =
-    "wildland.storage_template.foundation_storage_template_uuid";
 #[derive(Clone)]
 pub struct LssService {
     lss: &'static dyn LocalSecureStorage,
@@ -43,51 +37,21 @@ impl LssService {
             })
     }
 
+    // TODO refactor after merge
+    // impl deserialize and serialize for storage template
     #[tracing::instrument(level = "debug", skip(self, storage_template))]
     pub fn save_storage_template(
         &self,
         storage_template: &StorageTemplate,
     ) -> LssResult<Option<Vec<u8>>> {
         tracing::trace!("Saving storage template");
-        if storage_template.storage_template_type() == StorageTemplateType::FoundationStorage {
-            self.lss.insert(
-                FOUNDATION_STORAGE_TEMPLATE_UUID_KEY.to_owned(),
-                storage_template.uuid().as_bytes().to_vec(),
-            )?;
-        };
         self.lss.insert(
             format!("{STORAGE_TEMPLATE_PREFIX}{}", storage_template.uuid()),
             storage_template.data(),
         )
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
-    pub fn get_foundation_storage_template(&self) -> LssResult<Option<StorageTemplate>> {
-        tracing::trace!("Getting foundation storage template.");
-        let template_uuid_bytes_opt = self
-            .lss
-            .get(FOUNDATION_STORAGE_TEMPLATE_UUID_KEY.to_string())?;
-
-        if let Some(uuid_bytes) = template_uuid_bytes_opt {
-            let uuid = Uuid::from_slice(&uuid_bytes)
-                .map_err(|e| LssError(format!("Could not create uuid out of bytes: {e}")))?;
-            let template_bytes_opt = self.lss.get(format!("{STORAGE_TEMPLATE_PREFIX}{}", uuid))?;
-
-            if let Some(template_bytes) = template_bytes_opt {
-                Ok(Some(
-                    StorageTemplate::try_from_bytes(
-                        &template_bytes,
-                        StorageTemplateType::FoundationStorage,
-                    )
-                    .map_err(|e| LssError(format!("Error while parsing storage template: {e}")))?,
-                ))
-            } else {
-                Ok(None)
-            }
-        } else {
-            Ok(None)
-        }
-    }
+    // TODO list them
 }
 
 #[cfg(test)]
