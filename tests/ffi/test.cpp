@@ -191,7 +191,7 @@ int main()
 
         try
         {
-            user_api.create_user_from_mnemonic(mnemonic, device_name);
+            CargoUser new_user = user_api.create_user_from_mnemonic(mnemonic, device_name);
             std::cout << "User successfully created from mnemonic\n";
 
             try

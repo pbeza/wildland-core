@@ -47,7 +47,7 @@ impl From<MnemonicPhrase> for MnemonicPayload {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CargoUser {
     pub this_device: String,
     pub all_devices: Vec<String>,
@@ -126,7 +126,7 @@ impl UserApi {
         &self,
         entropy: Vec<u8>,
         device_name: String,
-    ) -> SingleErrVariantResult<(), UserCreationError> {
+    ) -> SingleErrVariantResult<CargoUser, UserCreationError> {
         tracing::debug!("creating new user");
         self.user_service
             .create_user(CreateUserInput::Entropy(entropy), device_name)
@@ -138,7 +138,7 @@ impl UserApi {
         &self,
         mnemonic: &MnemonicPayload,
         device_name: String,
-    ) -> SingleErrVariantResult<(), UserCreationError> {
+    ) -> SingleErrVariantResult<CargoUser, UserCreationError> {
         tracing::debug!("creating new user");
         self.user_service
             .create_user(
@@ -150,16 +150,122 @@ impl UserApi {
 
     /// Gets user if it exists
     ///
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn get_user(&self) -> RetrievalResult<CargoUser, UserRetrievalError> {
         tracing::debug!("getting user");
-        let user = self
-            .user_service
-            .get_user()
-            .map_err(RetrievalError::Unexpected)?;
+        let user = self.user_service.get_user().map_err(|e| match e {
+            UserRetrievalError::ForestRetrievalError(_)
+            | UserRetrievalError::LssError(_)
+            | UserRetrievalError::CatlibError(_)
+            | UserRetrievalError::DeviceMetadataNotFound => RetrievalError::Unexpected(e),
+            UserRetrievalError::ForestNotFound(e) => RetrievalError::NotFound(e.to_string()),
+        })?;
         match user {
             Some(user) => Ok(user),
             None => Err(RetrievalError::NotFound("User not found.".to_string())),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{cell::RefCell, collections::HashMap};
+
+    use wildland_corex::{LocalSecureStorage, LssResult, LssService};
+
+    use crate::{errors::RetrievalError, user::UserService};
+
+    use super::{CargoUser, UserApi};
+
+    #[derive(Default)]
+    struct LssStub {
+        storage: RefCell<HashMap<String, Vec<u8>>>,
+    }
+
+    impl LocalSecureStorage for LssStub {
+        fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>> {
+            Ok(self.storage.borrow_mut().insert(key, value))
+        }
+
+        fn get(&self, key: String) -> LssResult<Option<Vec<u8>>> {
+            Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
+        }
+
+        fn contains_key(&self, key: String) -> LssResult<bool> {
+            Ok(self.storage.borrow().contains_key(&key))
+        }
+
+        fn keys(&self) -> LssResult<Vec<String>> {
+            Ok(self.storage.borrow().keys().cloned().collect())
+        }
+
+        fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>> {
+            Ok(self.storage.borrow_mut().remove(&key))
+        }
+
+        fn len(&self) -> LssResult<usize> {
+            Ok(self.storage.borrow().len())
+        }
+
+        fn is_empty(&self) -> LssResult<bool> {
+            Ok(self.storage.borrow().is_empty())
+        }
+    }
+
+    #[test]
+    fn get_user_should_return_none_if_it_does_not_exist() {
+        let lss = LssStub::default(); // LSS must live through the whole test
+        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
+        let lss_service = LssService::new(lss_ref);
+        let user_service = UserService::new(lss_service);
+        let user_api = UserApi::new(user_service);
+
+        let user_result = user_api.get_user();
+        assert_eq!(
+            user_result.unwrap_err(),
+            RetrievalError::NotFound("Forest identity keypair not found".to_owned())
+        )
+    }
+
+    #[test]
+    fn create_user_should_return_user_structure() {
+        let lss = LssStub::default(); // LSS must live through the whole test
+        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
+        let lss_service = LssService::new(lss_ref);
+        let user_service = UserService::new(lss_service);
+        let user_api = UserApi::new(user_service);
+
+        let mnemonic = user_api.generate_mnemonic().unwrap();
+        let device_name = "device name".to_string();
+        let user = user_api
+            .create_user_from_mnemonic(&mnemonic, device_name.clone())
+            .unwrap();
+
+        let expected_user = CargoUser {
+            this_device: device_name.clone(),
+            all_devices: vec![device_name.clone()],
+        };
+        assert_eq!(user, expected_user);
+    }
+
+    #[test]
+    fn get_user_should_return_some_if_it_was_created() {
+        let lss = LssStub::default(); // LSS must live through the whole test
+        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
+        let lss_service = LssService::new(lss_ref);
+        let user_service = UserService::new(lss_service);
+        let user_api = UserApi::new(user_service);
+
+        let mnemonic = user_api.generate_mnemonic().unwrap();
+        let device_name = "device name".to_string();
+        let _ = user_api
+            .create_user_from_mnemonic(&mnemonic, device_name.clone())
+            .unwrap();
+
+        let user = user_api.get_user().unwrap();
+        let expected_user = CargoUser {
+            this_device: device_name.clone(),
+            all_devices: vec![device_name.clone()],
+        };
+        assert_eq!(user, expected_user);
     }
 }

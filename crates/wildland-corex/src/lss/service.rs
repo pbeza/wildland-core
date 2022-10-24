@@ -151,7 +151,7 @@ mod tests {
 
     use crate::{
         lss::service::{THIS_DEVICE_KEYPAIR_KEY, THIS_DEVICE_NAME_KEY},
-        LocalSecureStorage, LssService, WildlandIdentity, DEFAULT_FOREST_KEY,
+        LocalSecureStorage, LssResult, LssService, WildlandIdentity, DEFAULT_FOREST_KEY,
     };
 
     #[derive(Default)]
@@ -159,47 +159,39 @@ mod tests {
         storage: RefCell<HashMap<String, Vec<u8>>>,
     }
 
-    impl LssStub {
-        fn new() -> Self {
-            Self {
-                storage: RefCell::new(HashMap::new()),
-            }
-        }
-    }
-
     impl LocalSecureStorage for LssStub {
-        fn insert(&self, key: String, value: Vec<u8>) -> crate::LssResult<Option<Vec<u8>>> {
+        fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>> {
             Ok(self.storage.borrow_mut().insert(key, value))
         }
 
-        fn get(&self, key: String) -> crate::LssResult<Option<Vec<u8>>> {
+        fn get(&self, key: String) -> LssResult<Option<Vec<u8>>> {
             Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
         }
 
-        fn contains_key(&self, key: String) -> crate::LssResult<bool> {
+        fn contains_key(&self, key: String) -> LssResult<bool> {
             Ok(self.storage.borrow().contains_key(&key))
         }
 
-        fn keys(&self) -> crate::LssResult<Vec<String>> {
+        fn keys(&self) -> LssResult<Vec<String>> {
             Ok(self.storage.borrow().keys().cloned().collect())
         }
 
-        fn remove(&self, key: String) -> crate::LssResult<Option<Vec<u8>>> {
+        fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>> {
             Ok(self.storage.borrow_mut().remove(&key))
         }
 
-        fn len(&self) -> crate::LssResult<usize> {
+        fn len(&self) -> LssResult<usize> {
             Ok(self.storage.borrow().len())
         }
 
-        fn is_empty(&self) -> crate::LssResult<bool> {
+        fn is_empty(&self) -> LssResult<bool> {
             Ok(self.storage.borrow().is_empty())
         }
     }
 
     #[test]
     fn test_save_forest_identity() {
-        let lss = LssStub::new(); // LSS must live through the whole test
+        let lss = LssStub::default(); // LSS must live through the whole test
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
@@ -216,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_save_device_identity() {
-        let lss = LssStub::new(); // LSS must live through the whole test
+        let lss = LssStub::default(); // LSS must live through the whole test
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
@@ -242,7 +234,7 @@ mod tests {
 
     #[test]
     fn get_default_forest_should_return_none() {
-        let lss = LssStub::new(); // LSS must live through the whole test
+        let lss = LssStub::default(); // LSS must live through the whole test
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
@@ -253,7 +245,7 @@ mod tests {
 
     #[test]
     fn get_default_forest_should_return_identity() {
-        let lss = LssStub::new(); // LSS must live through the whole test
+        let lss = LssStub::default(); // LSS must live through the whole test
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
@@ -272,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_save_forest_uuid() {
-        let lss = LssStub::new(); // LSS must live through the whole test
+        let lss = LssStub::default(); // LSS must live through the whole test
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
@@ -294,7 +286,7 @@ mod tests {
 
     #[test]
     fn test_get_forest_uuid_by_identity() {
-        let lss = LssStub::new(); // LSS must live through the whole test
+        let lss = LssStub::default(); // LSS must live through the whole test
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
@@ -320,7 +312,7 @@ mod tests {
 
     #[test]
     fn test_get_this_device_identity_should_return_none() {
-        let lss = LssStub::new(); // LSS must live through the whole test
+        let lss = LssStub::default(); // LSS must live through the whole test
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
@@ -331,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_get_this_device_identity_should_return_identity() {
-        let lss = LssStub::new(); // LSS must live through the whole test
+        let lss = LssStub::default(); // LSS must live through the whole test
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 

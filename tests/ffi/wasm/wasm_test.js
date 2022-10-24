@@ -43,5 +43,7 @@ wildland().then((wlib) => {
         words_vec.push(new wlib.String(word));
     }
     var restored_mnemonic = user_api.create_mnemonic_from_vec(words_vec);
-    console.log(restored_mnemonic.get_string().to_string())
+    console.log(restored_mnemonic.get_string().to_string());
+
+    var new_user = user_api.create_user_from_mnemonic(mnemonic, device_name);
 });

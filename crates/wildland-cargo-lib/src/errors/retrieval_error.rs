@@ -20,7 +20,7 @@ use super::ExceptionTrait;
 use std::fmt::Display;
 
 pub type RetrievalResult<T, E> = Result<T, RetrievalError<E>>;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[repr(C)]
 pub enum RetrievalError<E: Clone> {
     NotFound(String),

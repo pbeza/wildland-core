@@ -77,7 +77,7 @@ impl UserService {
         &self,
         input: CreateUserInput,
         device_name: String,
-    ) -> Result<(), UserCreationError> {
+    ) -> Result<CargoUser, UserCreationError> {
         log::trace!("Checking whether user exists.");
         match self.get_user() {
             Ok(_) => return Err(UserCreationError::UserAlreadyExists),
@@ -100,7 +100,7 @@ impl UserService {
             &device_identity,
             UserMetaData {
                 devices: vec![DeviceMetadata {
-                    name: device_name,
+                    name: device_name.clone(),
                     pubkey: device_identity.get_public_key(),
                 }],
             },
@@ -111,7 +111,10 @@ impl UserService {
         self.lss_service.save_identity(&default_forest_identity)?;
         self.lss_service.save_identity(&device_identity)?;
 
-        Ok(())
+        Ok(CargoUser {
+            this_device: device_name.clone(),
+            all_devices: vec![device_name],
+        })
     }
 
     /// Retrieves default forest keypair from LSS and then basing on that reads User metadata from CatLib.

@@ -205,12 +205,12 @@ mod ffi_binding {
             self: &UserApi,
             entropy: Vec<u8>,
             device_name: String,
-        ) -> Result<VoidType, UserCreationExc>;
+        ) -> Result<CargoUser, UserCreationExc>;
         fn create_user_from_mnemonic(
             self: &UserApi,
             mnemonic: &MnemonicPayload,
             device_name: String,
-        ) -> Result<VoidType, UserCreationExc>;
+        ) -> Result<CargoUser, UserCreationExc>;
         fn get_user(self: &UserApi) -> Result<CargoUser, UserRetrievalExc>;
 
         fn get_string(self: &MnemonicPayload) -> String;
