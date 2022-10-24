@@ -1,6 +1,5 @@
 use crate::api::config::LoggerConfig;
-use anyhow::Context;
-use std::io::{self};
+use std::io;
 use tracing_subscriber::{fmt, prelude::__tracing_subscriber_SubscriberExt, EnvFilter};
 
 pub(crate) fn init_subscriber(cfg: LoggerConfig) -> anyhow::Result<()> {
@@ -28,11 +27,10 @@ pub(crate) fn init_subscriber(cfg: LoggerConfig) -> anyhow::Result<()> {
 }
 
 pub fn default_with_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
-    let (filepath, rotatedir) = cfg
-        .filestrings_as_paths()
-        .context("requested logger with file but paths provided are not valid or does not exist")?;
-
-    let file_appender = tracing_appender::rolling::hourly(filepath, rotatedir);
+    let file_appender = tracing_appender::rolling::hourly(
+        cfg.log_file_path.clone(),
+        cfg.log_file_rotate_directory.clone(),
+    );
     let subscriber = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env().add_directive(cfg.log_level.into()))
         .with(

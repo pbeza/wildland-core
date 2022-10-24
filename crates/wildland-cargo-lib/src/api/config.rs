@@ -20,7 +20,7 @@
 //!
 //! It can be also provided via type implementing [`CargoCfgProvider`].
 
-use std::str::FromStr;
+use std::{path::PathBuf, str::FromStr};
 
 use serde::{
     de::{Error, Unexpected},
@@ -68,14 +68,24 @@ pub struct FoundationStorageApiConfig {
     pub sc_url: String,
 }
 
-const fn bool_default_as_true() -> bool {
+fn bool_default_as_true() -> bool {
     true
+}
+
+fn serde_logger_default_path() -> PathBuf {
+    PathBuf::from("cargo_lib_log")
+}
+
+fn serde_logger_default_rot_dir() -> PathBuf {
+    PathBuf::from(".")
 }
 
 /// Structure representing configuration of [`super::CargoLib`].
 /// It is used to create [`super::CargoLib`] instance.
-/// It is created from JSON or from type implementing [`CargoCfgProvider`].\
-/// See [`super::CargoLib`] for more details.
+/// It is created from JSON or from type implementing [`CargoCfgProvider`].
+/// This structure provides default values for all fields and can be constructed
+/// by either LoggerConfig::new() or LoggerConfig::default(). Those two calls
+/// are equivalent to each other.
 /// ```
 /// # use wildland_cargo_lib::api::config::parse_config;
 /// #
@@ -129,14 +139,16 @@ pub struct LoggerConfig {
     /// File describing where log entries should be mirrored to. This part
     /// defines the file path of the currently active log file.
     /// defaults to `cargolib_log`
-    #[derivative(Default(value = "Some(\"cargolib_log\".to_string())"))]
-    pub log_file_path: Option<String>,
+    #[serde(default = "serde_logger_default_path")]
+    #[derivative(Default(value = "serde_logger_default_path()"))]
+    pub log_file_path: PathBuf,
 
     /// File describing where log entries should be mirrored to. This part
     /// defines the file directory where the rotation will happen.
     /// defaults to the current working directory.
-    #[derivative(Default(value = "Some(\".\".to_string())"))]
-    pub log_file_rotate_directory: Option<String>,
+    #[serde(default = "serde_logger_default_rot_dir")]
+    #[derivative(Default(value = "serde_logger_default_rot_dir()"))]
+    pub log_file_rotate_directory: PathBuf,
 
     /// Name of the system.log category. If Some() provided together with
     /// oslog_subsystem category, enables the oslog facility. If OsLog is enabled,
@@ -167,41 +179,25 @@ impl LoggerConfig {
 
     /// Helper function used to determine platform capabilities
     /// Whenever the file log facilities are available and properly configured,
-    /// returns `true`. However if the configuration does not contain all the
-    /// fields necessary to start the logger or the platform does not support
-    /// logging to the file (i.e. ios) then `false` is returned.
+    /// returns `true`. However if the configuration uses paths that do not exist
+    /// we will fail to initialize the logger and return `false`.
     #[instrument(skip(self))]
     pub fn is_file_eligible(&self) -> bool {
-        if self.log_file_path.is_none() || self.log_file_rotate_directory.is_none() {
+        if !self.log_file_enabled {
             return false;
         }
-        if let Ok((_, _)) = self.filestrings_as_paths() {
-            return true;
-        }
-        tracing::error!("file log can not be enabled with provided paths");
-        false
-    }
 
-    /// Helper function to transform and check filepaths.
-    /// Converts strings to std::path::PathBuf instances, and checks for their existance
-    /// throws Error if the paths are not valid or do not exist. On success returns
-    /// a tuple composed from "(filepath,rotatepath)" (taken from the config).
-    #[instrument(skip(self))]
-    pub fn filestrings_as_paths(&self) -> anyhow::Result<(std::path::PathBuf, std::path::PathBuf)> {
-        // all unwraps should succeed because of the is_file_eligiible check
-        // if it crashes on those, it means gods wanted it this way...
-        let file_path = std::path::PathBuf::from(self.log_file_path.clone().unwrap());
-        let dir_path = std::path::PathBuf::from(self.log_file_rotate_directory.clone().unwrap());
+        let filepath = self.log_file_path.clone();
+        let dirpath = self.log_file_rotate_directory.clone();
 
-        if !file_path.exists() {
-            anyhow::bail!("provided path: {} does not exist!", file_path.display());
+        // if filepaths are not existing, whetever provided or defaults, we are
+        // not eligible to start file logging subscriber
+        if !filepath.exists() || !dirpath.exists() {
+            std::eprintln!("file log paths do not exist, we failed to create logging subscriber");
+            return false;
         }
 
-        if !dir_path.exists() {
-            anyhow::bail!("provided path: {} does not exist!", dir_path.display());
-        }
-
-        Ok((file_path, dir_path))
+        true
     }
 
     pub fn validate_config_level(&mut self) {
@@ -250,9 +246,17 @@ pub fn collect_config(
             log_level: Level::from_str(config_provider.get_log_level().as_str())
                 .map_err(|e| SingleVariantError::Failure(ParseConfigError(e.to_string())))?,
             log_use_ansi: config_provider.get_log_use_ansi(),
-            log_file_path: config_provider.get_log_file(),
+            log_file_path: PathBuf::from(
+                config_provider
+                    .get_log_file()
+                    .unwrap_or_else(|| "cargolib_log".to_owned()),
+            ),
             log_file_enabled: config_provider.log_file_enabled(),
-            log_file_rotate_directory: config_provider.log_file_rotate_directory(),
+            log_file_rotate_directory: PathBuf::from(
+                config_provider
+                    .log_file_rotate_directory()
+                    .unwrap_or_else(|| ".".to_owned()),
+            ),
             oslog_category: config_provider.oslog_category(),
             oslog_sybsystem: config_provider.oslog_sybsystem(),
         },
@@ -276,10 +280,9 @@ pub fn parse_config(raw_content: Vec<u8>) -> SingleErrVariantResult<CargoConfig,
 
 #[cfg(test)]
 mod tests {
-
-    use tracing::Level;
-
     use super::{CargoConfig, FoundationStorageApiConfig, LoggerConfig};
+    use std::path::PathBuf;
+    use tracing::Level;
 
     #[test]
     fn test_parsing_debug_config() {
@@ -307,8 +310,8 @@ mod tests {
                     use_logger: true,
                     log_level: Level::TRACE,
                     log_use_ansi: false,
-                    log_file_path: Some("cargo_lib_log".to_owned()),
-                    log_file_rotate_directory: Some(".".to_owned()),
+                    log_file_path: PathBuf::from("cargo_lib_log"),
+                    log_file_rotate_directory: PathBuf::from("."),
                     log_file_enabled: true,
                     oslog_category: None,
                     oslog_sybsystem: None,
@@ -341,8 +344,8 @@ mod tests {
                     use_logger: true,
                     log_level: Level::TRACE,
                     log_use_ansi: true,
-                    log_file_path: None,
-                    log_file_rotate_directory: None,
+                    log_file_path: LoggerConfig::default().log_file_path,
+                    log_file_rotate_directory: LoggerConfig::default().log_file_rotate_directory,
                     log_file_enabled: false,
                     oslog_category: None,
                     oslog_sybsystem: None,

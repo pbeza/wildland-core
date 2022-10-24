@@ -97,13 +97,14 @@ impl CargoLib {
 ///
 /// let lss = TestLss{};
 ///
+/// # use std::path::PathBuf;
 /// let cfg = CargoConfig{     
 ///     logger_config: LoggerConfig {
 ///         use_logger: true,
 ///         log_level: Level::TRACE,
 ///         log_use_ansi: false,
-///         log_file_path: Some("cargo_lib_log".to_owned()),
-///         log_file_rotate_directory: Some(".".to_owned()),
+///         log_file_path: PathBuf::from("cargo_lib_log"),
+///         log_file_rotate_directory: PathBuf::from(".".to_owned()),
 ///         log_file_enabled: true,
 ///         oslog_category: None,
 ///         oslog_sybsystem: None,
