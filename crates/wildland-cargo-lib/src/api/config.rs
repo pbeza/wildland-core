@@ -87,6 +87,8 @@ pub struct FoundationStorageApiConfig {
 ///     "sc_url": "some_url"
 /// }
 /// "#;
+/// let parsed_cfg = parse_config(config_json.as_bytes().to_vec()).unwrap();
+/// 
 ///
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, derivative::Derivative)]
 #[derivative(Default(new = "true"))]
