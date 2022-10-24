@@ -66,6 +66,12 @@ impl TryFrom<Vec<u8>> for SigningKeypair {
     }
 }
 
+impl PartialEq for SigningKeypair {
+    fn eq(&self, other: &Self) -> bool {
+        self.public() == other.public() && self.secret() == other.secret()
+    }
+}
+
 impl From<&SigningKeypair> for SigningKeypair {
     fn from(other: &SigningKeypair) -> Self {
         Self(ed25519_dalek::Keypair {

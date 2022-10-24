@@ -5,7 +5,7 @@ use wildland_crypto::identity::{
     SigningKeypair,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum WildlandIdentity {
     Forest(u64, SigningKeypair),
     Device(String, SigningKeypair),
