@@ -77,18 +77,16 @@ pub struct FoundationStorageApiConfig {
 /// let config_json = r#"
 /// {
 ///     "log_level": "debug",
-///     "log_use_ansi": true
+///     "log_use_ansi": true,
 ///     "log_file_path": "some_name",
-///     "log_file_rotate_directory": Some("path"),
-///     "log_file_enabled": True,
-///     "oslog_sybsystem": None,
-///     "oslog_category": None
+///     "log_file_rotate_directory": ".",
+///     "log_file_enabled": true,
 ///     "evs_url": "some_url",
 ///     "sc_url": "some_url"
 /// }
 /// "#;
 /// let parsed_cfg = parse_config(config_json.as_bytes().to_vec()).unwrap();
-/// 
+///
 ///
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, derivative::Derivative)]
 #[derivative(Default(new = "true"))]
