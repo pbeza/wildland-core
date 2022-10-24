@@ -17,7 +17,9 @@ wildland().then((wlib) => {
     // or by parsing JSON string with parse_config function
     var CargoCfgProvider = wlib.CargoCfgProvider.extend("CargoCfgProvider", {
         get_log_level: function () { return new wlib.String("debug"); },
-        get_log_file: function () { return wlib.new_none_string() }
+        get_log_file: function () { return wlib.new_none_string() },
+        get_evs_url: function () { return new wlib.String("evs url will be here"); },
+        get_sc_url: function () { return new wlib.String("sc url will be here"); }
     });
 
     var lss = new Lss;
