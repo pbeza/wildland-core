@@ -68,6 +68,10 @@ pub struct FoundationStorageApiConfig {
     pub sc_url: String,
 }
 
+const fn bool_default_as_true() -> bool {
+    true
+}
+
 /// Structure representing configuration of [`super::CargoLib`].
 /// It is used to create [`super::CargoLib`] instance.
 /// It is created from JSON or from type implementing [`CargoCfgProvider`].\
@@ -104,6 +108,7 @@ pub struct LoggerConfig {
     ///
     /// In case its false, all the log configs are not used nor the subscriber
     /// is created.
+    #[serde(default = "bool_default_as_true")]
     #[derivative(Default(value = "true"))]
     pub use_logger: bool,
 

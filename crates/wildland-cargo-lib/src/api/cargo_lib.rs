@@ -99,6 +99,7 @@ impl CargoLib {
 ///
 /// let cfg = CargoConfig{     
 ///     logger_config: LoggerConfig {
+///         use_logger: true,
 ///         log_level: Level::TRACE,
 ///         log_use_ansi: false,
 ///         log_file_path: Some("cargo_lib_log".to_owned()),
