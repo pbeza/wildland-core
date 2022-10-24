@@ -47,12 +47,11 @@ pub trait CargoCfgProvider {
     /// - "5" - trace
     fn get_log_level(&self) -> String;
     fn get_log_use_ansi(&self) -> bool;
-    fn get_log_file(&self) -> Option<String>;
-    fn log_file_enabled(&self) -> bool;
-    fn log_file_path(&self) -> Option<String>;
-    fn log_file_rotate_directory(&self) -> Option<String>;
-    fn oslog_category(&self) -> Option<String>;
-    fn oslog_sybsystem(&self) -> Option<String>;
+    fn get_log_file_enabled(&self) -> bool;
+    fn get_log_file_path(&self) -> Option<String>;
+    fn get_log_file_rotate_directory(&self) -> Option<String>;
+    fn get_oslog_category(&self) -> Option<String>;
+    fn get_oslog_sybsystem(&self) -> Option<String>;
 
     fn get_evs_url(&self) -> String;
     fn get_sc_url(&self) -> String;
@@ -248,17 +247,17 @@ pub fn collect_config(
             log_use_ansi: config_provider.get_log_use_ansi(),
             log_file_path: PathBuf::from(
                 config_provider
-                    .get_log_file()
+                    .get_log_file_path()
                     .unwrap_or_else(|| "cargolib_log".to_owned()),
             ),
-            log_file_enabled: config_provider.log_file_enabled(),
+            log_file_enabled: config_provider.get_log_file_enabled(),
             log_file_rotate_directory: PathBuf::from(
                 config_provider
-                    .log_file_rotate_directory()
+                    .get_log_file_rotate_directory()
                     .unwrap_or_else(|| ".".to_owned()),
             ),
-            oslog_category: config_provider.oslog_category(),
-            oslog_sybsystem: config_provider.oslog_sybsystem(),
+            oslog_category: config_provider.get_oslog_category(),
+            oslog_sybsystem: config_provider.get_oslog_sybsystem(),
         },
         fsa_config: FoundationStorageApiConfig {
             evs_url: config_provider.get_evs_url(),

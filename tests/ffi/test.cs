@@ -5,18 +5,35 @@ using static wildland;
 namespace Main
 {
     class CargoCfgProviderImpl : CargoCfgProvider {
-        public override RustString get_log_level()
-        {
+        public override bool get_use_logger() {
+            return true;
+        }
+        public override RustString get_log_level() {
             return new RustString("debug");
         }
-        public override OptionalString get_log_file()
-        {
+        public override bool get_log_use_ansi() {
+            return false;
+        }
+        public override bool get_log_file_enabled() {
+            return true;
+        }
+        public override OptionalString get_log_file_path() {
+            return new_none_string();
+        }
+        public override OptionalString get_log_file_rotate_directory() {
+            return new_none_string();
+        }
+        public override OptionalString get_oslog_category() {
+            return new_none_string();
+        }
+        public override OptionalString get_oslog_sybsystem() {
             return new_none_string();
         }
 
         public override RustString get_evs_url() {
             return new RustString("http://localhost:5000/");
         }
+
         public override RustString get_sc_url() {
             return new RustString("http://localhost:5000/");
         }

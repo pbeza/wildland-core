@@ -127,12 +127,11 @@ mod ffi_binding {
         fn get_use_logger(self: &dyn CargoCfgProvider) -> bool;
         fn get_log_level(self: &dyn CargoCfgProvider) -> String;
         fn get_log_use_ansi(self: &dyn CargoCfgProvider) -> bool;
-        fn get_log_file(self: &dyn CargoCfgProvider) -> OptionalString;
-        fn log_file_enabled(self: &dyn CargoCfgProvider) -> bool;
-        fn log_file_path(self: &dyn CargoCfgProvider) -> OptionalString;
-        fn log_file_rotate_directory(self: &dyn CargoCfgProvider) -> OptionalString;
-        fn oslog_category(self: &dyn CargoCfgProvider) -> OptionalString;
-        fn oslog_sybsystem(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_log_file_enabled(self: &dyn CargoCfgProvider) -> bool;
+        fn get_log_file_path(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_log_file_rotate_directory(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_oslog_category(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_oslog_sybsystem(self: &dyn CargoCfgProvider) -> OptionalString;
 
         // # traits required for lss:
         //
