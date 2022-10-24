@@ -248,13 +248,15 @@ pub fn collect_config(
             log_file_path: PathBuf::from(
                 config_provider
                     .get_log_file_path()
-                    .unwrap_or_else(|| "cargolib_log".to_owned()),
+                    .unwrap_or_else(|| serde_logger_default_path().to_string_lossy().to_string()),
             ),
             log_file_enabled: config_provider.get_log_file_enabled(),
             log_file_rotate_directory: PathBuf::from(
                 config_provider
                     .get_log_file_rotate_directory()
-                    .unwrap_or_else(|| ".".to_owned()),
+                    .unwrap_or_else(|| {
+                        serde_logger_default_rot_dir().to_string_lossy().to_string()
+                    }),
             ),
             oslog_category: config_provider.get_oslog_category(),
             oslog_sybsystem: config_provider.get_oslog_sybsystem(),
