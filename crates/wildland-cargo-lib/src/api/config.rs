@@ -32,6 +32,7 @@ use tracing::{instrument, Level};
 use crate::errors::{SingleErrVariantResult, SingleVariantError};
 
 pub trait CargoCfgProvider {
+    fn get_use_logger(&self) -> bool;
     /// Must return one of (case-insensitive):
     /// - "error"
     /// - "warn"
@@ -91,6 +92,21 @@ pub struct FoundationStorageApiConfig {
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, derivative::Derivative)]
 #[derivative(Default(new = "true"))]
 pub struct LoggerConfig {
+    /// switch to disable the logger facility.
+    /// If set to false, the logger will be disabled.
+    /// usefull for cases where the client wants to use its own tracing
+    /// subscriber object or want to enable it from the outside.
+    /// Default: true
+    ///
+    /// Most users will want to leave it defaulted to true, especially users
+    /// of the bindings, as they will not be able to create subscriber
+    /// externally.
+    ///
+    /// In case its false, all the log configs are not used nor the subscriber
+    /// is created.
+    #[derivative(Default(value = "true"))]
+    pub use_logger: bool,
+
     /// Minimum level of messages to get logged
     #[serde(deserialize_with = "log_level_deserialize")]
     #[derivative(Default(value = "Level::INFO"))]
@@ -225,6 +241,7 @@ pub fn collect_config(
 ) -> SingleErrVariantResult<CargoConfig, ParseConfigError> {
     Ok(CargoConfig {
         logger_config: LoggerConfig {
+            use_logger: config_provider.get_use_logger(),
             log_level: Level::from_str(config_provider.get_log_level().as_str())
                 .map_err(|e| SingleVariantError::Failure(ParseConfigError(e.to_string())))?,
             log_use_ansi: config_provider.get_log_use_ansi(),
@@ -282,6 +299,7 @@ mod tests {
                     sc_url: "some_url".to_owned(),
                 },
                 logger_config: LoggerConfig {
+                    use_logger: true,
                     log_level: Level::TRACE,
                     log_use_ansi: false,
                     log_file_path: Some("cargo_lib_log".to_owned()),
@@ -315,6 +333,7 @@ mod tests {
                     sc_url: "some_url".to_owned(),
                 },
                 logger_config: LoggerConfig {
+                    use_logger: true,
                     log_level: Level::TRACE,
                     log_use_ansi: true,
                     log_file_path: None,

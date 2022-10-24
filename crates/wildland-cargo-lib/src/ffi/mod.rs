@@ -124,6 +124,7 @@ mod ffi_binding {
 
         // # traits required for logging configuration
         //
+        fn get_use_logger(self: &dyn CargoCfgProvider) -> bool;
         fn get_log_level(self: &dyn CargoCfgProvider) -> String;
         fn get_log_use_ansi(self: &dyn CargoCfgProvider) -> bool;
         fn get_log_file(self: &dyn CargoCfgProvider) -> OptionalString;

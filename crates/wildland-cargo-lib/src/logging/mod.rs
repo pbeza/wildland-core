@@ -4,6 +4,11 @@ use std::io::{self};
 use tracing_subscriber::{fmt, prelude::__tracing_subscriber_SubscriberExt, EnvFilter};
 
 pub(crate) fn init_subscriber(cfg: LoggerConfig) -> anyhow::Result<()> {
+    if !cfg.use_logger {
+        eprintln!("default log subscriber disabled by config!");
+        return Ok(());
+    }
+
     let mut cfg = cfg;
 
     // check if we are using release or debug build and adjust the level
