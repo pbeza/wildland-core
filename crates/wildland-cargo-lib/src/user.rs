@@ -20,11 +20,10 @@ use crate::{
     api::user::CargoUser,
     errors::{UserCreationError, UserRetrievalError},
 };
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use wildland_corex::{
-    CatLibService, CatlibError, CryptoError, IForest, Identity, LssService, MasterIdentity,
-    MnemonicPhrase, PubKey,
+    CatLibService, CatlibError, CryptoError, DeviceMetadata, IForest, Identity, LssService,
+    MasterIdentity, MnemonicPhrase, UserMetaData,
 };
 
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
@@ -34,26 +33,6 @@ pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
 pub enum CreateUserInput {
     Mnemonic(Box<MnemonicPhrase>),
     Entropy(Vec<u8>),
-}
-
-#[derive(Serialize, Deserialize)]
-struct DeviceMetadata {
-    name: String,
-    pubkey: PubKey,
-}
-#[derive(Serialize, Deserialize)]
-struct UserMetaData {
-    devices: Vec<DeviceMetadata>,
-}
-
-impl UserMetaData {
-    fn get_device_metadata(&self, device_pubkey: PubKey) -> Option<&DeviceMetadata> {
-        self.devices.iter().find(|d| d.pubkey == device_pubkey)
-    }
-
-    fn get_all_devices(&self) -> impl Iterator<Item = &DeviceMetadata> {
-        self.devices.iter()
-    }
 }
 
 /// This struct contains User functionalities but in contrast to [`super::api::UserApi`] it is not exposed through FFI
@@ -142,7 +121,8 @@ impl UserService {
                     Some(device_metadata) => Ok(Some(CargoUser {
                         this_device: device_metadata.name.clone(),
                         all_devices: user_metadata
-                            .get_all_devices()
+                            .devices
+                            .iter()
                             .map(|dm| dm.name.clone())
                             .collect(),
                     })),

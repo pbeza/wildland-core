@@ -18,11 +18,28 @@
 
 use std::collections::HashSet;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use wildland_catlib::{CatLib, CatlibError, Forest};
+use wildland_crypto::identity::signing_keypair::PubKey;
 
 use crate::WildlandIdentity;
+
+#[derive(Serialize, Deserialize)]
+pub struct DeviceMetadata {
+    pub name: String,
+    pub pubkey: PubKey,
+}
+#[derive(Serialize, Deserialize)]
+pub struct UserMetaData {
+    pub devices: Vec<DeviceMetadata>,
+}
+
+impl UserMetaData {
+    pub fn get_device_metadata(&self, device_pubkey: PubKey) -> Option<&DeviceMetadata> {
+        self.devices.iter().find(|d| d.pubkey == device_pubkey)
+    }
+}
 
 #[derive(Clone)]
 pub struct CatLibService {
@@ -42,7 +59,7 @@ impl CatLibService {
         &self,
         forest_identity: &WildlandIdentity,
         this_device_identity: &WildlandIdentity,
-        data: impl Serialize,
+        data: UserMetaData,
     ) -> Result<Forest, CatlibError> {
         self.catlib.create_forest(
             forest_identity.get_public_key().into(),
