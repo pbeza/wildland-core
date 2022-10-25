@@ -21,16 +21,11 @@ use std::rc::Rc;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
-use wildland_corex::{storage::*, CryptoError, EncryptingKeypair, LssError};
+use wildland_corex::{storage::*, CryptoError, EncryptingKeypair, LssError, LssService};
 use wildland_http_client::{
     error::WildlandHttpClientError,
     evs::{ConfirmTokenReq, EvsClient, GetStorageReq},
 };
-
-#[cfg(test)]
-use crate::test_utils::MockLssService as LssService;
-#[cfg(not(test))]
-use wildland_corex::LssService;
 
 use super::config::FoundationStorageApiConfig;
 
