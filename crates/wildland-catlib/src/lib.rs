@@ -229,7 +229,6 @@ impl CatLib {
 
 impl Default for CatLib {
     fn default() -> Self {
-        // TODO WASM
         let project_dirs = ProjectDirs::from("com", "wildland", "Cargo");
 
         let db_file = if let Some(project_dirs) = project_dirs {
