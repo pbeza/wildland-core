@@ -1755,6 +1755,7 @@ dependencies = [
  "serde_yaml 0.9.13",
  "tempfile",
  "thiserror",
+ "tracing",
  "uuid",
 ]
 

@@ -229,19 +229,21 @@ impl CatLib {
 
 impl Default for CatLib {
     fn default() -> Self {
+        // TODO WASM
         let project_dirs = ProjectDirs::from("com", "wildland", "Cargo");
 
-        if project_dirs.is_none() {
-            panic!("Could not instantiate Catlib database directory");
-        }
+        let db_file = if let Some(project_dirs) = project_dirs {
+            let db_dir = project_dirs.data_local_dir().join("catlib");
 
-        let db_dir = project_dirs.unwrap().data_local_dir().join("catlib");
+            if !db_dir.exists() {
+                std::fs::create_dir_all(&db_dir).unwrap();
+            }
 
-        if !db_dir.exists() {
-            std::fs::create_dir_all(&db_dir).unwrap();
-        }
-
-        let db_file = db_dir.join("catlib.database");
+            db_dir.join("catlib.database")
+        } else {
+            tracing::info!("Could not create ProjectDirs. Using working directory.");
+            "./catlib.database".into()
+        };
 
         CatLib {
             db: Rc::new(PathDatabase::load_from_path_or_default(db_file).unwrap()),

@@ -3,13 +3,54 @@ var wildland = require("./wildland.js")
 wildland().then((wlib) => {
     // Local Secure Storage native implementation
     var Lss = wlib.LocalSecureStorage.extend("LocalSecureStorage", {
-        insert: function (key, val) { },
-        get: function (key) { },
-        contains_key: function (key) { },
-        keys: function () { },
-        remove: function (key) { },
-        len: function () { },
-        is_empty: function () { },
+        store: {},
+
+        insert: function (key, val) {
+            console.log("LSS insert");
+            var result;
+            var str_key = key.to_string(); // JS cannot compare Rust strings so conversion to native type is necessary
+            if (str_key in this.store) {
+                console.log("LSS insert: found");
+                result = wlib.new_ok_lss_optional_bytes(wlib.new_some_bytes(this.store[str_key]))
+            } else {
+                console.log("LSS insert: not found");
+                result = wlib.new_ok_lss_optional_bytes(wlib.new_none_bytes());
+            }
+            this.store[str_key] = val;
+            return result;
+        },
+        get: function (key) {
+            console.log("LSS get");
+            var str_key = key.to_string(); // JS cannot compare Rust strings so conversion to native type is necessary
+            if (str_key in this.store) {
+                console.log("LSS get: found");
+                return wlib.new_ok_lss_optional_bytes(wlib.new_some_bytes(store[str_key]))
+            } else {
+                console.log("LSS get: not found");
+                return wlib.new_ok_lss_optional_bytes(wlib.new_none_bytes());
+            }
+        },
+        contains_key: function (key) {
+            console.log("LSS contains_key");
+            var str_key = key.to_string(); // JS cannot compare Rust strings so conversion to native type is necessary
+            return str_key in this.store;
+        },
+        keys: function () {
+            console.log("LSS keys");
+            console.log("unimplemented!");
+        },
+        remove: function (key) {
+            console.log("LSS remove");
+            console.log("unimplemented!");
+        },
+        len: function () {
+            console.log("LSS len");
+            return this.store.size;
+        },
+        is_empty: function () {
+            console.log("LSS is_empty");
+            console.log("unimplemented!");
+        },
     });
 
     // Configuration may be provided by an Object - the CargoCfgProvider implementation,
@@ -47,5 +88,7 @@ wildland().then((wlib) => {
     var restored_mnemonic = user_api.create_mnemonic_from_vec(words_vec);
     console.log(restored_mnemonic.get_string().to_string());
 
+    var device_name = new wlib.String("WASM device");
     var new_user = user_api.create_user_from_mnemonic(mnemonic, device_name);
+    console.log(new_user.get_string().to_string())
 });
