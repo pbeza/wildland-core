@@ -47,7 +47,7 @@ impl From<MnemonicPhrase> for MnemonicPayload {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CargoUser {
     pub this_device: String,
     pub all_devices: Vec<String>,
@@ -157,7 +157,7 @@ impl UserApi {
             | UserRetrievalError::LssError(_)
             | UserRetrievalError::CatlibError(_)
             | UserRetrievalError::DeviceMetadataNotFound => RetrievalError::Unexpected(e),
-            UserRetrievalError::ForestNotFound(e) => RetrievalError::NotFound(e.to_string()),
+            UserRetrievalError::ForestNotFound(e) => RetrievalError::NotFound(e),
         })?;
         match user {
             Some(user) => Ok(user),
