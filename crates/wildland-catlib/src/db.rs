@@ -19,13 +19,13 @@
 use super::*;
 use std::rc::Rc;
 
-pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: String) -> CatlibResult<Forest> {
+pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: Uuid) -> CatlibResult<Forest> {
     db.load()?;
     let data = db.read(|db| db.clone()).map_err(CatlibError::from)?;
 
     let forest: Vec<Forest> = data
         .iter()
-        .filter(|(id, _)| (**id).starts_with(format!("forest-{}", uuid).as_str()))
+        .filter(|(id, _)| (**id).starts_with(format!("forest-{uuid}").as_str()))
         .map(|(_, forest_str)| Forest::try_from((*forest_str).clone()).unwrap())
         .collect();
 
@@ -36,13 +36,13 @@ pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: String) -> CatlibResul
     }
 }
 
-pub(crate) fn fetch_container_by_uuid(db: Rc<StoreDb>, uuid: String) -> CatlibResult<Container> {
+pub(crate) fn fetch_container_by_uuid(db: Rc<StoreDb>, uuid: Uuid) -> CatlibResult<Container> {
     db.load()?;
     let data = db.read(|db| db.clone()).map_err(CatlibError::from)?;
 
     let container: Vec<Container> = data
         .iter()
-        .filter(|(id, _)| (**id).starts_with(format!("container-{}", uuid).as_str()))
+        .filter(|(id, _)| (**id).starts_with(format!("container-{uuid}").as_str()))
         .map(|(_, forest_str)| Container::try_from((*forest_str).clone()).unwrap())
         .collect();
 
@@ -55,7 +55,7 @@ pub(crate) fn fetch_container_by_uuid(db: Rc<StoreDb>, uuid: String) -> CatlibRe
 
 pub(crate) fn fetch_storages_by_container_uuid(
     db: Rc<StoreDb>,
-    uuid: String,
+    uuid: Uuid,
 ) -> CatlibResult<Vec<Storage>> {
     db.load()?;
     let data = db.read(|db| db.clone()).map_err(CatlibError::from)?;
@@ -98,14 +98,14 @@ pub(crate) fn init_catlib(random: uuid::Bytes) -> crate::CatLib {
     let uuid = uuid::Builder::from_random_bytes(random).into_uuid();
     let dir = tempfile::tempdir().unwrap().into_path();
 
-    let path = dir.join(format!("{}-{}", uuid, "db.ron"));
+    let path = dir.join(format!("{uuid}-db.ron"));
 
     // Mock the `use_default_database` function to return a unique path to a file database
     // for each test. This allows not only to avoid having to mock whole Catlib structs to use
     // a different DB deserializer, but also allows tests to run in parallel due to the fact
     // that every test will have it's own, random UUID.
     crate::use_default_database.mock_safe(move || {
-        let path = dir.join(format!("{}-{}", uuid, "db.ron"));
+        let path = dir.join(format!("{uuid}-db.ron"));
         println!("{}", path.to_str().unwrap());
         let db = CatLib::new(path).db;
         db.load().unwrap();

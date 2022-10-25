@@ -1,9 +1,27 @@
+//
+// Wildland Project
+//
+// Copyright © 2022 Golem Foundation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
-use wildland_corex::{storage::FoundationStorageTemplate, CryptoError, EncryptingKeypair};
+use wildland_corex::{storage::*, CryptoError, EncryptingKeypair, LssError, LssService};
 use wildland_http_client::{
     error::WildlandHttpClientError,
     evs::{ConfirmTokenReq, EvsClient, GetStorageReq},
@@ -31,6 +49,30 @@ impl StorageCredentials {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FoundationStorageTemplate {
+    pub id: Uuid,
+    pub credential_id: String,
+    pub credential_secret: String,
+    pub sc_url: String,
+}
+
+impl StorageTemplateTrait for FoundationStorageTemplate {
+    fn uuid(&self) -> Uuid {
+        self.id
+    }
+
+    fn data(&self) -> Vec<u8> {
+        serde_json::to_vec(self).unwrap()
+    }
+}
+
+impl From<FoundationStorageTemplate> for StorageTemplate {
+    fn from(fst: FoundationStorageTemplate) -> Self {
+        Self::new(Rc::new(fst))
+    }
+}
+
 #[repr(C)]
 #[derive(Error, Debug, Clone)]
 pub enum FsaError {
@@ -42,6 +84,8 @@ pub enum FsaError {
     CryptoError(CryptoError),
     #[error("Credentials are expected to be JSON with fields: id, credentialID, credentialSecret")]
     InvalidCredentialsFormat(String),
+    #[error(transparent)]
+    LssError(#[from] LssError),
 }
 
 #[derive(Clone)]
@@ -54,13 +98,15 @@ pub struct FreeTierProcessHandle {
 pub struct FoundationStorageApi {
     evs_client: EvsClient,
     sc_url: String,
+    lss_service: LssService,
 }
 
 impl FoundationStorageApi {
-    pub fn new(config: FoundationStorageApiConfig) -> Self {
+    pub fn new(config: FoundationStorageApiConfig, lss_service: LssService) -> Self {
         Self {
             evs_client: EvsClient::new(&config.evs_url),
             sc_url: config.sc_url,
+            lss_service,
         }
     }
 
@@ -88,7 +134,7 @@ impl FoundationStorageApi {
         &self,
         process_handle: &FreeTierProcessHandle,
         verification_token: String,
-    ) -> Result<FoundationStorageTemplate, FsaError> {
+    ) -> Result<StorageTemplate, FsaError> {
         self.evs_client
             .confirm_token(ConfirmTokenReq {
                 email: process_handle.email.clone(),
@@ -116,7 +162,13 @@ impl FoundationStorageApi {
                     let storage_credentials: StorageCredentials =
                         serde_json::from_slice(&decrypted)
                             .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
-                    Ok(storage_credentials.into_storage_template(self.sc_url.clone()))
+
+                    let storage_template: StorageTemplate = storage_credentials
+                        .into_storage_template(self.sc_url.clone())
+                        .into();
+                    self.lss_service.save_storage_template(&storage_template)?;
+
+                    Ok(storage_template)
                 }
                 None => Err(FsaError::EvsError(WildlandHttpClientError::HttpError(
                     "No body with credentials".into(),

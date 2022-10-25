@@ -7,7 +7,7 @@ class CargoCfgProviderImpl : public CargoCfgProvider
 {
     String get_log_level() override
     {
-        return RustString("info");
+        return RustString("trace");
     }
     OptionalString get_log_file() override
     {
@@ -146,8 +146,8 @@ void foundation_storage_test(SharedMutexCargoLib &cargo_lib)
         std::cout << "Provide a verification token:\n";
         std::string verification_token;
         std::cin >> verification_token;
-        // TODO may be used for creating container
-        FoundationStorageTemplate storage_template = fsa_api.verify_email(process_handle, RustString{verification_token});
+        // may be used for creating container
+        StorageTemplate storage_template = fsa_api.verify_email(process_handle, RustString{verification_token});
     }
     catch (const RustExceptionBase &e)
     {
@@ -191,12 +191,12 @@ int main()
 
         try
         {
-            user_api.create_user_from_mnemonic(mnemonic, device_name);
+            CargoUser new_user = user_api.create_user_from_mnemonic(mnemonic, device_name);
             std::cout << "User successfully created from mnemonic\n";
 
             try
             {
-                UserPayload user = user_api.get_user();
+                CargoUser user = user_api.get_user();
                 std::cout << "User: " << user.get_string().to_string() << std::endl;
             }
             catch (const UserRetrievalExc_NotFoundException &e)

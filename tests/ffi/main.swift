@@ -109,7 +109,7 @@ do {
 
     let mnemonic = try user_api.generateMnemonic()
     print(mnemonic.getString().toString())
-    let _ = try user_api.createUserFromMnemonic(mnemonic, RustString("My Mac"))
+    let new_user = try user_api.createUserFromMnemonic(mnemonic, RustString("My Mac"))
     print("User successfully created from mnemonic")
     let user = try user_api.getUser()
     print("User: " + user.getString().toString())

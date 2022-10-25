@@ -1,10 +1,7 @@
 //
 // Wildland Project
 //
-// Copyright © 2021 Golem Foundation,
-// 	    	     Pawel Peregud <pepesza@wildland.io>
-// 	    	     Piotr K. Isajew <piotr@wildland.io>
-// 	    	     Lukasz Kujawski <leon@wildland.io>
+// Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

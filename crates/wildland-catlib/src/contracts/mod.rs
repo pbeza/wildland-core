@@ -28,7 +28,7 @@ pub type ContainerPaths = HashSet<ContainerPath>;
 
 pub trait IForest {
     /// Return UUID object identifier
-    fn uuid(&self) -> String;
+    fn uuid(&self) -> Uuid;
 
     /// Return Forest owner
     fn owner(&self) -> Identity;
@@ -102,8 +102,8 @@ pub trait IForest {
     /// # use crate::wildland_catlib::*;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
+    ///                  Identity([1; 32]),
+    ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
     /// let mut container = forest.create_container().unwrap();
@@ -128,8 +128,8 @@ pub trait IForest {
     /// # use crate::wildland_catlib::*;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
+    ///                  Identity([1; 32]),
+    ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
     /// forest.create_bridge("/other/forest".to_string(), vec![]);
@@ -176,7 +176,7 @@ pub trait IForest {
 
 pub trait IContainer {
     /// Return UUID object identifier
-    fn uuid(&self) -> String;
+    fn uuid(&self) -> Uuid;
 
     /// Return [`Forest`] that contains the [`Container`].
     ///
@@ -205,8 +205,8 @@ pub trait IContainer {
     /// # use crate::wildland_catlib::*;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
+    ///                  Identity([1; 32]),
+    ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
     /// let mut container = forest.create_container().unwrap();
@@ -232,8 +232,8 @@ pub trait IContainer {
     /// # use crate::wildland_catlib::*;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
+    ///                  Identity([1; 32]),
+    ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
     /// let mut container = forest.create_container().unwrap();
@@ -268,26 +268,26 @@ pub trait IContainer {
     /// # use wildland_catlib::CatLib;
     /// # use std::collections::HashSet;
     /// # use crate::wildland_catlib::*;
+    /// # use uuid::Uuid;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
+    ///                  Identity([1; 32]),
+    ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
     /// let mut container = forest.create_container().unwrap();
     /// container.add_path("/foo/bar".to_string());
-    /// container.create_storage(Some(String::from("free-storage-1")), vec![]).unwrap();
+    /// container.create_storage(Some(Uuid::from_u128(1)), vec![]).unwrap();
     /// ```
-    fn create_storage(&self, template_uuid: Option<String>, data: Vec<u8>)
-        -> CatlibResult<Storage>;
+    fn create_storage(&self, template_uuid: Option<Uuid>, data: Vec<u8>) -> CatlibResult<Storage>;
 }
 
 pub trait IStorage {
     /// Return UUID object identifier
-    fn uuid(&self) -> String;
+    fn uuid(&self) -> Uuid;
 
     /// Return Template UUID
-    fn template_uuid(&self) -> Option<String>;
+    fn template_uuid(&self) -> Option<Uuid>;
 
     /// Return [`Container`] that contains the [`Storage`].
     ///
@@ -306,7 +306,7 @@ pub trait IStorage {
 
 pub trait IBridge {
     /// Return UUID object identifier
-    fn uuid(&self) -> String;
+    fn uuid(&self) -> Uuid;
 
     // Returns [`Bridge`]'s path
     fn path(&self) -> ContainerPath;

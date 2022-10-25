@@ -1,9 +1,7 @@
 //
 // Wildland Project
 //
-// Copyright © 2021 Golem Foundation,
-// 	    	     Lukasz Kujawski <leon@wildland.io>
-// 	    	     Pawel Peregud <pepesza@wildland.io>
+// Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,13 +17,40 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{error::CryptoError, signature::Signature};
-use ed25519_dalek::Signer;
+use ed25519_dalek::{PublicKey, SecretKey, Signer};
 use rand_7::{CryptoRng, RngCore};
+use serde::{Deserialize, Serialize};
 
 use super::bytes_key_from_str;
 
+pub type PubKey = [u8; 32];
+pub type SecKey = [u8; 32];
+
 #[derive(Debug)]
 pub struct SigningKeypair(ed25519_dalek::Keypair);
+
+impl<'de> Deserialize<'de> for SigningKeypair {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let hex_encoded_str = String::deserialize(deserializer)?;
+        let bytes = hex::decode(hex_encoded_str).map_err(serde::de::Error::custom)?;
+        Ok(Self(
+            ed25519_dalek::Keypair::from_bytes(&bytes).map_err(serde::de::Error::custom)?,
+        ))
+    }
+}
+
+impl Serialize for SigningKeypair {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let hex = hex::encode(self.0.to_bytes());
+        String::serialize(&hex, serializer)
+    }
+}
 
 impl TryFrom<Vec<u8>> for SigningKeypair {
     type Error = CryptoError;
@@ -39,6 +64,21 @@ impl TryFrom<Vec<u8>> for SigningKeypair {
     }
 }
 
+impl PartialEq for SigningKeypair {
+    fn eq(&self, other: &Self) -> bool {
+        self.public() == other.public() && self.secret() == other.secret()
+    }
+}
+
+impl From<&SigningKeypair> for SigningKeypair {
+    fn from(other: &SigningKeypair) -> Self {
+        Self(ed25519_dalek::Keypair {
+            public: PublicKey::from_bytes(&other.public()).unwrap(),
+            secret: SecretKey::from_bytes(&other.secret()).unwrap(),
+        })
+    }
+}
+
 impl SigningKeypair {
     #[tracing::instrument(level = "debug", skip(csprng))]
     pub fn generate<R>(csprng: &mut R) -> Self
@@ -49,7 +89,7 @@ impl SigningKeypair {
     }
 
     #[tracing::instrument(level = "debug", skip(pubkey, seckey))]
-    pub fn try_from_bytes_slices(pubkey: [u8; 32], seckey: [u8; 32]) -> Result<Self, CryptoError> {
+    pub fn try_from_bytes_slices(pubkey: PubKey, seckey: SecKey) -> Result<Self, CryptoError> {
         Ok(Self(
             ed25519_dalek::Keypair::from_bytes([seckey, pubkey].concat().as_slice())
                 .map_err(|e| CryptoError::InvalidSignatureBytesError(e.to_string()))?,
@@ -64,7 +104,7 @@ impl SigningKeypair {
     }
 
     #[tracing::instrument(level = "debug", skip(secret_key_bytes))]
-    pub fn try_from_secret_bytes(secret_key_bytes: &[u8; 32]) -> Result<Self, CryptoError> {
+    pub fn try_from_secret_bytes(secret_key_bytes: &SecKey) -> Result<Self, CryptoError> {
         let sec_key = ed25519_dalek::SecretKey::from_bytes(secret_key_bytes)
             .map_err(|e| CryptoError::InvalidSignatureBytesError(e.to_string()))?;
         let pub_key = ed25519_dalek::PublicKey::from(&sec_key);
@@ -75,12 +115,12 @@ impl SigningKeypair {
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn public(&self) -> [u8; 32] {
+    pub fn public(&self) -> PubKey {
         self.0.public.to_bytes()
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn secret(&self) -> [u8; 32] {
+    pub fn secret(&self) -> SecKey {
         self.0.secret.to_bytes()
     }
 
