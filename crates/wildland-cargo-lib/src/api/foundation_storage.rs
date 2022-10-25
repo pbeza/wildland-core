@@ -72,9 +72,9 @@ impl StorageTemplateTrait for FoundationStorageTemplate {
     }
 }
 
-impl Into<StorageTemplate> for FoundationStorageTemplate {
-    fn into(self) -> StorageTemplate {
-        StorageTemplate::with_template(Rc::new(self))
+impl From<FoundationStorageTemplate> for StorageTemplate {
+    fn from(fst: FoundationStorageTemplate) -> Self {
+        Self::new(Rc::new(fst))
     }
 }
 

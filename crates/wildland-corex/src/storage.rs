@@ -18,6 +18,7 @@
 
 use std::rc::Rc;
 
+use serde::Serialize;
 use uuid::Uuid;
 
 pub trait StorageTemplateTrait {
@@ -31,6 +32,10 @@ pub struct StorageTemplate {
 }
 
 impl StorageTemplate {
+    pub fn new(inner: Rc<dyn StorageTemplateTrait>) -> Self {
+        Self { inner }
+    }
+
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid()
     }
@@ -43,5 +48,14 @@ impl StorageTemplate {
         Self {
             inner: storage_template,
         }
+    }
+}
+
+impl Serialize for StorageTemplate {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(&self.data())
     }
 }
