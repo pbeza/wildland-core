@@ -31,8 +31,8 @@ impl TryFrom<String> for Container {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Container {
-    uuid: String,
-    forest_uuid: String,
+    uuid: Uuid,
+    forest_uuid: Uuid,
     paths: ContainerPaths,
 
     #[serde(skip, default = "use_default_database")]
@@ -40,9 +40,9 @@ pub struct Container {
 }
 
 impl Container {
-    pub fn new(forest_uuid: String, db: Rc<StoreDb>) -> Self {
+    pub fn new(forest_uuid: Uuid, db: Rc<StoreDb>) -> Self {
         Container {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: Uuid::new_v4(),
             forest_uuid,
             db,
             paths: ContainerPaths::new(),
@@ -51,12 +51,12 @@ impl Container {
 }
 
 impl IContainer for Container {
-    fn uuid(&self) -> String {
-        self.uuid.clone()
+    fn uuid(&self) -> Uuid {
+        self.uuid
     }
 
     fn forest(&self) -> CatlibResult<crate::forest::Forest> {
-        fetch_forest_by_uuid(self.db.clone(), self.forest_uuid.clone())
+        fetch_forest_by_uuid(self.db.clone(), self.forest_uuid)
     }
 
     fn paths(&self) -> ContainerPaths {
@@ -79,11 +79,7 @@ impl IContainer for Container {
         fetch_storages_by_container_uuid(self.db.clone(), self.uuid())
     }
 
-    fn create_storage(
-        &self,
-        template_uuid: Option<String>,
-        data: Vec<u8>,
-    ) -> CatlibResult<Storage> {
+    fn create_storage(&self, template_uuid: Option<Uuid>, data: Vec<u8>) -> CatlibResult<Storage> {
         let mut storage = Storage::new(self.uuid(), template_uuid, data, self.db.clone());
         storage.save()?;
 
@@ -121,8 +117,8 @@ mod tests {
         // Create a dummy forest to which containers will be bound
         catlib
             .create_forest(
-                b"owner".to_vec(),
-                HashSet::from([b"signer".to_vec()]),
+                Identity([1; 32]),
+                HashSet::from([Identity([2; 32])]),
                 vec![],
             )
             .unwrap();
@@ -131,7 +127,7 @@ mod tests {
     }
 
     fn make_container(catlib: &CatLib) -> crate::container::Container {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
         forest.create_container().unwrap()
     }
@@ -141,7 +137,7 @@ mod tests {
         let container = make_container(&catlib);
         let container = catlib.get_container(container.uuid()).unwrap();
 
-        assert_eq!(container.forest().unwrap().owner(), b"owner");
+        assert_eq!(container.forest().unwrap().owner(), Identity([1; 32]));
     }
 
     #[rstest]
@@ -149,12 +145,12 @@ mod tests {
         let container = make_container(&catlib);
         let container = catlib.get_container(container.uuid()).unwrap();
 
-        assert_eq!(container.forest().unwrap().owner(), b"owner");
+        assert_eq!(container.forest().unwrap().owner(), Identity([1; 32]));
     }
 
     #[rstest]
     fn container_with_paths(catlib: CatLib) {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
         let mut container = make_container(&catlib);
         container.add_path("/foo/bar".to_string()).unwrap();
@@ -183,7 +179,7 @@ mod tests {
 
     #[rstest]
     fn multiple_containers_with_paths(catlib: CatLib) {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
         let mut container = make_container(&catlib);
         container.add_path("/foo/bar".to_string()).unwrap();
@@ -219,24 +215,24 @@ mod tests {
         let beta = make_container(&catlib);
 
         alpha
-            .create_storage(Some("template-1".into()), vec![])
+            .create_storage(Some(Uuid::from_u128(1)), vec![])
             .unwrap();
         alpha
-            .create_storage(Some("template-2".into()), vec![])
+            .create_storage(Some(Uuid::from_u128(2)), vec![])
             .unwrap();
 
-        beta.create_storage(Some("template-1".into()), vec![])
+        beta.create_storage(Some(Uuid::from_u128(1)), vec![])
             .unwrap();
 
         let containers = catlib
-            .find_containers_with_template("template-2".into())
+            .find_containers_with_template(Uuid::from_u128(2))
             .unwrap();
 
         assert_eq!(containers.len(), 1);
         assert_eq!(containers[0].uuid(), alpha.uuid());
 
         let containers = catlib
-            .find_containers_with_template("template-1".into())
+            .find_containers_with_template(Uuid::from_u128(1))
             .unwrap();
 
         assert_eq!(containers.len(), 2);
@@ -245,7 +241,7 @@ mod tests {
 
     #[rstest]
     fn multiple_containers_with_subpaths(catlib: CatLib) {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
         let mut container = make_container(&catlib);
         container.add_path("/foo/bar1".to_string()).unwrap();
