@@ -106,11 +106,13 @@ impl FoundationStorageApi {
                 Some(payload) => {
                     let payload = payload.replace('\n', ""); // make sure that content is properly encoded
                     let decoded = base64::decode(payload).unwrap();
-                    let decrypted_hex = process_handle
-                        .encrypting_keypair
-                        .decrypt(decoded)
-                        .map_err(FsaError::CryptoError)?;
-                    let decrypted = hex::decode(decrypted_hex).unwrap();
+                    // TODO WILX-269 EVS communication encryption
+                    // let decrypted_hex = process_handle
+                    //     .encrypting_keypair
+                    //     .decrypt(decoded)
+                    //     .map_err(FsaError::CryptoError)?;
+                    // let decrypted = hex::decode(decrypted_hex).unwrap();
+                    let decrypted = decoded;
                     let storage_credentials: StorageCredentials =
                         serde_json::from_slice(&decrypted)
                             .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
