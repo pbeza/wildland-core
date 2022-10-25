@@ -57,13 +57,13 @@ impl UserService {
         input: CreateUserInput,
         device_name: String,
     ) -> Result<CargoUser, UserCreationError> {
-        log::trace!("Checking whether user exists.");
+        tracing::trace!("Checking whether user exists.");
         match self.get_user() {
             Ok(_) => return Err(UserCreationError::UserAlreadyExists),
             Err(UserRetrievalError::ForestNotFound(_)) => Ok(()),
             Err(e) => Err(UserCreationError::UserRetrievalError(e)),
         }?;
-        log::trace!("User does not exist yet");
+        tracing::trace!("User does not exist yet");
         let crypto_identity = match input {
             CreateUserInput::Mnemonic(mnemonic) => Identity::try_from(mnemonic.as_ref())?,
             CreateUserInput::Entropy(entropy) => Identity::try_from(entropy.as_slice())?,

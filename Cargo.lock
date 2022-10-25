@@ -1721,7 +1721,6 @@ dependencies = [
  "env_logger 0.9.1",
  "hex",
  "hex-literal",
- "log",
  "mockall",
  "rusty-bind",
  "rusty-bind-build",
