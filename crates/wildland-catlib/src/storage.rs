@@ -31,9 +31,9 @@ impl TryFrom<String> for Storage {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Storage {
-    uuid: String,
-    container_uuid: String,
-    template_uuid: Option<String>,
+    uuid: Uuid,
+    container_uuid: Uuid,
+    template_uuid: Option<Uuid>,
     data: Vec<u8>,
 
     #[serde(skip, default = "use_default_database")]
@@ -42,13 +42,13 @@ pub struct Storage {
 
 impl Storage {
     pub fn new(
-        container_uuid: String,
-        template_uuid: Option<String>,
+        container_uuid: Uuid,
+        template_uuid: Option<Uuid>,
         data: Vec<u8>,
         db: Rc<StoreDb>,
     ) -> Self {
         Storage {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: Uuid::new_v4(),
             container_uuid,
             template_uuid,
             data,
@@ -58,16 +58,16 @@ impl Storage {
 }
 
 impl IStorage for Storage {
-    fn uuid(&self) -> String {
-        self.uuid.clone()
+    fn uuid(&self) -> Uuid {
+        self.uuid
     }
 
-    fn template_uuid(&self) -> Option<String> {
-        self.template_uuid.clone()
+    fn template_uuid(&self) -> Option<Uuid> {
+        self.template_uuid
     }
 
     fn container(&self) -> CatlibResult<crate::container::Container> {
-        fetch_container_by_uuid(self.db.clone(), self.container_uuid.clone())
+        fetch_container_by_uuid(self.db.clone(), self.container_uuid)
     }
 
     fn data(&self) -> Vec<u8> {
@@ -112,8 +112,8 @@ mod tests {
         // Create a dummy forest and container to which storages will be bound
         catlib
             .create_forest(
-                b"owner".to_vec(),
-                HashSet::from([b"signer".to_vec()]),
+                Identity([1; 32]),
+                HashSet::from([Identity([2; 32])]),
                 vec![],
             )
             .unwrap();
@@ -122,7 +122,7 @@ mod tests {
     }
 
     fn _container(catlib: &CatLib) -> Container {
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
         forest.create_container().unwrap()
     }
 
@@ -141,7 +141,7 @@ mod tests {
         container.create_storage(None, vec![]).unwrap()
     }
 
-    fn make_storage_with_template(container: &Container, template_id: String) -> Storage {
+    fn make_storage_with_template(container: &Container, template_id: Uuid) -> Storage {
         container.create_storage(Some(template_id), vec![]).unwrap()
     }
 
@@ -170,17 +170,17 @@ mod tests {
     fn create_storage_with_template_id(catlib: CatLib) {
         let container = _container(&catlib);
         make_storage(&container); // Create storage w/o template id on purpose
-        make_storage_with_template(&container, "template-id-1".to_string());
-        make_storage_with_template(&container, "template-id-1".to_string());
-        make_storage_with_template(&container, "template-id-2".to_string());
+        make_storage_with_template(&container, Uuid::from_u128(1));
+        make_storage_with_template(&container, Uuid::from_u128(1));
+        make_storage_with_template(&container, Uuid::from_u128(2));
 
         let storages = catlib
-            .find_storages_with_template("template-id-1".to_string())
+            .find_storages_with_template(Uuid::from_u128(1))
             .unwrap();
         assert_eq!(storages.len(), 2);
 
         let storages = catlib
-            .find_storages_with_template("template-id-2".to_string())
+            .find_storages_with_template(Uuid::from_u128(2))
             .unwrap();
         assert_eq!(storages.len(), 1);
     }

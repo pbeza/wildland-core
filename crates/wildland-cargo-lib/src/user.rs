@@ -1,10 +1,30 @@
-use crate::errors::UserCreationError;
-use wildland_corex::{CryptoError, ForestRetrievalError, Identity, MasterIdentity, MnemonicPhrase};
+//
+// Wildland Project
+//
+// Copyright © 2022 Golem Foundation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#[cfg(test)]
-use crate::test_utils::MockLssService as LssService;
-#[cfg(not(test))]
-use wildland_corex::LssService;
+use crate::{
+    api::user::CargoUser,
+    errors::{UserCreationError, UserRetrievalError},
+};
+use uuid::Uuid;
+use wildland_corex::{
+    CatLibService, CatlibError, CryptoError, DeviceMetadata, IForest, Identity, LssService,
+    MasterIdentity, MnemonicPhrase, UserMetaData,
+};
 
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     wildland_corex::generate_random_mnemonic()
@@ -15,29 +35,34 @@ pub enum CreateUserInput {
     Entropy(Vec<u8>),
 }
 
+/// This struct contains User functionalities but in contrast to [`super::api::UserApi`] it is not exposed through FFI
+///
 #[derive(Clone)]
-pub struct UserService {
+pub(crate) struct UserService {
     lss_service: LssService,
+    catlib_service: CatLibService,
 }
 
 impl UserService {
-    pub fn new(lss_service: LssService) -> Self {
-        Self { lss_service }
+    pub(crate) fn new(lss_service: LssService) -> Self {
+        Self {
+            lss_service,
+            catlib_service: CatLibService::new(),
+        }
     }
 
     #[tracing::instrument(level = "debug", skip(input, self))]
-    pub fn create_user(
+    pub(crate) fn create_user(
         &self,
         input: CreateUserInput,
         device_name: String,
-    ) -> Result<(), UserCreationError> {
+    ) -> Result<CargoUser, UserCreationError> {
         tracing::trace!("Checking whether user exists.");
-        if self
-            .user_exists()
-            .map_err(UserCreationError::ForestRetrievalError)?
-        {
-            return Err(UserCreationError::UserAlreadyExists);
-        }
+        match self.get_user() {
+            Ok(_) => return Err(UserCreationError::UserAlreadyExists),
+            Err(UserRetrievalError::ForestNotFound(_)) => Ok(()),
+            Err(e) => Err(UserCreationError::UserRetrievalError(e)),
+        }?;
         tracing::trace!("User does not exist yet");
         let crypto_identity = match input {
             CreateUserInput::Mnemonic(mnemonic) => Identity::try_from(mnemonic.as_ref())?,
@@ -47,165 +72,81 @@ impl UserService {
         let default_forest_identity = master_identity
             .create_forest_identity(0)
             .map_err(UserCreationError::ForestIdentityCreationError)?;
-        let device_identity = master_identity.create_device_identity(device_name);
+        let device_identity = master_identity.create_device_identity(device_name.clone());
 
-        self.lss_service.save(default_forest_identity)?;
-        self.lss_service.save(device_identity)?;
-        Ok(())
+        let forest = self.catlib_service.add_forest(
+            &default_forest_identity,
+            &device_identity,
+            UserMetaData {
+                devices: vec![DeviceMetadata {
+                    name: device_name.clone(),
+                    pubkey: device_identity.get_public_key(),
+                }],
+            },
+        )?;
+
+        self.lss_service.save_forest_uuid(&forest)?;
+
+        self.lss_service.save_identity(&default_forest_identity)?;
+        self.lss_service.save_identity(&device_identity)?;
+
+        Ok(CargoUser {
+            this_device: device_name.clone(),
+            all_devices: vec![device_name],
+        })
     }
 
+    /// Retrieves default forest keypair from LSS and then basing on that reads User metadata from CatLib.
+    /// Result is presented in from of [`crate::api::user::CargoUser`].
+    ///
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn user_exists(&self) -> Result<bool, ForestRetrievalError> {
+    pub(crate) fn get_user(&self) -> Result<Option<CargoUser>, UserRetrievalError> {
+        let default_forest_uuid = self.get_default_forest_uuid()?;
+
+        match self.catlib_service.get_forest(default_forest_uuid) {
+            Ok(forest) => {
+                let user_metadata: UserMetaData =
+                    serde_json::from_slice(&forest.data()).map_err(|e| {
+                        CatlibError::Generic(format!(
+                            "Could not parse forest data retrieved from Catlib: {e}"
+                        ))
+                    })?;
+
+                let device_identity = self
+                    .lss_service
+                    .get_this_device_identity()?
+                    .ok_or(UserRetrievalError::DeviceMetadataNotFound)?;
+
+                match user_metadata.get_device_metadata(device_identity.get_public_key()) {
+                    Some(device_metadata) => Ok(Some(CargoUser {
+                        this_device: device_metadata.name.clone(),
+                        all_devices: user_metadata
+                            .devices
+                            .iter()
+                            .map(|dm| dm.name.clone())
+                            .collect(),
+                    })),
+                    None => Err(UserRetrievalError::DeviceMetadataNotFound),
+                }
+            }
+            Err(CatlibError::NoRecordsFound) => Ok(None),
+            Err(err) => Err(UserRetrievalError::CatlibError(err)),
+        }
+    }
+
+    /// Retrieves default forest uuid from LSS
+    ///
+    #[tracing::instrument(level = "debug", ret, skip(self))]
+    fn get_default_forest_uuid(&self) -> Result<Uuid, UserRetrievalError> {
+        let forest_identity = self
+            .lss_service
+            .get_default_forest_identity()?
+            .ok_or_else(|| {
+                UserRetrievalError::ForestNotFound("Forest identity keypair not found".to_owned())
+            })?;
+
         self.lss_service
-            .get_default_forest()
-            .map(|forest| forest.is_some())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use hex_literal::hex;
-    use wildland_corex::{SigningKeypair, WildlandIdentity, DEFAULT_FOREST_KEY};
-
-    pub static SIGNING_PUBLIC_KEY: &str =
-        "1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f";
-    pub static SIGNING_SECRET_KEY: &str =
-        "e02cdfa23ad7d94508108ad41410e556c5b0737e9c264d4a2304a7a45894fc57";
-
-    pub fn create_signing_keypair() -> SigningKeypair {
-        SigningKeypair::try_from_str(SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY).unwrap()
-    }
-
-    pub fn create_wildland_forest_identity() -> WildlandIdentity {
-        WildlandIdentity::Forest(0, create_signing_keypair())
-    }
-
-    #[test]
-    fn generated_mnemonic_has_proper_length() {
-        let mnemonic = generate_random_mnemonic().unwrap();
-        assert_eq!(mnemonic.len(), 12);
-    }
-
-    #[test]
-    fn should_not_create_user_when_it_already_exists() {
-        // given
-        let forest_wildland_identity = create_wildland_forest_identity();
-        let mut lss_service_mock = LssService::default();
-        lss_service_mock
-            .expect_get_default_forest()
-            .return_once(|| Ok(Some(forest_wildland_identity)));
-        let user_service = UserService::new(lss_service_mock);
-
-        // when
-        let result =
-            user_service.create_user(CreateUserInput::Entropy(vec![]), "My Mac".to_string());
-
-        // then
-        assert_eq!(result.unwrap_err(), UserCreationError::UserAlreadyExists);
-    }
-
-    #[test]
-    fn should_create_user_from_entropy() {
-        // given
-        let entropy = hex!(
-            "
-            65426aa1176159d1929caea10514cddd
-            d11235741001f125922f258a58716b58
-            da63e3060fe461fe37e4ed201d76b132
-            e35830929b0f4764e577d3da09ecb6d2
-            12
-        "
-        );
-
-        let mut lss_service_mock = LssService::default();
-        lss_service_mock
-            .expect_get_default_forest()
-            .return_once(|| Ok(None));
-        lss_service_mock
-            .expect_save()
-            .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.to_string() == DEFAULT_FOREST_KEY
-            })
-            .returning(|_| Ok(None));
-        lss_service_mock
-            .expect_save()
-            .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.to_string() == "wildland.device.My Mac"
-            })
-            .returning(|_| Ok(None));
-        let user_service = UserService::new(lss_service_mock);
-
-        // when
-        let result = user_service.create_user(
-            CreateUserInput::Entropy(entropy.to_vec()),
-            "My Mac".to_string(),
-        );
-
-        // then
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn should_create_user_from_mnemonic() {
-        // given
-        let mnemonic: MnemonicPhrase = [
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "abandon".to_string(),
-            "about".to_string(),
-        ];
-
-        let mut lss_service_mock = LssService::default();
-        lss_service_mock
-            .expect_get_default_forest()
-            .return_once(|| Ok(None));
-        lss_service_mock
-            .expect_save()
-            .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.to_string() == DEFAULT_FOREST_KEY
-            })
-            .returning(|_| Ok(None));
-        lss_service_mock
-            .expect_save()
-            .withf(|wildland_identity: &WildlandIdentity| {
-                wildland_identity.to_string() == "wildland.device.My Mac"
-            })
-            .returning(|_| Ok(None));
-        let user_service = UserService::new(lss_service_mock);
-
-        // when
-        let result = user_service.create_user(
-            CreateUserInput::Mnemonic(Box::new(mnemonic)),
-            "My Mac".to_string(),
-        );
-
-        // then
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn should_return_true_if_user_exists() {
-        // given
-        let forest_wildland_identity = create_wildland_forest_identity();
-        let mut lss_service_mock = LssService::default();
-        lss_service_mock
-            .expect_get_default_forest()
-            .return_once(|| Ok(Some(forest_wildland_identity)));
-        let user_service = UserService::new(lss_service_mock);
-
-        // when
-        let result = user_service.user_exists();
-
-        // then
-        assert!(result.unwrap());
+            .get_forest_uuid_by_identity(&forest_identity)?
+            .ok_or_else(|| UserRetrievalError::ForestNotFound("Forest uuid not found".to_owned()))
     }
 }

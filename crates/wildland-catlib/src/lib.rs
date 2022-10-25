@@ -50,8 +50,9 @@
 //! # use wildland_catlib::CatLib;
 //! # use std::collections::HashSet;
 //! # use crate::wildland_catlib::*;
-//! let forest_owner = b"alice".to_vec();
-//! let signer = b"bob".to_vec();
+//! # use uuid::Uuid;
+//! let forest_owner = Identity([1; 32]);
+//! let signer = Identity([2; 32]);
 //!
 //! let catlib = CatLib::default();
 //! let forest = catlib.create_forest(
@@ -64,7 +65,7 @@
 //! container.add_path("/foo/bar".to_string());
 //! container.add_path("/bar/baz".to_string());
 //!
-//! let storage_template_id = String::from("free-storage-1");
+//! let storage_template_id = Uuid::from_u128(1);
 //! let storage_data = b"credentials_and_whatnot".to_vec();
 //! container.create_storage(Some(storage_template_id), storage_data);
 //! ```
@@ -88,12 +89,13 @@ use uuid::Uuid;
 
 mod bridge;
 mod container;
-mod contracts;
+pub mod contracts;
 mod db;
 mod error;
 mod forest;
 mod storage;
 
+#[derive(Clone)]
 pub struct CatLib {
     db: Rc<StoreDb>,
 }
@@ -104,7 +106,7 @@ impl CatLib {
 
         if db.is_err() {
             let path_str = path.to_str().unwrap();
-            panic!("Could not create CatLib database at {}", path_str);
+            panic!("Could not create CatLib database at {path_str}");
         }
 
         CatLib {
@@ -127,11 +129,11 @@ impl CatLib {
     /// ## Example
     ///
     /// ```rust
-    /// # use wildland_catlib::CatLib;
+    /// # use wildland_catlib::{CatLib, Identity};
     /// # use std::collections::HashSet;
     /// # use crate::wildland_catlib::IForest;
-    /// let forest_owner = b"alice".to_vec();
-    /// let signer = b"bob".to_vec();
+    /// let forest_owner = Identity([1; 32]);
+    /// let signer = Identity([2; 32]);
     ///
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
@@ -152,7 +154,7 @@ impl CatLib {
     }
 
     /// Return [`Forest`] object by Forest UUID.
-    pub fn get_forest(&self, uuid: String) -> CatlibResult<Forest> {
+    pub fn get_forest(&self, uuid: Uuid) -> CatlibResult<Forest> {
         fetch_forest_by_uuid(self.db.clone(), uuid)
     }
 
@@ -183,7 +185,7 @@ impl CatLib {
     }
 
     /// Return [`Container`] object by Container UUID.
-    pub fn get_container(&self, uuid: String) -> CatlibResult<Container> {
+    pub fn get_container(&self, uuid: Uuid) -> CatlibResult<Container> {
         fetch_container_by_uuid(self.db.clone(), uuid)
     }
 
@@ -193,7 +195,7 @@ impl CatLib {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseEntry`] if more than one [`Forest`] was found.
-    pub fn find_storages_with_template(&self, template_id: String) -> CatlibResult<Vec<Storage>> {
+    pub fn find_storages_with_template(&self, template_id: Uuid) -> CatlibResult<Vec<Storage>> {
         self.db.load()?;
         let data = self.db.read(|db| db.clone()).map_err(CatlibError::from)?;
 
@@ -218,10 +220,7 @@ impl CatLib {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseEntry`] if more than one [`Forest`] was found.
-    pub fn find_containers_with_template(
-        &self,
-        template_id: String,
-    ) -> CatlibResult<Vec<Container>> {
+    pub fn find_containers_with_template(&self, template_id: Uuid) -> CatlibResult<Vec<Container>> {
         let storages = self.find_storages_with_template(template_id)?;
 
         storages.iter().map(|storage| storage.container()).collect()
@@ -232,17 +231,18 @@ impl Default for CatLib {
     fn default() -> Self {
         let project_dirs = ProjectDirs::from("com", "wildland", "Cargo");
 
-        if project_dirs.is_none() {
-            panic!("Could not instantiate Catlib database directory");
-        }
+        let db_file = if let Some(project_dirs) = project_dirs {
+            let db_dir = project_dirs.data_local_dir().join("catlib");
 
-        let db_dir = project_dirs.unwrap().data_local_dir().join("catlib");
+            if !db_dir.exists() {
+                std::fs::create_dir_all(&db_dir).unwrap();
+            }
 
-        if !db_dir.exists() {
-            std::fs::create_dir_all(&db_dir).unwrap();
-        }
-
-        let db_file = db_dir.join("catlib.database");
+            db_dir.join("catlib.database")
+        } else {
+            tracing::info!("Could not create ProjectDirs. Using working directory.");
+            "./catlib.database".into()
+        };
 
         CatLib {
             db: Rc::new(PathDatabase::load_from_path_or_default(db_file).unwrap()),
