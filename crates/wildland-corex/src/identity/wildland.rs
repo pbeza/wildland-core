@@ -32,8 +32,8 @@ pub enum WildlandIdentity {
 impl Display for WildlandIdentity {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            Forest(index, _) => write!(f, "wildland.forest.{}", index),
-            Device(name, _) => write!(f, "wildland.device.{}", name),
+            Forest(index, _) => write!(f, "wildland.forest.{index}"),
+            Device(name, _) => write!(f, "wildland.device.{name}"),
         }
     }
 }
