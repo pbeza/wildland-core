@@ -32,7 +32,7 @@ impl TryFrom<String> for Forest {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Forest {
-    uuid: String,
+    uuid: Uuid,
     signers: Signers,
     owner: Identity,
     data: Vec<u8>,
@@ -44,7 +44,7 @@ pub struct Forest {
 impl Forest {
     pub fn new(owner: Identity, signers: Signers, data: Vec<u8>, db: Rc<StoreDb>) -> Self {
         Forest {
-            uuid: Uuid::new_v4().to_string(), // redundant?
+            uuid: Uuid::new_v4(),
             signers,
             owner,
             data,
@@ -90,8 +90,8 @@ impl IForest for Forest {
         Ok(true)
     }
 
-    fn uuid(&self) -> String {
-        self.uuid.clone()
+    fn uuid(&self) -> Uuid {
+        self.uuid
     }
 
     fn owner(&self) -> Identity {
@@ -202,14 +202,14 @@ mod tests {
     }
 
     fn make_forest(catlib: &CatLib) -> Forest {
-        let owner = b"owner".to_vec();
+        let owner = Identity([1; 32]);
 
         catlib.create_forest(owner, Signers::new(), vec![]).unwrap()
     }
 
     fn make_forest_with_signer(catlib: &CatLib) -> Forest {
-        let owner = b"owner".to_vec();
-        let signer = b"signer".to_vec();
+        let owner = Identity([1; 32]);
+        let signer = Identity([2; 32]);
 
         let mut signers = Signers::new();
         signers.insert(signer);
@@ -221,9 +221,9 @@ mod tests {
     fn read_new_forest(catlib: CatLib) {
         make_forest_with_signer(&catlib);
 
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
-        assert_eq!(forest.owner, b"owner");
+        assert_eq!(forest.owner, Identity([1; 32]));
         assert_eq!(forest.signers.len(), 1);
     }
 
@@ -233,7 +233,7 @@ mod tests {
 
         let forest = catlib.get_forest(f.uuid()).unwrap();
 
-        assert_eq!(forest.owner, b"owner");
+        assert_eq!(forest.owner, Identity([1; 32]));
         assert_eq!(forest.signers.len(), 1);
     }
 
@@ -241,21 +241,21 @@ mod tests {
     fn create_two_different_forests(catlib: CatLib) {
         make_forest(&catlib);
         catlib
-            .create_forest(b"another owner".to_vec(), Signers::new(), vec![])
+            .create_forest(Identity([2; 32]), Signers::new(), vec![])
             .unwrap();
 
-        let forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
-        assert_eq!(forest.owner(), b"owner");
+        assert_eq!(forest.owner(), Identity([1; 32]));
 
-        let forest = catlib.find_forest(b"another owner".to_vec()).unwrap();
+        let forest = catlib.find_forest(Identity([2; 32])).unwrap();
 
-        assert_eq!(forest.owner(), b"another owner");
+        assert_eq!(forest.owner(), Identity([2; 32]));
     }
 
     #[rstest]
     fn read_non_existing_forest(catlib: CatLib) {
-        let forest = catlib.find_forest(b"owner".to_vec());
+        let forest = catlib.find_forest(Identity([1; 32]));
 
         assert_eq!(forest.err(), Some(CatlibError::NoRecordsFound));
     }
@@ -264,7 +264,7 @@ mod tests {
     fn read_wrong_forest_owner(catlib: CatLib) {
         make_forest(&catlib);
 
-        let forest = catlib.find_forest(b"non_existing_owner".to_vec());
+        let forest = catlib.find_forest(Identity([0; 32]));
 
         assert_eq!(forest.err(), Some(CatlibError::NoRecordsFound));
     }
@@ -323,20 +323,20 @@ mod tests {
 
     #[rstest]
     fn adding_signers(catlib: CatLib) {
-        let alice = b"alice".to_vec();
-        let bob = b"bob".to_vec();
-        let charlie = b"charlie".to_vec();
+        let alice = Identity([3; 32]);
+        let bob = Identity([4; 32]);
+        let charlie = Identity([5; 32]);
 
         let mut forest = make_forest_with_signer(&catlib);
 
-        assert_eq!(forest.owner, b"owner");
+        assert_eq!(forest.owner, Identity([1; 32]));
 
         assert_eq!(forest.signers.len(), 1);
 
         forest.add_signer(alice).unwrap();
 
         // Find the same forest by it's owner and add one more signer
-        let mut forest = catlib.find_forest(b"owner".to_vec()).unwrap();
+        let mut forest = catlib.find_forest(Identity([1; 32])).unwrap();
         forest.add_signer(bob).unwrap();
         assert_eq!(forest.signers.len(), 3);
 

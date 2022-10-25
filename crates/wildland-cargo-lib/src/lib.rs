@@ -1,3 +1,21 @@
+//
+// Wildland Project
+//
+// Copyright © 2022 Golem Foundation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 //! This crate provides a high level interface for the Cargo clients. It is built on top of the
 //! Wildland CoreX library and provides Cargo specific abstractions like "user", "device" or
 //! "sharing logic".
@@ -16,6 +34,4 @@ mod errors;
 #[cfg(feature = "bindings")]
 pub mod ffi;
 mod logging;
-#[cfg(test)]
-mod test_utils;
 mod user;
