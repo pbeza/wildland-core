@@ -292,7 +292,7 @@ mod tests {
 
         let forest_uuid = Uuid::new_v4();
         let forest_pubkey = [1; 32];
-        let forest_identity = Identity(forest_pubkey.clone());
+        let forest_identity = Identity(forest_pubkey);
         lss.insert(
             forest_identity.encode(),
             serde_json::to_vec(&forest_uuid).unwrap(),
@@ -343,7 +343,7 @@ mod tests {
 
         let device_identity = service.get_this_device_identity().unwrap().unwrap();
         let expected_device_identity =
-            WildlandIdentity::Device(device_name.clone(), SigningKeypair::from(&keypair));
+            WildlandIdentity::Device(device_name, SigningKeypair::from(&keypair));
         assert_eq!(device_identity, expected_device_identity);
     }
 }

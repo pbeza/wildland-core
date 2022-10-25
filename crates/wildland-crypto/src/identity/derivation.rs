@@ -36,17 +36,17 @@ use super::encrypting_keypair::EncryptingKeypair;
 fn signing_key_path(forest_index: u64) -> String {
     // "master/WLD/purpose/index"
     // "5721156" == b'WLD'.hex() converted to decimal
-    format!("m/5721156'/0'/{}'", forest_index)
+    format!("m/5721156'/0'/{forest_index}'")
 }
 
 #[tracing::instrument(level = "debug", ret)]
 fn encryption_key_path(forest_index: u64, index: u64) -> String {
-    format!("m/5721156'/1'/{}'/{}'", forest_index, index)
+    format!("m/5721156'/1'/{forest_index}'/{index}'")
 }
 
 #[tracing::instrument(level = "debug", ret)]
 fn single_use_encryption_key_path(index: u64) -> String {
-    format!("m/5721156'/2'/{}'", index)
+    format!("m/5721156'/2'/{index}'")
 }
 
 #[tracing::instrument(level = "debug", ret)]
