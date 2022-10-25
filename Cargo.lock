@@ -1714,7 +1714,7 @@ checksum = "1c38c045535d93ec4f0b4defec448e4291638ee608530863b1e2ba115d4fff7f"
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.17.0"
+version = "0.18.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -1742,7 +1742,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-catlib"
-version = "0.5.5"
+version = "0.5.6"
 dependencies = [
  "directories",
  "mocktopus",
@@ -1759,7 +1759,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-corex"
-version = "0.7.6"
+version = "0.7.7"
 dependencies = [
  "hex",
  "log",
@@ -1775,7 +1775,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-crypto"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "crypto_box",
  "ed25519-dalek",
@@ -1797,11 +1797,11 @@ dependencies = [
 
 [[package]]
 name = "wildland-dfs"
-version = "0.2.7"
+version = "0.2.8"
 
 [[package]]
 name = "wildland-http-client"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "hex",
  "http",
