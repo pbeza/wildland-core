@@ -106,7 +106,7 @@ impl CatLib {
 
         if db.is_err() {
             let path_str = path.to_str().unwrap();
-            panic!("Could not create CatLib database at {}", path_str);
+            panic!("Could not create CatLib database at {path_str}");
         }
 
         CatLib {

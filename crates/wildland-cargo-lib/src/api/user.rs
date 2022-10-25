@@ -242,7 +242,7 @@ mod tests {
 
         let expected_user = CargoUser {
             this_device: device_name.clone(),
-            all_devices: vec![device_name.clone()],
+            all_devices: vec![device_name],
         };
         assert_eq!(user, expected_user);
     }
@@ -264,7 +264,7 @@ mod tests {
         let user = user_api.get_user().unwrap();
         let expected_user = CargoUser {
             this_device: device_name.clone(),
-            all_devices: vec![device_name.clone()],
+            all_devices: vec![device_name],
         };
         assert_eq!(user, expected_user);
     }
