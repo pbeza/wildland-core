@@ -57,10 +57,14 @@ pub struct CargoLib {
 }
 
 impl CargoLib {
-    pub fn new(user_api: UserApi, fsa_config: FoundationStorageApiConfig) -> Self {
+    pub fn new(
+        lss: &'static dyn LocalSecureStorage,
+        fsa_config: FoundationStorageApiConfig,
+    ) -> Self {
+        let lss_service = LssService::new(lss);
         Self {
-            user_api,
-            foundation_storage_api: FoundationStorageApi::new(fsa_config),
+            user_api: UserApi::new(UserService::new(lss_service.clone())),
+            foundation_storage_api: FoundationStorageApi::new(fsa_config, lss_service),
         }
     }
 
@@ -135,10 +139,7 @@ pub fn create_cargo_lib(
         logging::init_subscriber(cfg.logger_config)
             .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e)))?;
 
-        let cargo_lib = Arc::new(Mutex::new(CargoLib::new(
-            UserApi::new(UserService::new(LssService::new(lss))),
-            cfg.fsa_config,
-        )));
+        let cargo_lib = Arc::new(Mutex::new(CargoLib::new(lss, cfg.fsa_config)));
 
         unsafe {
             CARGO_LIB.write(cargo_lib);

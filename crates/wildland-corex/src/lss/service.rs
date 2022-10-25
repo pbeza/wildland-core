@@ -19,12 +19,15 @@
 use std::fmt::{Debug, Display};
 
 use super::{api::LocalSecureStorage, result::LssResult};
-use crate::{ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY};
+use crate::{
+    storage::StorageTemplate, ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY,
+};
 use serde::{de::DeserializeOwned, Serialize};
 use uuid::Uuid;
 use wildland_catlib::{Forest, IForest, Identity};
 use wildland_crypto::identity::SigningKeypair;
 
+const STORAGE_TEMPLATE_PREFIX: &str = "wildland.storage_template.";
 #[derive(Clone)]
 pub struct LssService {
     lss: &'static dyn LocalSecureStorage,
@@ -94,6 +97,15 @@ impl LssService {
         })
     }
 
+    #[tracing::instrument(level = "debug", skip(self, storage_template))]
+    pub fn save_storage_template(&self, storage_template: &StorageTemplate) -> LssResult<bool> {
+        tracing::trace!("Saving storage template");
+        self.serialize_and_save(
+            format!("{STORAGE_TEMPLATE_PREFIX}{}", storage_template.uuid()),
+            storage_template,
+        )
+    }
+
     #[tracing::instrument(level = "debug", skip(self))]
     fn get_this_device_name(&self) -> LssResult<Option<String>> {
         self.get_parsed(THIS_DEVICE_NAME_KEY)
@@ -109,6 +121,8 @@ impl LssService {
         self.get_parsed(DEFAULT_FOREST_KEY)
     }
 
+    /// serializes an `obj` and saves it in LSS
+    /// this is the only method which should use `serde_json::to_vec` function so it could be easily replaced
     #[tracing::instrument(level = "debug", skip(self, obj))]
     fn serialize_and_save(
         &self,
@@ -124,6 +138,8 @@ impl LssService {
             .map(|bytes| bytes.is_some())
     }
 
+    /// retrieves bytes from LSS, deserializes them as json and parses as a type specified with template parameter
+    /// this is the only method which should use `serde_json::from_slice` function so it could be easily replaced
     #[tracing::instrument(level = "debug", skip(self))]
     fn get_parsed<'a, T: DeserializeOwned>(
         &self,
@@ -143,6 +159,7 @@ mod tests {
     use std::{
         cell::RefCell,
         collections::{HashMap, HashSet},
+        rc::Rc,
     };
 
     use uuid::Uuid;
@@ -151,6 +168,7 @@ mod tests {
 
     use crate::{
         lss::service::{THIS_DEVICE_KEYPAIR_KEY, THIS_DEVICE_NAME_KEY},
+        storage::{StorageTemplate, StorageTemplateTrait},
         LocalSecureStorage, LssResult, LssService, WildlandIdentity, DEFAULT_FOREST_KEY,
     };
 
@@ -345,5 +363,36 @@ mod tests {
         let expected_device_identity =
             WildlandIdentity::Device(device_name, SigningKeypair::from(&keypair));
         assert_eq!(device_identity, expected_device_identity);
+    }
+
+    struct StorageTemplateTestImpl;
+    impl StorageTemplateTrait for StorageTemplateTestImpl {
+        fn uuid(&self) -> Uuid {
+            Uuid::from_u128(2)
+        }
+
+        fn data(&self) -> Vec<u8> {
+            vec![1, 2, 3]
+        }
+    }
+
+    #[test]
+    fn test_save_storage_template() {
+        let lss = LssStub::default(); // LSS must live through the whole test
+        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
+        let service = LssService::new(lss_ref);
+
+        let storage_template = StorageTemplate::new(Rc::new(StorageTemplateTestImpl {}));
+
+        service.save_storage_template(&storage_template).unwrap();
+
+        let expected_uuid = Uuid::from_u128(2);
+        let retrieved_storage_template_data = lss
+            .get(format!("wildland.storage_template.{expected_uuid}"))
+            .unwrap()
+            .unwrap();
+
+        let expected_data = serde_json::to_vec(&vec![1, 2, 3]).unwrap();
+        assert_eq!(retrieved_storage_template_data, expected_data);
     }
 }
