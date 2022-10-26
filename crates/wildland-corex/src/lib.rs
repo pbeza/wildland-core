@@ -1,11 +1,31 @@
+//
+// Wildland Project
+//
+// Copyright © 2022 Golem Foundation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License version 3 as published by
+// the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+mod catlib_service;
 mod error;
 mod identity;
 mod lss;
 pub mod storage;
 
+pub use catlib_service::*;
 pub use error::*;
 pub use identity::{master::*, wildland::*};
 pub use lss::*;
+pub use wildland_catlib::{contracts::*, CatlibError, Forest, PubKey};
 pub use wildland_crypto::{
     error::CryptoError,
     identity::{
@@ -16,7 +36,7 @@ pub use wildland_crypto::{
 
 pub type CorexResult<T> = Result<T, CoreXError>;
 
-pub static DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
+pub const DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
 
 #[cfg(test)]
 pub mod test_utilities {

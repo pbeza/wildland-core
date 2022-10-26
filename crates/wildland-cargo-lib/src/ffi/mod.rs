@@ -1,22 +1,34 @@
+//
+// Wildland Project
+//
+// Copyright © 2022 Golem Foundation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License version 3 as published by
+// the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 use crate::{
-    api::{
-        cargo_lib::*,
-        config::*,
-        foundation_storage::*,
-        user::{MnemonicPayload, UserApi, UserPayload},
-    },
+    api::{cargo_lib::*, config::*, foundation_storage::*, user::*},
     errors::*,
 };
 use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
 pub use wildland_corex::{
-    storage::FoundationStorageTemplate, CoreXError, CryptoError, ForestRetrievalError,
-    LocalSecureStorage, LssError, LssResult,
+    storage::StorageTemplate, CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage,
+    LssError, LssResult,
 };
 
 type VoidType = ();
 
-pub type UserRetrievalExc = RetrievalError<ForestRetrievalError>;
+pub type UserRetrievalExc = RetrievalError<UserRetrievalError>;
 pub type MnemonicCreationExc = SingleVariantError<CryptoError>;
 pub type StringExc = SingleVariantError<String>; // Used for simple errors originating inside CargoLib (not in dependant modules)
 pub type UserCreationExc = SingleVariantError<UserCreationError>;
@@ -192,10 +204,10 @@ mod ffi_binding {
             self: &FoundationStorageApi,
             process_handle: &FreeTierProcessHandle,
             verification_token: String,
-        ) -> Result<FoundationStorageTemplate, FsaExc>;
+        ) -> Result<StorageTemplate, FsaExc>;
         type FreeTierProcessHandle;
 
-        type FoundationStorageTemplate;
+        type StorageTemplate;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_mnemonic_from_vec(
@@ -206,17 +218,17 @@ mod ffi_binding {
             self: &UserApi,
             entropy: Vec<u8>,
             device_name: String,
-        ) -> Result<VoidType, UserCreationExc>;
+        ) -> Result<CargoUser, UserCreationExc>;
         fn create_user_from_mnemonic(
             self: &UserApi,
             mnemonic: &MnemonicPayload,
             device_name: String,
-        ) -> Result<VoidType, UserCreationExc>;
-        fn get_user(self: &UserApi) -> Result<UserPayload, UserRetrievalExc>;
+        ) -> Result<CargoUser, UserCreationExc>;
+        fn get_user(self: &UserApi) -> Result<CargoUser, UserRetrievalExc>;
 
         fn get_string(self: &MnemonicPayload) -> String;
         fn get_vec(self: &MnemonicPayload) -> Vec<String>;
 
-        fn get_string(self: &UserPayload) -> String;
+        fn get_string(self: &CargoUser) -> String;
     }
 }

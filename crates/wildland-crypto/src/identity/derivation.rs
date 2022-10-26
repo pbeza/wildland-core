@@ -1,14 +1,11 @@
 //
 // Wildland Project
 //
-// Copyright © 2021 Golem Foundation,
-// 	    	     Lukasz Kujawski <leon@wildland.io>
-// 	    	     Pawel Peregud <pepesza@wildland.io>
+// Copyright © 2022 Golem Foundation,
 //
 // This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// it under the terms of the GNU General Public License version 3 as published by
+// the Free Software Foundation.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -38,17 +35,17 @@ use super::encrypting_keypair::EncryptingKeypair;
 fn signing_key_path(forest_index: u64) -> String {
     // "master/WLD/purpose/index"
     // "5721156" == b'WLD'.hex() converted to decimal
-    format!("m/5721156'/0'/{}'", forest_index)
+    format!("m/5721156'/0'/{forest_index}'")
 }
 
 #[tracing::instrument(level = "debug", ret)]
 fn encryption_key_path(forest_index: u64, index: u64) -> String {
-    format!("m/5721156'/1'/{}'/{}'", forest_index, index)
+    format!("m/5721156'/1'/{forest_index}'/{index}'")
 }
 
 #[tracing::instrument(level = "debug", ret)]
 fn single_use_encryption_key_path(index: u64) -> String {
-    format!("m/5721156'/2'/{}'", index)
+    format!("m/5721156'/2'/{index}'")
 }
 
 #[tracing::instrument(level = "debug", ret)]

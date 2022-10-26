@@ -4,9 +4,8 @@
 // Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// it under the terms of the GNU General Public License version 3 as published by
+// the Free Software Foundation.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,8 +30,8 @@ impl TryFrom<String> for Bridge {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Bridge {
-    uuid: String,
-    forest_uuid: String,
+    uuid: Uuid,
+    forest_uuid: Uuid,
     path: ContainerPath,
     link: Vec<u8>,
 
@@ -41,9 +40,9 @@ pub struct Bridge {
 }
 
 impl Bridge {
-    pub fn new(forest_uuid: String, path: ContainerPath, link: Vec<u8>, db: Rc<StoreDb>) -> Self {
+    pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>, db: Rc<StoreDb>) -> Self {
         Bridge {
-            uuid: Uuid::new_v4().to_string(),
+            uuid: Uuid::new_v4(),
             forest_uuid,
             path,
             link,
@@ -53,8 +52,8 @@ impl Bridge {
 }
 
 impl IBridge for Bridge {
-    fn uuid(&self) -> String {
-        self.uuid.clone()
+    fn uuid(&self) -> Uuid {
+        self.uuid
     }
 
     fn path(&self) -> ContainerPath {
@@ -62,7 +61,7 @@ impl IBridge for Bridge {
     }
 
     fn forest(&self) -> CatlibResult<crate::forest::Forest> {
-        fetch_forest_by_uuid(self.db.clone(), self.forest_uuid.clone())
+        fetch_forest_by_uuid(self.db.clone(), self.forest_uuid)
     }
 
     fn link(&self) -> Vec<u8> {
@@ -104,7 +103,7 @@ mod tests {
     #[rstest]
     fn create_bridge(catlib: CatLib) {
         let forest = catlib
-            .create_forest(b"owner".to_vec(), Signers::new(), vec![])
+            .create_forest(Identity([1; 32]), Signers::new(), vec![])
             .unwrap();
 
         let mut bridge = forest

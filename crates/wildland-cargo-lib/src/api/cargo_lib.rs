@@ -1,5 +1,20 @@
-#[cfg(test)]
-use crate::test_utils::MockLssService as LssService;
+//
+// Wildland Project
+//
+// Copyright © 2022 Golem Foundation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License version 3 as published by
+// the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 use crate::{
     api::{
         config::{CargoConfig, FoundationStorageApiConfig},
@@ -18,9 +33,7 @@ use std::{
     },
 };
 use thiserror::Error;
-use wildland_corex::LocalSecureStorage;
-#[cfg(not(test))]
-use wildland_corex::LssService;
+use wildland_corex::{LocalSecureStorage, LssService};
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[error("CargoLib creation error: {0}")]
@@ -43,10 +56,14 @@ pub struct CargoLib {
 }
 
 impl CargoLib {
-    pub fn new(user_api: UserApi, fsa_config: FoundationStorageApiConfig) -> Self {
+    pub fn new(
+        lss: &'static dyn LocalSecureStorage,
+        fsa_config: FoundationStorageApiConfig,
+    ) -> Self {
+        let lss_service = LssService::new(lss);
         Self {
-            user_api,
-            foundation_storage_api: FoundationStorageApi::new(fsa_config),
+            user_api: UserApi::new(UserService::new(lss_service.clone())),
+            foundation_storage_api: FoundationStorageApi::new(fsa_config, lss_service),
         }
     }
 
@@ -128,10 +145,7 @@ pub fn create_cargo_lib(
         logging::init_subscriber(cfg.logger_config)
             .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e.to_string())))?;
 
-        let cargo_lib = Arc::new(Mutex::new(CargoLib::new(
-            UserApi::new(UserService::new(LssService::new(lss))),
-            cfg.fsa_config,
-        )));
+        let cargo_lib = Arc::new(Mutex::new(CargoLib::new(lss, cfg.fsa_config)));
 
         unsafe {
             CARGO_LIB.write(cargo_lib);
