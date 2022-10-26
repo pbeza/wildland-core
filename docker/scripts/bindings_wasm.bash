@@ -9,7 +9,6 @@ cp ./tests/ffi/wasm/main.cpp $PROJECT_DIR/ffi_build
 cp ./tests/ffi/wasm/wasm_test.js $PROJECT_DIR/ffi_build
 
 cd $PROJECT_DIR/ffi_build
-mv ffi_cxx.h wildland.cpp
 
 export EMCC_CFLAGS="-s ERROR_ON_UNDEFINED_SYMBOLS=0" 
 
