@@ -58,7 +58,13 @@ wildland().then((wlib) => {
     // or by parsing JSON string with parse_config function
     var CargoCfgProvider = wlib.CargoCfgProvider.extend("CargoCfgProvider", {
         get_log_level: function () { return new wlib.String("debug"); },
-        get_log_file: function () { return wlib.new_none_string() },
+        get_log_use_ansi: function () { return false; },
+        get_log_file_enabled: function () { return false; },
+        get_log_path_file: function () { return new wlib.String("wildlandwasm.log"); },
+        get_log_file_rotate_diretory: function () { return new wlib.String("."); },
+        get_oslog_category: function () { return new wlib.None(); },
+        get_oslog_subsystem: function () { return new wlib.None(); },
+        
         get_evs_url: function () { return new wlib.String("evs url will be here"); },
         get_sc_url: function () { return new wlib.String("sc url will be here"); }
     });
