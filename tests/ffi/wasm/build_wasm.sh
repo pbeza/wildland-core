@@ -9,4 +9,5 @@ em++ ./main.cpp -std=c++20 -g -D WASM \
     -l embind \
     -s WASM=1 \
     -sMODULARIZE -sEXPORTED_RUNTIME_METHODS=ccall \
-    -o wildland.js
+    -o wildland.js \
+    --debug
