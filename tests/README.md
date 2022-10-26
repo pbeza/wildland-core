@@ -7,9 +7,11 @@ In order to run the process of storage credentials retrieval one must take a few
 
 1. Set up a server 
 
-    It can be done by downloading repository of EVS (https://gitlab.com/wildland/cargo/email-verification-service) and running docker container with `make run` in root directory.
+    It can be done by downloading branch `encryption-off` of EVS repository (https://gitlab.com/wildland/cargo/email-verification-service) and running docker container with `make run` in root directory.
 
     Server must be run in `DEV` and with token delivery set to `HTTP`. Instruction how to do that can be found in EVS README.md file.
+
+    **IMPORTANT** Use `encryption-off` branch since encryption is not supported yet.
 
 2. Run c++ test
 
@@ -33,3 +35,5 @@ In order to run the process of storage credentials retrieval one must take a few
     Both scripts uses the same hardcoded variables for now and the same configuration (e.g. evs port [default 5000]).
 
 4. Paste token to the test input
+
+This flow works only once because EVS server creates a record in its database for an email. In order to successfully run 3. step again, database volume of EVS container must be removed (default name of volume: `docker_db`).
