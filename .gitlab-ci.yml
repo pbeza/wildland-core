@@ -342,7 +342,7 @@ pages-lld:
   image: rustlang/rust:nightly
   stage: Deploy
   script:
-    - cargo doc --target-dir public/lld/
+    - cargo doc --target-dir public/lld/ --all-features --no-deps
   artifacts:
     paths:
       - public
