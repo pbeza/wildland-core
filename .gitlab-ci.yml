@@ -325,37 +325,47 @@ publish crates:
     # Specifying registry is required (bug: https://github.com/crate-ci/cargo-release/issues/429)
     - RUST_LOG=debug cargo $CARGO_FLAGS release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release
 
-pages-create:
+pages-mld:
   image: registry.gitlab.com/wildland/corex/wildland-core/esv_mdbook:0.3.2
   stage: Deploy
-  tags:
-    - docker
-    - linux
-    - metal
   script:
     - mdbook build
+  artifacts:
+    paths:
+      - public
+    untracked: true
+  # only:
+  #   refs:
+  #     - main
+
+pages-lld:
+  image: rustlang/rust:nightly
+  stage: Deploy
+  script:
     - cargo doc --target-dir public/lld/
   artifacts:
     paths:
       - public
     untracked: true
-  only:
-  - main
+  # only:
+  #   refs:
+  #     - main
 
 pages-publish:
   image: google/cloud-sdk
   stage: Deploy
-  when: manual
-  tags:
-    - docker
-    - linux
-    - metal
-  dependencies:
-    - pages-create
+  needs:
+    - job: pages-mld
+    - job: pages-lld
+  dependencies: 
+    - pages-lld
+    - pages-mld
   script:
     - echo -n $DOCS_WILDLAND_GCS_UPLOADER_KEY | base64 -d > /credentials.json
     - gcloud auth activate-service-account --key-file=/credentials.json
-    - gsutil cp public/* gs://docs.wildland.dev/
+    # - gsutil rm -rf gs://docs.wildland.dev/public
+    - gsutil -m rsync -d -r public/ gs://docs.wildland.dev/
     - gsutil ls gs://docs.wildland.dev/
-  only:
-  - main
+  # only:
+  #   refs:
+  #     - main
