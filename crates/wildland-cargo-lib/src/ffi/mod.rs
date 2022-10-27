@@ -143,7 +143,7 @@ mod ffi_binding {
         fn get_log_file_path(self: &dyn CargoCfgProvider) -> OptionalString;
         fn get_log_file_rotate_directory(self: &dyn CargoCfgProvider) -> OptionalString;
         fn get_oslog_category(self: &dyn CargoCfgProvider) -> OptionalString;
-        fn get_oslog_sybsystem(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_oslog_subsystem(self: &dyn CargoCfgProvider) -> OptionalString;
 
         // # traits required for lss:
         //

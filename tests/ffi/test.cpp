@@ -26,7 +26,7 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     OptionalString get_oslog_category() override {
         return new_none_string();
     }
-    OptionalString get_oslog_sybsystem() override {
+    OptionalString get_oslog_subsystem() override {
         return new_none_string();
     }
     String get_evs_url() override

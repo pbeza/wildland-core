@@ -124,7 +124,7 @@ impl CargoLib {
 ///         log_file_rotate_directory: PathBuf::from(".".to_owned()),
 ///         log_file_enabled: true,
 ///         oslog_category: None,
-///         oslog_sybsystem: None,
+///         oslog_subsystem: None,
 ///     },
 ///     fsa_config: FoundationStorageApiConfig {
 ///         evs_url: "some_url".to_owned(),

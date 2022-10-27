@@ -68,7 +68,7 @@ pub trait CargoCfgProvider {
     fn get_log_file_path(&self) -> Option<String>;
     fn get_log_file_rotate_directory(&self) -> Option<String>;
     fn get_oslog_category(&self) -> Option<String>;
-    fn get_oslog_sybsystem(&self) -> Option<String>;
+    fn get_oslog_subsystem(&self) -> Option<String>;
 
     fn get_evs_url(&self) -> String;
     fn get_sc_url(&self) -> String;
@@ -176,7 +176,7 @@ pub struct LoggerConfig {
     /// oslog_category, enables the oslog facility. If OsLog is enabled,
     /// then all other facilities are not initialized.
     #[derivative(Default(value = "None"))]
-    pub oslog_sybsystem: Option<String>,
+    pub oslog_subsystem: Option<String>,
 }
 
 impl LoggerConfig {
@@ -187,7 +187,7 @@ impl LoggerConfig {
     /// to the OsLog (i.e. linux,windows) then `false` is returned.
     pub fn is_oslog_eligible(&self) -> bool {
         let correct_platform = cfg!(target_os = "macos") || cfg!(target_os = "ios");
-        if self.oslog_category.is_some() && self.oslog_sybsystem.is_some() && correct_platform {
+        if self.oslog_category.is_some() && self.oslog_subsystem.is_some() && correct_platform {
             return true;
         }
         false
@@ -276,7 +276,7 @@ pub fn collect_config(
                     }),
             ),
             oslog_category: config_provider.get_oslog_category(),
-            oslog_sybsystem: config_provider.get_oslog_sybsystem(),
+            oslog_subsystem: config_provider.get_oslog_subsystem(),
         },
         fsa_config: FoundationStorageApiConfig {
             evs_url: config_provider.get_evs_url(),
@@ -332,7 +332,7 @@ mod tests {
                     log_file_rotate_directory: PathBuf::from("."),
                     log_file_enabled: true,
                     oslog_category: None,
-                    oslog_sybsystem: None,
+                    oslog_subsystem: None,
                 }
             }
         )
@@ -366,7 +366,7 @@ mod tests {
                     log_file_rotate_directory: LoggerConfig::default().log_file_rotate_directory,
                     log_file_enabled: false,
                     oslog_category: None,
-                    oslog_sybsystem: None,
+                    oslog_subsystem: None,
                 }
             }
         )

@@ -93,8 +93,8 @@ pub fn nondefault_oslog(cfg: &LoggerConfig) -> anyhow::Result<()> {
     let subscriber = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
         .with(tracing_oslog::OsLogger::new(
-            cfg.oslog_sybsystem.clone().unwrap(),
-            cfg.oslog_sybsystem.clone().unwrap(),
+            cfg.oslog_subsystem.clone().unwrap(),
+            cfg.oslog_category.clone().unwrap(),
         ));
     tracing::subscriber::set_global_default(subscriber)
         .expect("Unable to set a global oslog instance"); // unrecoverable

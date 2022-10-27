@@ -26,7 +26,7 @@ namespace Main
         public override OptionalString get_oslog_category() {
             return new_none_string();
         }
-        public override OptionalString get_oslog_sybsystem() {
+        public override OptionalString get_oslog_subsystem() {
             return new_none_string();
         }
 
