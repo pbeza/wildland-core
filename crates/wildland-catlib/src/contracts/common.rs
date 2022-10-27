@@ -43,7 +43,7 @@ impl From<Identity> for PubKey {
 pub(crate) type CatLibData = std::collections::HashMap<String, String>;
 pub(crate) type StoreDb = PathDatabase<CatLibData, Ron>;
 
-pub(crate) trait Model {
+pub trait Model {
     fn delete(&mut self) -> CatlibResult<()>;
     fn save(&mut self) -> CatlibResult<()>;
 }

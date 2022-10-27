@@ -26,7 +26,7 @@ pub use catlib_service::*;
 pub use error::*;
 pub use identity::{master::*, wildland::*};
 pub use lss::*;
-pub use wildland_catlib::{contracts::*, CatlibError, Forest, PubKey};
+pub use wildland_catlib::{contracts::*, CatlibError, Container, Forest, PubKey};
 pub use wildland_crypto::{
     error::CryptoError,
     identity::{

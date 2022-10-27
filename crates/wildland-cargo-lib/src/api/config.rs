@@ -45,7 +45,7 @@ use serde::{
 use thiserror::Error;
 use tracing::Level;
 
-use crate::errors::{SingleErrVariantResult, SingleVariantError};
+use crate::errors::single_variant::*;
 
 pub trait CargoCfgProvider {
     /// Must return one of (case-insensitive):

@@ -178,7 +178,7 @@ int main()
     try
     {
         MnemonicPayload mnemonic = user_api.generate_mnemonic();
-        std::string mnemonic_str = mnemonic.get_string().to_string();
+        std::string mnemonic_str = mnemonic.stringify().to_string();
         std::cout << "Generated mnemonic: " << mnemonic_str << std::endl;
 
         RustVec<String> words_vec = mnemonic.get_vec();
@@ -197,7 +197,7 @@ int main()
             try
             {
                 CargoUser user = user_api.get_user();
-                std::cout << "User: " << user.get_string().to_string() << std::endl;
+                std::cout << "User: " << user.stringify().to_string() << std::endl;
             }
             catch (const UserRetrievalExc_NotFoundException &e)
             {

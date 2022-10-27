@@ -21,12 +21,12 @@ use std::rc::Rc;
 use serde::Serialize;
 use uuid::Uuid;
 
-pub trait StorageTemplateTrait {
+pub trait StorageTemplateTrait: std::fmt::Debug {
     fn uuid(&self) -> Uuid;
     fn data(&self) -> Vec<u8>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct StorageTemplate {
     inner: Rc<dyn StorageTemplateTrait>,
 }

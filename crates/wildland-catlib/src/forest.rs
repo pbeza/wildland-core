@@ -18,25 +18,28 @@
 
 use super::*;
 use crate::{db::delete_model, db::save_model};
+use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
 /// Create Forest object from its representation in Rust Object Notation
-impl TryFrom<String> for Forest {
+impl TryFrom<&str> for Forest {
     type Error = ron::error::SpannedError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        ron::from_str(value.as_str())
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        ron::from_str(value)
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Derivative)]
+#[derivative(Debug)]
 pub struct Forest {
     uuid: Uuid,
     signers: Signers,
     owner: Identity,
     data: Vec<u8>,
 
+    #[derivative(Debug = "ignore")]
     #[serde(skip, default = "use_default_database")]
     db: Rc<StoreDb>,
 }
@@ -73,7 +76,7 @@ impl IForest for Forest {
         let containers: Vec<Container> = data
             .iter()
             .filter(|(id, _)| (**id).starts_with("container-"))
-            .map(|(_, container_str)| Container::try_from((*container_str).clone()).unwrap())
+            .map(|(_, container_str)| Container::try_from(container_str.as_str()).unwrap())
             .filter(|container| {
                 container.forest().is_ok() && container.forest().unwrap().uuid() == self.uuid()
             })
@@ -156,7 +159,7 @@ impl IForest for Forest {
         let containers: Vec<Container> = data
             .iter()
             .filter(|(id, _)| (**id).starts_with("container-"))
-            .map(|(_, container_str)| Container::try_from((*container_str).clone()).unwrap())
+            .map(|(_, container_str)| Container::try_from(container_str.as_str()).unwrap())
             .filter(|container| {
                 container.forest().unwrap().uuid() == self.uuid()
                     && container.paths().iter().any(|container_path| {

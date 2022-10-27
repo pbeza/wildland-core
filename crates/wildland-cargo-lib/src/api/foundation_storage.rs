@@ -21,13 +21,15 @@ use std::rc::Rc;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
-use wildland_corex::{storage::*, CryptoError, EncryptingKeypair, LssError, LssService};
+use wildland_corex::{
+    storage::StorageTemplateTrait, CryptoError, EncryptingKeypair, LssError, LssService,
+};
 use wildland_http_client::{
     error::WildlandHttpClientError,
     evs::{ConfirmTokenReq, EvsClient, GetStorageReq},
 };
 
-use super::config::FoundationStorageApiConfig;
+use super::{config::FoundationStorageApiConfig, storage_template::StorageTemplate};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StorageCredentials {
@@ -69,7 +71,7 @@ impl StorageTemplateTrait for FoundationStorageTemplate {
 
 impl From<FoundationStorageTemplate> for StorageTemplate {
     fn from(fst: FoundationStorageTemplate) -> Self {
-        Self::new(Rc::new(fst))
+        Self::new(wildland_corex::storage::StorageTemplate::new(Rc::new(fst)))
     }
 }
 
@@ -166,7 +168,8 @@ impl FoundationStorageApi {
                     let storage_template: StorageTemplate = storage_credentials
                         .into_storage_template(self.sc_url.clone())
                         .into();
-                    self.lss_service.save_storage_template(&storage_template)?;
+                    self.lss_service
+                        .save_storage_template(storage_template.inner())?;
 
                     Ok(storage_template)
                 }

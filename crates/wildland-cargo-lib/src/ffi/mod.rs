@@ -17,14 +17,19 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    api::{cargo_lib::*, config::*, foundation_storage::*, user::*},
-    errors::*,
+    api::{
+        cargo_lib::*, cargo_user::*, config::*, container::*, foundation_storage::*, storage::*,
+        storage_template::*, user::*,
+    },
+    errors::{
+        container::*, retrieval_error::*, single_variant::*, storage::*, user::*, ExceptionTrait,
+    },
 };
 use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
 pub use wildland_corex::{
-    storage::StorageTemplate, CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage,
-    LssError, LssResult,
+    CatlibError, CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError,
+    LssResult,
 };
 
 type VoidType = ();
@@ -36,6 +41,14 @@ pub type UserCreationExc = SingleVariantError<UserCreationError>;
 pub type CargoLibCreationExc = SingleVariantError<CargoLibCreationError>;
 pub type ConfigParseExc = SingleVariantError<ParseConfigError>;
 pub type FsaExc = FsaError;
+pub type CatlibExc = SingleVariantError<CatlibError>;
+pub type ContainerMountExc = SingleVariantError<ContainerMountError>;
+pub type ContainerUnmountExc = SingleVariantError<ContainerUnmountError>;
+pub type AddStorageExc = SingleVariantError<AddStorageError>;
+pub type DeleteStorageExc = SingleVariantError<DeleteStorageError>;
+pub type GetStoragesExc = SingleVariantError<GetStoragesError>;
+pub type ForestMountExc = SingleVariantError<ForestMountError>;
+pub type ContainerDeletionExc = ContainerDeletionError;
 
 pub type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
 /// constructor of `LssResult<Option<Vec<u8>>>` (aka [`LssOptionalBytesResult`]) with Ok variant
@@ -127,6 +140,31 @@ mod ffi_binding {
     enum StringExc {
         Failure(_),
     }
+    enum ForestMountExc {
+        Failure(_),
+    }
+    enum CatlibExc {
+        Failure(_),
+    }
+    enum ContainerMountExc {
+        Failure(_),
+    }
+    enum ContainerUnmountExc {
+        Failure(_),
+    }
+    enum GetStoragesExc {
+        Failure(_),
+    }
+    enum DeleteStorageExc {
+        Failure(_),
+    }
+    enum AddStorageExc {
+        Failure(_),
+    }
+    enum ContainerDeletionExc {
+        CatlibError(_),
+        ContainerDataLockError(_),
+    }
 
     extern "Traits" {
         fn get_log_level(self: &dyn CargoCfgProvider) -> String;
@@ -194,7 +232,7 @@ mod ffi_binding {
         ) -> Result<StorageTemplate, FsaExc>;
         type FreeTierProcessHandle;
 
-        type StorageTemplate;
+        fn stringify(self: &StorageTemplate) -> String;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_mnemonic_from_vec(
@@ -213,9 +251,41 @@ mod ffi_binding {
         ) -> Result<CargoUser, UserCreationExc>;
         fn get_user(self: &UserApi) -> Result<CargoUser, UserRetrievalExc>;
 
-        fn get_string(self: &MnemonicPayload) -> String;
+        fn stringify(self: &MnemonicPayload) -> String;
         fn get_vec(self: &MnemonicPayload) -> Vec<String>;
 
-        fn get_string(self: &CargoUser) -> String;
+        fn stringify(self: &CargoUser) -> String;
+        fn mount_forest(self: &CargoUser) -> Result<VoidType, ForestMountExc>;
+        fn get_containers(
+            self: &CargoUser,
+            include_unmounted: bool,
+        ) -> Result<Vec<Container>, CatlibExc>;
+        fn create_container(
+            self: &CargoUser,
+            name: String,
+            storage_templates: &StorageTemplate,
+        ) -> Result<Container, CatlibExc>;
+        fn delete_container(
+            self: &CargoUser,
+            container: &Container,
+        ) -> Result<VoidType, ContainerDeletionExc>;
+
+        fn mount(self: &Container) -> Result<VoidType, ContainerMountExc>;
+        fn unmount(self: &Container) -> Result<VoidType, ContainerUnmountExc>;
+        fn is_mounted(self: &Container) -> bool;
+        fn get_storages(self: &Container) -> Result<Vec<Storage>, GetStoragesExc>;
+        fn delete_storage(
+            self: &Container,
+            storage: &Storage,
+        ) -> Result<VoidType, DeleteStorageExc>;
+        fn add_storage(
+            self: &Container,
+            templates: &StorageTemplate,
+        ) -> Result<VoidType, AddStorageExc>;
+        fn set_name(self: &Container, new_name: String);
+        fn stringify(self: &Container) -> String;
+        fn duplicate(self: &Container) -> Result<Container, CatlibExc>;
+
+        fn stringify(self: &Storage) -> String;
     }
 }

@@ -75,7 +75,7 @@ wildland().then((wlib) => {
     var mnemonic = user_api.generate_mnemonic();
     // Rust Strings are not automatically converted to native ones yet
     // so to_string() call is required
-    console.log(mnemonic.get_string().to_string());
+    console.log(mnemonic.stringify().to_string());
 
     // mnemonic can be restored from vec of words
     // RustVec<T> can be initialized with constructor named with pattern `RustVec_{T type name}()`
@@ -86,9 +86,9 @@ wildland().then((wlib) => {
         words_vec.push(new wlib.String(word));
     }
     var restored_mnemonic = user_api.create_mnemonic_from_vec(words_vec);
-    console.log(restored_mnemonic.get_string().to_string());
+    console.log(restored_mnemonic.stringify().to_string());
 
     var device_name = new wlib.String("WASM device");
     var new_user = user_api.create_user_from_mnemonic(mnemonic, device_name);
-    console.log(new_user.get_string().to_string())
+    console.log(new_user.stringify().to_string())
 });

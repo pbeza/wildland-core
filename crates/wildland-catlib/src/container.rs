@@ -17,24 +17,27 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
 /// Create Container object from its representation in Rust Object Notation
-impl TryFrom<String> for Container {
+impl TryFrom<&str> for Container {
     type Error = ron::error::SpannedError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        ron::from_str(value.as_str())
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        ron::from_str(value)
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Derivative)]
+#[derivative(Debug)]
 pub struct Container {
     uuid: Uuid,
     forest_uuid: Uuid,
     paths: ContainerPaths,
 
+    #[derivative(Debug = "ignore")]
     #[serde(skip, default = "use_default_database")]
     db: Rc<StoreDb>,
 }

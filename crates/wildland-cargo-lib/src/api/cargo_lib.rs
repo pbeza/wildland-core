@@ -22,7 +22,7 @@ use crate::{
         foundation_storage::FoundationStorageApi,
         user::UserApi,
     },
-    errors::{SingleErrVariantResult, SingleVariantError},
+    errors::single_variant::*,
     logging,
     user::UserService,
 };
