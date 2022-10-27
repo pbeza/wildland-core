@@ -23,7 +23,10 @@ crate-type = ["staticlib", "lib"]
 [dependencies]
 anyhow               = { version = "1.0" }
 base64               = { version = "0.13.0" }
+derivative           = { version = "2.2" }
+env_logger           = { version = "0.9" }
 hex                  = { version = "0.4" }
+log                  = { version = "0.4" }
 rusty-bind           = { version = "0.2.1", registry = "wl-dev", optional = true }
 serde                = { version = "1.0", features = ["derive"] }
 serde_json           = { version = "1.0" }
@@ -34,6 +37,7 @@ tracing-appender     = { version = "0.2" }
 tracing-attributes   = { version = "0.1" }
 tracing-core         = { version = "0.1" }
 tracing-log          = { version = "0.1", features = ["env_logger"] }
+tracing-oslog        = { version = "0.1" }
 tracing-subscriber   = { version = "0.3", features = ["json", "env-filter", "fmt", "std", "registry"] }
 uuid                 = { version = "1.2", features = ["serde"] }
 wildland-corex       = { version = "0.8.0", path = "../wildland-corex", registry = "wl-dev" }
