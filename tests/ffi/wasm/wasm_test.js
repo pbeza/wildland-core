@@ -57,8 +57,21 @@ wildland().then((wlib) => {
     // which has to be translated with collect_config function into Rust object,
     // or by parsing JSON string with parse_config function
     var CargoCfgProvider = wlib.CargoCfgProvider.extend("CargoCfgProvider", {
+        // config: logger general
+        get_use_logger: function () { return true; },
         get_log_level: function () { return new wlib.String("debug"); },
-        get_log_file: function () { return wlib.new_none_string() },
+        get_log_use_ansi: function () { return false; },
+
+        // config: logger file log
+        get_log_file_enabled: function () { return false; },
+        get_log_file_path: function () { return new wlib.new_none_string(); },
+        get_log_file_rotate_directory: function () { return new wlib.new_none_string(); },
+
+        // config: logger oslog
+        get_oslog_category: function () { return new wlib.new_none_string(); },
+        get_oslog_subsystem: function () { return new wlib.new_none_string(); },
+
+        // config: urls
         get_evs_url: function () { return new wlib.String("evs url will be here"); },
         get_sc_url: function () { return new wlib.String("sc url will be here"); }
     });
