@@ -30,6 +30,9 @@ MANIFEST_BRANCH="master"
 RUST_ARCH_X86_64=x86_64-apple-darwin
 RUST_ARCH_ARM64=aarch64-apple-darwin
 
+export MACOS_DEPLOYMENT_TARGET=12.3
+export SDKROOT=$(xcrun -sdk macosx${MACOS_DEPLOYMENT_TARGET} --show-sdk-path)
+
 if [ -d "$DESTROOT" ]; then
     rm -rf "$DESTROOT"
 fi
