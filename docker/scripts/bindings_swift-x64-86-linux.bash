@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
-swiftc -L target/debug -lwildland_cargo_lib -lstdc++ \
-        -L ./ffi_build \
-        -I ffi_build -import-objc-header \
-        ./ffi_build/ffi_swift.h \
-        ./ffi_build/ffi_swift.swift \
-        ffi_tests/main.swift \
-        -o ffi_build/swift_app
-./ffi_build/swift_app
+cd /ffi_build
+
+cp /ffi_tests/main.swift .
+mkdir -p ./out
+
+swiftc -L . -lwildland_cargo_lib -lstdc++ \
+        -I . -import-objc-header \
+        ./ffi_swift.h \
+        ./ffi_swift.swift \
+        main.swift \
+        -o swift_app
+./swift_app
+mv ./ffi_swift.h /out
+mv ./ffi_swift.swift /out
