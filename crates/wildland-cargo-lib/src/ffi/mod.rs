@@ -4,9 +4,8 @@
 // Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// it under the terms of the GNU General Public License version 3 as published by
+// the Free Software Foundation.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -162,11 +161,25 @@ mod ffi_binding {
     }
 
     extern "Traits" {
-        fn get_log_level(self: &dyn CargoCfgProvider) -> String;
-        fn get_log_file(self: &dyn CargoCfgProvider) -> OptionalString;
+
+        // # traits required for main configuration
+        //
         fn get_evs_url(self: &dyn CargoCfgProvider) -> String;
         fn get_sc_url(self: &dyn CargoCfgProvider) -> String;
 
+        // # traits required for logging configuration
+        //
+        fn get_use_logger(self: &dyn CargoCfgProvider) -> bool;
+        fn get_log_level(self: &dyn CargoCfgProvider) -> String;
+        fn get_log_use_ansi(self: &dyn CargoCfgProvider) -> bool;
+        fn get_log_file_enabled(self: &dyn CargoCfgProvider) -> bool;
+        fn get_log_file_path(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_log_file_rotate_directory(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_oslog_category(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_oslog_subsystem(self: &dyn CargoCfgProvider) -> OptionalString;
+
+        // # traits required for lss:
+        //
         fn insert(
             self: &dyn LocalSecureStorage,
             key: String,

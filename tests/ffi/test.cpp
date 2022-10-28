@@ -5,12 +5,28 @@
 
 class CargoCfgProviderImpl : public CargoCfgProvider
 {
-    String get_log_level() override
-    {
-        return RustString("trace");
+    bool get_use_logger() override {
+        return true;
     }
-    OptionalString get_log_file() override
-    {
+    String get_log_level() override {
+        return new RustString("debug");
+    }
+    bool get_log_use_ansi() override {
+        return false;
+    }
+    bool get_log_file_enabled() override {
+        return true;
+    }
+    OptionalString get_log_file_path() override {
+        return new_none_string();
+    }
+    OptionalString get_log_file_rotate_directory() override {
+        return new_none_string();
+    }
+    OptionalString get_oslog_category() override {
+        return new_none_string();
+    }
+    OptionalString get_oslog_subsystem() override {
         return new_none_string();
     }
     String get_evs_url() override

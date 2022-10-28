@@ -4,9 +4,8 @@
 // Copyright © 2022 Golem Foundation
 //
 // This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// it under the terms of the GNU General Public License version 3 as published by
+// the Free Software Foundation.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -115,10 +114,17 @@ impl CargoLib {
 ///
 /// let lss = TestLss{};
 ///
-/// let cfg = CargoConfig{
+/// # use std::path::PathBuf;
+/// let cfg = CargoConfig{     
 ///     logger_config: LoggerConfig {
-///         log_level: Level::DEBUG,
-///         log_file: None,
+///         use_logger: true,
+///         log_level: Level::TRACE,
+///         log_use_ansi: false,
+///         log_file_path: PathBuf::from("cargo_lib_log"),
+///         log_file_rotate_directory: PathBuf::from(".".to_owned()),
+///         log_file_enabled: true,
+///         oslog_category: None,
+///         oslog_subsystem: None,
 ///     },
 ///     fsa_config: FoundationStorageApiConfig {
 ///         evs_url: "some_url".to_owned(),
@@ -137,7 +143,7 @@ pub fn create_cargo_lib(
         INITIALIZED.store(true, Ordering::Relaxed);
 
         logging::init_subscriber(cfg.logger_config)
-            .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e)))?;
+            .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e.to_string())))?;
 
         let cargo_lib = Arc::new(Mutex::new(CargoLib::new(lss, cfg.fsa_config)));
 

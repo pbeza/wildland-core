@@ -2,10 +2,28 @@
 // This test file is not supported since ffi-macro v.0.2.0
 
 class CargoCfgProviderImpl: CargoCfgProvider {
-    public override func getLogLevel() -> RustString {
-        return RustString("info")
+    public override bool getUseLogger() {
+        return true
     }
-    public override func getLogFile() -> OptionalString {
+    public override RustString getLogLevel() -> RustString {
+        return new RustString("info")
+    }
+    public override bool getLogUseAnsi() -> bool {
+        return false
+    }
+    public override bool getLogFileEnabled() -> bool {
+        return false
+    }
+    public override OptionalString getLogFilePath() -> OptionalString {
+        return newNoneString()
+    }
+    public override OptionalString getLogFileRotateDirectory() -> OptionalString {
+        return newNoneString()
+    }
+    public override OptionalString getOslogCategory() -> OptionalString {
+        return newNoneString()
+    }
+    public override OptionalString getOslogSubsystem() -> OptionalString {
         return newNoneString()
     }
 
