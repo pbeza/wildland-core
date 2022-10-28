@@ -81,7 +81,7 @@ impl CatLibService {
         forest: &Forest,
         storage_template: &StorageTemplate,
     ) -> Result<Container, CatlibError> {
-        let container = forest.create_container()?;
+        let container = forest.create_container(name)?;
 
         let _storage =
             container.create_storage(Some(storage_template.uuid()), storage_template.data())?;

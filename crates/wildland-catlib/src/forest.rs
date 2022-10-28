@@ -76,7 +76,7 @@ impl IForest for Forest {
         let containers: Vec<Container> = data
             .iter()
             .filter(|(id, _)| (**id).starts_with("container-"))
-            .map(|(_, container_str)| Container::try_from(container_str.as_str()).unwrap())
+            .map(|(_, container_str)| Container::try_from(dbg!(container_str).as_str()).unwrap())
             .filter(|container| {
                 container.forest().is_ok() && container.forest().unwrap().uuid() == self.uuid()
             })
@@ -114,8 +114,8 @@ impl IForest for Forest {
         self.save()
     }
 
-    fn create_container(&self) -> CatlibResult<Container> {
-        let mut container = Container::new(self.uuid(), self.db.clone());
+    fn create_container(&self, name: String) -> CatlibResult<Container> {
+        let mut container = Container::new(self.uuid(), name, self.db.clone());
         container.save()?;
 
         Ok(container)

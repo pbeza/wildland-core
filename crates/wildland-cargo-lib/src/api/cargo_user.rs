@@ -1,6 +1,6 @@
 use crate::{
     api::storage_template::*,
-    errors::{container::ContainerDeletionError, single_variant::*, user::*},
+    errors::{single_variant::*, user::*},
 };
 use derivative::Derivative;
 use wildland_corex::{CatLibService, CatlibError, Forest, IForest};
@@ -14,6 +14,7 @@ pub struct CargoUser {
     all_devices: Vec<String>,
 
     forest: Forest,
+
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
 }
@@ -60,10 +61,7 @@ All devices:
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn get_containers(
-        &self,
-        include_unmounted: bool,
-    ) -> SingleErrVariantResult<Vec<Container>, CatlibError> {
+    pub fn get_containers(&self) -> SingleErrVariantResult<Vec<Container>, CatlibError> {
         self.forest
             .containers()
             .map_err(SingleVariantError::Failure)
@@ -88,8 +86,13 @@ All devices:
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn delete_container(&self, container: &Container) -> Result<(), ContainerDeletionError> {
-        container.delete(&self.catlib_service)
+    pub fn delete_container(
+        &self,
+        container: &Container,
+    ) -> SingleErrVariantResult<(), CatlibError> {
+        container
+            .delete(&self.catlib_service)
+            .map_err(SingleVariantError::Failure)
     }
 
     pub fn this_device(&self) -> &str {

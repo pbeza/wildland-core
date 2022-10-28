@@ -137,22 +137,42 @@ void config_parser_test() // test
     }
 }
 
-void foundation_storage_test(SharedMutexCargoLib &cargo_lib)
+auto foundation_storage_test(SharedMutexCargoLib &cargo_lib)
 {
-    try
+    FoundationStorageApi fsa_api = cargo_lib.foundation_storage_api();
+    auto process_handle = fsa_api.request_free_tier_storage("test@email.com");
+    std::cout << "Provide a verification token:\n";
+    std::string verification_token;
+    std::cin >> verification_token;
+    // may be used for creating container
+    StorageTemplate storage_template = fsa_api.verify_email(process_handle, RustString{verification_token});
+    std::cout << storage_template.stringify().to_string() << std::endl;
+    return storage_template;
+}
+
+auto container_test(CargoUser &user, StorageTemplate &storage_template)
+{
+    auto container = user.create_container(RustString{"My Container"}, storage_template);
+    std::cout << container.stringify().to_string() << std::endl;
+
+    auto containers = user.get_containers();
+    for (uint i = 0; i < containers.size(); ++i)
     {
-        FoundationStorageApi fsa_api = cargo_lib.foundation_storage_api();
-        auto process_handle = fsa_api.request_free_tier_storage("test@email.com");
-        std::cout << "Provide a verification token:\n";
-        std::string verification_token;
-        std::cin >> verification_token;
-        // may be used for creating container
-        StorageTemplate storage_template = fsa_api.verify_email(process_handle, RustString{verification_token});
+        auto current_container = containers.at(i).unwrap();
+        std::cout << container.stringify().to_string() << std::endl;
+        user.delete_container(current_container);
+        std::cout << "IN LOOP: " << current_container.stringify().to_string() << std::endl;
     }
-    catch (const RustExceptionBase &e)
-    {
-        std::cerr << e.reason().to_string() << std::endl;
-    }
+    // Container structure from inside the above loop, named current_container, is deleted, therefore it has
+    // flag is_deleted set to true. Variable named container is another structure referencing to the
+    // same instance of a container in CatLib, but it is not marked as deleted since it is a
+    // completely independent in-memory structure.
+    // This could be fixed by creating some kind of in-memory cache on Rust side, then
+    // all variables representing the same container should keep a reference to the same container
+    // data kept in cache. Another solution is to always lookup for the current container state in
+    // CatLib, what in case of simple stringify method could be avoided.
+
+    std::cout << "AFTER LOOP: " << container.stringify().to_string() << std::endl;
 }
 
 int main()
@@ -170,8 +190,6 @@ int main()
         std::cerr << e.reason().to_string() << std::endl;
         assert(false);
     }
-
-    foundation_storage_test(cargo_lib);
 
     UserApi user_api = cargo_lib.user_api();
 
@@ -193,6 +211,16 @@ int main()
         {
             CargoUser new_user = user_api.create_user_from_mnemonic(mnemonic, device_name);
             std::cout << "User successfully created from mnemonic\n";
+
+            try
+            {
+                auto storage_template = foundation_storage_test(cargo_lib);
+                container_test(new_user, storage_template);
+            }
+            catch (const RustExceptionBase &e)
+            {
+                std::cerr << e.reason().to_string() << std::endl;
+            }
 
             try
             {

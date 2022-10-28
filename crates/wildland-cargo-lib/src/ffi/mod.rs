@@ -48,7 +48,6 @@ pub type AddStorageExc = SingleVariantError<AddStorageError>;
 pub type DeleteStorageExc = SingleVariantError<DeleteStorageError>;
 pub type GetStoragesExc = SingleVariantError<GetStoragesError>;
 pub type ForestMountExc = SingleVariantError<ForestMountError>;
-pub type ContainerDeletionExc = ContainerDeletionError;
 
 pub type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
 /// constructor of `LssResult<Option<Vec<u8>>>` (aka [`LssOptionalBytesResult`]) with Ok variant
@@ -161,10 +160,6 @@ mod ffi_binding {
     enum AddStorageExc {
         Failure(_),
     }
-    enum ContainerDeletionExc {
-        CatlibError(_),
-        ContainerDataLockError(_),
-    }
 
     extern "Traits" {
         fn get_log_level(self: &dyn CargoCfgProvider) -> String;
@@ -256,19 +251,14 @@ mod ffi_binding {
 
         fn stringify(self: &CargoUser) -> String;
         fn mount_forest(self: &CargoUser) -> Result<VoidType, ForestMountExc>;
-        fn get_containers(
-            self: &CargoUser,
-            include_unmounted: bool,
-        ) -> Result<Vec<Container>, CatlibExc>;
+        fn get_containers(self: &CargoUser) -> Result<Vec<Container>, CatlibExc>;
         fn create_container(
             self: &CargoUser,
             name: String,
             storage_templates: &StorageTemplate,
         ) -> Result<Container, CatlibExc>;
-        fn delete_container(
-            self: &CargoUser,
-            container: &Container,
-        ) -> Result<VoidType, ContainerDeletionExc>;
+        fn delete_container(self: &CargoUser, container: &Container)
+            -> Result<VoidType, CatlibExc>;
 
         fn mount(self: &Container) -> Result<VoidType, ContainerMountExc>;
         fn unmount(self: &Container) -> Result<VoidType, ContainerUnmountExc>;

@@ -4,7 +4,7 @@ use crate::{
     api::{storage::Storage, storage_template::StorageTemplate},
     errors::{container::*, single_variant::*, storage::*},
 };
-use wildland_corex::{CatLibService, CatlibError, Container as InnerContainer};
+use wildland_corex::{CatLibService, CatlibError, Container as InnerContainer, IContainer};
 
 #[derive(Debug, Clone)]
 pub struct Container {
@@ -69,12 +69,16 @@ impl Container {
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn set_name(&mut self, new_name: String) {
-        todo!()
+        let mut data = self.data.lock().expect("Could not lock containers data");
+        data.inner.set_name(new_name)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn stringify(&self) -> String {
-        todo!()
+        let data = self.data.lock().expect("Could not lock containers data");
+        let deleted_info = if data.is_deleted { "DELETED: " } else { "" };
+        let name = data.inner.name();
+        format!("{deleted_info}Container (name: {name})")
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
@@ -82,11 +86,8 @@ impl Container {
         todo!()
     }
 
-    pub fn delete(&self, catlib_service: &CatLibService) -> Result<(), ContainerDeletionError> {
-        let mut data = self
-            .data
-            .lock()
-            .map_err(|e| ContainerDeletionError::ContainerDataLockError(e.to_string()))?;
+    pub fn delete(&self, catlib_service: &CatLibService) -> Result<(), CatlibError> {
+        let mut data = self.data.lock().expect("Could not lock containers data");
         catlib_service.delete_container(&mut data.inner)?;
         data.is_deleted = true;
         Ok(())

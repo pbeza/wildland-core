@@ -35,6 +35,7 @@ impl TryFrom<&str> for Container {
 pub struct Container {
     uuid: Uuid,
     forest_uuid: Uuid,
+    name: String,
     paths: ContainerPaths,
 
     #[derivative(Debug = "ignore")]
@@ -43,10 +44,11 @@ pub struct Container {
 }
 
 impl Container {
-    pub fn new(forest_uuid: Uuid, db: Rc<StoreDb>) -> Self {
+    pub fn new(forest_uuid: Uuid, name: String, db: Rc<StoreDb>) -> Self {
         Container {
             uuid: Uuid::new_v4(),
             forest_uuid,
+            name,
             db,
             paths: ContainerPaths::new(),
         }
@@ -87,6 +89,14 @@ impl IContainer for Container {
         storage.save()?;
 
         Ok(storage)
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn set_name(&mut self, new_name: String) {
+        self.name = new_name;
     }
 }
 
@@ -132,7 +142,7 @@ mod tests {
     fn make_container(catlib: &CatLib) -> crate::container::Container {
         let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
-        forest.create_container().unwrap()
+        forest.create_container("name".to_owned()).unwrap()
     }
 
     #[rstest]

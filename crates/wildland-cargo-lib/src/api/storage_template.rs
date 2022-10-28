@@ -16,6 +16,6 @@ impl StorageTemplate {
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn stringify(&self) -> String {
-        todo!()
+        format!("Storage Template (uuid: {})", self.inner.uuid())
     }
 }

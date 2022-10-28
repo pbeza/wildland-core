@@ -84,7 +84,9 @@ pub enum FsaError {
     EvsError(WildlandHttpClientError),
     #[error("Crypto error: {0}")]
     CryptoError(CryptoError),
-    #[error("Credentials are expected to be JSON with fields: id, credentialID, credentialSecret")]
+    #[error(
+        "Credentials are expected to be JSON with fields: id, credentialID, credentialSecret: {0}"
+    )]
     InvalidCredentialsFormat(String),
     #[error(transparent)]
     LssError(#[from] LssError),

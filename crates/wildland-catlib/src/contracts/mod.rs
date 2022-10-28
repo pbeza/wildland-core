@@ -106,11 +106,11 @@ pub trait IForest {
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container().unwrap();
+    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
     /// container.add_path("/foo/bar".to_string());
     /// container.add_path("/bar/baz".to_string());
     /// ```
-    fn create_container(&self) -> CatlibResult<Container>;
+    fn create_container(&self, name: String) -> CatlibResult<Container>;
 
     /// Create a Bridge obect with arbitrary link data to another Forest.
     ///
@@ -178,6 +178,12 @@ pub trait IContainer {
     /// Return UUID object identifier
     fn uuid(&self) -> Uuid;
 
+    /// Returns name of the container
+    fn name(&self) -> String;
+
+    /// Sets the container's name
+    fn set_name(&mut self, new_name: String);
+
     /// Return [`Forest`] that contains the [`Container`].
     ///
     /// ## Errors
@@ -209,7 +215,7 @@ pub trait IContainer {
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container().unwrap();
+    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
     /// container.add_path("/bar/baz2".to_string()).unwrap()
     ///     .add_path("/baz/qux1".to_string()).unwrap()
     ///     .add_path("/baz/qux2".to_string()).unwrap();
@@ -236,7 +242,7 @@ pub trait IContainer {
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container().unwrap();
+    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
     /// container.add_path("/bar/baz2".to_string()).unwrap()
     ///     .del_path("/baz/qux1".to_string()).unwrap()
     ///     .del_path("/baz/qux2".to_string()).unwrap();
@@ -275,7 +281,7 @@ pub trait IContainer {
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container().unwrap();
+    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
     /// container.add_path("/foo/bar".to_string());
     /// container.create_storage(Some(Uuid::from_u128(1)), vec![]).unwrap();
     /// ```

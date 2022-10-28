@@ -123,7 +123,7 @@ mod tests {
 
     fn _container(catlib: &CatLib) -> Container {
         let forest = catlib.find_forest(Identity([1; 32])).unwrap();
-        forest.create_container().unwrap()
+        forest.create_container("name".to_owned()).unwrap()
     }
 
     #[fixture]
