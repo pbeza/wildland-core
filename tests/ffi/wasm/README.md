@@ -36,6 +36,6 @@ Expected sample output:
 2022-10-14T10:28:04.000000Z DEBUG generate_mnemonic:generate_random_mnemonic: return=Ok(["shrimp", "sniff", "gown", "match", "share", "figure", "plate", "video", "inside", "olive", "chunk", "fault"])
 2022-10-14T10:28:04.000000Z DEBUG generate_mnemonic:from{mnemonic=["shrimp", "sniff", "gown", "match", "share", "figure", "plate", "video", "inside", "olive", "chunk", "fault"]}: return=MnemonicPayload(["shrimp", "sniff", "gown", "match", "share", "figure", "plate", "video", "inside", "olive", "chunk", "fault"])
 2022-10-14T10:28:04.000000Z DEBUG generate_mnemonic: return=Ok(MnemonicPayload(["shrimp", "sniff", "gown", "match", "share", "figure", "plate", "video", "inside", "olive", "chunk", "fault"]))
-2022-10-14T10:28:04.000000Z DEBUG get_string: return="shrimp sniff gown match share figure plate video inside olive chunk fault"
+2022-10-14T10:28:04.000000Z DEBUG stringify: return="shrimp sniff gown match share figure plate video inside olive chunk fault"
 shrimp sniff gown match share figure plate video inside olive chunk fault
 ```

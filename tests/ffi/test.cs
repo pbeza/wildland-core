@@ -116,13 +116,13 @@ namespace Main
             var cargo_lib = wildland.create_cargo_lib(new LocalSecureStorageImpl(), wildland.collect_config(new CargoCfgProviderImpl()));
             var user_api = cargo_lib.user_api();
             var mnemonic = user_api.generate_mnemonic();
-            Console.WriteLine(mnemonic.get_string().to_string());
+            Console.WriteLine(mnemonic.stringify().to_string());
 
             user_api.create_user_from_mnemonic(mnemonic, new RustString("My Mac"));
             Console.WriteLine("User successfully created from mnemonic");
 
             var user = user_api.get_user();
-            Console.WriteLine("User: " + user.get_string().to_string());
+            Console.WriteLine("User: " + user.stringify().to_string());
         }
     }
 }
