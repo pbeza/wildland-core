@@ -5,28 +5,36 @@
 
 class CargoCfgProviderImpl : public CargoCfgProvider
 {
-    bool get_use_logger() override {
+    bool get_use_logger() override
+    {
         return true;
     }
-    String get_log_level() override {
-        return new RustString("debug");
+    String get_log_level() override
+    {
+        return RustString("info");
     }
-    bool get_log_use_ansi() override {
+    bool get_log_use_ansi() override
+    {
         return false;
     }
-    bool get_log_file_enabled() override {
+    bool get_log_file_enabled() override
+    {
         return true;
     }
-    OptionalString get_log_file_path() override {
+    OptionalString get_log_file_path() override
+    {
         return new_none_string();
     }
-    OptionalString get_log_file_rotate_directory() override {
+    OptionalString get_log_file_rotate_directory() override
+    {
         return new_none_string();
     }
-    OptionalString get_oslog_category() override {
+    OptionalString get_oslog_category() override
+    {
         return new_none_string();
     }
-    OptionalString get_oslog_subsystem() override {
+    OptionalString get_oslog_subsystem() override
+    {
         return new_none_string();
     }
     String get_evs_url() override
@@ -179,15 +187,8 @@ auto container_test(CargoUser &user, StorageTemplate &storage_template)
         user.delete_container(current_container);
         std::cout << "IN LOOP: " << current_container.stringify().to_string() << std::endl;
     }
-    // Container structure from inside the above loop, named current_container, is deleted, therefore it has
-    // flag is_deleted set to true. Variable named container is another structure referencing to the
-    // same instance of a container in CatLib, but it is not marked as deleted since it is a
-    // completely independent in-memory structure.
-    // This could be fixed by creating some kind of in-memory cache on Rust side, then
-    // all variables representing the same container should keep a reference to the same container
-    // data kept in cache. Another solution is to always lookup for the current container state in
-    // CatLib, what in case of simple stringify method could be avoided.
 
+    // this container is also mark deleted (deleted in loop)
     std::cout << "AFTER LOOP: " << container.stringify().to_string() << std::endl;
 }
 

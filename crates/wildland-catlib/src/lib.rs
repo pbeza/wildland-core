@@ -231,7 +231,7 @@ impl Default for CatLib {
         let project_dirs = ProjectDirs::from("com", "wildland", "Cargo");
 
         let db_file = if let Some(project_dirs) = project_dirs {
-            let db_dir = dbg!(project_dirs.data_local_dir().join("catlib"));
+            let db_dir = project_dirs.data_local_dir().join("catlib");
 
             if !db_dir.exists() {
                 std::fs::create_dir_all(&db_dir).unwrap();

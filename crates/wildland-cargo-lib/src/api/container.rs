@@ -1,18 +1,14 @@
-use std::sync::{Arc, Mutex};
-
 use crate::{
     api::{storage::Storage, storage_template::StorageTemplate},
     errors::{container::*, single_variant::*, storage::*},
 };
+use uuid::Uuid;
 use wildland_corex::{CatLibService, CatlibError, Container as InnerContainer, IContainer};
 
-#[derive(Debug, Clone)]
-pub struct Container {
-    data: Arc<Mutex<ContainerData>>,
-}
+use super::cargo_user::SharedContainer;
 
 #[derive(Debug)]
-pub struct ContainerData {
+pub struct Container {
     inner: InnerContainer,
     // We cannot force a native app to drop reference to Container structure
     // so the flag is_deleted is used to mark container as deleted
@@ -22,10 +18,8 @@ pub struct ContainerData {
 impl From<InnerContainer> for Container {
     fn from(inner: InnerContainer) -> Self {
         Self {
-            data: Arc::new(Mutex::new(ContainerData {
-                inner,
-                is_deleted: false,
-            })),
+            inner,
+            is_deleted: false,
         }
     }
 }
@@ -69,27 +63,28 @@ impl Container {
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn set_name(&mut self, new_name: String) {
-        let mut data = self.data.lock().expect("Could not lock containers data");
-        data.inner.set_name(new_name)
+        self.inner.set_name(new_name)
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn stringify(&self) -> String {
-        let data = self.data.lock().expect("Could not lock containers data");
-        let deleted_info = if data.is_deleted { "DELETED: " } else { "" };
-        let name = data.inner.name();
+        let deleted_info = if self.is_deleted { "DELETED: " } else { "" };
+        let name = self.inner.name();
         format!("{deleted_info}Container (name: {name})")
     }
 
     #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn duplicate(&self) -> SingleErrVariantResult<Container, CatlibError> {
+    pub fn duplicate(&self) -> SingleErrVariantResult<SharedContainer, CatlibError> {
         todo!()
     }
 
-    pub fn delete(&self, catlib_service: &CatLibService) -> Result<(), CatlibError> {
-        let mut data = self.data.lock().expect("Could not lock containers data");
-        catlib_service.delete_container(&mut data.inner)?;
-        data.is_deleted = true;
+    pub fn delete(&mut self, catlib_service: &CatLibService) -> Result<(), CatlibError> {
+        catlib_service.delete_container(&mut self.inner)?;
+        self.is_deleted = true;
         Ok(())
+    }
+
+    pub fn uuid(&self) -> Uuid {
+        self.inner.uuid()
     }
 }

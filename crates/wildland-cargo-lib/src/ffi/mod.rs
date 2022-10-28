@@ -264,30 +264,32 @@ mod ffi_binding {
 
         fn stringify(self: &CargoUser) -> String;
         fn mount_forest(self: &CargoUser) -> Result<VoidType, ForestMountExc>;
-        fn get_containers(self: &CargoUser) -> Result<Vec<Container>, CatlibExc>;
+        fn get_containers(self: &CargoUser) -> Result<Vec<Arc<Mutex<Container>>>, CatlibExc>;
         fn create_container(
             self: &CargoUser,
             name: String,
             storage_templates: &StorageTemplate,
-        ) -> Result<Container, CatlibExc>;
-        fn delete_container(self: &CargoUser, container: &Container)
-            -> Result<VoidType, CatlibExc>;
+        ) -> Result<Arc<Mutex<Container>>, CatlibExc>;
+        fn delete_container(
+            self: &CargoUser,
+            container: &Arc<Mutex<Container>>,
+        ) -> Result<VoidType, CatlibExc>;
 
-        fn mount(self: &Container) -> Result<VoidType, ContainerMountExc>;
-        fn unmount(self: &Container) -> Result<VoidType, ContainerUnmountExc>;
-        fn is_mounted(self: &Container) -> bool;
-        fn get_storages(self: &Container) -> Result<Vec<Storage>, GetStoragesExc>;
+        fn mount(self: &Arc<Mutex<Container>>) -> Result<VoidType, ContainerMountExc>;
+        fn unmount(self: &Arc<Mutex<Container>>) -> Result<VoidType, ContainerUnmountExc>;
+        fn is_mounted(self: &Arc<Mutex<Container>>) -> bool;
+        fn get_storages(self: &Arc<Mutex<Container>>) -> Result<Vec<Storage>, GetStoragesExc>;
         fn delete_storage(
-            self: &Container,
+            self: &Arc<Mutex<Container>>,
             storage: &Storage,
         ) -> Result<VoidType, DeleteStorageExc>;
         fn add_storage(
-            self: &Container,
+            self: &Arc<Mutex<Container>>,
             templates: &StorageTemplate,
         ) -> Result<VoidType, AddStorageExc>;
-        fn set_name(self: &Container, new_name: String);
-        fn stringify(self: &Container) -> String;
-        fn duplicate(self: &Container) -> Result<Container, CatlibExc>;
+        fn set_name(self: &Arc<Mutex<Container>>, new_name: String);
+        fn stringify(self: &Arc<Mutex<Container>>) -> String;
+        fn duplicate(self: &Arc<Mutex<Container>>) -> Result<Arc<Mutex<Container>>, CatlibExc>;
 
         fn stringify(self: &Storage) -> String;
     }

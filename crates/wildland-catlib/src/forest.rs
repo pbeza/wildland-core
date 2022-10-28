@@ -75,7 +75,7 @@ impl IForest for Forest {
         let containers: Vec<Container> = data
             .iter()
             .filter(|(id, _)| (**id).starts_with("container-"))
-            .map(|(_, container_str)| Container::try_from(dbg!(container_str).as_str()).unwrap())
+            .map(|(_, container_str)| Container::try_from(container_str.as_str()).unwrap())
             .filter(|container| {
                 container.forest().is_ok() && container.forest().unwrap().uuid() == self.uuid()
             })
