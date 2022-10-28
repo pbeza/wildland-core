@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -ex
+
 cd /ffi_build
 
 cp /ffi_tests/main.swift .
