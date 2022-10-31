@@ -342,11 +342,9 @@ pages-mld:
       - main
 
 pages-lld:
-  image: rustlang/rust:nightly
   stage: docs
   script:
-    - mkdir -p .docs/lld
-    - cargo doc --target-dir .docs/lld --all-features --no-deps
+    - cargo make lld-docs
   artifacts:
     paths:
       - .docs/lld
