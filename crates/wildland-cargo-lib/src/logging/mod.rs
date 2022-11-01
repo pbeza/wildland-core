@@ -39,7 +39,7 @@ pub(crate) fn init_subscriber(cfg: LoggerConfig) -> anyhow::Result<()> {
     } else {
         default_without_file_copy(&cfg)?;
     }
-    tracing::debug!("logger initialized");
+    tracing::info!("logger initialized");
     Ok(())
 }
 
@@ -52,7 +52,6 @@ pub fn default_with_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
         .with(EnvFilter::from_default_env().add_directive(cfg.log_level.into()))
         .with(
             fmt::Layer::new()
-                .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
                 .with_file(true)
                 .with_line_number(true)
                 .with_ansi(cfg.log_use_ansi)
@@ -60,7 +59,6 @@ pub fn default_with_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
         )
         .with(
             fmt::Layer::new()
-                .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
                 .with_file(true)
                 .with_line_number(true)
                 .with_ansi(cfg.log_use_ansi)
@@ -68,7 +66,7 @@ pub fn default_with_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
         );
     tracing::subscriber::set_global_default(subscriber)
         .expect("Unable to set a global multilogger instance"); // unrecoverable
-    tracing::debug!("initialized multilogger");
+    tracing::info!("initialized multilogger");
     Ok(())
 }
 
@@ -77,7 +75,6 @@ pub fn default_without_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
         .with(EnvFilter::from_default_env().add_directive(cfg.log_level.into()))
         .with(
             fmt::Layer::new()
-                .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
                 .with_file(true)
                 .with_line_number(true)
                 .with_ansi(cfg.log_use_ansi)
@@ -85,7 +82,7 @@ pub fn default_without_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
         );
     tracing::subscriber::set_global_default(subscriber)
         .expect("Unable to set a global stderr-log instance"); // unrecoverable
-    tracing::debug!("initialized stderr logger");
+    tracing::info!("initialized stderr logger");
     Ok(())
 }
 
@@ -98,6 +95,6 @@ pub fn nondefault_oslog(cfg: &LoggerConfig) -> anyhow::Result<()> {
         ));
     tracing::subscriber::set_global_default(subscriber)
         .expect("Unable to set a global oslog instance"); // unrecoverable
-    tracing::debug!("initialized oslog logger");
+    tracing::info!("initialized oslog logger");
     Ok(())
 }
