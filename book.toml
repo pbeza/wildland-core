@@ -6,7 +6,7 @@ src = "docs"
 title = "Wildland documentation"
 
 [build]
-build-dir = "public/mld"
+build-dir = ".docs/mld"
 create-missing = true
 use-default-preprocessors = true
 
