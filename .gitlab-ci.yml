@@ -345,6 +345,9 @@ publish crates:
   before_script:
     - git config --global user.name "Wildland Housekeeper"
     - git config --global user.email "$HOUSEKEEPER_EMAIL"
+  variables:
+    # We cannot have dirty tree in the build directory for release
+    CARGO_HOME: /tmp/cargo_home
   script:
     - git remote set-url origin "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"
     - git reset --hard remotes/origin/$CI_COMMIT_BRANCH
