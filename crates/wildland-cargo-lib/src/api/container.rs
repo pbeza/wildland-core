@@ -39,14 +39,14 @@ impl Container {
 
     pub fn delete_storage(
         &self,
-        storage: &Storage,
+        _storage: &Storage,
     ) -> SingleErrVariantResult<(), DeleteStorageError> {
         todo!()
     }
 
     pub fn add_storage(
         &self,
-        storage: &StorageTemplate,
+        _storage: &StorageTemplate,
     ) -> SingleErrVariantResult<(), AddStorageError> {
         todo!()
     }
