@@ -40,7 +40,7 @@ impl UserMetaData {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct CatLibService {
     catlib: CatLib,
 }
