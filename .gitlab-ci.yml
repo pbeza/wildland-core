@@ -296,6 +296,34 @@ webassembly emscripten linux:
     - main
     - merge_requests
 
+swift x86_64 linux:
+  stage: Bindings
+  needs: ['x86_64_linux ffi']
+  script:
+    - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
+    - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
+    - bash docker/scripts/bindings_swift-x64-86-linux.bash
+    - mv /out ${CI_PROJECT_DIR}/build
+  artifacts:
+    expose_as: 'swift-x86_64-linux-gnu'
+    name: swift-x86_64-linux-gnu
+    paths:
+      - build/
+    expire_in: 1 week
+  cache:
+    key: lib-x86_64-linux-gnu-$CI_PIPELINE_ID
+    paths:
+      - ffi_build/
+      - ffi_tests/
+    policy: pull
+  tags:
+    - docker
+    - linux
+    - metal
+  only:
+    - main
+    - merge_requests
+
 ###############
 # STAGE: Deploy
 #
