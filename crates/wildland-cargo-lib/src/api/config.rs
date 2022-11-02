@@ -46,7 +46,7 @@ use serde::{
 use thiserror::Error;
 use tracing::{instrument, Level};
 
-use crate::errors::{SingleErrVariantResult, SingleVariantError};
+use crate::errors::single_variant::*;
 
 pub trait CargoCfgProvider {
     fn get_use_logger(&self) -> bool;

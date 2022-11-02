@@ -24,7 +24,6 @@ crate-type = ["staticlib", "lib"]
 anyhow               = { version = "1.0" }
 base64               = { version = "0.13.0" }
 derivative           = { version = "2.2" }
-env_logger           = { version = "0.9" }
 hex                  = { version = "0.4" }
 log                  = { version = "0.4" }
 rusty-bind           = { version = "0.2.1", registry = "wl-dev", optional = true }

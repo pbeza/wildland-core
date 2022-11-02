@@ -20,11 +20,11 @@ use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
 /// Create String object from its representation in Rust Object Notation
-impl TryFrom<String> for Storage {
+impl TryFrom<&str> for Storage {
     type Error = ron::error::SpannedError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        ron::from_str(value.as_str())
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        ron::from_str(value)
     }
 }
 
@@ -122,7 +122,7 @@ mod tests {
 
     fn _container(catlib: &CatLib) -> Container {
         let forest = catlib.find_forest(Identity([1; 32])).unwrap();
-        forest.create_container().unwrap()
+        forest.create_container("name".to_owned()).unwrap()
     }
 
     #[fixture]

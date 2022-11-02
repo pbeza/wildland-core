@@ -19,10 +19,10 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use wildland_catlib::{CatLib, CatlibError, Forest};
+use wildland_catlib::{CatLib, CatlibError, Container, Forest, IContainer, IForest, Model};
 use wildland_crypto::identity::signing_keypair::PubKey;
 
-use crate::WildlandIdentity;
+use crate::{storage::StorageTemplate, WildlandIdentity};
 
 #[derive(Serialize, Deserialize)]
 pub struct DeviceMetadata {
@@ -46,14 +46,12 @@ pub struct CatLibService {
 }
 
 impl CatLibService {
-    #[tracing::instrument(level = "debug")]
     pub fn new() -> Self {
         Self {
             catlib: CatLib::default(),
         }
     }
 
-    #[tracing::instrument(level = "debug", skip(self, data))]
     pub fn add_forest(
         &self,
         forest_identity: &WildlandIdentity,
@@ -68,8 +66,25 @@ impl CatLibService {
         )
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_forest(&self, forest_uuid: Uuid) -> Result<Forest, CatlibError> {
         self.catlib.get_forest(forest_uuid)
+    }
+
+    pub fn create_container(
+        &self,
+        name: String,
+        forest: &Forest,
+        storage_template: &StorageTemplate,
+    ) -> Result<Container, CatlibError> {
+        let container = forest.create_container(name)?;
+
+        let _storage =
+            container.create_storage(Some(storage_template.uuid()), storage_template.data())?;
+
+        Ok(container)
+    }
+
+    pub fn delete_container(&self, container: &mut Container) -> Result<(), CatlibError> {
+        container.delete()
     }
 }

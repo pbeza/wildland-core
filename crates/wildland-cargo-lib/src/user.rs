@@ -16,8 +16,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    api::user::CargoUser,
-    errors::{UserCreationError, UserRetrievalError},
+    api::cargo_user::CargoUser,
+    errors::user::{UserCreationError, UserRetrievalError},
 };
 use uuid::Uuid;
 use wildland_corex::{
@@ -89,10 +89,12 @@ impl UserService {
         self.lss_service.save_identity(&default_forest_identity)?;
         self.lss_service.save_identity(&device_identity)?;
 
-        Ok(CargoUser {
-            this_device: device_name.clone(),
-            all_devices: vec![device_name],
-        })
+        Ok(CargoUser::new(
+            device_name.clone(),
+            vec![device_name],
+            forest,
+            self.catlib_service.clone(),
+        ))
     }
 
     /// Retrieves default forest keypair from LSS and then basing on that reads User metadata from CatLib.
@@ -117,14 +119,16 @@ impl UserService {
                     .ok_or(UserRetrievalError::DeviceMetadataNotFound)?;
 
                 match user_metadata.get_device_metadata(device_identity.get_public_key()) {
-                    Some(device_metadata) => Ok(Some(CargoUser {
-                        this_device: device_metadata.name.clone(),
-                        all_devices: user_metadata
+                    Some(device_metadata) => Ok(Some(CargoUser::new(
+                        device_metadata.name.clone(),
+                        user_metadata
                             .devices
                             .iter()
                             .map(|dm| dm.name.clone())
                             .collect(),
-                    })),
+                        forest,
+                        self.catlib_service.clone(),
+                    ))),
                     None => Err(UserRetrievalError::DeviceMetadataNotFound),
                 }
             }

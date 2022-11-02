@@ -16,20 +16,19 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    errors::{
-        RetrievalError, RetrievalResult, SingleErrVariantResult, SingleVariantError,
-        UserCreationError, UserRetrievalError,
-    },
+    errors::{retrieval_error::*, single_variant::*, user::*},
     user::{generate_random_mnemonic, CreateUserInput, UserService},
 };
 use wildland_corex::{CryptoError, MnemonicPhrase};
+
+use super::cargo_user::CargoUser;
 
 #[derive(Clone)]
 pub struct MnemonicPayload(MnemonicPhrase);
 
 impl MnemonicPayload {
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn get_string(&self) -> String {
+    pub fn stringify(&self) -> String {
         self.0.join(" ")
     }
 
@@ -43,34 +42,6 @@ impl From<MnemonicPhrase> for MnemonicPayload {
     #[tracing::instrument(level = "debug")]
     fn from(mnemonic: MnemonicPhrase) -> Self {
         Self(mnemonic)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CargoUser {
-    pub this_device: String,
-    pub all_devices: Vec<String>,
-}
-
-impl CargoUser {
-    #[tracing::instrument(level = "debug", ret, skip(self))]
-    pub fn get_string(&self) -> String {
-        let CargoUser {
-            this_device,
-            all_devices,
-        } = &self;
-        let all_devices_str = all_devices
-            .iter()
-            .map(|d| format!("    {d}"))
-            .collect::<Vec<_>>()
-            .join("\n");
-        format!(
-            "
-This device: {this_device}
-All devices:
-{all_devices_str}
-"
-        )
     }
 }
 
@@ -171,9 +142,9 @@ mod tests {
 
     use wildland_corex::{LocalSecureStorage, LssResult, LssService};
 
-    use crate::{errors::RetrievalError, user::UserService};
+    use crate::{errors::retrieval_error::RetrievalError, user::UserService};
 
-    use super::{CargoUser, UserApi};
+    use super::UserApi;
 
     #[derive(Default)]
     struct LssStub {
@@ -239,11 +210,8 @@ mod tests {
             .create_user_from_mnemonic(&mnemonic, device_name.clone())
             .unwrap();
 
-        let expected_user = CargoUser {
-            this_device: device_name.clone(),
-            all_devices: vec![device_name],
-        };
-        assert_eq!(user, expected_user);
+        assert_eq!(user.this_device(), device_name);
+        assert_eq!(user.all_devices(), [device_name]);
     }
 
     #[test]
@@ -261,10 +229,7 @@ mod tests {
             .unwrap();
 
         let user = user_api.get_user().unwrap();
-        let expected_user = CargoUser {
-            this_device: device_name.clone(),
-            all_devices: vec![device_name],
-        };
-        assert_eq!(user, expected_user);
+        assert_eq!(user.this_device(), device_name);
+        assert_eq!(user.all_devices(), [device_name]);
     }
 }
