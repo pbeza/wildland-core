@@ -4,14 +4,12 @@ use std::{
 };
 
 use crate::{
-    api::storage_template::*,
+    api::{container::*, storage_template::*},
     errors::{single_variant::*, user::*},
 };
 use derivative::Derivative;
 use uuid::Uuid;
 use wildland_corex::{CatLibService, CatlibError, Forest, IForest};
-
-use super::container::Container;
 
 pub type SharedContainer = Arc<Mutex<Container>>;
 #[derive(Debug, Clone)]
@@ -111,14 +109,20 @@ All devices:
                     .map(|c| {
                         let container = Container::from(c);
                         let uuid = container.uuid();
-                        self.user_context
-                            .get_loaded_container(uuid) // Return container from user context if it has been already loaded
-                            .unwrap_or_else(|| {
-                                // or create one in context and return
-                                let shared = Arc::new(Mutex::new(container));
-                                self.user_context.add_container(uuid, shared.clone());
-                                shared
-                            })
+                        if let Some(cached_container) = self.user_context.get_loaded_container(uuid)
+                        {
+                            // update container in user's context with the content fetched from CatLib
+                            let mut locked_cached_container = cached_container
+                                .lock()
+                                .expect("Could not lock loaded container in user context");
+                            *locked_cached_container = container;
+                            cached_container.clone()
+                        } else {
+                            // create container in context if it was not already there
+                            let shared = Arc::new(Mutex::new(container));
+                            self.user_context.add_container(uuid, shared.clone());
+                            shared
+                        }
                     })
                     .collect::<Vec<SharedContainer>>()
             })
@@ -142,7 +146,7 @@ All devices:
         Ok(shared_container)
     }
 
-    /// Deleting container is exposed via this method on `CargoUser` 
+    /// Deleting container is exposed via this method on `CargoUser`
     /// because in future it may require some additional changes in user's context
     /// (which `Container` structure has no access to).
     ///
