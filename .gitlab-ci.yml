@@ -341,6 +341,7 @@ publish crates:
   only:
     - main
   dependencies: [] # Disable artifacts passing
+  cache: [] # Disable cache from first-stage jobs
   before_script:
     - git config --global user.name "Wildland Housekeeper"
     - git config --global user.email "$HOUSEKEEPER_EMAIL"
