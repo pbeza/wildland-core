@@ -70,7 +70,6 @@ impl CargoUser {
         }
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn stringify(&self) -> String {
         let CargoUser {
             this_device,
@@ -91,12 +90,10 @@ All devices:
         )
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn mount_forest(&self) -> SingleErrVariantResult<(), ForestMountError> {
         todo!()
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn get_containers(
         &self,
     ) -> SingleErrVariantResult<Vec<Arc<Mutex<Container>>>, CatlibError> {
@@ -128,7 +125,6 @@ All devices:
             })
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn create_container(
         &self,
         name: String,
@@ -150,7 +146,6 @@ All devices:
     /// because in future it may require some additional changes in user's context
     /// (which `Container` structure has no access to).
     ///
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn delete_container(
         &self,
         container: &SharedContainer,

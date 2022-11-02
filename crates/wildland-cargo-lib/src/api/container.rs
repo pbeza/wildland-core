@@ -25,22 +25,18 @@ impl From<InnerContainer> for Container {
 }
 
 impl Container {
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn mount(&self) -> SingleErrVariantResult<(), ContainerMountError> {
         todo!()
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn unmount(&self) -> SingleErrVariantResult<(), ContainerUnmountError> {
         todo!()
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn get_storages(&self) -> SingleErrVariantResult<Vec<Storage>, GetStoragesError> {
         todo!()
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn delete_storage(
         &self,
         storage: &Storage,
@@ -48,7 +44,6 @@ impl Container {
         todo!()
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn add_storage(
         &self,
         storage: &StorageTemplate,
@@ -56,24 +51,20 @@ impl Container {
         todo!()
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn is_mounted(&self) -> bool {
         todo!()
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn set_name(&mut self, new_name: String) {
         self.inner.set_name(new_name)
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn stringify(&self) -> String {
         let deleted_info = if self.is_deleted { "DELETED: " } else { "" };
         let name = self.inner.name();
         format!("{deleted_info}Container (name: {name})")
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn duplicate(&self) -> SingleErrVariantResult<SharedContainer, CatlibError> {
         todo!()
     }
