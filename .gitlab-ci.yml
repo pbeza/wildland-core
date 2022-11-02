@@ -13,6 +13,7 @@ stages:
   - Bridges
   - Bindings
   - Deploy
+  - docs
 
 ###############
 # STAGE: Build
@@ -295,6 +296,34 @@ webassembly emscripten linux:
     - main
     - merge_requests
 
+swift x86_64 linux:
+  stage: Bindings
+  needs: ['x86_64_linux ffi']
+  script:
+    - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
+    - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
+    - bash docker/scripts/bindings_swift-x64-86-linux.bash
+    - mv /out ${CI_PROJECT_DIR}/build
+  artifacts:
+    expose_as: 'swift-x86_64-linux-gnu'
+    name: swift-x86_64-linux-gnu
+    paths:
+      - build/
+    expire_in: 1 week
+  cache:
+    key: lib-x86_64-linux-gnu-$CI_PIPELINE_ID
+    paths:
+      - ffi_build/
+      - ffi_tests/
+    policy: pull
+  tags:
+    - docker
+    - linux
+    - metal
+  only:
+    - main
+    - merge_requests
+
 ###############
 # STAGE: Deploy
 #
@@ -325,37 +354,48 @@ publish crates:
     # Specifying registry is required (bug: https://github.com/crate-ci/cargo-release/issues/429)
     - RUST_LOG=debug cargo $CARGO_FLAGS release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release
 
-pages-create:
+pages-mld:
   image: registry.gitlab.com/wildland/corex/wildland-core/esv_mdbook:0.3.2
-  stage: Deploy
-  tags:
-    - docker
-    - linux
-    - metal
+  stage: docs
   script:
+    - mkdir -p .docs/mld
     - mdbook build
-    - cargo doc --target-dir public/lld/
   artifacts:
     paths:
-      - public
+      - .docs/lld
     untracked: true
+    expire_in: 2h
   only:
-  - main
+    refs:
+      - main
+
+pages-lld:
+  stage: docs
+  script:
+    - cargo make lld-docs
+  artifacts:
+    paths:
+      - .docs/lld
+    untracked: true
+    expire_in: 2h
+  only:
+    refs:
+      - main
 
 pages-publish:
   image: google/cloud-sdk
-  stage: Deploy
-  when: manual
-  tags:
-    - docker
-    - linux
-    - metal
-  dependencies:
-    - pages-create
+  stage: docs
+  needs:
+    - job: pages-mld
+    - job: pages-lld
+  dependencies: 
+    - pages-lld
+    - pages-mld
   script:
     - echo -n $DOCS_WILDLAND_GCS_UPLOADER_KEY | base64 -d > /credentials.json
     - gcloud auth activate-service-account --key-file=/credentials.json
-    - gsutil cp public/* gs://docs.wildland.dev/
-    - gsutil ls gs://docs.wildland.dev/
+    - gsutil -m rsync -d -r .docs/mld gs://docs.wildland.dev/docs/wildland/mld
+    - gsutil -m rsync -d -r .docs/lld gs://docs.wildland.dev/docs/wildland/lld
   only:
-  - main
+    refs:
+      - main
