@@ -142,6 +142,10 @@ All devices:
         Ok(shared_container)
     }
 
+    /// Deleting container is exposed via this method on `CargoUser` 
+    /// because in future it may require some additional changes in user's context
+    /// (which `Container` structure has no access to).
+    ///
     #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn delete_container(
         &self,
