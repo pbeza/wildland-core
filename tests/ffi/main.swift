@@ -126,11 +126,11 @@ do {
     let restored_mnemonic = try user_api.createMnemonicFromVec(mnemonic_vec)
 
     let mnemonic = try user_api.generateMnemonic()
-    print(mnemonic.getString().toString())
+    print(mnemonic.stringify().toString())
     let new_user = try user_api.createUserFromMnemonic(mnemonic, RustString("My Mac"))
     print("User successfully created from mnemonic")
     let user = try user_api.getUser()
-    print("User: " + user.getString().toString())
+    print("User: " + user.stringify().toString())
 
     do {
         let config_bytes: RustVec<u8> = RustVec(u8.createNewRustVec())

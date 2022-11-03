@@ -16,33 +16,38 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
 /// Create Container object from its representation in Rust Object Notation
-impl TryFrom<String> for Container {
+impl TryFrom<&str> for Container {
     type Error = ron::error::SpannedError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        ron::from_str(value.as_str())
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        ron::from_str(value)
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Derivative)]
+#[derivative(Debug)]
 pub struct Container {
     uuid: Uuid,
     forest_uuid: Uuid,
+    name: String,
     paths: ContainerPaths,
 
+    #[derivative(Debug = "ignore")]
     #[serde(skip, default = "use_default_database")]
     db: Rc<StoreDb>,
 }
 
 impl Container {
-    pub fn new(forest_uuid: Uuid, db: Rc<StoreDb>) -> Self {
+    pub fn new(forest_uuid: Uuid, name: String, db: Rc<StoreDb>) -> Self {
         Container {
             uuid: Uuid::new_v4(),
             forest_uuid,
+            name,
             db,
             paths: ContainerPaths::new(),
         }
@@ -83,6 +88,14 @@ impl IContainer for Container {
         storage.save()?;
 
         Ok(storage)
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn set_name(&mut self, new_name: String) {
+        self.name = new_name;
     }
 }
 
@@ -128,7 +141,7 @@ mod tests {
     fn make_container(catlib: &CatLib) -> crate::container::Container {
         let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
-        forest.create_container().unwrap()
+        forest.create_container("name".to_owned()).unwrap()
     }
 
     #[rstest]

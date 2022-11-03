@@ -29,7 +29,7 @@
 //! [`api::CargoLib`] must be initialized with some set of parameters (see [`api::config`]).
 
 pub mod api;
-mod errors;
+pub mod errors;
 #[cfg(feature = "bindings")]
 pub mod ffi;
 mod logging;

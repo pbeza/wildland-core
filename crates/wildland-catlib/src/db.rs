@@ -25,7 +25,7 @@ pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: Uuid) -> CatlibResult<
     let forest: Vec<Forest> = data
         .iter()
         .filter(|(id, _)| (**id).starts_with(format!("forest-{uuid}").as_str()))
-        .map(|(_, forest_str)| Forest::try_from((*forest_str).clone()).unwrap())
+        .map(|(_, forest_str)| Forest::try_from(forest_str.as_str()).unwrap())
         .collect();
 
     match forest.len() {
@@ -42,7 +42,7 @@ pub(crate) fn fetch_container_by_uuid(db: Rc<StoreDb>, uuid: Uuid) -> CatlibResu
     let container: Vec<Container> = data
         .iter()
         .filter(|(id, _)| (**id).starts_with(format!("container-{uuid}").as_str()))
-        .map(|(_, forest_str)| Container::try_from((*forest_str).clone()).unwrap())
+        .map(|(_, forest_str)| Container::try_from(forest_str.as_str()).unwrap())
         .collect();
 
     match container.len() {
@@ -62,7 +62,7 @@ pub(crate) fn fetch_storages_by_container_uuid(
     let storages: Vec<Storage> = data
         .iter()
         .filter(|(id, _)| (**id).starts_with("storage-"))
-        .map(|(_, storage_str)| Storage::try_from((*storage_str).clone()).unwrap())
+        .map(|(_, storage_str)| Storage::try_from(storage_str.as_str()).unwrap())
         .filter(|storage| storage.container().unwrap().uuid() == uuid)
         .collect();
 
