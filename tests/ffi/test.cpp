@@ -110,9 +110,9 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     {
         std::cout << "LSS keys C++ impl\n";
         RustVec<RustString> keys;
+        auto prefix_str = prefix.to_string();
         for (const auto &[k, v] : store)
         {
-            auto prefix_str = prefix.to_string();
             if (k.starts_with(prefix_str))
                 keys.push(RustString{k});
         }
