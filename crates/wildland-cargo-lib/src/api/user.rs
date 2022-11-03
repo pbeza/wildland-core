@@ -168,6 +168,16 @@ mod tests {
             Ok(self.storage.borrow().keys().cloned().collect())
         }
 
+        fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
+            Ok(self
+                .storage
+                .borrow()
+                .keys()
+                .filter(|key| key.starts_with(&prefix))
+                .cloned()
+                .collect())
+        }
+
         fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>> {
             Ok(self.storage.borrow_mut().remove(&key))
         }

@@ -47,6 +47,7 @@ pub type AddStorageExc = SingleVariantError<AddStorageError>;
 pub type DeleteStorageExc = SingleVariantError<DeleteStorageError>;
 pub type GetStoragesExc = SingleVariantError<GetStoragesError>;
 pub type ForestMountExc = SingleVariantError<ForestMountError>;
+pub type GetStorageTemplateExc = GetStorageTemplateError;
 
 pub type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
 /// constructor of `LssResult<Option<Vec<u8>>>` (aka [`LssOptionalBytesResult`]) with Ok variant
@@ -159,6 +160,10 @@ mod ffi_binding {
     enum AddStorageExc {
         Failure(_),
     }
+    enum GetStorageTemplateExc {
+        LssError(_),
+        DeserializationError(_),
+    }
 
     extern "Traits" {
 
@@ -188,6 +193,10 @@ mod ffi_binding {
         fn get(self: &dyn LocalSecureStorage, key: String) -> LssOptionalBytesResult;
         fn contains_key(self: &dyn LocalSecureStorage, key: String) -> LssBoolResult;
         fn keys(self: &dyn LocalSecureStorage) -> LssVecOfStringsResult;
+        fn keys_starting_with(
+            self: &dyn LocalSecureStorage,
+            prefix: String,
+        ) -> LssVecOfStringsResult;
         fn remove(self: &dyn LocalSecureStorage, key: String) -> LssOptionalBytesResult;
         fn len(self: &dyn LocalSecureStorage) -> LssUsizeResult;
         fn is_empty(self: &dyn LocalSecureStorage) -> LssBoolResult;
@@ -274,6 +283,9 @@ mod ffi_binding {
             self: &CargoUser,
             container: &Arc<Mutex<Container>>,
         ) -> Result<VoidType, CatlibExc>;
+        fn get_storage_templates(
+            self: &CargoUser,
+        ) -> Result<Vec<StorageTemplate>, GetStorageTemplateExc>;
 
         fn mount(self: &Arc<Mutex<Container>>) -> Result<VoidType, ContainerMountExc>;
         fn unmount(self: &Arc<Mutex<Container>>) -> Result<VoidType, ContainerUnmountExc>;

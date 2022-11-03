@@ -62,15 +62,11 @@ impl StorageTemplateTrait for FoundationStorageTemplate {
     fn uuid(&self) -> Uuid {
         self.id
     }
-
-    fn data(&self) -> Vec<u8> {
-        serde_json::to_vec(self).unwrap()
-    }
 }
 
 impl From<FoundationStorageTemplate> for StorageTemplate {
     fn from(fst: FoundationStorageTemplate) -> Self {
-        Self::new(wildland_corex::storage::StorageTemplate::new(Rc::new(fst)))
+        Self::FoundationStorageTemplate(fst)
     }
 }
 
@@ -166,11 +162,10 @@ impl FoundationStorageApi {
                         serde_json::from_slice(&decrypted)
                             .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
 
-                    let storage_template: StorageTemplate = storage_credentials
-                        .into_storage_template(self.sc_url.clone())
-                        .into();
-                    self.lss_service
-                        .save_storage_template(storage_template.inner())?;
+                    let storage_template = StorageTemplate::FoundationStorageTemplate(
+                        storage_credentials.into_storage_template(self.sc_url.clone()),
+                    );
+                    self.lss_service.save_storage_template(&storage_template)?;
 
                     Ok(storage_template)
                 }

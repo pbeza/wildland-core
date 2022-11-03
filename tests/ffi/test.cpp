@@ -105,6 +105,20 @@ class LocalSecureStorageImpl : public LocalSecureStorage
         return new_ok_lss_vec_of_strings(keys);
     }
 
+    /// Returns all keys in arbitrary order.
+    LssVecOfStringsResult keys_starting_with(RustString prefix) override
+    {
+        std::cout << "LSS keys C++ impl\n";
+        RustVec<RustString> keys;
+        for (const auto &[k, v] : store)
+        {
+            auto prefix_str = prefix.to_string();
+            if (k.starts_with(prefix_str))
+                keys.push(RustString{k});
+        }
+        return new_ok_lss_vec_of_strings(keys);
+    }
+
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
     LssOptionalBytesResult remove(RustString key) override
     {
@@ -232,6 +246,11 @@ int main()
             try
             {
                 auto storage_template = foundation_storage_test(cargo_lib);
+
+                RustVec<StorageTemplate> storage_templates = new_user.get_storage_templates();
+                StorageTemplate first_st = storage_templates.at(0).unwrap();
+                std::cout << first_st.stringify().to_string() << std::endl;
+
                 container_test(new_user, storage_template);
             }
             catch (const RustExceptionBase &e)

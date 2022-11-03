@@ -5,11 +5,11 @@ use std::{
 
 use crate::{
     api::{container::*, storage_template::*},
-    errors::{single_variant::*, user::*},
+    errors::{single_variant::*, storage::GetStorageTemplateError, user::*},
 };
 use derivative::Derivative;
 use uuid::Uuid;
-use wildland_corex::{CatLibService, CatlibError, Forest, IForest};
+use wildland_corex::{CatLibService, CatlibError, Forest, IForest, LssService};
 
 pub type SharedContainer = Arc<Mutex<Container>>;
 #[derive(Debug, Clone)]
@@ -51,6 +51,8 @@ pub struct CargoUser {
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
     #[derivative(Debug = "ignore")]
+    lss_service: LssService,
+    #[derivative(Debug = "ignore")]
     user_context: UserContext,
 }
 
@@ -60,12 +62,14 @@ impl CargoUser {
         all_devices: Vec<String>,
         forest: Forest,
         catlib_service: CatLibService,
+        lss_service: LssService,
     ) -> Self {
         Self {
             this_device,
             all_devices,
             forest,
             catlib_service,
+            lss_service,
             user_context: UserContext::new(),
         }
     }
@@ -132,7 +136,7 @@ All devices:
     ) -> SingleErrVariantResult<SharedContainer, CatlibError> {
         let container: Container = self
             .catlib_service
-            .create_container(name, &self.forest, template.inner())
+            .create_container(name, &self.forest, template)
             .map_err(SingleVariantError::Failure)
             .map(|c| c.into())?;
         let container_uuid = container.uuid();
@@ -163,5 +167,16 @@ All devices:
 
     pub fn all_devices(&self) -> &[String] {
         self.all_devices.as_slice()
+    }
+
+    pub fn get_storage_templates(&self) -> Result<Vec<StorageTemplate>, GetStorageTemplateError> {
+        self.lss_service
+            .get_storage_templates_data()?
+            .into_iter()
+            .map(|st_data| {
+                serde_json::from_slice(&st_data)
+                    .map_err(|e| GetStorageTemplateError::DeserializationError(e.to_string()))
+            })
+            .collect()
     }
 }

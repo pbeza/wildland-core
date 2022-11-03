@@ -1,20 +1,37 @@
-use wildland_corex::storage::StorageTemplate as InnerStorageTemplate;
+use serde::{Deserialize, Serialize};
+use wildland_corex::storage::StorageTemplateTrait;
 
-#[derive(Debug, Clone)]
-pub struct StorageTemplate {
-    inner: InnerStorageTemplate,
+use super::foundation_storage::FoundationStorageTemplate;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum StorageTemplate {
+    FoundationStorageTemplate(FoundationStorageTemplate),
 }
 
 impl StorageTemplate {
-    pub(crate) fn new(inner: InnerStorageTemplate) -> Self {
-        Self { inner }
-    }
-
-    pub(crate) fn inner(&self) -> &InnerStorageTemplate {
-        &self.inner
-    }
-
     pub fn stringify(&self) -> String {
-        format!("Storage Template (uuid: {})", self.inner.uuid())
+        let uuid = match self {
+            StorageTemplate::FoundationStorageTemplate(st) => st.uuid(),
+        };
+        format!(
+            "Storage Template (uuid: {uuid}, type: {})",
+            self.storage_template_type()
+        )
+    }
+
+    fn storage_template_type(&self) -> &'static str {
+        match self {
+            StorageTemplate::FoundationStorageTemplate(_) => "Foundation Storage Template",
+        }
+    }
+}
+
+impl StorageTemplateTrait for StorageTemplate {
+    fn uuid(&self) -> uuid::Uuid {
+        match self {
+            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
+                id, ..
+            }) => *id,
+        }
     }
 }

@@ -22,7 +22,7 @@ use uuid::Uuid;
 use wildland_catlib::{CatLib, CatlibError, Container, Forest, IContainer, IForest, Model};
 use wildland_crypto::identity::signing_keypair::PubKey;
 
-use crate::{storage::StorageTemplate, WildlandIdentity};
+use crate::{storage::StorageTemplateTrait, WildlandIdentity};
 
 #[derive(Serialize, Deserialize)]
 pub struct DeviceMetadata {
@@ -74,12 +74,16 @@ impl CatLibService {
         &self,
         name: String,
         forest: &Forest,
-        storage_template: &StorageTemplate,
+        storage_template: &impl StorageTemplateTrait,
     ) -> Result<Container, CatlibError> {
         let container = forest.create_container(name)?;
 
+        let serialized_storage_template = serde_json::to_vec(&storage_template).map_err(|e| {
+            CatlibError::Generic(format!("Could not serialize storage template: {e}"))
+        })?;
+
         let _storage =
-            container.create_storage(Some(storage_template.uuid()), storage_template.data())?;
+            container.create_storage(Some(storage_template.uuid()), serialized_storage_template)?;
 
         Ok(container)
     }
