@@ -82,9 +82,9 @@ impl LssService {
 
         let optional_this_device_identity = self.get_this_device_keypair()?;
         optional_this_device_identity.map_or(Ok(None), |this_device_identity| {
-            let device_name = self
-                .get_this_device_name()?
-                .ok_or_else(|| LssError("Could not retrieve device name from LSS".to_owned()))?;
+            let device_name = self.get_this_device_name()?.ok_or_else(|| {
+                LssError::Error("Could not retrieve device name from LSS".to_owned())
+            })?;
             Ok(Some(WildlandIdentity::Device(
                 device_name,
                 this_device_identity,
@@ -140,7 +140,7 @@ impl LssService {
             .insert(
                 key.to_string(),
                 serde_json::to_vec(obj)
-                    .map_err(|e| LssError(format!("Could not serialize object: {e}")))?,
+                    .map_err(|e| LssError::Error(format!("Could not serialize object: {e}")))?,
             )
             .map(|bytes| bytes.is_some())
     }
@@ -151,7 +151,7 @@ impl LssService {
         self.lss.get(key.to_string()).and_then(|optional_bytes| {
             optional_bytes.map_or(Ok(None), |bytes| {
                 serde_json::from_slice(bytes.as_slice())
-                    .map_err(|e| LssError(format!("Could not parse LSS entry: {e}")))
+                    .map_err(|e| LssError::Error(format!("Could not parse LSS entry: {e}")))
             })
         })
     }

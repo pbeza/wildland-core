@@ -21,7 +21,6 @@ use crate::{
         foundation_storage::FoundationStorageApi,
         user::UserApi,
     },
-    errors::single_variant::*,
     logging,
     user::UserService,
 };
@@ -36,8 +35,10 @@ use thiserror::Error;
 use wildland_corex::{LocalSecureStorage, LssService};
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
-#[error("CargoLib creation error: {0}")]
-pub struct CargoLibCreationError(pub String);
+pub enum CargoLibCreationError {
+    #[error("CargoLib creation error: {0}")]
+    Error(String),
+}
 
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -139,12 +140,12 @@ impl CargoLib {
 pub fn create_cargo_lib(
     lss: &'static dyn LocalSecureStorage,
     cfg: CargoConfig,
-) -> SingleErrVariantResult<SharedCargoLib, CargoLibCreationError> {
+) -> Result<SharedCargoLib, CargoLibCreationError> {
     if !INITIALIZED.load(Ordering::Relaxed) {
         INITIALIZED.store(true, Ordering::Relaxed);
 
         logging::init_subscriber(cfg.logger_config)
-            .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e.to_string())))?;
+            .map_err(|e| CargoLibCreationError::Error(e.to_string()))?;
 
         let cargo_lib = Arc::new(Mutex::new(CargoLib::new(lss, cfg.fsa_config)));
 

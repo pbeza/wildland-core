@@ -19,13 +19,25 @@ use thiserror::Error;
 use wildland_corex::LssError;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum GetStoragesError {}
+#[repr(C)]
+pub enum GetStoragesError {
+    #[error("Get Storage error")]
+    Error,
+}
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum DeleteStorageError {}
+#[repr(C)]
+pub enum DeleteStorageError {
+    #[error("Delete Storage error")]
+    Error,
+}
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum AddStorageError {}
+#[repr(C)]
+pub enum AddStorageError {
+    #[error("Add Storage error")]
+    Error,
+}
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum GetStorageTemplateError {

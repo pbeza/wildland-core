@@ -22,6 +22,13 @@ use wildland_corex::{
 };
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
+pub enum CreateMnemonicError {
+    #[error("Invalid Mnemonic words")]
+    InvalidMnemonicWords,
+}
+
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum UserCreationError {
     #[error("User already exists")]
     UserAlreadyExists,
@@ -82,7 +89,13 @@ pub enum UserRetrievalError {
     CatlibError(#[from] CatlibError),
     #[error("Metadata of this device has not been found in Forest")]
     DeviceMetadataNotFound,
+    #[error("User not found")]
+    UserNotFound,
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum ForestMountError {}
+#[repr(C)]
+pub enum ForestMountError {
+    #[error("Forest Mount error")]
+    Error,
+}

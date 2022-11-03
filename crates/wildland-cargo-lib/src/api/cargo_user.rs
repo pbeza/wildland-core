@@ -23,7 +23,7 @@ use std::{
 
 use crate::{
     api::{container::*, storage_template::*},
-    errors::{single_variant::*, storage::GetStorageTemplateError, user::*},
+    errors::{storage::GetStorageTemplateError, user::*},
 };
 use derivative::Derivative;
 use uuid::Uuid;
@@ -118,7 +118,7 @@ All devices:
     }
 
     /// TODO
-    pub fn mount_forest(&self) -> SingleErrVariantResult<(), ForestMountError> {
+    pub fn mount_forest(&self) -> Result<(), ForestMountError> {
         todo!()
     }
 

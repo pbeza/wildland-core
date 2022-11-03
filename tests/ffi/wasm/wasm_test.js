@@ -28,10 +28,10 @@ wildland().then((wlib) => {
             var str_key = key.to_string(); // JS cannot compare Rust strings so conversion to native type is necessary
             if (str_key in this.store) {
                 console.log("LSS insert: found");
-                result = wlib.new_ok_lss_optional_bytes(wlib.new_some_bytes(js_string_to_rust_vec_u8(this.store[str_key])))
+                result = wlib.OptionalVecu8ResultWithLssError.from_ok(wlib.OptionalVecu8(this.store[str_key]))
             } else {
                 console.log("LSS insert: not found");
-                result = wlib.new_ok_lss_optional_bytes(wlib.new_none_bytes());
+                result = wlib.OptionalVecu8ResultWithLssError.from_ok(wlib.OptionalVecu8());
             }
             this.store[str_key] = rust_vec_u8_of_bytes_to_js_string(val);
             return result;
@@ -41,10 +41,10 @@ wildland().then((wlib) => {
             var str_key = key.to_string(); // JS cannot compare Rust strings so conversion to native type is necessary
             if (str_key in this.store) {
                 console.log("LSS get: found");
-                return wlib.new_ok_lss_optional_bytes(wlib.new_some_bytes(js_string_to_rust_vec_u8(store[str_key])))
+                return wlib.OptionalVecu8ResultWithLssError(wlib.OptionalVecu8(store[str_key]))
             } else {
                 console.log("LSS get: not found");
-                return wlib.new_ok_lss_optional_bytes(wlib.new_none_bytes());
+                return wlib.OptionalVecu8ResultWithLssError(wlib.OptionalVecu8());
             }
         },
         contains_key: function (key) {
@@ -85,12 +85,12 @@ wildland().then((wlib) => {
 
         // config: logger file log
         get_log_file_enabled: function () { return false; },
-        get_log_file_path: function () { return new wlib.new_none_string(); },
-        get_log_file_rotate_directory: function () { return new wlib.new_none_string(); },
+        get_log_file_path: function () { return new wlib.OptionalRustString(); },
+        get_log_file_rotate_directory: function () { return new wlib.OptionalRustString(); },
 
         // config: logger oslog
-        get_oslog_category: function () { return new wlib.new_none_string(); },
-        get_oslog_subsystem: function () { return new wlib.new_none_string(); },
+        get_oslog_category: function () { return new wlib.OptionalRustString(); },
+        get_oslog_subsystem: function () { return new wlib.OptionalRustString(); },
 
         get_foundation_cloud_env_mode: function () { return wlib.FoundationCloudMode.Dev }
     });

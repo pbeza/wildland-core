@@ -14,17 +14,17 @@ class CargoCfgProviderImpl: CargoCfgProvider {
     public override func getLogFileEnabled() -> bool {
         return false
     }
-    public override func getLogFilePath() -> OptionalString {
-        return newNoneString()
+    public override func getLogFilePath() -> RustOptional<RustString> {
+        return Optional.none.toRustOptional()
     }
-    public override func getLogFileRotateDirectory() -> OptionalString {
-        return newNoneString()
+    public override func getLogFileRotateDirectory() -> RustOptional<RustString> {
+        return Optional.none.toRustOptional()
     }
-    public override func getOslogCategory() -> OptionalString {
-        return newNoneString()
+    public override func getOslogCategory() -> RustOptional<RustString> {
+        return Optional.none.toRustOptional()
     }
-    public override func getOslogSubsystem() -> OptionalString {
-        return newNoneString()
+    public override func getOslogSubsystem() -> RustOptional<RustString> {
+        return Optional.none.toRustOptional()
     }
 
     public override func getFoundationCloudEnvMode() -> FoundationCloudMode {
@@ -38,44 +38,44 @@ class LocalSecureStorageImpl : LocalSecureStorage {
     /// Inserts a key-value pair into the LSS.
     /// If the map did not have this key present, None is returned.
     /// If the map did have this key present, the value is updated, and the old value is returned.
-    public override func insert(_ key: RustString,_ value: RustVec<u8>) -> LssOptionalBytesResult {
+    public override func insert(_ key: RustString,_ value: RustVec<u8>) -> OptionalVecu8ResultWithLssError {
         let std_key = key.toString()
         let result = store[std_key] != nil
-            ? newOkLssOptionalBytes(newSomeBytes(store[std_key]!))
-            : newOkLssOptionalBytes(newNoneBytes())
+            ? OptionalVecu8ResultWithLssError.from_ok(Optional.some(store[std_key]!).toRustOptional())
+            : OptionalVecu8ResultWithLssError.from_ok(Optional.none.toRustOptional())
         store[std_key] = value;
         return result;
         // return new_err_lss_optional_bytes(RustString("Err")); // EXAMPLE: returning error
     }
 
     /// Returns a copy of the value corresponding to the key.
-    public override func get(_ key: RustString) -> LssOptionalBytesResult
+    public override func get(_ key: RustString) -> OptionalVecu8ResultWithLssError
     {
         let std_key = key.toString()
         return store[std_key] != nil
-            ? newOkLssOptionalBytes(newSomeBytes(store[std_key]!))
-            : newOkLssOptionalBytes(newNoneBytes())
+            ? OptionalVecu8ResultWithLssError.from_ok(Optional.some(store[std_key]!).toRustOptional())
+            : OptionalVecu8ResultWithLssError.from_ok(Optional.none.toRustOptional())
     }
 
     /// Returns true if the map contains a value for the specified key.
-    public override func containsKey(_ key: RustString) -> LssBoolResult
+    public override func containsKey(_ key: RustString) -> boolResultWithLssError
     {
         let std_key = key.toString()
-        return newOkLssBool(store[std_key] != nil)
+        return boolResultWithLssError.from_ok(store[std_key] != nil)
     }
 
     /// Returns all keys in arbitrary order.
-    public override func keys() -> LssVecOfStringsResult
+    public override func keys() -> VecRustStringResultWithLssError
     {
         let keys = RustVec<RustString>(RustString.createNewRustVec())
         for (key, _) in store {
             keys.push(RustString(key))
         }
-        return newOkLssVecOfStrings(keys)
+        return VecRustStringResultWithLssError.from_ok(keys)
     }
 
     /// Returns all keys in arbitrary order.
-    public override func keysStartingWith(_ prefix: RustString) -> LssVecOfStringsResult
+    public override func keysStartingWith(_ prefix: RustString) -> VecRustStringResultWithLssError
     {
         let keys = RustVec<RustString>(RustString.createNewRustVec())
         let std_prefix = prefix.toString()
@@ -84,36 +84,36 @@ class LocalSecureStorageImpl : LocalSecureStorage {
                 keys.push(RustString(key))
             }
         }
-        return newOkLssVecOfStrings(keys)
+        return VecRustStringResultWithLssError.from_ok(keys)
     }
 
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
-    public override func remove(_ key: RustString) -> LssOptionalBytesResult
+    public override func remove(_ key: RustString) -> OptionalVecu8ResultWithLssError
     {
         let std_key = key.toString()
-        var result: LssOptionalBytesResult
+        var result: OptionalVecu8ResultWithLssError
         if (store[std_key] != nil)
         {
-            result = newOkLssOptionalBytes(newSomeBytes(store[std_key]!))
+            result = OptionalVecu8ResultWithLssError.from_ok(Optional.some(store[std_key]!).toRustOptional())
             store[std_key] = nil
         }
         else
         {
-            result = newOkLssOptionalBytes(newNoneBytes())
+            result = OptionalVecu8ResultWithLssError.from_ok(Optional.none.toRustOptional())
         }
         return result
     }
 
     /// Returns the number of elements in the map.
-    public override func len() -> LssUsizeResult
+    public override func len() -> usizeResultWithLssError
     {
-        return newOkLssUsize((usize)(store.count))
+        return usizeResultWithLssError.from_ok((usize)(store.count))
     }
 
     /// Returns true if the map contains no elements, false otherwise.
-    public override func isEmpty() -> LssBoolResult
+    public override func isEmpty() -> boolResultWithLssError
     {
-        return newOkLssBool(store.isEmpty)
+        return boolResultWithLssError.from_ok(store.isEmpty)
     }
 }
 
@@ -150,7 +150,7 @@ do {
         }
         let parsed_cfg: CargoConfig = try parseConfig(config_bytes)
         let _ = try createCargoLib(lss, parsed_cfg)
-    } catch let err as CargoLibCreationExc_FailureException {
+    } catch let err as RustExceptionBase {
         print(err.reason().toString())
     }
 } catch let err as RustExceptionBase {

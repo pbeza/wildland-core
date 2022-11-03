@@ -46,8 +46,6 @@ use serde::{
 use thiserror::Error;
 use tracing::{instrument, Level};
 
-use crate::errors::single_variant::*;
-
 const DEV_DEFAULT_EVS_URL: &str = "https://evs.cargo.wildland.dev/";
 const DEV_DEFAULT_SC_URL: &str = "https://storage-controller.cargo.wildland.dev/";
 
@@ -93,8 +91,10 @@ pub trait CargoCfgProvider {
 }
 
 #[derive(PartialEq, Eq, Error, Debug, Clone)]
-#[error("Config parse error: {0}")]
-pub struct ParseConfigError(pub String);
+pub enum ParseConfigError {
+    #[error("Config parse error: {0}")]
+    Error(String),
+}
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(new = "true"))]
@@ -300,12 +300,12 @@ impl CargoConfig {
 ///
 pub fn collect_config(
     config_provider: &'static dyn CargoCfgProvider,
-) -> SingleErrVariantResult<CargoConfig, ParseConfigError> {
+) -> Result<CargoConfig, ParseConfigError> {
     Ok(CargoConfig {
         logger_config: LoggerConfig {
             use_logger: config_provider.get_use_logger(),
             log_level: Level::from_str(config_provider.get_log_level().as_str())
-                .map_err(|e| SingleVariantError::Failure(ParseConfigError(e.to_string())))?,
+                .map_err(|e| ParseConfigError::Error(e.to_string()))?,
             log_use_ansi: config_provider.get_log_use_ansi(),
             log_file_path: PathBuf::from(
                 config_provider
@@ -331,9 +331,9 @@ pub fn collect_config(
 /// into an instance of [`CargoConfig`]
 /// The `settings` must be a string with JSON formatted configuration.
 ///
-pub fn parse_config(raw_content: Vec<u8>) -> SingleErrVariantResult<CargoConfig, ParseConfigError> {
-    let parsed: CargoConfig = serde_json::from_slice(&raw_content)
-        .map_err(|e| SingleVariantError::Failure(ParseConfigError(e.to_string())))?;
+pub fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ParseConfigError> {
+    let parsed: CargoConfig =
+        serde_json::from_slice(&raw_content).map_err(|e| ParseConfigError::Error(e.to_string()))?;
     println!("Parsed config: {parsed:?}");
     Ok(parsed)
 }
