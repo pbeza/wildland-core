@@ -26,13 +26,6 @@ class CargoCfgProviderImpl: CargoCfgProvider {
     public override func getOslogSubsystem() -> OptionalString {
         return newNoneString()
     }
-
-    public override func getEvsUrl() -> RustString {
-        return RustString("http://localhost:5000/");
-    }
-    public override func getScUrl() -> RustString {
-        return RustString("http://localhost:5000/");
-    }
 }
 
 class LocalSecureStorageImpl : LocalSecureStorage {

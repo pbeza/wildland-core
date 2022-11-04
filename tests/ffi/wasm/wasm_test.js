@@ -70,10 +70,6 @@ wildland().then((wlib) => {
         // config: logger oslog
         get_oslog_category: function () { return new wlib.new_none_string(); },
         get_oslog_subsystem: function () { return new wlib.new_none_string(); },
-
-        // config: urls
-        get_evs_url: function () { return new wlib.String("evs url will be here"); },
-        get_sc_url: function () { return new wlib.String("sc url will be here"); }
     });
 
     var lss = new Lss;

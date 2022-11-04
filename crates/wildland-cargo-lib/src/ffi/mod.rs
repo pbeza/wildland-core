@@ -129,11 +129,6 @@ mod ffi_binding {
 
     extern "Traits" {
 
-        // # traits required for main configuration
-        //
-        fn get_evs_url(self: &dyn CargoCfgProvider) -> String;
-        fn get_sc_url(self: &dyn CargoCfgProvider) -> String;
-
         // # traits required for logging configuration
         //
         fn get_use_logger(self: &dyn CargoCfgProvider) -> bool;
@@ -183,11 +178,12 @@ mod ffi_binding {
         fn new_some_string(s: String) -> OptionalString;
         fn new_none_string() -> OptionalString;
 
-        type CargoConfig;
         fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ConfigParseExc>;
         fn collect_config(
             config_provider: &'static dyn CargoCfgProvider,
         ) -> Result<CargoConfig, ConfigParseExc>;
+        fn override_evs_url(self: &CargoConfig, new_evs_url: String);
+        fn override_sc_url(self: &CargoConfig, new_sc_url: String);
 
         fn create_cargo_lib(
             lss: &'static dyn LocalSecureStorage,

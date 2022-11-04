@@ -39,6 +39,7 @@
 
 use std::{path::PathBuf, str::FromStr};
 
+use derivative::Derivative;
 use serde::{
     de::{Error, Unexpected},
     Deserialize, Deserializer,
@@ -69,19 +70,32 @@ pub trait CargoCfgProvider {
     fn get_log_file_rotate_directory(&self) -> Option<String>;
     fn get_oslog_category(&self) -> Option<String>;
     fn get_oslog_subsystem(&self) -> Option<String>;
-
-    fn get_evs_url(&self) -> String;
-    fn get_sc_url(&self) -> String;
 }
 
 #[derive(PartialEq, Eq, Error, Debug, Clone)]
 #[error("Config parse error: {0}")]
 pub struct ParseConfigError(pub String);
 
-#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+const DEFAULT_EVS_URL: &'static str = "http://localhost:5000/";
+const DEFAULT_SC_URL: &'static str = "http://localhost:5555/";
+
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
+#[derivative(Default(new = "true"))]
 pub struct FoundationStorageApiConfig {
+    #[serde(default = "default_evs_url")]
+    #[derivative(Default(value = "DEFAULT_EVS_URL.to_string()"))]
     pub evs_url: String,
+    #[serde(default = "default_sc_url")]
+    #[derivative(Default(value = "DEFAULT_SC_URL.to_string()"))]
     pub sc_url: String,
+}
+
+fn default_evs_url() -> String {
+    DEFAULT_EVS_URL.to_owned()
+}
+
+fn default_sc_url() -> String {
+    DEFAULT_SC_URL.to_owned()
 }
 
 fn bool_default_as_true() -> bool {
@@ -119,7 +133,7 @@ fn serde_logger_default_rot_dir() -> PathBuf {
 /// let parsed_cfg = parse_config(config_json.as_bytes().to_vec()).unwrap();
 ///
 ///
-#[derive(Debug, Deserialize, Clone, PartialEq, Eq, derivative::Derivative)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(new = "true"))]
 pub struct LoggerConfig {
     /// switch to disable the logger facility.
@@ -250,6 +264,16 @@ pub struct CargoConfig {
     pub logger_config: LoggerConfig,
 }
 
+impl CargoConfig {
+    pub fn override_evs_url(&mut self, new_evs_url: String) {
+        self.fsa_config.evs_url = new_evs_url;
+    }
+
+    pub fn override_sc_url(&mut self, new_sc_url: String) {
+        self.fsa_config.sc_url = new_sc_url;
+    }
+}
+
 /// Uses an implementation of [`CargoCfgProvider`] to collect a configuration storing structure ([`CargoConfig`])
 /// which then can be passed to [`super::cargo_lib::create_cargo_lib`] in order to instantiate main API object ([`super::CargoLib`])
 ///
@@ -278,10 +302,7 @@ pub fn collect_config(
             oslog_category: config_provider.get_oslog_category(),
             oslog_subsystem: config_provider.get_oslog_subsystem(),
         },
-        fsa_config: FoundationStorageApiConfig {
-            evs_url: config_provider.get_evs_url(),
-            sc_url: config_provider.get_sc_url(),
-        },
+        fsa_config: FoundationStorageApiConfig::default(),
     })
 }
 
@@ -344,9 +365,7 @@ mod tests {
             "log_level": "trace",
             "log_use_ansi": true,
             "log_file_enabled": false,
-            "evs_runtime_mode": "DEBUG",
-            "evs_url": "some_url",
-            "sc_url": "some_url"
+            "evs_runtime_mode": "DEBUG"
         }"#;
 
         let config: CargoConfig = serde_json::from_str(config_str).unwrap();
@@ -355,8 +374,8 @@ mod tests {
             config,
             CargoConfig {
                 fsa_config: FoundationStorageApiConfig {
-                    evs_url: "some_url".to_owned(),
-                    sc_url: "some_url".to_owned(),
+                    evs_url: "http://localhost:5000/".to_owned(),
+                    sc_url: "http://localhost:5555/".to_owned(),
                 },
                 logger_config: LoggerConfig {
                     use_logger: true,

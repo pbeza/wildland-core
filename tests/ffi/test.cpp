@@ -5,37 +5,37 @@
 
 class CargoCfgProviderImpl : public CargoCfgProvider
 {
-    bool get_use_logger() override {
+    bool get_use_logger() override
+    {
         return true;
     }
-    String get_log_level() override {
-        return new RustString("debug");
+    String get_log_level() override
+    {
+        return RustString("debug");
     }
-    bool get_log_use_ansi() override {
+    bool get_log_use_ansi() override
+    {
         return false;
     }
-    bool get_log_file_enabled() override {
+    bool get_log_file_enabled() override
+    {
         return true;
     }
-    OptionalString get_log_file_path() override {
-        return new_none_string();
-    }
-    OptionalString get_log_file_rotate_directory() override {
-        return new_none_string();
-    }
-    OptionalString get_oslog_category() override {
-        return new_none_string();
-    }
-    OptionalString get_oslog_subsystem() override {
-        return new_none_string();
-    }
-    String get_evs_url() override
+    OptionalString get_log_file_path() override
     {
-        return RustString("http://localhost:5000/");
+        return new_none_string();
     }
-    String get_sc_url() override
+    OptionalString get_log_file_rotate_directory() override
     {
-        return RustString("http://TODO:5555/");
+        return new_none_string();
+    }
+    OptionalString get_oslog_category() override
+    {
+        return new_none_string();
+    }
+    OptionalString get_oslog_subsystem() override
+    {
+        return new_none_string();
     }
 };
 
@@ -175,6 +175,7 @@ int main()
 {
     CargoCfgProviderImpl cfg_provider{};
     CargoConfig cfg = collect_config(cfg_provider);
+    cfg.override_evs_url(RustString{"new url"});
     LocalSecureStorageImpl lss{};
     SharedMutexCargoLib cargo_lib;
     try
