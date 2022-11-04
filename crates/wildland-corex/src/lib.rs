@@ -16,6 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 mod catlib_service;
+pub mod catlib_service2;
 mod error;
 mod identity;
 mod lss;
