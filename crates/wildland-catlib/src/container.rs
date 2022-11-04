@@ -16,33 +16,38 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
 /// Create Container object from its representation in Rust Object Notation
-impl TryFrom<String> for Container {
+impl TryFrom<&str> for Container {
     type Error = ron::error::SpannedError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        ron::from_str(value.as_str())
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        ron::from_str(value)
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Derivative)]
+#[derivative(Debug)]
 pub struct Container {
     uuid: Uuid,
     forest_uuid: Uuid,
+    name: String,
     paths: ContainerPaths,
 
+    #[derivative(Debug = "ignore")]
     #[serde(skip, default = "use_default_database")]
     db: Rc<StoreDb>,
 }
 
 impl Container {
-    pub fn new(forest_uuid: Uuid, db: Rc<StoreDb>) -> Self {
+    pub fn new(forest_uuid: Uuid, name: String, db: Rc<StoreDb>) -> Self {
         Container {
             uuid: Uuid::new_v4(),
             forest_uuid,
+            name,
             db,
             paths: ContainerPaths::new(),
         }
@@ -62,16 +67,18 @@ impl IContainer for Container {
         self.paths.clone()
     }
 
-    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<Self> {
-        self.paths.insert(path);
+    /// Returns true if path was actually added, false otherwise.
+    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<bool> {
+        let inserted = self.paths.insert(path);
         self.save()?;
-        Ok(self.clone())
+        Ok(inserted)
     }
 
-    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<Self> {
-        self.paths.remove(&path);
+    /// Returns true if path was actually deleted, false otherwise.
+    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<bool> {
+        let removed = self.paths.remove(&path);
         self.save()?;
-        Ok(self.clone())
+        Ok(removed)
     }
 
     fn storages(&self) -> CatlibResult<Vec<Storage>> {
@@ -83,6 +90,14 @@ impl IContainer for Container {
         storage.save()?;
 
         Ok(storage)
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn set_name(&mut self, new_name: String) {
+        self.name = new_name;
     }
 }
 
@@ -128,7 +143,7 @@ mod tests {
     fn make_container(catlib: &CatLib) -> crate::container::Container {
         let forest = catlib.find_forest(Identity([1; 32])).unwrap();
 
-        forest.create_container().unwrap()
+        forest.create_container("name".to_owned()).unwrap()
     }
 
     #[rstest]
@@ -250,13 +265,9 @@ mod tests {
         container.add_path("/bar/baz1".to_string()).unwrap();
 
         let mut container = make_container(&catlib);
-        container
-            .add_path("/bar/baz2".to_string())
-            .unwrap()
-            .add_path("/baz/qux1".to_string())
-            .unwrap()
-            .add_path("/baz/qux2".to_string())
-            .unwrap();
+        container.add_path("/bar/baz2".to_string()).unwrap();
+        container.add_path("/baz/qux1".to_string()).unwrap();
+        container.add_path("/baz/qux2".to_string()).unwrap();
 
         let containers = forest.find_containers(vec!["/foo".into()], false);
         assert_eq!(containers.err(), Some(CatlibError::NoRecordsFound));

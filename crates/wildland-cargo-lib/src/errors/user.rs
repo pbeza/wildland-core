@@ -82,3 +82,6 @@ pub enum UserRetrievalError {
     #[error("Metadata of this device has not been found in Forest")]
     DeviceMetadataNotFound,
 }
+
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
+pub enum ForestMountError {}
