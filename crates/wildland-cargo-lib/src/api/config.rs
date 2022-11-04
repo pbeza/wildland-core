@@ -76,8 +76,8 @@ pub trait CargoCfgProvider {
 #[error("Config parse error: {0}")]
 pub struct ParseConfigError(pub String);
 
-const DEFAULT_EVS_URL: &'static str = "http://localhost:5000/";
-const DEFAULT_SC_URL: &'static str = "http://localhost:5555/";
+const DEFAULT_EVS_URL: &str = "http://localhost:5000/";
+const DEFAULT_SC_URL: &str = "http://localhost:5555/";
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(new = "true"))]
