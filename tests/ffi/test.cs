@@ -29,14 +29,6 @@ namespace Main
         public override OptionalString get_oslog_subsystem() {
             return new_none_string();
         }
-
-        public override RustString get_evs_url() {
-            return new RustString("http://localhost:5000/");
-        }
-
-        public override RustString get_sc_url() {
-            return new RustString("http://localhost:5000/");
-        }
     }
 
     class LocalSecureStorageImpl : LocalSecureStorage {
