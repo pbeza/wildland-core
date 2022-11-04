@@ -15,17 +15,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod cargo_lib;
-pub mod cargo_user;
-pub mod config;
-pub mod container;
-pub mod foundation_storage;
-pub mod storage;
-pub mod storage_template;
-pub mod user;
+use wildland_corex::storage::StorageTemplate as InnerStorageTemplate;
 
-pub use self::{
-    cargo_lib::CargoLib,
-    config::{CargoCfgProvider, CargoConfig},
-    user::UserApi,
-};
+#[derive(Debug, Clone)]
+pub struct StorageTemplate {
+    inner: InnerStorageTemplate,
+}
+
+impl StorageTemplate {
+    pub(crate) fn new(inner: InnerStorageTemplate) -> Self {
+        Self { inner }
+    }
+
+    pub(crate) fn inner(&self) -> &InnerStorageTemplate {
+        &self.inner
+    }
+
+    pub fn stringify(&self) -> String {
+        format!("Storage Template (uuid: {})", self.inner.uuid())
+    }
+}

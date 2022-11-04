@@ -364,6 +364,7 @@ mod tests {
         assert_eq!(device_identity, expected_device_identity);
     }
 
+    #[derive(Debug)]
     struct StorageTemplateTestImpl;
     impl StorageTemplateTrait for StorageTemplateTestImpl {
         fn uuid(&self) -> Uuid {

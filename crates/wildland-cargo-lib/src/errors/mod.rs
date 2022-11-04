@@ -15,21 +15,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-mod retrieval_error;
-mod single_variant;
-mod user;
-pub use retrieval_error::*;
-pub use single_variant::*;
-pub use user::*;
+pub mod container;
+pub mod retrieval_error;
+pub mod single_variant;
+pub mod storage;
+pub mod user;
 
-use crate::api::foundation_storage::FsaError;
-
-impl ExceptionTrait for FsaError {
-    fn reason(&self) -> String {
-        self.to_string()
-    }
-}
+use std::fmt::Display;
 
 pub trait ExceptionTrait {
     fn reason(&self) -> String;
+}
+
+impl<T: Display> ExceptionTrait for T {
+    fn reason(&self) -> String {
+        self.to_string()
+    }
 }
