@@ -11,7 +11,7 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     }
     String get_log_level() override
     {
-        return RustString("debug");
+        return RustString("info");
     }
     bool get_log_use_ansi() override
     {
@@ -22,6 +22,18 @@ class CargoCfgProviderImpl : public CargoCfgProvider
         return true;
     }
     OptionalString get_log_file_path() override
+    {
+        return new_none_string();
+    }
+    OptionalString get_log_file_rotate_directory() override
+    {
+        return new_none_string();
+    }
+    OptionalString get_oslog_category() override
+    {
+        return new_none_string();
+    }
+    OptionalString get_oslog_subsystem() override
     {
         return new_none_string();
     }
@@ -153,22 +165,35 @@ void config_parser_test() // test
     }
 }
 
-void foundation_storage_test(SharedMutexCargoLib &cargo_lib)
+auto foundation_storage_test(SharedMutexCargoLib &cargo_lib)
 {
-    try
+    FoundationStorageApi fsa_api = cargo_lib.foundation_storage_api();
+    auto process_handle = fsa_api.request_free_tier_storage("test@email.com");
+    std::cout << "Provide a verification token:\n";
+    std::string verification_token;
+    std::cin >> verification_token;
+    // may be used for creating container
+    StorageTemplate storage_template = fsa_api.verify_email(process_handle, RustString{verification_token});
+    std::cout << storage_template.stringify().to_string() << std::endl;
+    return storage_template;
+}
+
+auto container_test(CargoUser &user, StorageTemplate &storage_template)
+{
+    auto container = user.create_container(RustString{"My Container"}, storage_template);
+    std::cout << container.stringify().to_string() << std::endl;
+
+    auto containers = user.get_containers();
+    for (uint i = 0; i < containers.size(); ++i)
     {
-        FoundationStorageApi fsa_api = cargo_lib.foundation_storage_api();
-        auto process_handle = fsa_api.request_free_tier_storage("test@email.com");
-        std::cout << "Provide a verification token:\n";
-        std::string verification_token;
-        std::cin >> verification_token;
-        // may be used for creating container
-        StorageTemplate storage_template = fsa_api.verify_email(process_handle, RustString{verification_token});
+        auto current_container = containers.at(i).unwrap();
+        std::cout << container.stringify().to_string() << std::endl;
+        user.delete_container(current_container);
+        std::cout << "IN LOOP: " << current_container.stringify().to_string() << std::endl;
     }
-    catch (const RustExceptionBase &e)
-    {
-        std::cerr << e.reason().to_string() << std::endl;
-    }
+
+    // this container is also mark deleted (deleted in loop)
+    std::cout << "AFTER LOOP: " << container.stringify().to_string() << std::endl;
 }
 
 int main()
@@ -188,14 +213,12 @@ int main()
         assert(false);
     }
 
-    foundation_storage_test(cargo_lib);
-
     UserApi user_api = cargo_lib.user_api();
 
     try
     {
         MnemonicPayload mnemonic = user_api.generate_mnemonic();
-        std::string mnemonic_str = mnemonic.get_string().to_string();
+        std::string mnemonic_str = mnemonic.stringify().to_string();
         std::cout << "Generated mnemonic: " << mnemonic_str << std::endl;
 
         RustVec<String> words_vec = mnemonic.get_vec();
@@ -213,8 +236,18 @@ int main()
 
             try
             {
+                auto storage_template = foundation_storage_test(cargo_lib);
+                container_test(new_user, storage_template);
+            }
+            catch (const RustExceptionBase &e)
+            {
+                std::cerr << e.reason().to_string() << std::endl;
+            }
+
+            try
+            {
                 CargoUser user = user_api.get_user();
-                std::cout << "User: " << user.get_string().to_string() << std::endl;
+                std::cout << "User: " << user.stringify().to_string() << std::endl;
             }
             catch (const UserRetrievalExc_NotFoundException &e)
             {

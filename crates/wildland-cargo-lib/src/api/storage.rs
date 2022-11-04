@@ -15,17 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod cargo_lib;
-pub mod cargo_user;
-pub mod config;
-pub mod container;
-pub mod foundation_storage;
-pub mod storage;
-pub mod storage_template;
-pub mod user;
+#[derive(Debug, Clone)]
+pub struct Storage {}
 
-pub use self::{
-    cargo_lib::CargoLib,
-    config::{CargoCfgProvider, CargoConfig},
-    user::UserApi,
-};
+impl Storage {
+    pub fn stringify(&self) -> String {
+        todo!()
+    }
+}

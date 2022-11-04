@@ -60,7 +60,7 @@
 //!                  vec![],
 //!              ).unwrap();
 //!
-//! let mut container = forest.create_container().unwrap();
+//! let mut container = forest.create_container("container name".to_owned()).unwrap();
 //! container.add_path("/foo/bar".to_string());
 //! container.add_path("/bar/baz".to_string());
 //!
@@ -172,7 +172,7 @@ impl CatLib {
         let forests: Vec<Forest> = data
             .iter()
             .filter(|(id, _)| (**id).starts_with("forest-"))
-            .map(|(_, forest_str)| Forest::try_from((*forest_str).clone()).unwrap())
+            .map(|(_, forest_str)| Forest::try_from(forest_str.as_str()).unwrap())
             .filter(|forest| forest.owner() == owner)
             .collect();
 
@@ -201,7 +201,7 @@ impl CatLib {
         let storages: Vec<Storage> = data
             .iter()
             .filter(|(id, _)| (**id).starts_with("storage-"))
-            .map(|(_, storage_str)| Storage::try_from((*storage_str).clone()).unwrap())
+            .map(|(_, storage_str)| Storage::try_from(storage_str.as_str()).unwrap())
             .filter(|storage| {
                 storage.template_uuid().is_some() && storage.template_uuid().unwrap() == template_id
             })
