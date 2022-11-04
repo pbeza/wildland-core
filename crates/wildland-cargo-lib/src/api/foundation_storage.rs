@@ -42,7 +42,7 @@ pub struct StorageCredentials {
 impl StorageCredentials {
     fn into_storage_template(self, sc_url: String) -> FoundationStorageTemplate {
         FoundationStorageTemplate {
-            id: self.id,
+            uuid: self.id,
             credential_id: self.credential_id,
             credential_secret: self.credential_secret,
             sc_url,
@@ -52,7 +52,7 @@ impl StorageCredentials {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FoundationStorageTemplate {
-    pub id: Uuid,
+    pub uuid: Uuid,
     pub credential_id: String,
     pub credential_secret: String,
     pub sc_url: String,
@@ -60,7 +60,7 @@ pub struct FoundationStorageTemplate {
 
 impl StorageTemplateTrait for FoundationStorageTemplate {
     fn uuid(&self) -> Uuid {
-        self.id
+        self.uuid
     }
 }
 
