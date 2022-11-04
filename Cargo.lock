@@ -1961,7 +1961,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-cargo-lib"
-version = "0.19.1"
+version = "0.20.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -1991,7 +1991,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-catlib"
-version = "0.6.2"
+version = "0.7.0"
 dependencies = [
  "derivative",
  "directories",
@@ -2011,7 +2011,7 @@ dependencies = [
 
 [[package]]
 name = "wildland-corex"
-version = "0.8.2"
+version = "0.9.0"
 dependencies = [
  "hex",
  "mockall",
