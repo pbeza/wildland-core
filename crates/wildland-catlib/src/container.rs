@@ -67,16 +67,18 @@ impl IContainer for Container {
         self.paths.clone()
     }
 
-    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<Self> {
-        self.paths.insert(path);
+    /// Returns true if path was actually added, false otherwise.
+    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<bool> {
+        let inserted = self.paths.insert(path);
         self.save()?;
-        Ok(self.clone())
+        Ok(inserted)
     }
 
-    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<Self> {
-        self.paths.remove(&path);
+    /// Returns true if path was actually deleted, false otherwise.
+    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<bool> {
+        let removed = self.paths.remove(&path);
         self.save()?;
-        Ok(self.clone())
+        Ok(removed)
     }
 
     fn storages(&self) -> CatlibResult<Vec<Storage>> {
@@ -263,13 +265,9 @@ mod tests {
         container.add_path("/bar/baz1".to_string()).unwrap();
 
         let mut container = make_container(&catlib);
-        container
-            .add_path("/bar/baz2".to_string())
-            .unwrap()
-            .add_path("/baz/qux1".to_string())
-            .unwrap()
-            .add_path("/baz/qux2".to_string())
-            .unwrap();
+        container.add_path("/bar/baz2".to_string()).unwrap();
+        container.add_path("/baz/qux1".to_string()).unwrap();
+        container.add_path("/baz/qux2".to_string()).unwrap();
 
         let containers = forest.find_containers(vec!["/foo".into()], false);
         assert_eq!(containers.err(), Some(CatlibError::NoRecordsFound));

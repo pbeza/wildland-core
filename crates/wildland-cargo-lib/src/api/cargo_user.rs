@@ -94,46 +94,39 @@ All devices:
         todo!()
     }
 
-    pub fn get_containers(
-        &self,
-    ) -> SingleErrVariantResult<Vec<Arc<Mutex<Container>>>, CatlibError> {
-        self.forest
-            .containers()
-            .map_err(SingleVariantError::Failure)
-            .map(|inner| {
-                inner
-                    .into_iter()
-                    .map(|c| {
-                        let container = Container::from(c);
-                        let uuid = container.uuid();
-                        if let Some(cached_container) = self.user_context.get_loaded_container(uuid)
-                        {
-                            // update container in user's context with the content fetched from CatLib
-                            let mut locked_cached_container = cached_container
-                                .lock()
-                                .expect("Could not lock loaded container in user context");
-                            *locked_cached_container = container;
-                            cached_container.clone()
-                        } else {
-                            // create container in context if it was not already there
-                            let shared = Arc::new(Mutex::new(container));
-                            self.user_context.add_container(uuid, shared.clone());
-                            shared
-                        }
-                    })
-                    .collect::<Vec<SharedContainer>>()
-            })
+    pub fn get_containers(&self) -> Result<Vec<Arc<Mutex<Container>>>, CatlibError> {
+        self.forest.containers().map(|inner| {
+            inner
+                .into_iter()
+                .map(|c| {
+                    let container = Container::from(c);
+                    let uuid = container.uuid();
+                    if let Some(cached_container) = self.user_context.get_loaded_container(uuid) {
+                        // update container in user's context with the content fetched from CatLib
+                        let mut locked_cached_container = cached_container
+                            .lock()
+                            .expect("Could not lock loaded container in user context");
+                        *locked_cached_container = container;
+                        cached_container.clone()
+                    } else {
+                        // create container in context if it was not already there
+                        let shared = Arc::new(Mutex::new(container));
+                        self.user_context.add_container(uuid, shared.clone());
+                        shared
+                    }
+                })
+                .collect::<Vec<SharedContainer>>()
+        })
     }
 
     pub fn create_container(
         &self,
         name: String,
         template: &StorageTemplate,
-    ) -> SingleErrVariantResult<SharedContainer, CatlibError> {
+    ) -> Result<SharedContainer, CatlibError> {
         let container: Container = self
             .catlib_service
             .create_container(name, &self.forest, template.inner())
-            .map_err(SingleVariantError::Failure)
             .map(|c| c.into())?;
         let container_uuid = container.uuid();
         let shared_container = Arc::new(Mutex::new(container));
@@ -146,15 +139,11 @@ All devices:
     /// because in future it may require some additional changes in user's context
     /// (which `Container` structure has no access to).
     ///
-    pub fn delete_container(
-        &self,
-        container: &SharedContainer,
-    ) -> SingleErrVariantResult<(), CatlibError> {
+    pub fn delete_container(&self, container: &SharedContainer) -> Result<(), CatlibError> {
         container
             .lock()
             .expect("Could not lock shared container while deleting")
             .delete(&self.catlib_service)
-            .map_err(SingleVariantError::Failure)
     }
 
     pub fn this_device(&self) -> &str {

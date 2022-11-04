@@ -21,14 +21,14 @@ pub mod single_variant;
 pub mod storage;
 pub mod user;
 
-use crate::api::foundation_storage::FsaError;
-
-impl ExceptionTrait for FsaError {
-    fn reason(&self) -> String {
-        self.to_string()
-    }
-}
+use std::fmt::Display;
 
 pub trait ExceptionTrait {
     fn reason(&self) -> String;
+}
+
+impl<T: Display> ExceptionTrait for T {
+    fn reason(&self) -> String {
+        self.to_string()
+    }
 }

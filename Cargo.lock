@@ -1970,6 +1970,7 @@ dependencies = [
  "hex-literal",
  "log",
  "mockall",
+ "rstest",
  "rusty-bind",
  "rusty-bind-build",
  "serde",
