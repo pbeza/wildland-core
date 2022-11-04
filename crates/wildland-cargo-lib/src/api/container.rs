@@ -7,8 +7,12 @@ use wildland_corex::{CatLibService, CatlibError, Container as InnerContainer, IC
 
 use super::cargo_user::SharedContainer;
 
+/// Structure representing a container within Cargo application context.
+///
+/// It is designed to be safely used even in many threads on the native side (foreign languages) app.
 #[derive(Debug)]
 pub struct Container {
+    /// CoreX container
     inner: InnerContainer,
     // We cannot force a native app to drop reference to Container structure
     // so the flag is_deleted is used to mark container as deleted
@@ -25,18 +29,22 @@ impl From<InnerContainer> for Container {
 }
 
 impl Container {
+    /// TODO
     pub fn mount(&self) -> SingleErrVariantResult<(), ContainerMountError> {
         todo!()
     }
 
+    /// TODO
     pub fn unmount(&self) -> SingleErrVariantResult<(), ContainerUnmountError> {
         todo!()
     }
 
+    /// TODO
     pub fn get_storages(&self) -> SingleErrVariantResult<Vec<Storage>, GetStoragesError> {
         todo!()
     }
 
+    /// TODO
     pub fn delete_storage(
         &self,
         _storage: &Storage,
@@ -44,6 +52,7 @@ impl Container {
         todo!()
     }
 
+    /// TODO
     pub fn add_storage(
         &self,
         _storage: &StorageTemplate,
@@ -51,6 +60,7 @@ impl Container {
         todo!()
     }
 
+    /// TODO
     pub fn is_mounted(&self) -> bool {
         todo!()
     }
@@ -65,12 +75,14 @@ impl Container {
         todo!()
     }
 
+    /// TODO
     pub fn delete(&mut self, catlib_service: &CatLibService) -> Result<(), CatlibError> {
         catlib_service.delete_container(&mut self.inner)?;
         self.is_deleted = true;
         Ok(())
     }
 
+    /// Returns container uuid
     pub fn uuid(&self) -> Uuid {
         self.inner.uuid()
     }

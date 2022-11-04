@@ -40,6 +40,9 @@ impl UserContext {
     }
 }
 
+/// Structure representing a User.
+///
+/// It gives access to user's forest and containers.
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub struct CargoUser {
@@ -70,6 +73,7 @@ impl CargoUser {
         }
     }
 
+    /// Returns string representation of a [`CargoUser`]
     pub fn stringify(&self) -> String {
         let CargoUser {
             this_device,
@@ -90,10 +94,12 @@ All devices:
         )
     }
 
+    /// TODO
     pub fn mount_forest(&self) -> SingleErrVariantResult<(), ForestMountError> {
         todo!()
     }
 
+    /// Returns vector of handles to all containers (mounted or not) found in the user's forest.
     pub fn get_containers(&self) -> Result<Vec<Arc<Mutex<Container>>>, CatlibError> {
         self.forest.containers().map(|inner| {
             inner
@@ -119,6 +125,7 @@ All devices:
         })
     }
 
+    /// Creates a new container within user's forest and return its handle
     pub fn create_container(
         &self,
         name: String,
