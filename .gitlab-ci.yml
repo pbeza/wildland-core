@@ -69,28 +69,6 @@ x86_64 bindings build:
 #
 # This stage contains code sanity checks as well as automated tests.
 
-cargo versions bump:
-  stage: Test
-  tags:
-    - docker
-    - linux
-    - metal
-  needs: []
-  cache:
-    key: build-cache-$CI_COMMIT_REF_SLUG
-    policy: push
-  script:
-    # Check if cargo workspaced changed returns an empty list.
-    # If it doesn't, it means that most likely you forgot to run ./bump.sh
-    - gem install semantic
-    - ruby docker/scripts/check_cargo_versions.rb || EXIT_CODE=$?
-    - exit $EXIT_CODE
-  rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-    - if: $CI_COMMIT_BRANCH == "main"
-  allow_failure:
-    exit_codes: 42
-
 cargo test:
   stage: Test
   tags:
@@ -358,6 +336,8 @@ pages-mld:
   image: registry.gitlab.com/wildland/corex/wildland-core/esv_mdbook:0.3.2
   stage: docs
   dependencies: [] # Disable conflicting artifacts pulling from Bindinds stage
+  except:
+    - tags
   script:
     - mkdir -p .docs/mld
     - mdbook build
@@ -373,6 +353,8 @@ pages-mld:
 pages-lld:
   stage: docs
   dependencies: [] # Disable conflicting artifacts pulling from Bindinds stage
+  except:
+    - tags
   script:
     - cargo make lld-docs
   artifacts:
@@ -387,6 +369,8 @@ pages-lld:
 pages-publish:
   image: google/cloud-sdk
   stage: docs
+  except:
+    - tags
   needs:
     - job: pages-mld
     - job: pages-lld
