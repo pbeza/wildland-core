@@ -1,4 +1,4 @@
-allow-branch               = ['*']
+allow-branch               = ['master']
 consolidate-commits        = true
 pre-release-commit-message = "Workspace crates release version {{prev_version}} set to {{version}}"
 tag-message	               = "Workspace crates release version {{prev_version}} set to {{version}}"
