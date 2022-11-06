@@ -23,6 +23,3 @@ wildland-crypto = { version = "0.9.0", path = "../wildland-crypto", registry = "
 [dev-dependencies]
 http    = { version = "0.2" }
 mockito = { version = "0.31" }
-
-[package.metadata.workspaces]
-independent = true

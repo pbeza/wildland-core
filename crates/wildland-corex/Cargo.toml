@@ -28,6 +28,3 @@ wildland-dfs    = { version = "0.2.0", path = "../wildland-dfs", registry = "wl-
 [dev-dependencies]
 mockall  = { version = "0.11" }
 tempfile = { version = "3.3" }
-
-[package.metadata.workspaces]
-independent = true

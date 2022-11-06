@@ -29,6 +29,3 @@ uuid        = { version = "1.1.2", features = ["v4", "serde"] }
 mocktopus = { version = "0.7.11" }
 rand      = { version = "0.8.5" }
 rstest    = { version = "0.15.0" }
-
-[package.metadata.workspaces]
-independent = true
