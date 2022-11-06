@@ -33,7 +33,7 @@ x86_64 linux build:
   except:
     - tags
   only:
-    - main
+    - master
     - merge_requests
   cache:
     key: x86_64-linux-build-cache-$CI_COMMIT_REF_SLUG
@@ -53,7 +53,7 @@ x86_64 bindings build:
   except:
     - tags
   only:
-    - main
+    - master
     - merge_requests
   cache:
     key: x86_64-bindings-build-cache-$CI_COMMIT_REF_SLUG
@@ -101,7 +101,7 @@ cargo test:
   except:
     - tags
   only:
-    - main
+    - master
     - merge_requests
   script:
     - cargo make test
@@ -122,7 +122,7 @@ cargo clippy (lint):
   except:
     - tags
   only:
-    - main
+    - master
     - merge_requests
   script:
     - cargo make clippy
@@ -137,7 +137,7 @@ cargo fmt (format):
   except:
     - tags
   only:
-    - main
+    - master
     - merge_requests
   script:
     - rustup component add rustfmt
@@ -159,7 +159,7 @@ cargo audit:
   except:
     - tags
   only:
-    - main
+    - master
     - merge_requests
   script:
     - cargo make audit
@@ -193,13 +193,13 @@ x86_64_linux ffi:
         - ffi_tests/
       policy: push
   only:
-    - main
+    - master
     - merge_requests
 
 apple:
   stage: Bridges
   only:
-    - main
+    - master
     - merge_requests
   tags:
     - macos
@@ -272,7 +272,7 @@ csharp x86_64 linux:
     - linux
     - metal
   only:
-    - main
+    - master
     - merge_requests
 
 webassembly emscripten linux:
@@ -293,7 +293,7 @@ webassembly emscripten linux:
     - linux
     - metal
   only:
-    - main
+    - master
     - merge_requests
 
 swift x86_64 linux:
@@ -321,7 +321,7 @@ swift x86_64 linux:
     - linux
     - metal
   only:
-    - main
+    - master
     - merge_requests
 
 ###############
@@ -339,7 +339,7 @@ publish crates:
     - tags
     - docs/*
   only:
-    - main
+    - master
   dependencies: [] # Disable artifacts passing
   cache: {} # Disable cache from first-stage jobs
   before_script:
@@ -352,11 +352,7 @@ publish crates:
     - git remote set-url origin "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"
     - git reset --hard remotes/origin/$CI_COMMIT_BRANCH
     - git checkout -B $CI_COMMIT_BRANCH --track remotes/origin/$CI_COMMIT_BRANCH
-    # Seriously those diff and grep exit codes...
-    - EXCLUDES=$((diff <(cargo $CARGO_FLAGS workspaces list) <(cargo $CARGO_FLAGS workspaces changed) || true) | (grep '< ' || true) | sed 's/< //' | xargs -I@ echo -n "--exclude @ ")
-    - echo $EXCLUDES
-    # Specifying registry is required (bug: https://github.com/crate-ci/cargo-release/issues/429)
-    - RUST_LOG=debug cargo $CARGO_FLAGS release -vvv --registry wl-dev --workspace --no-verify --no-confirm --execute $EXCLUDES release
+    - RUST_LOG=debug cargo $CARGO_FLAGS release -v --registry wl-dev --workspace --no-confirm --execute release
 
 pages-mld:
   image: registry.gitlab.com/wildland/corex/wildland-core/esv_mdbook:0.3.2
@@ -372,7 +368,7 @@ pages-mld:
     expire_in: 2h
   only:
     refs:
-      - main
+      - master
 
 pages-lld:
   stage: docs
@@ -386,7 +382,7 @@ pages-lld:
     expire_in: 2h
   only:
     refs:
-      - main
+      - master
 
 pages-publish:
   image: google/cloud-sdk
@@ -404,4 +400,4 @@ pages-publish:
     - gsutil -m rsync -d -r .docs/lld gs://docs.wildland.dev/docs/wildland/lld
   only:
     refs:
-      - main
+      - master
