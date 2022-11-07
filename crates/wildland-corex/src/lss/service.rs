@@ -18,13 +18,13 @@
 use std::fmt::{Debug, Display};
 
 use super::{api::LocalSecureStorage, result::LssResult};
+use crate::catlib_service::entities::{ForestData, Identity};
 use crate::{
     storage::StorageTemplateTrait, ForestRetrievalError, LssError, WildlandIdentity,
     DEFAULT_FOREST_KEY,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use uuid::Uuid;
-use wildland_catlib::{Forest, IForest, Identity};
 use wildland_crypto::identity::SigningKeypair;
 
 const STORAGE_TEMPLATE_PREFIX: &str = "wildland.storage_template.";
@@ -65,9 +65,9 @@ impl LssService {
         })
     }
 
-    pub fn save_forest_uuid(&self, forest: &Forest) -> LssResult<bool> {
+    pub fn save_forest_uuid(&self, forest: &ForestData) -> LssResult<bool> {
         tracing::trace!("Saving forest uuid");
-        self.serialize_and_save(forest.owner().encode(), &forest.uuid())
+        self.serialize_and_save(forest.owner.encode(), &forest.uuid)
     }
 
     pub fn get_forest_uuid_by_identity(
@@ -164,9 +164,9 @@ mod tests {
         collections::{HashMap, HashSet},
     };
 
-    use serde::Serialize;
+    use crate::catlib_service::entities::{ForestData, Identity};
     use uuid::Uuid;
-    use wildland_catlib::{CatLib, IForest, Identity};
+
     use wildland_crypto::identity::SigningKeypair;
 
     use crate::{
@@ -299,20 +299,20 @@ mod tests {
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
-        let tmp = tempfile::tempdir().unwrap().path().into();
-        let catlib = CatLib::new(tmp);
-
         let forest_identity = Identity([1; 32]);
-        let forest = catlib
-            .create_forest(forest_identity.clone(), HashSet::new(), vec![])
-            .unwrap();
+        let forest = ForestData {
+            uuid: Uuid::new_v4(),
+            owner: forest_identity.clone(),
+            signers: HashSet::new(),
+            data: vec![],
+        };
 
         service.save_forest_uuid(&forest).unwrap();
 
         let retrieved_uuid: Uuid =
             serde_json::from_slice(&lss.get(forest_identity.encode()).unwrap().unwrap()).unwrap();
 
-        assert_eq!(retrieved_uuid, forest.uuid());
+        assert_eq!(retrieved_uuid, forest.uuid);
     }
 
     #[test]

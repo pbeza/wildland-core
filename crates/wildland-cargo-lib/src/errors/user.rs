@@ -17,7 +17,8 @@
 
 use thiserror::Error;
 use wildland_corex::{
-    CatlibError, CryptoError, ForestIdentityCreationError, ForestRetrievalError, LssError,
+    catlib_service::error::CatlibError, CryptoError, ForestIdentityCreationError,
+    ForestRetrievalError, LssError,
 };
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
@@ -62,7 +63,7 @@ impl From<CatlibError> for UserCreationError {
     fn from(catlib_err: CatlibError) -> Self {
         match catlib_err {
             CatlibError::NoRecordsFound
-            | CatlibError::MalformedDatabaseEntry
+            | CatlibError::MalformedDatabaseRecord
             | CatlibError::Generic(_) => UserCreationError::CatlibError(catlib_err.to_string()),
             CatlibError::RecordAlreadyExists => UserCreationError::UserAlreadyExists,
         }
