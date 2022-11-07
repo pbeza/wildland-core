@@ -215,11 +215,11 @@ pub trait IContainer {
     ///                  vec![],
     ///              ).unwrap();
     /// let mut container = forest.create_container("container name".to_owned()).unwrap();
-    /// container.add_path("/bar/baz2".to_string()).unwrap()
-    ///     .add_path("/baz/qux1".to_string()).unwrap()
-    ///     .add_path("/baz/qux2".to_string()).unwrap();
+    /// container.add_path("/bar/baz2".to_string()).unwrap();
+    /// container.add_path("/baz/qux1".to_string()).unwrap();
+    /// container.add_path("/baz/qux2".to_string()).unwrap();
     /// ```
-    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<Container>;
+    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<bool>;
 
     /// Delete a path from the Container.
     ///
@@ -242,11 +242,11 @@ pub trait IContainer {
     ///                  vec![],
     ///              ).unwrap();
     /// let mut container = forest.create_container("container name".to_owned()).unwrap();
-    /// container.add_path("/bar/baz2".to_string()).unwrap()
-    ///     .del_path("/baz/qux1".to_string()).unwrap()
-    ///     .del_path("/baz/qux2".to_string()).unwrap();
+    /// container.add_path("/bar/baz2".to_string()).unwrap();
+    /// container.del_path("/baz/qux1".to_string()).unwrap();
+    /// container.del_path("/baz/qux2".to_string()).unwrap();
     /// ```
-    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<Container>;
+    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<bool>;
 
     /// Return list of Forest [`Storage`]s.
     ///

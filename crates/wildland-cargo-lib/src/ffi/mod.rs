@@ -40,7 +40,7 @@ pub type UserCreationExc = SingleVariantError<UserCreationError>;
 pub type CargoLibCreationExc = SingleVariantError<CargoLibCreationError>;
 pub type ConfigParseExc = SingleVariantError<ParseConfigError>;
 pub type FsaExc = FsaError;
-pub type CatlibExc = SingleVariantError<CatlibError>;
+pub type CatlibExc = CatlibError;
 pub type ContainerMountExc = SingleVariantError<ContainerMountError>;
 pub type ContainerUnmountExc = SingleVariantError<ContainerUnmountError>;
 pub type AddStorageExc = SingleVariantError<AddStorageError>;
@@ -143,7 +143,10 @@ mod ffi_binding {
         Failure(_),
     }
     enum CatlibExc {
-        Failure(_),
+        NoRecordsFound(_),
+        MalformedDatabaseEntry(_),
+        RecordAlreadyExists(_),
+        Generic(_),
     }
     enum ContainerMountExc {
         Failure(_),
@@ -225,12 +228,18 @@ mod ffi_binding {
         fn new_some_string(s: String) -> OptionalString;
         fn new_none_string() -> OptionalString;
 
+        //
+        // CargoConfig
+        //
         type CargoConfig;
         fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ConfigParseExc>;
         fn collect_config(
             config_provider: &'static dyn CargoCfgProvider,
         ) -> Result<CargoConfig, ConfigParseExc>;
 
+        //
+        // CargoLib
+        //
         fn create_cargo_lib(
             lss: &'static dyn LocalSecureStorage,
             config: CargoConfig,
@@ -238,6 +247,9 @@ mod ffi_binding {
         fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
         fn foundation_storage_api(self: &Arc<Mutex<CargoLib>>) -> FoundationStorageApi;
 
+        //
+        // FoundationStorageApi
+        //
         fn request_free_tier_storage(
             self: &FoundationStorageApi,
             email: String,
@@ -249,8 +261,9 @@ mod ffi_binding {
         ) -> Result<StorageTemplate, FsaExc>;
         type FreeTierProcessHandle;
 
-        fn stringify(self: &StorageTemplate) -> String;
-
+        //
+        // UserApi
+        //
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
         fn create_mnemonic_from_vec(
             self: &UserApi,
@@ -268,9 +281,15 @@ mod ffi_binding {
         ) -> Result<CargoUser, UserCreationExc>;
         fn get_user(self: &UserApi) -> Result<CargoUser, UserRetrievalExc>;
 
+        //
+        // MnemonicPayload
+        //
         fn stringify(self: &MnemonicPayload) -> String;
         fn get_vec(self: &MnemonicPayload) -> Vec<String>;
 
+        //
+        // CargoUser
+        //
         fn stringify(self: &CargoUser) -> String;
         fn mount_forest(self: &CargoUser) -> Result<VoidType, ForestMountExc>;
         fn get_containers(self: &CargoUser) -> Result<Vec<Arc<Mutex<Container>>>, CatlibExc>;
@@ -287,9 +306,16 @@ mod ffi_binding {
             self: &CargoUser,
         ) -> Result<Vec<StorageTemplate>, GetStorageTemplateExc>;
 
+        //
+        // Container
+        //
+
+        // mounting
         fn mount(self: &Arc<Mutex<Container>>) -> Result<VoidType, ContainerMountExc>;
         fn unmount(self: &Arc<Mutex<Container>>) -> Result<VoidType, ContainerUnmountExc>;
         fn is_mounted(self: &Arc<Mutex<Container>>) -> bool;
+
+        // storages
         fn get_storages(self: &Arc<Mutex<Container>>) -> Result<Vec<Storage>, GetStoragesExc>;
         fn delete_storage(
             self: &Arc<Mutex<Container>>,
@@ -299,10 +325,22 @@ mod ffi_binding {
             self: &Arc<Mutex<Container>>,
             templates: &StorageTemplate,
         ) -> Result<VoidType, AddStorageExc>;
+
+        // paths
+        fn add_path(self: &Arc<Mutex<Container>>, path: String) -> Result<bool, CatlibExc>;
+        fn delete_path(self: &Arc<Mutex<Container>>, path: String) -> Result<bool, CatlibExc>;
+        fn get_paths(self: &Arc<Mutex<Container>>) -> Result<Vec<String>, CatlibExc>;
+
         fn set_name(self: &Arc<Mutex<Container>>, new_name: String);
+        fn get_name(self: &Arc<Mutex<Container>>) -> String;
         fn stringify(self: &Arc<Mutex<Container>>) -> String;
         fn duplicate(self: &Arc<Mutex<Container>>) -> Result<Arc<Mutex<Container>>, CatlibExc>;
 
+        //
+        // Storage
+        //
         fn stringify(self: &Storage) -> String;
+
+        fn stringify(self: &StorageTemplate) -> String;
     }
 }

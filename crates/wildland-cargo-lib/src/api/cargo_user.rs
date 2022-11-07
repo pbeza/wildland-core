@@ -1,3 +1,20 @@
+//
+// Wildland Project
+//
+// Copyright © 2022 Golem Foundation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License version 3 as published by
+// the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -40,6 +57,9 @@ impl UserContext {
     }
 }
 
+/// Structure representing a User.
+///
+/// It gives access to user's forest and containers.
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub struct CargoUser {
@@ -74,6 +94,7 @@ impl CargoUser {
         }
     }
 
+    /// Returns string representation of a [`CargoUser`]
     pub fn stringify(&self) -> String {
         let CargoUser {
             this_device,
@@ -94,50 +115,46 @@ All devices:
         )
     }
 
+    /// TODO
     pub fn mount_forest(&self) -> SingleErrVariantResult<(), ForestMountError> {
         todo!()
     }
 
-    pub fn get_containers(
-        &self,
-    ) -> SingleErrVariantResult<Vec<Arc<Mutex<Container>>>, CatlibError> {
-        self.forest
-            .containers()
-            .map_err(SingleVariantError::Failure)
-            .map(|inner| {
-                inner
-                    .into_iter()
-                    .map(|c| {
-                        let container = Container::from(c);
-                        let uuid = container.uuid();
-                        if let Some(cached_container) = self.user_context.get_loaded_container(uuid)
-                        {
-                            // update container in user's context with the content fetched from CatLib
-                            let mut locked_cached_container = cached_container
-                                .lock()
-                                .expect("Could not lock loaded container in user context");
-                            *locked_cached_container = container;
-                            cached_container.clone()
-                        } else {
-                            // create container in context if it was not already there
-                            let shared = Arc::new(Mutex::new(container));
-                            self.user_context.add_container(uuid, shared.clone());
-                            shared
-                        }
-                    })
-                    .collect::<Vec<SharedContainer>>()
-            })
+    /// Returns vector of handles to all containers (mounted or not) found in the user's forest.
+    pub fn get_containers(&self) -> Result<Vec<Arc<Mutex<Container>>>, CatlibError> {
+        self.forest.containers().map(|inner| {
+            inner
+                .into_iter()
+                .map(|c| {
+                    let container = Container::from(c);
+                    let uuid = container.uuid();
+                    if let Some(cached_container) = self.user_context.get_loaded_container(uuid) {
+                        // update container in user's context with the content fetched from CatLib
+                        let mut locked_cached_container = cached_container
+                            .lock()
+                            .expect("Could not lock loaded container in user context");
+                        *locked_cached_container = container;
+                        cached_container.clone()
+                    } else {
+                        // create container in context if it was not already there
+                        let shared = Arc::new(Mutex::new(container));
+                        self.user_context.add_container(uuid, shared.clone());
+                        shared
+                    }
+                })
+                .collect::<Vec<SharedContainer>>()
+        })
     }
 
+    /// Creates a new container within user's forest and return its handle
     pub fn create_container(
         &self,
         name: String,
         template: &StorageTemplate,
-    ) -> SingleErrVariantResult<SharedContainer, CatlibError> {
+    ) -> Result<SharedContainer, CatlibError> {
         let container: Container = self
             .catlib_service
             .create_container(name, &self.forest, template)
-            .map_err(SingleVariantError::Failure)
             .map(|c| c.into())?;
         let container_uuid = container.uuid();
         let shared_container = Arc::new(Mutex::new(container));
@@ -150,15 +167,11 @@ All devices:
     /// because in future it may require some additional changes in user's context
     /// (which `Container` structure has no access to).
     ///
-    pub fn delete_container(
-        &self,
-        container: &SharedContainer,
-    ) -> SingleErrVariantResult<(), CatlibError> {
+    pub fn delete_container(&self, container: &SharedContainer) -> Result<(), CatlibError> {
         container
             .lock()
             .expect("Could not lock shared container while deleting")
             .delete(&self.catlib_service)
-            .map_err(SingleVariantError::Failure)
     }
 
     pub fn this_device(&self) -> &str {
