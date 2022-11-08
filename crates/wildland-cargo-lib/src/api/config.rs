@@ -27,7 +27,6 @@
 //!     "log_file_enabled": true,
 //!     "log_file_path": "cargo_lib_log",
 //!     "log_file_rotate_directory": ".",
-//!     "evs_runtime_mode": "DEBUG",
 //!     "evs_url": "some_url",
 //!     "sc_url": "some_url"
 //! }"#;
@@ -331,7 +330,6 @@ mod tests {
             "log_file_enabled": true,
             "log_file_path": "cargo_lib_log",
             "log_file_rotate_directory": ".",
-            "evs_runtime_mode": "DEBUG",
             "evs_url": "some_url",
             "sc_url": "some_url"
         }"#;
@@ -364,8 +362,7 @@ mod tests {
         let config_str = r#"{
             "log_level": "trace",
             "log_use_ansi": true,
-            "log_file_enabled": false,
-            "evs_runtime_mode": "DEBUG"
+            "log_file_enabled": false
         }"#;
 
         let config: CargoConfig = serde_json::from_str(config_str).unwrap();
@@ -374,7 +371,7 @@ mod tests {
             config,
             CargoConfig {
                 fsa_config: FoundationStorageApiConfig {
-                    evs_url: "http://localhost:5000/".to_owned(),
+                    evs_url: "https://evs.cargo.wildland.dev/".to_owned(),
                     sc_url: "http://localhost:5555/".to_owned(),
                 },
                 logger_config: LoggerConfig {
