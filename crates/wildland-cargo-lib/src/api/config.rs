@@ -75,8 +75,8 @@ pub trait CargoCfgProvider {
 #[error("Config parse error: {0}")]
 pub struct ParseConfigError(pub String);
 
-const DEFAULT_EVS_URL: &str = "http://localhost:5000/";
-const DEFAULT_SC_URL: &str = "http://localhost:5555/";
+const DEFAULT_EVS_URL: &str = "https://evs.cargo.wildland.dev/";
+const DEFAULT_SC_URL: &str = "https://storage-controller.cargo.wildland.dev/";
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(new = "true"))]
@@ -372,7 +372,7 @@ mod tests {
             CargoConfig {
                 fsa_config: FoundationStorageApiConfig {
                     evs_url: "https://evs.cargo.wildland.dev/".to_owned(),
-                    sc_url: "http://localhost:5555/".to_owned(),
+                    sc_url: "https://storage-controller.cargo.wildland.dev/".to_owned(),
                 },
                 logger_config: LoggerConfig {
                     use_logger: true,
