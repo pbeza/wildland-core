@@ -8,7 +8,7 @@ license     = "GPL-3.0-only"
 name        = "wildland-crypto"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.9.2"
+version     = "0.30.0"
 
 [lib]
 crate-type = ["rlib"]
@@ -46,6 +46,3 @@ hex         = { version = "0.4.3" }
 hex-literal = { version = "0.3.4" }
 serde       = { version = "1", features = ["derive"] }
 serde_json  = { version = "1.0.79" }
-
-[package.metadata.workspaces]
-independent = true

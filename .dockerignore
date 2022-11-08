@@ -3,7 +3,6 @@ target
 ci
 .gitignore
 .gitlab-ci.yml
-bump.sh
 COPYING
 README.md
 release.toml
