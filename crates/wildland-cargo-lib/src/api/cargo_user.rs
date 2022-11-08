@@ -182,6 +182,8 @@ All devices:
         self.all_devices.as_slice()
     }
 
+    /// Returns vector of user's storage templates
+    ///
     pub fn get_storage_templates(&self) -> Result<Vec<StorageTemplate>, GetStorageTemplateError> {
         self.lss_service
             .get_storage_templates_data()?
