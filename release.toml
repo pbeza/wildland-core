@@ -1,4 +1,8 @@
-allow-branch               = ['*']
+allow-branch               = ['master']
 consolidate-commits        = true
-pre-release-commit-message = "Cargo crates version bump"
+pre-release-commit-message = "Workspace crates release version {{prev_version}} set to {{version}}"
+shared-version             = true
 tag                        = true
+tag-message	               = "Workspace crates release version {{prev_version}} set to {{version}}"
+tag-name                   = "v{{version}}"
+verify                     = false

@@ -17,19 +17,19 @@
 
 use std::convert::TryFrom;
 
-use bip39::{Language::English, Mnemonic, Seed};
+use bip39::{Mnemonic, Seed};
 use crypto_box::SecretKey as EncryptionSecretKey;
 use ed25519_dalek_bip32::{DerivationPath, ExtendedSecretKey};
 use sha2::{Digest, Sha256};
 
+use super::encrypting_keypair::EncryptingKeypair;
 use crate::error::KeyDeriveError;
 use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
+use crate::utils;
 use crate::{
     error::CryptoError,
     identity::{seed::extend_seed, signing_keypair::SigningKeypair},
 };
-
-use super::encrypting_keypair::EncryptingKeypair;
 
 #[tracing::instrument(level = "debug", ret)]
 fn signing_key_path(forest_index: u64) -> String {
@@ -75,10 +75,7 @@ impl TryFrom<&MnemonicPhrase> for Identity {
     /// Only English language is accepted.
     #[tracing::instrument(level = "debug")]
     fn try_from(mnemonic_phrase: &MnemonicPhrase) -> Result<Self, Self::Error> {
-        let mnemonic = Mnemonic::from_phrase(&mnemonic_phrase.join(" "), English)
-            .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?;
-
-        Self::from_mnemonic(mnemonic)
+        Self::from_mnemonic(utils::new_mnemonic_from_phrase(&mnemonic_phrase.join(" "))?)
     }
 }
 
@@ -97,9 +94,7 @@ impl TryFrom<&[u8]> for Identity {
         let mut hasher = Sha256::new();
         hasher.update(entropy);
         let hashed_entropy = hasher.finalize();
-        let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16], English)
-            .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?;
-        Self::from_mnemonic(mnemonic)
+        Self::from_mnemonic(utils::new_mnemonic_from_entropy(&hashed_entropy[0..16])?)
     }
 }
 
@@ -250,7 +245,7 @@ mod tests {
     const MSG: &[u8] = b"Hello World";
 
     fn user() -> Identity {
-        let mnemonic = Mnemonic::from_phrase(MNEMONIC_PHRASE, English).unwrap();
+        let mnemonic = utils::new_mnemonic_from_phrase(MNEMONIC_PHRASE).unwrap();
         Identity::from_mnemonic(mnemonic).unwrap()
     }
 
@@ -396,6 +391,8 @@ mod tests {
     }
 
     #[test]
+    // this is still valid test, we are supporting only english, but do not
+    // expose the language to the user
     fn should_fail_on_not_english_mnemonic() {
         let mnemonic_array: MnemonicPhrase = TEST_MNEMONIC_ITALIAN
             .split(' ')

@@ -19,12 +19,32 @@ use crate::{
     errors::{retrieval_error::*, single_variant::*, user::*},
     user::{generate_random_mnemonic, CreateUserInput, UserService},
 };
-use wildland_corex::{CryptoError, MnemonicPhrase};
+use wildland_corex::{utils, CryptoError, MnemonicPhrase};
 
 use super::cargo_user::CargoUser;
 
 #[derive(Clone)]
 pub struct MnemonicPayload(MnemonicPhrase);
+
+/// Wrapper to check the mnemonic.
+/// Accepts string. Returns Ok if the mnemonic is valid, Err otherwise
+/// throws [`CryptoError`] if the mnemonic is invalid
+pub fn check_phrase_mnemonic(phrase: String) -> SingleErrVariantResult<(), CryptoError> {
+    match utils::new_mnemonic_from_phrase(phrase.as_str()) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(SingleVariantError::Failure(e)),
+    }
+}
+
+/// Wrapper to check the mnemonic.
+/// Accepts raw bytes. Returns Ok if the mnemonic is valid, Err otherwise
+/// throws [`CryptoError`] if the mnemonic is invalid
+pub fn check_entropy_mnemonic(bytes: Vec<u8>) -> SingleErrVariantResult<(), CryptoError> {
+    match utils::new_mnemonic_from_entropy(bytes.as_slice()) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(SingleVariantError::Failure(e)),
+    }
+}
 
 impl MnemonicPayload {
     #[tracing::instrument(level = "debug", skip(self))]
