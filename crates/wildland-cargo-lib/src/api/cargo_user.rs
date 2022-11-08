@@ -195,3 +195,114 @@ All devices:
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{cell::RefCell, collections::HashMap, str::FromStr};
+
+    use uuid::Uuid;
+    use wildland_corex::{
+        CatLibService, DeviceMetadata, LocalSecureStorage, LssResult, LssService, SigningKeypair,
+        UserMetaData, WildlandIdentity,
+    };
+
+    use crate::api::{
+        foundation_storage::FoundationStorageTemplate, storage_template::StorageTemplate,
+    };
+
+    use super::CargoUser;
+
+    #[derive(Default)]
+    struct LssStub {
+        storage: RefCell<HashMap<String, Vec<u8>>>,
+    }
+
+    impl LocalSecureStorage for LssStub {
+        fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>> {
+            Ok(self.storage.borrow_mut().insert(key, value))
+        }
+
+        fn get(&self, key: String) -> LssResult<Option<Vec<u8>>> {
+            Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
+        }
+
+        fn contains_key(&self, key: String) -> LssResult<bool> {
+            Ok(self.storage.borrow().contains_key(&key))
+        }
+
+        fn keys(&self) -> LssResult<Vec<String>> {
+            Ok(self.storage.borrow().keys().cloned().collect())
+        }
+
+        fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
+            Ok(self
+                .storage
+                .borrow()
+                .keys()
+                .filter(|key| key.starts_with(&prefix))
+                .cloned()
+                .collect())
+        }
+
+        fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>> {
+            Ok(self.storage.borrow_mut().remove(&key))
+        }
+
+        fn len(&self) -> LssResult<usize> {
+            Ok(self.storage.borrow().len())
+        }
+
+        fn is_empty(&self) -> LssResult<bool> {
+            Ok(self.storage.borrow().is_empty())
+        }
+    }
+
+    #[test]
+    fn test_creating_container() {
+        let lss = LssStub::default(); // LSS must live through the whole test
+        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
+        let lss_service = LssService::new(lss_ref);
+
+        let catlib_service = CatLibService::new();
+
+        let this_dev_name = "My device".to_string();
+
+        let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
+        let forest_identity = WildlandIdentity::Forest(5, SigningKeypair::from(&forest_keypair));
+        let device_keypair = SigningKeypair::try_from_bytes_slices([3; 32], [4; 32]).unwrap();
+        let device_identity =
+            WildlandIdentity::Device(this_dev_name.clone(), SigningKeypair::from(&device_keypair));
+        let forest = catlib_service
+            .add_forest(
+                &forest_identity,
+                &device_identity,
+                UserMetaData {
+                    devices: vec![DeviceMetadata {
+                        name: this_dev_name.clone(),
+                        pubkey: device_keypair.public(),
+                    }],
+                },
+            )
+            .unwrap();
+
+        let cargo_user = CargoUser::new(
+            this_dev_name.clone(),
+            vec![this_dev_name],
+            forest,
+            catlib_service,
+            lss_service,
+        );
+
+        let container_uuid_str = "00000000-0000-0000-0000-000000000001";
+        let storage_template =
+            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
+                uuid: Uuid::from_str(&container_uuid_str).unwrap(),
+                credential_id: "cred_id".to_owned(),
+                credential_secret: "cred_secret".to_owned(),
+                sc_url: "some url".to_owned(),
+            });
+        cargo_user.create_container("new container".to_string(), &storage_template);
+
+        // TODO asserts
+    }
+}
