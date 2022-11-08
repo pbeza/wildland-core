@@ -32,6 +32,7 @@ pub use wildland_crypto::{
         encrypting_keypair::EncryptingKeypair, generate_random_mnemonic, Identity, MnemonicPhrase,
         SigningKeypair,
     },
+    utils,
 };
 
 pub type CorexResult<T> = Result<T, CoreXError>;
