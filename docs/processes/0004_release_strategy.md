@@ -5,12 +5,14 @@ Core project.
 
 ## Branching
 
-Branching strategy used in the Wildland Core project is the **gitflow** strategy
-as per **RFC 0002**. The aforentioned strategy defined three sets of branches:
+The branching strategy used in the Wildland Core project is the **gitflow**
+strategy as per **RFC 0002**. The aforementioned strategy defined four sets of
+branches:
 
 - development and feature branches
-- release/stabilisation branches
+- release/stabilization branches
 - stable and production branches
+- hotfix branches
 
 ### Ownership
 
@@ -23,7 +25,7 @@ maintainers. Maintainers (or, release masters) should agree amongst each other
 who is responsible to deliver a particular release.
 
 Stable and production branches have no owners as they are managed by the
-automated CD workflows. Whoever designes or implements such workflow may be
+automated CD workflows. Whoever designs or implements such workflow may be
 considered an owner of those branches.
 
 ### Release branches names
@@ -34,7 +36,7 @@ Every release branch must have the following format:
 release/v0.0.0
 ```
 
-where `0.0.0` is `MAJOR.MINOR.PATCH` semanting versioning format.
+where `0.0.0` is `MAJOR.MINOR.PATCH` semantic versioning format.
 
 ### Protected branches
 
@@ -51,9 +53,9 @@ Currently we only use **release tags** that have the following format
 v0.0.0
 ```
 
-where `0.0.0` is `MAJOR.MINOR.PATCH` semanting versioning format.
+where `0.0.0` is `MAJOR.MINOR.PATCH` semantic versioning format.
 
-Those tags are created during CD flow, right after cargo crates are published to
+Those tags are created during CD flow, right after cargo crates are published in
 the registry. The tool that creates those tags is called [cargo-release]
 (https://github.com/crate-ci/cargo-release/) and is executed as one of the CI
 jobs that are run on `master` branch.
@@ -66,8 +68,9 @@ repository.
 ## Crates versions bumping
 
 There must be no manual crates version bumping with the Wildland Core workspace.
-Crates versions from now on are bumped only by project maintainers in release
-branches as well as by CD workflow on master branch upon crates publishing.
+Crates versions from now on are bumped only by the project maintainers in a
+release branches as well as by CD workflow on master branch upon crates
+publishing.
 
 ## Release flow
 
@@ -77,7 +80,7 @@ non-standard parts.
 ### Setup
 
 Once release is planned, and the scope is defined by project management, a
-maintainer will create a release brach, branching of develop. Afterwards the
+maintainer will create a release branch, branching of `develop`. Afterwards the
 maintainer must bump the crates version to the pre-release format, namely
 
 ```
@@ -90,14 +93,14 @@ manual actions.
 ### Release cycle
 
 Once the branch is created, the project enters release mode. During that time
-there should be no features merged into develop whilst bugfixes, document
+there should be no features merged into develop whilst bugfixes, documentation
 updates etc. should go straight to the active release branch.
 
-Now is the time for QA team to test the release as well as the maintainer should
-gather release notes, update changelog, etc. Once the release is ready the
-maintainer merges release branch into master, triggerring the CD workflow.
-Lastly the develop branch is rebased on master and the regular development flow
-continues.
+Now is the time for the QA team to test the release as well as the maintainer
+should gather release notes, update changelog, etc. Once the release is ready
+the maintainer merges release branch into master, triggering the CD workflow.
+Lastly the `develop` branch is rebased on `master` and the regular development
+flow continues.
 
-Note that the release branch lifespan may be very short, ie. it may as well be
+Note that the release branch lifespan may be very short, i.e. it may as well be
 created and merged into master during a single day)
