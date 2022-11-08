@@ -256,6 +256,8 @@ mod ffi_binding {
         // UserApi
         //
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
+        fn check_phrase_mnemonic(phrase: String) -> Result<VoidType, MnemonicCreationExc>;
+        fn check_entropy_mnemonic(bytes: Vec<u8>) -> Result<VoidType, MnemonicCreationExc>;
         fn create_mnemonic_from_vec(
             self: &UserApi,
             words: Vec<String>,
