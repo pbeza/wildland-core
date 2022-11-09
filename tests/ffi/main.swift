@@ -77,6 +77,19 @@ class LocalSecureStorageImpl : LocalSecureStorage {
         return newOkLssVecOfStrings(keys)
     }
 
+    /// Returns all keys in arbitrary order.
+    public override func keysStartingWith(_ prefix: RustString) -> LssVecOfStringsResult
+    {
+        let keys = RustVec<RustString>(RustString.createNewRustVec())
+        let std_prefix = prefix.toString()
+        for (key, _) in store {
+            if (key.starts(with: std_prefix)) {
+                keys.push(RustString(key))
+            }
+        }
+        return newOkLssVecOfStrings(keys)
+    }
+
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
     public override func remove(_ key: RustString) -> LssOptionalBytesResult
     {
