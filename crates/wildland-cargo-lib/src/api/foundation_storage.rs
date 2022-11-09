@@ -42,7 +42,7 @@ pub struct StorageCredentials {
 impl StorageCredentials {
     fn into_storage_template(self, sc_url: String) -> FoundationStorageTemplate {
         FoundationStorageTemplate {
-            id: self.id,
+            uuid: self.id,
             credential_id: self.credential_id,
             credential_secret: self.credential_secret,
             sc_url,
@@ -52,7 +52,7 @@ impl StorageCredentials {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FoundationStorageTemplate {
-    pub id: Uuid,
+    pub uuid: Uuid,
     pub credential_id: String,
     pub credential_secret: String,
     pub sc_url: String,
@@ -60,17 +60,13 @@ pub struct FoundationStorageTemplate {
 
 impl StorageTemplateTrait for FoundationStorageTemplate {
     fn uuid(&self) -> Uuid {
-        self.id
-    }
-
-    fn data(&self) -> Vec<u8> {
-        serde_json::to_vec(self).unwrap()
+        self.uuid
     }
 }
 
 impl From<FoundationStorageTemplate> for StorageTemplate {
     fn from(fst: FoundationStorageTemplate) -> Self {
-        Self::new(wildland_corex::storage::StorageTemplate::new(Rc::new(fst)))
+        Self::FoundationStorageTemplate(fst)
     }
 }
 
@@ -166,11 +162,10 @@ impl FoundationStorageApi {
                         serde_json::from_slice(&decrypted)
                             .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
 
-                    let storage_template: StorageTemplate = storage_credentials
-                        .into_storage_template(self.sc_url.clone())
-                        .into();
-                    self.lss_service
-                        .save_storage_template(storage_template.inner())?;
+                    let storage_template = StorageTemplate::FoundationStorageTemplate(
+                        storage_credentials.into_storage_template(self.sc_url.clone()),
+                    );
+                    self.lss_service.save_storage_template(&storage_template)?;
 
                     Ok(storage_template)
                 }
