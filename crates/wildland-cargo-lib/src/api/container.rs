@@ -82,6 +82,10 @@ impl Container {
         todo!()
     }
 
+    pub fn is_deleted(&self) -> bool {
+        self.is_deleted
+    }
+
     /// Returns string representation of a container
     pub fn stringify(&self) -> String {
         let deleted_info = if self.is_deleted { "DELETED: " } else { "" };
