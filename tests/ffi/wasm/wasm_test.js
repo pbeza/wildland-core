@@ -39,6 +39,10 @@ wildland().then((wlib) => {
             console.log("LSS keys");
             console.log("unimplemented!");
         },
+        keys_starting_with: function (prefix) {
+            console.log("LSS keys");
+            console.log("unimplemented!");
+        },
         remove: function (key) {
             console.log("LSS remove");
             console.log("unimplemented!");

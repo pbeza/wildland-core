@@ -82,12 +82,18 @@ impl Container {
         todo!()
     }
 
+    pub fn is_deleted(&self) -> bool {
+        self.is_deleted
+    }
+
+    /// Returns string representation of a container
     pub fn stringify(&self) -> String {
         let deleted_info = if self.is_deleted { "DELETED: " } else { "" };
         let name = self.inner.name();
         format!("{deleted_info}Container (name: {name})")
     }
 
+    /// TODO
     pub fn duplicate(&self) -> Result<SharedContainer, CatlibError> {
         todo!()
     }
@@ -134,11 +140,9 @@ mod tests {
         container::tests::utils::compare_unordered, foundation_storage::FoundationStorageTemplate,
     };
     use rstest::*;
-    use std::rc::Rc;
     use uuid::Uuid;
     use wildland_corex::{
-        storage::StorageTemplate, CatLibService, DeviceMetadata, SigningKeypair, UserMetaData,
-        WildlandIdentity,
+        CatLibService, DeviceMetadata, SigningKeypair, UserMetaData, WildlandIdentity,
     };
 
     use super::Container;
@@ -170,12 +174,12 @@ mod tests {
             )
             .unwrap();
 
-        let fst = StorageTemplate::new(Rc::new(FoundationStorageTemplate {
-            id: Uuid::new_v4(),
+        let fst = FoundationStorageTemplate {
+            uuid: Uuid::new_v4(),
             credential_id: "".to_owned(),
             credential_secret: "".to_owned(),
             sc_url: "".to_owned(),
-        }));
+        };
 
         Container {
             inner: catlib_service

@@ -16,6 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use thiserror::Error;
+use wildland_corex::LssError;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum GetStoragesError {}
@@ -25,3 +26,11 @@ pub enum DeleteStorageError {}
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum AddStorageError {}
+
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
+pub enum GetStorageTemplateError {
+    #[error(transparent)]
+    LssError(#[from] LssError),
+    #[error("Error while deserializing data retrieved from LSS: {0}")]
+    DeserializationError(String),
+}
