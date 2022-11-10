@@ -30,12 +30,8 @@ namespace Main
             return new_none_string();
         }
 
-        public override RustString get_evs_url() {
-            return new RustString("http://localhost:5000/");
-        }
-
-        public override RustString get_sc_url() {
-            return new RustString("http://localhost:5000/");
+        public override FoundationCloudMode get_foundation_cloud_env_mode() {
+            return FoundationCloudMode.Dev;
         }
     }
 
