@@ -1,5 +1,5 @@
 # crypto library is a subject of additional review:
-crates/wildland-crypto/ @lukas.kujawski @peregud
+crates/wildland-crypto/src @lukas.kujawski @peregud
 
 # CI/CD
 .gitlab-ci.yml @ringo.wildland
