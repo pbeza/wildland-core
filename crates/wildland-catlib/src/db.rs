@@ -48,7 +48,7 @@ pub(crate) fn fetch_container_by_uuid(
     let container: Vec<_> = data
         .iter()
         .filter(|(id, _)| id.starts_with(format!("container-{uuid}").as_str()))
-        .map(|(_, forest_str)| forest_str.parse::<Container>().unwrap())
+        .map(|(_, container_str)| container_str.parse::<Container>().unwrap())
         .collect();
 
     match container.len() {
