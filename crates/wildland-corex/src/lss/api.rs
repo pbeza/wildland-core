@@ -32,6 +32,9 @@ pub trait LocalSecureStorage {
     /// Returns all keys in arbitrary order.
     fn keys(&self) -> LssResult<Vec<String>>;
 
+    /// Returns all keys starting with the given prefix.
+    fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>>;
+
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
     fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>>;
 
