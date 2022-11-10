@@ -162,6 +162,9 @@ mod ffi_binding {
     enum AddStorageExc {
         Failure(_),
     }
+    enum FoundationCloudMode {
+        Dev,
+    }
 
     extern "Traits" {
 
@@ -175,6 +178,8 @@ mod ffi_binding {
         fn get_log_file_rotate_directory(self: &dyn CargoCfgProvider) -> OptionalString;
         fn get_oslog_category(self: &dyn CargoCfgProvider) -> OptionalString;
         fn get_oslog_subsystem(self: &dyn CargoCfgProvider) -> OptionalString;
+
+        fn get_foundation_cloud_env_mode(self: &dyn CargoCfgProvider) -> FoundationCloudMode;
 
         // # traits required for lss:
         //

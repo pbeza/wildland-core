@@ -48,6 +48,25 @@ use tracing::{instrument, Level};
 
 use crate::errors::single_variant::*;
 
+const DEV_DEFAULT_EVS_URL: &str = "https://evs.cargo.wildland.dev/";
+const DEV_DEFAULT_SC_URL: &str = "https://storage-controller.cargo.wildland.dev/";
+
+#[repr(C)]
+pub enum FoundationCloudMode {
+    Dev,
+}
+
+impl From<FoundationCloudMode> for FoundationStorageApiConfig {
+    fn from(mode: FoundationCloudMode) -> Self {
+        match mode {
+            FoundationCloudMode::Dev => FoundationStorageApiConfig {
+                evs_url: DEV_DEFAULT_EVS_URL.to_string(),
+                sc_url: DEV_DEFAULT_SC_URL.to_string(),
+            },
+        }
+    }
+}
+
 pub trait CargoCfgProvider {
     fn get_use_logger(&self) -> bool;
     /// Must return one of (case-insensitive):
@@ -69,32 +88,35 @@ pub trait CargoCfgProvider {
     fn get_log_file_rotate_directory(&self) -> Option<String>;
     fn get_oslog_category(&self) -> Option<String>;
     fn get_oslog_subsystem(&self) -> Option<String>;
+
+    fn get_foundation_cloud_env_mode(&self) -> FoundationCloudMode;
 }
 
 #[derive(PartialEq, Eq, Error, Debug, Clone)]
 #[error("Config parse error: {0}")]
 pub struct ParseConfigError(pub String);
 
-const DEFAULT_EVS_URL: &str = "https://evs.cargo.wildland.dev/";
-const DEFAULT_SC_URL: &str = "https://storage-controller.cargo.wildland.dev/";
-
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(new = "true"))]
 pub struct FoundationStorageApiConfig {
     #[serde(default = "default_evs_url")]
-    #[derivative(Default(value = "DEFAULT_EVS_URL.to_string()"))]
+    #[derivative(Default(value = "default_evs_url()"))]
     pub evs_url: String,
     #[serde(default = "default_sc_url")]
-    #[derivative(Default(value = "DEFAULT_SC_URL.to_string()"))]
+    #[derivative(Default(value = "default_sc_url()"))]
     pub sc_url: String,
 }
 
 fn default_evs_url() -> String {
-    DEFAULT_EVS_URL.to_owned()
+    // TODO for now default is DEV
+    // in the future we might distinguish debug and release builds in order to choose environment
+    DEV_DEFAULT_EVS_URL.to_owned()
 }
 
 fn default_sc_url() -> String {
-    DEFAULT_SC_URL.to_owned()
+    // TODO for now default is DEV
+    // in the future we might distinguish debug and release builds in order to choose environment
+    DEV_DEFAULT_SC_URL.to_owned()
 }
 
 fn bool_default_as_true() -> bool {
@@ -301,7 +323,7 @@ pub fn collect_config(
             oslog_category: config_provider.get_oslog_category(),
             oslog_subsystem: config_provider.get_oslog_subsystem(),
         },
-        fsa_config: FoundationStorageApiConfig::default(),
+        fsa_config: config_provider.get_foundation_cloud_env_mode().into(),
     })
 }
 

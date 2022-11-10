@@ -26,6 +26,10 @@ class CargoCfgProviderImpl: CargoCfgProvider {
     public override func getOslogSubsystem() -> OptionalString {
         return newNoneString()
     }
+
+    public override func getFoundationCloudEnvMode() -> FoundationCloudMode {
+        return FoundationCloudMode_Dev
+    }
 }
 
 class LocalSecureStorageImpl : LocalSecureStorage {

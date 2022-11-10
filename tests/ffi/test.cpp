@@ -37,17 +37,10 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     {
         return new_none_string();
     }
-    OptionalString get_log_file_rotate_directory() override
+
+    FoundationCloudMode get_foundation_cloud_env_mode() override
     {
-        return new_none_string();
-    }
-    OptionalString get_oslog_category() override
-    {
-        return new_none_string();
-    }
-    OptionalString get_oslog_subsystem() override
-    {
-        return new_none_string();
+        return FoundationCloudMode::Dev;
     }
 };
 
