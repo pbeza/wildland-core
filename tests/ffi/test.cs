@@ -31,7 +31,7 @@ namespace Main
         }
 
         public override FoundationCloudMode get_foundation_cloud_env_mode() {
-            return FoundationCloudMode.Dev
+            return FoundationCloudMode.Dev;
         }
     }
 
