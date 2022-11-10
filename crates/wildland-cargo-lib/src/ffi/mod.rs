@@ -163,17 +163,15 @@ mod ffi_binding {
     enum AddStorageExc {
         Failure(_),
     }
+    enum FoundationCloudMode {
+        Dev,
+    }
     enum GetStorageTemplateExc {
         LssError(_),
         DeserializationError(_),
     }
 
     extern "Traits" {
-
-        // # traits required for main configuration
-        //
-        fn get_evs_url(self: &dyn CargoCfgProvider) -> String;
-        fn get_sc_url(self: &dyn CargoCfgProvider) -> String;
 
         // # traits required for logging configuration
         //
@@ -185,6 +183,8 @@ mod ffi_binding {
         fn get_log_file_rotate_directory(self: &dyn CargoCfgProvider) -> OptionalString;
         fn get_oslog_category(self: &dyn CargoCfgProvider) -> OptionalString;
         fn get_oslog_subsystem(self: &dyn CargoCfgProvider) -> OptionalString;
+
+        fn get_foundation_cloud_env_mode(self: &dyn CargoCfgProvider) -> FoundationCloudMode;
 
         // # traits required for lss:
         //
@@ -231,11 +231,12 @@ mod ffi_binding {
         //
         // CargoConfig
         //
-        type CargoConfig;
         fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ConfigParseExc>;
         fn collect_config(
             config_provider: &'static dyn CargoCfgProvider,
         ) -> Result<CargoConfig, ConfigParseExc>;
+        fn override_evs_url(self: &CargoConfig, new_evs_url: String);
+        fn override_sc_url(self: &CargoConfig, new_sc_url: String);
 
         //
         // CargoLib

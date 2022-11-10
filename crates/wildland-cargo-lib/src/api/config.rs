@@ -27,7 +27,6 @@
 //!     "log_file_enabled": true,
 //!     "log_file_path": "cargo_lib_log",
 //!     "log_file_rotate_directory": ".",
-//!     "evs_runtime_mode": "DEBUG",
 //!     "evs_url": "some_url",
 //!     "sc_url": "some_url"
 //! }"#;
@@ -39,6 +38,7 @@
 
 use std::{path::PathBuf, str::FromStr};
 
+use derivative::Derivative;
 use serde::{
     de::{Error, Unexpected},
     Deserialize, Deserializer,
@@ -47,6 +47,25 @@ use thiserror::Error;
 use tracing::{instrument, Level};
 
 use crate::errors::single_variant::*;
+
+const DEV_DEFAULT_EVS_URL: &str = "https://evs.cargo.wildland.dev/";
+const DEV_DEFAULT_SC_URL: &str = "https://storage-controller.cargo.wildland.dev/";
+
+#[repr(C)]
+pub enum FoundationCloudMode {
+    Dev,
+}
+
+impl From<FoundationCloudMode> for FoundationStorageApiConfig {
+    fn from(mode: FoundationCloudMode) -> Self {
+        match mode {
+            FoundationCloudMode::Dev => FoundationStorageApiConfig {
+                evs_url: DEV_DEFAULT_EVS_URL.to_string(),
+                sc_url: DEV_DEFAULT_SC_URL.to_string(),
+            },
+        }
+    }
+}
 
 pub trait CargoCfgProvider {
     fn get_use_logger(&self) -> bool;
@@ -70,18 +89,34 @@ pub trait CargoCfgProvider {
     fn get_oslog_category(&self) -> Option<String>;
     fn get_oslog_subsystem(&self) -> Option<String>;
 
-    fn get_evs_url(&self) -> String;
-    fn get_sc_url(&self) -> String;
+    fn get_foundation_cloud_env_mode(&self) -> FoundationCloudMode;
 }
 
 #[derive(PartialEq, Eq, Error, Debug, Clone)]
 #[error("Config parse error: {0}")]
 pub struct ParseConfigError(pub String);
 
-#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
+#[derivative(Default(new = "true"))]
 pub struct FoundationStorageApiConfig {
+    #[serde(default = "default_evs_url")]
+    #[derivative(Default(value = "default_evs_url()"))]
     pub evs_url: String,
+    #[serde(default = "default_sc_url")]
+    #[derivative(Default(value = "default_sc_url()"))]
     pub sc_url: String,
+}
+
+fn default_evs_url() -> String {
+    // TODO for now default is DEV
+    // in the future we might distinguish debug and release builds in order to choose environment
+    DEV_DEFAULT_EVS_URL.to_owned()
+}
+
+fn default_sc_url() -> String {
+    // TODO for now default is DEV
+    // in the future we might distinguish debug and release builds in order to choose environment
+    DEV_DEFAULT_SC_URL.to_owned()
 }
 
 fn bool_default_as_true() -> bool {
@@ -119,7 +154,7 @@ fn serde_logger_default_rot_dir() -> PathBuf {
 /// let parsed_cfg = parse_config(config_json.as_bytes().to_vec()).unwrap();
 ///
 ///
-#[derive(Debug, Deserialize, Clone, PartialEq, Eq, derivative::Derivative)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(new = "true"))]
 pub struct LoggerConfig {
     /// switch to disable the logger facility.
@@ -250,6 +285,16 @@ pub struct CargoConfig {
     pub logger_config: LoggerConfig,
 }
 
+impl CargoConfig {
+    pub fn override_evs_url(&mut self, new_evs_url: String) {
+        self.fsa_config.evs_url = new_evs_url;
+    }
+
+    pub fn override_sc_url(&mut self, new_sc_url: String) {
+        self.fsa_config.sc_url = new_sc_url;
+    }
+}
+
 /// Uses an implementation of [`CargoCfgProvider`] to collect a configuration storing structure ([`CargoConfig`])
 /// which then can be passed to [`super::cargo_lib::create_cargo_lib`] in order to instantiate main API object ([`super::CargoLib`])
 ///
@@ -278,10 +323,7 @@ pub fn collect_config(
             oslog_category: config_provider.get_oslog_category(),
             oslog_subsystem: config_provider.get_oslog_subsystem(),
         },
-        fsa_config: FoundationStorageApiConfig {
-            evs_url: config_provider.get_evs_url(),
-            sc_url: config_provider.get_sc_url(),
-        },
+        fsa_config: config_provider.get_foundation_cloud_env_mode().into(),
     })
 }
 
@@ -310,7 +352,6 @@ mod tests {
             "log_file_enabled": true,
             "log_file_path": "cargo_lib_log",
             "log_file_rotate_directory": ".",
-            "evs_runtime_mode": "DEBUG",
             "evs_url": "some_url",
             "sc_url": "some_url"
         }"#;
@@ -343,10 +384,7 @@ mod tests {
         let config_str = r#"{
             "log_level": "trace",
             "log_use_ansi": true,
-            "log_file_enabled": false,
-            "evs_runtime_mode": "DEBUG",
-            "evs_url": "some_url",
-            "sc_url": "some_url"
+            "log_file_enabled": false
         }"#;
 
         let config: CargoConfig = serde_json::from_str(config_str).unwrap();
@@ -355,8 +393,8 @@ mod tests {
             config,
             CargoConfig {
                 fsa_config: FoundationStorageApiConfig {
-                    evs_url: "some_url".to_owned(),
-                    sc_url: "some_url".to_owned(),
+                    evs_url: "https://evs.cargo.wildland.dev/".to_owned(),
+                    sc_url: "https://storage-controller.cargo.wildland.dev/".to_owned(),
                 },
                 logger_config: LoggerConfig {
                     use_logger: true,

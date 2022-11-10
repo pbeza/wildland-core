@@ -37,13 +37,10 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     {
         return new_none_string();
     }
-    String get_evs_url() override
+
+    FoundationCloudMode get_foundation_cloud_env_mode() override
     {
-        return RustString("http://localhost:5000/");
-    }
-    String get_sc_url() override
-    {
-        return RustString("http://TODO:5555/");
+        return FoundationCloudMode::Dev;
     }
 };
 
@@ -210,6 +207,7 @@ int main()
 {
     CargoCfgProviderImpl cfg_provider{};
     CargoConfig cfg = collect_config(cfg_provider);
+    cfg.override_evs_url(RustString{"new url"});
     LocalSecureStorageImpl lss{};
     SharedMutexCargoLib cargo_lib;
     try
