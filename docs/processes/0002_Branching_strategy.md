@@ -12,13 +12,13 @@ shortened version is available at the end of the document
 
 - Release Branch - A fork originating from the development branch, marking the
   point in time, in which a feature set is frozen, and an official release is
-  made. example `1.3.1-123`
+  made. example `1.3.1`
 - Development Branch - The main, active branch to which all code that is
   currently worked on is merged. Only developer releases (a.k.a. release
   candidates) can be done from this main branch. example: `develop`
 - `Develop` or `develop` - a common name used in this document to refer to
   development branch (see above)
-- MAJOR,MINOR,PATCH - The standard notation for semantic versioning. The
+- MAJOR.MINOR.PATCH - The standard notation for semantic versioning. The
   triplet represents three main categories of versions: major release,
   minor release, and patches. The importance of the version section decreases
   from left to right. Additionally, a bump in a specific category resets
@@ -59,14 +59,14 @@ committed to the released branch, only stabilisation patches and/or bug fixes
 (which also have to be mirrored to development branch if applies)
 
 If Stabilisation branch is deemed stable, it can be merged to master. Squashing
-of the commits is required and release must be kept in proper format. Example
-format is shown below:
+of the commits should not be required due to the fact that merges in the develop
+branch are already tidy and in proper formatting. Example of such format:
 
 ```text
-Release X.Y.Z
+Feature WILX-000
 
 - feat: cat lasers
-- feat: more lasers
+- chore: more lasers
 - fix: lazers do not hurt other cats anymore
 - ...
 ```
@@ -84,22 +84,17 @@ used by non-rust clients - i.e. c++, c#, or switft clients.
 Tags are REQUIRED on this branch.
 
 Versions and tags on `master` branch must be in semver format:
-For example `1.3.1`
+For example `v1.3.1`
 
 #### Development Branch
 
-Tags are OPTIONAL on this branch.
-
-tags on the `develop` branch must be in semver format followed with
-`dev-<timestamp>`. Timestamp format is `<yyyymmdd-hhmm>`
-For example `1.3.2-dev-20220911-0420`
+There are no tags on development branches.
 
 #### Stabilistaion Branches
 
-This branch is not tagged.
+Branch must be created using the following format: `release/v0.0.0`
 
-Branch must be created using only semversion.
-For example `1.3.1`.
+There are no tags on release branches.
 
 This version is going to become next tag on master after merge.
 This branch after merge must be deleted.
@@ -143,7 +138,6 @@ official documentation about the process.
 
 ### Branch Tagging
 
-- The master branch will be tagged by its (MAJOR,MINOR,PATCH) tag for each
+- The master branch will be tagged by its (MAJOR.MINOR.PATCH) tag for each
   release
-- On development branch, each patch may additionally introduce a build tagged
-  with (MAJOR.MINOR.PATCH)
+- No other branches should have their commits tagged
