@@ -47,7 +47,7 @@ esac
 cargo workspaces version \
   --no-git-tag \
   --no-git-push \
-  --allow-branch 'master' \
+  --allow-branch 'release/*' \
   --pre-id 'rc' \
   "pre$1"
 
