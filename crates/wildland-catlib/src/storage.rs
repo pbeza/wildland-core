@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::{rc::Rc, str::FromStr};
 use wildland_corex::entities::{Container, Storage as IStorage, StorageData};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Storage {
     data: StorageData,
 
@@ -130,7 +130,7 @@ mod tests {
 
     fn _container(catlib: &CatLib) -> Box<dyn Container> {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
-        forest.create_container().unwrap()
+        forest.create_container("name".to_owned()).unwrap()
     }
 
     #[fixture]
@@ -157,19 +157,19 @@ mod tests {
 
     #[rstest]
     fn create_empty_storage(container: Box<dyn Container>) {
-        make_storage(&*container);
+        make_storage(container.as_ref());
 
         assert_eq!(container.storages().unwrap().len(), 1);
 
-        make_storage(&*container);
+        make_storage(container.as_ref());
 
         assert_eq!(container.storages().unwrap().len(), 2);
     }
 
     #[rstest]
     fn delete_a_storage(container: Box<dyn Container>) {
-        make_storage(&*container);
-        let mut storage = make_storage(&*container);
+        make_storage(container.as_ref());
+        let mut storage = make_storage(container.as_ref());
 
         storage.delete().unwrap();
 
@@ -179,10 +179,10 @@ mod tests {
     #[rstest]
     fn create_storage_with_template_id(catlib: CatLib) {
         let container = _container(&catlib);
-        make_storage(&*container); // Create storage w/o template id on purpose
-        make_storage_with_template(&*container, Uuid::from_u128(1));
-        make_storage_with_template(&*container, Uuid::from_u128(1));
-        make_storage_with_template(&*container, Uuid::from_u128(2));
+        make_storage(container.as_ref()); // Create storage w/o template id on purpose
+        make_storage_with_template(container.as_ref(), Uuid::from_u128(1));
+        make_storage_with_template(container.as_ref(), Uuid::from_u128(1));
+        make_storage_with_template(container.as_ref(), Uuid::from_u128(2));
 
         let storages = catlib
             .find_storages_with_template(&Uuid::from_u128(1))

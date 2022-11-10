@@ -165,6 +165,7 @@ mod tests {
     };
 
     use crate::catlib_service::entities::{ForestData, Identity};
+    use serde::Serialize;
     use uuid::Uuid;
 
     use wildland_crypto::identity::SigningKeypair;

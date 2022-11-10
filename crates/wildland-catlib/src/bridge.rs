@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::{rc::Rc, str::FromStr};
 use wildland_corex::entities::{Bridge as IBridge, BridgeData, ContainerPath, Forest};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Bridge {
     data: BridgeData,
 

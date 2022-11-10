@@ -26,9 +26,9 @@ use crate::{
 };
 use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
+pub use wildland_corex::catlib_service::error::CatlibError;
 pub use wildland_corex::{
-    CatlibError, CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError,
-    LssResult,
+    CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, LssResult,
 };
 
 type VoidType = ();

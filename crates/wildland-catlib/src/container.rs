@@ -56,6 +56,7 @@ impl Container {
             data: ContainerData {
                 uuid: Uuid::new_v4(),
                 forest_uuid,
+                name,
                 paths: ContainerPaths::new(),
             },
             db,
@@ -89,15 +90,13 @@ impl IContainer for Container {
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container().unwrap();
-    /// container.add_path("/bar/baz2".to_string()).unwrap()
-    ///     .add_path("/baz/qux1".to_string()).unwrap()
-    ///     .add_path("/baz/qux2".to_string()).unwrap();
+    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
+    /// container.add_path("/bar/baz2".to_string()).unwrap();
     /// ```
-    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<&mut dyn IContainer> {
-        self.data.paths.insert(path);
+    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<bool> {
+        let inserted = self.data.paths.insert(path);
         self.save()?;
-        Ok(self)
+        Ok(inserted)
     }
 
     /// ## Errors
@@ -117,15 +116,13 @@ impl IContainer for Container {
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container().unwrap();
-    /// container.add_path("/bar/baz2".to_string()).unwrap()
-    ///     .del_path("/baz/qux1".to_string()).unwrap()
-    ///     .del_path("/baz/qux2".to_string()).unwrap();
+    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
+    /// container.del_path("/baz/qux1".to_string()).unwrap();
     /// ```
-    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<&mut dyn IContainer> {
-        self.data.paths.remove(&path);
+    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<bool> {
+        let removed = self.data.paths.remove(&path);
         self.save()?;
-        Ok(self)
+        Ok(removed)
     }
 
     /// ## Errors
@@ -153,7 +150,7 @@ impl IContainer for Container {
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container().unwrap();
+    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
     /// container.add_path("/foo/bar".to_string());
     /// container.create_storage(Some(Uuid::from_u128(1)), vec![]).unwrap();
     /// ```
@@ -171,6 +168,11 @@ impl IContainer for Container {
         storage.save()?;
 
         Ok(storage)
+    }
+
+    fn set_name(&mut self, new_name: String) {
+        self.data.name = new_name;
+        /* storage.save() is missing? */
     }
 
     /// ## Errors

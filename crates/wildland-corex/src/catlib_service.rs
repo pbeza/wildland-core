@@ -27,7 +27,7 @@ use wildland_crypto::identity::signing_keypair::PubKey;
 
 use crate::{storage::StorageTemplateTrait, WildlandIdentity};
 
-use self::entities::Forest;
+use self::entities::{Container, Forest};
 use self::error::{CatlibError, CatlibResult};
 use self::interface::CatLib;
 
@@ -48,7 +48,7 @@ impl UserMetaData {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct CatLibService {
     catlib: Rc<dyn CatLib>,
 }
@@ -79,9 +79,9 @@ impl CatLibService {
     pub fn create_container(
         &self,
         name: String,
-        forest: &Forest,
+        forest: &dyn Forest,
         storage_template: &impl StorageTemplateTrait,
-    ) -> Result<Container, CatlibError> {
+    ) -> CatlibResult<Box<dyn Container>> {
         let container = forest.create_container(name)?;
 
         let serialized_storage_template = serde_json::to_vec(&storage_template).map_err(|e| {
@@ -94,7 +94,7 @@ impl CatLibService {
         Ok(container)
     }
 
-    pub fn delete_container(&self, container: &mut Container) -> Result<(), CatlibError> {
-        container.delete()
+    pub fn delete_container(&self, container: &mut dyn Container) -> CatlibResult<()> {
+        container.delete().map(|_| ())
     }
 }

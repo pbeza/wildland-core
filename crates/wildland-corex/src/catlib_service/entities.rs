@@ -48,7 +48,7 @@ pub type ContainerPath = String;
 pub type ContainerPaths = HashSet<ContainerPath>;
 pub type Signers = HashSet<Identity>;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ForestData {
     pub uuid: Uuid,
     pub signers: Signers,
@@ -56,7 +56,7 @@ pub struct ForestData {
     pub data: Vec<u8>,
 }
 
-pub trait Forest: AsRef<ForestData> {
+pub trait Forest: AsRef<ForestData> + std::fmt::Debug {
     /// Add manifest Signer
     ///
     /// Returns whether the value was newly inserted. That is:
@@ -87,7 +87,7 @@ pub trait Forest: AsRef<ForestData> {
     /// Create an empty container, bound to the Forest.
     ///
     /// To set container paths, use [`Container::add_path`]
-    fn create_container(/* mut? */ &self) -> CatlibResult<Box<dyn Container>>;
+    fn create_container(/* mut? */ &self, name: String) -> CatlibResult<Box<dyn Container>>;
 
     /// Create a Bridge object with arbitrary link data to another Forest.
     ///
@@ -112,26 +112,23 @@ pub trait Forest: AsRef<ForestData> {
     ) -> CatlibResult<Vec<Box<dyn Container>>>;
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ContainerData {
     pub uuid: Uuid,
     pub forest_uuid: Uuid,
+    pub name: String,
     pub paths: ContainerPaths,
 }
 
-pub trait Container: AsRef<ContainerData> {
+pub trait Container: AsRef<ContainerData> + std::fmt::Debug {
     /// Return [`Forest`] that contains the [`Container`].
     fn forest(&self) -> CatlibResult<Box<dyn Forest>>;
 
     /// Add a path to the Container.
-    ///
-    /// Returns self to allow chain method execution.
-    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<&mut dyn Container>;
+    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<bool>;
 
     /// Delete a path from the Container.
-    ///
-    /// Returns self to allow chain method execution.
-    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<&mut dyn Container>;
+    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<bool>;
 
     /// Return list of Forest [`Storage`]s.
     fn storages(&self) -> CatlibResult<Vec<Box<dyn Storage>>>;
@@ -149,13 +146,16 @@ pub trait Container: AsRef<ContainerData> {
         data: Vec<u8>,
     ) -> CatlibResult<Box<dyn Storage>>;
 
+    /// Sets the container's name
+    fn set_name(&mut self, new_name: String);
+
     /// Delete Container
     ///
     /// **WARN: The underlying objects are not removed recursively**
     fn delete(/* just self? */ &mut self) -> CatlibResult<bool>;
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct StorageData {
     pub uuid: Uuid,
     pub container_uuid: Uuid,
@@ -163,7 +163,7 @@ pub struct StorageData {
     pub data: Vec<u8>,
 }
 
-pub trait Storage: AsRef<StorageData> {
+pub trait Storage: AsRef<StorageData> + std::fmt::Debug {
     /// Return [`Container`] that contains the [`Storage`].
     fn container(&self) -> CatlibResult<Box<dyn Container>>;
 
@@ -174,7 +174,7 @@ pub trait Storage: AsRef<StorageData> {
     fn delete(/* just self? */ &mut self) -> CatlibResult<bool>;
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct BridgeData {
     pub uuid: Uuid,
     pub forest_uuid: Uuid,
@@ -182,7 +182,7 @@ pub struct BridgeData {
     pub link: Vec<u8>,
 }
 
-pub trait Bridge: AsRef<BridgeData> {
+pub trait Bridge: AsRef<BridgeData> + std::fmt::Debug {
     /// Return [`Forest`] that contains the [`Bridge`].
     fn forest(&self) -> CatlibResult<Box<dyn Forest>>;
 

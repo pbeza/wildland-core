@@ -20,7 +20,9 @@ use crate::{
     errors::{container::*, single_variant::*, storage::*},
 };
 use uuid::Uuid;
-use wildland_corex::{CatLibService, CatlibError, Container as InnerContainer, IContainer};
+use wildland_corex::catlib_service::{
+    entities::Container as InnerContainer, error::CatlibError, CatLibService,
+};
 
 use super::cargo_user::SharedContainer;
 
@@ -30,14 +32,14 @@ use super::cargo_user::SharedContainer;
 #[derive(Debug)]
 pub struct Container {
     /// CoreX container
-    inner: InnerContainer,
+    inner: Box<dyn InnerContainer>,
     // We cannot force a native app to drop reference to Container structure
     // so the flag is_deleted is used to mark container as deleted
     is_deleted: bool,
 }
 
-impl From<InnerContainer> for Container {
-    fn from(inner: InnerContainer) -> Self {
+impl From<Box<dyn InnerContainer>> for Container {
+    fn from(inner: Box<dyn InnerContainer>) -> Self {
         Self {
             inner,
             is_deleted: false,
@@ -89,7 +91,7 @@ impl Container {
     /// Returns string representation of a container
     pub fn stringify(&self) -> String {
         let deleted_info = if self.is_deleted { "DELETED: " } else { "" };
-        let name = self.inner.name();
+        let name = &(*self.inner).as_ref().name;
         format!("{deleted_info}Container (name: {name})")
     }
 
@@ -100,14 +102,14 @@ impl Container {
 
     /// TODO
     pub fn delete(&mut self, catlib_service: &CatLibService) -> Result<(), CatlibError> {
-        catlib_service.delete_container(&mut self.inner)?;
+        catlib_service.delete_container(self.inner.as_mut())?;
         self.is_deleted = true;
         Ok(())
     }
 
     /// Returns container uuid
     pub fn uuid(&self) -> Uuid {
-        self.inner.uuid()
+        (*self.inner).as_ref().uuid
     }
 
     /// Returns true if path was actually added, false otherwise.
@@ -122,11 +124,11 @@ impl Container {
 
     /// Returns paths in arbitrary order.
     pub fn get_paths(&self) -> Result<Vec<String>, CatlibError> {
-        Ok(self.inner.paths().into_iter().collect())
+        Ok((*self.inner).as_ref().paths.iter().cloned().collect())
     }
 
     pub fn get_name(&self) -> String {
-        self.inner.name()
+        (*self.inner).as_ref().name.clone()
     }
 
     pub fn set_name(&mut self, new_name: String) {
@@ -136,6 +138,8 @@ impl Container {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
     use crate::api::{
         container::tests::utils::compare_unordered, foundation_storage::FoundationStorageTemplate,
     };
@@ -145,11 +149,13 @@ mod tests {
         CatLibService, DeviceMetadata, SigningKeypair, UserMetaData, WildlandIdentity,
     };
 
+    use wildland_catlib::CatLib;
+
     use super::Container;
 
     #[fixture]
     fn container() -> Container {
-        let catlib_service = CatLibService::new();
+        let catlib_service = CatLibService::new(Rc::new(CatLib::default()));
 
         let dev_name = "dev name".to_string();
         let forest_identity = WildlandIdentity::Forest(
@@ -183,7 +189,7 @@ mod tests {
 
         Container {
             inner: catlib_service
-                .create_container("name".to_owned(), &forest, &fst)
+                .create_container("name".to_owned(), forest.as_ref(), &fst)
                 .unwrap(),
             is_deleted: false,
         }

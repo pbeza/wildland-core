@@ -143,12 +143,12 @@ impl IForest for Forest {
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container().unwrap();
+    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
     /// container.add_path("/foo/bar".to_string());
     /// container.add_path("/bar/baz".to_string());
     /// ```
-    fn create_container(&self) -> CatlibResult<Box<dyn IContainer>> {
-        let mut container = Box::new(Container::new(self.data.uuid, self.db.clone()));
+    fn create_container(&self, name: String) -> CatlibResult<Box<dyn IContainer>> {
+        let mut container = Box::new(Container::new(self.data.uuid, name, self.db.clone()));
         container.save()?;
 
         Ok(container)
@@ -231,7 +231,7 @@ impl IForest for Forest {
     ///                  HashSet::from([b"signer".to_vec()]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container().unwrap();
+    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
     /// container.add_path("/foo/bar".to_string());
     ///
     /// let containers = forest.find_containers(vec!["/foo/bar".to_string()], false).unwrap();
