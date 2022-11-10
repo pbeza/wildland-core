@@ -29,6 +29,10 @@ namespace Main
         public override OptionalString get_oslog_subsystem() {
             return new_none_string();
         }
+
+        public override FoundationCloudMode get_foundation_cloud_env_mode() {
+            return FoundationCloudMode.Dev
+        }
     }
 
     class LocalSecureStorageImpl : LocalSecureStorage {
