@@ -91,6 +91,7 @@ pub trait CargoCfgProvider {
 }
 
 #[derive(PartialEq, Eq, Error, Debug, Clone)]
+#[repr(C)]
 pub enum ParseConfigError {
     #[error("Config parse error: {0}")]
     Error(String),

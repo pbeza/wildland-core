@@ -198,7 +198,7 @@ All devices:
             .get_storage_templates_data()?
             .into_iter()
             .map(|st_data| {
-                serde_json::from_slice(&st_data)
+                serde_json::from_str(&st_data)
                     .map_err(|e| GetStorageTemplateError::DeserializationError(e.to_string()))
             })
             .collect()

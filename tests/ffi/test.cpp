@@ -36,16 +36,10 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     Optional<String> get_oslog_subsystem() override
     {
         return Optional<String>();
-
+    }
     FoundationCloudMode get_foundation_cloud_env_mode() override
     {
         return FoundationCloudMode::Dev;
-    }
-    String get_evs_url() override {
-        return String("http://localhost:5000/");
-    }
-    String get_sc_url() override {
-        return String("http://TODO:5555/");
     }
 };
 
@@ -54,18 +48,18 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     /// Inserts a key-value pair into the LSS.
     /// If the map did not have this key present, None is returned.
     /// If the map did have this key present, the value is updated, and the old value is returned.
-    OptionalVecu8ResultWithLssError insert(String key, RustVec<u8> value) override
+    OptionalRustStringResultWithLssError insert(String key, RustString value) override
     {
         std::cout << "LSS insert C++ impl\n";
         auto std_key = key.to_string();
-        OptionalVecu8ResultWithLssError result;
+        OptionalRustStringResultWithLssError result;
         if (store.contains(std_key))
         {
-            result = OptionalVecu8ResultWithLssError::from_ok(Optional<RustVec<u8>>(store[std_key]));
+            result = OptionalRustStringResultWithLssError::from_ok(Optional<RustString>(store[std_key]));
         }
         else
         {
-            result = OptionalVecu8ResultWithLssError::from_ok(Optional<RustVec<u8>>());
+            result = OptionalRustStringResultWithLssError::from_ok(Optional<RustString>());
         }
         store[std_key] = value;
         return result;
@@ -73,17 +67,17 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Returns a copy of the value corresponding to the key.
-    OptionalVecu8ResultWithLssError get(String key) override
+    OptionalRustStringResultWithLssError get(String key) override
     {
         std::cout << "LSS get C++ impl\n";
         auto std_key = key.to_string();
         if (store.contains(std_key))
         {
-            return OptionalVecu8ResultWithLssError::from_ok(Optional<RustVec<u8>>(store[std_key]));
+            return OptionalRustStringResultWithLssError::from_ok(Optional<RustString>(store[std_key]));
         }
         else
         {
-            return OptionalVecu8ResultWithLssError::from_ok(Optional<RustVec<u8>>());
+            return OptionalRustStringResultWithLssError::from_ok(Optional<RustString>());
         }
     }
 
@@ -122,19 +116,19 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
-    OptionalVecu8ResultWithLssError remove(String key) override
+    OptionalRustStringResultWithLssError remove(String key) override
     {
         std::cout << "LSS remove C++ impl\n";
         auto std_key = key.to_string();
-        OptionalVecu8ResultWithLssError result;
+        OptionalRustStringResultWithLssError result;
         if (store.contains(std_key))
         {
-            result = OptionalVecu8ResultWithLssError::from_ok(Optional<RustVec<u8>>(store[std_key]));
+            result = OptionalRustStringResultWithLssError::from_ok(Optional<RustString>(store[std_key]));
             store.erase(std_key);
         }
         else
         {
-            result = OptionalVecu8ResultWithLssError::from_ok(Optional<RustVec<u8>>());
+            result = OptionalRustStringResultWithLssError::from_ok(Optional<RustString>());
         }
         return result;
     }
@@ -154,7 +148,7 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
 private:
-    std::unordered_map<std::string, RustVec<u8>> store = {};
+    std::unordered_map<std::string, RustString> store = {};
 };
 
 void config_parser_test() // test

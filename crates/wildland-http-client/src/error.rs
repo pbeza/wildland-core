@@ -20,6 +20,7 @@ use thiserror::Error;
 use wildland_crypto::error::CryptoError;
 
 #[derive(Error, Debug, Clone)]
+#[repr(C)]
 pub enum WildlandHttpClientError {
     #[error("{0}")]
     HttpError(String),

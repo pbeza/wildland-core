@@ -33,28 +33,28 @@ class CargoCfgProviderImpl: CargoCfgProvider {
 }
 
 class LocalSecureStorageImpl : LocalSecureStorage {
-    private var store = [String : RustVec<u8>]()
+    private var store = [String : RustString]()
 
     /// Inserts a key-value pair into the LSS.
     /// If the map did not have this key present, None is returned.
     /// If the map did have this key present, the value is updated, and the old value is returned.
-    public override func insert(_ key: RustString,_ value: RustVec<u8>) -> OptionalVecu8ResultWithLssError {
+    public override func insert(_ key: RustString,_ value: RustString) -> OptionalRustStringResultWithLssError {
         let std_key = key.toString()
         let result = store[std_key] != nil
-            ? OptionalVecu8ResultWithLssError.from_ok(Optional.some(store[std_key]!).toRustOptional())
-            : OptionalVecu8ResultWithLssError.from_ok(Optional.none.toRustOptional())
+            ? OptionalRustStringResultWithLssError.from_ok(Optional.some(store[std_key]!).toRustOptional())
+            : OptionalRustStringResultWithLssError.from_ok(Optional.none.toRustOptional())
         store[std_key] = value;
         return result;
         // return new_err_lss_optional_bytes(RustString("Err")); // EXAMPLE: returning error
     }
 
     /// Returns a copy of the value corresponding to the key.
-    public override func get(_ key: RustString) -> OptionalVecu8ResultWithLssError
+    public override func get(_ key: RustString) -> OptionalRustStringResultWithLssError
     {
         let std_key = key.toString()
         return store[std_key] != nil
-            ? OptionalVecu8ResultWithLssError.from_ok(Optional.some(store[std_key]!).toRustOptional())
-            : OptionalVecu8ResultWithLssError.from_ok(Optional.none.toRustOptional())
+            ? OptionalRustStringResultWithLssError.from_ok(Optional.some(store[std_key]!).toRustOptional())
+            : OptionalRustStringResultWithLssError.from_ok(Optional.none.toRustOptional())
     }
 
     /// Returns true if the map contains a value for the specified key.
@@ -88,18 +88,18 @@ class LocalSecureStorageImpl : LocalSecureStorage {
     }
 
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
-    public override func remove(_ key: RustString) -> OptionalVecu8ResultWithLssError
+    public override func remove(_ key: RustString) -> OptionalRustStringResultWithLssError
     {
         let std_key = key.toString()
-        var result: OptionalVecu8ResultWithLssError
+        var result: OptionalRustStringResultWithLssError
         if (store[std_key] != nil)
         {
-            result = OptionalVecu8ResultWithLssError.from_ok(Optional.some(store[std_key]!).toRustOptional())
+            result = OptionalRustStringResultWithLssError.from_ok(Optional.some(store[std_key]!).toRustOptional())
             store[std_key] = nil
         }
         else
         {
-            result = OptionalVecu8ResultWithLssError.from_ok(Optional.none.toRustOptional())
+            result = OptionalRustStringResultWithLssError.from_ok(Optional.none.toRustOptional())
         }
         return result
     }
@@ -143,7 +143,7 @@ do {
     print("User: " + user.stringify().toString())
 
     do {
-        let config_bytes: RustVec<u8> = RustVec(u8.createNewRustVec())
+        let config_bytes: RustVec<u8> = RustVec<u8>()
         let raw_config = "{\"log_level\": \"trace\"}"
         for ch in raw_config.utf8 {
             config_bytes.push(ch);

@@ -2,21 +2,21 @@ var wildland = require("./wildland.js")
 
 
 wildland().then((wlib) => {
-    function rust_vec_u8_of_bytes_to_js_string(vec) {
-        result = "";
-        for (let i = 0; i < vec.size(); i++) {
-            result += String.fromCharCode(parseInt(vec.at(i).unwrap()))
-        }
-        return result;
-    }
+    // function rust_vec_u8_of_bytes_to_js_string(vec) {
+    //     result = "";
+    //     for (let i = 0; i < vec.size(); i++) {
+    //         result += String.fromCharCode(parseInt(vec.at(i).unwrap()))
+    //     }
+    //     return result;
+    // }
 
-    function js_string_to_rust_vec_u8(js_str) {
-        var result = new wlib.RustVec_u8();
-        for (var i = 0; i < js_str.length; i++) {
-            result.push(js_str[i].charCodeAt(0));
-        }
-        return result
-    }
+    // function js_string_to_rust_vec_u8(js_str) {
+    //     var result = new wlib.RustVec_u8();
+    //     for (var i = 0; i < js_str.length; i++) {
+    //         result.push(js_str[i].charCodeAt(0));
+    //     }
+    //     return result
+    // }
 
     // Local Secure Storage native implementation
     var Lss = wlib.LocalSecureStorage.extend("LocalSecureStorage", {
@@ -28,12 +28,12 @@ wildland().then((wlib) => {
             var str_key = key.to_string(); // JS cannot compare Rust strings so conversion to native type is necessary
             if (str_key in this.store) {
                 console.log("LSS insert: found");
-                result = wlib.OptionalVecu8ResultWithLssError.from_ok(wlib.OptionalVecu8(this.store[str_key]))
+                result = wlib.OptionalRustStringResultWithLssError.from_ok(wlib.OptionalRustString(this.store[str_key]))
             } else {
                 console.log("LSS insert: not found");
-                result = wlib.OptionalVecu8ResultWithLssError.from_ok(wlib.OptionalVecu8());
+                result = wlib.OptionalRustStringResultWithLssError.from_ok(wlib.OptionalRustString());
             }
-            this.store[str_key] = rust_vec_u8_of_bytes_to_js_string(val);
+            this.store[str_key] = val;
             return result;
         },
         get: function (key) {
@@ -41,10 +41,10 @@ wildland().then((wlib) => {
             var str_key = key.to_string(); // JS cannot compare Rust strings so conversion to native type is necessary
             if (str_key in this.store) {
                 console.log("LSS get: found");
-                return wlib.OptionalVecu8ResultWithLssError(wlib.OptionalVecu8(store[str_key]))
+                return wlib.OptionalRustStringResultWithLssError(wlib.OptionalRustString(store[str_key]))
             } else {
                 console.log("LSS get: not found");
-                return wlib.OptionalVecu8ResultWithLssError(wlib.OptionalVecu8());
+                return wlib.OptionalRustStringResultWithLssError(wlib.OptionalRustString());
             }
         },
         contains_key: function (key) {

@@ -40,6 +40,7 @@ pub enum AddStorageError {
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
 pub enum GetStorageTemplateError {
     #[error(transparent)]
     LssError(#[from] LssError),

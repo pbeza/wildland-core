@@ -29,6 +29,7 @@ pub enum CreateMnemonicError {
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
 pub enum UserCreationError {
     #[error("User already exists")]
     UserAlreadyExists,
@@ -78,6 +79,7 @@ impl From<CatlibError> for UserCreationError {
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
 pub enum UserRetrievalError {
     #[error(transparent)]
     ForestRetrievalError(#[from] ForestRetrievalError),

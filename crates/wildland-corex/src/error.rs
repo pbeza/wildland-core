@@ -20,6 +20,7 @@ use thiserror::Error;
 use wildland_crypto::error::CryptoError;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
 pub enum ForestRetrievalError {
     #[error(transparent)]
     LssError(#[from] LssError),
@@ -28,6 +29,7 @@ pub enum ForestRetrievalError {
 }
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
+#[repr(C)]
 pub enum CoreXError {
     #[error("Cannot create forest identity: {0}")]
     CannotCreateForestIdentityError(String),

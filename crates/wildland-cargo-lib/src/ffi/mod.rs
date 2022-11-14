@@ -26,7 +26,7 @@ use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
 pub use wildland_corex::catlib_service::error::CatlibError;
 pub use wildland_corex::{
-    CatlibError, CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError,
+    CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError,
 };
 
 type VoidType = ();
@@ -46,7 +46,7 @@ mod ffi_binding {
         EntropyTooLow,
         CatlibError(_),
     }
-    pub enum UserRetrievalError {
+    enum UserRetrievalError {
         ForestRetrievalError(_),
         ForestNotFound(_),
         LssError(_),
@@ -124,16 +124,16 @@ mod ffi_binding {
         fn insert(
             self: &dyn LocalSecureStorage,
             key: String,
-            value: Vec<u8>,
-        ) -> Result<Option<Vec<u8>>, LssError>;
-        fn get(self: &dyn LocalSecureStorage, key: String) -> Result<Option<Vec<u8>>, LssError>;
+            value: String,
+        ) -> Result<Option<String>, LssError>;
+        fn get(self: &dyn LocalSecureStorage, key: String) -> Result<Option<String>, LssError>;
         fn contains_key(self: &dyn LocalSecureStorage, key: String) -> Result<bool, LssError>;
         fn keys(self: &dyn LocalSecureStorage) -> Result<Vec<String>, LssError>;
         fn keys_starting_with(
             self: &dyn LocalSecureStorage,
             prefix: String,
         ) -> Result<Vec<String>, LssError>;
-        fn remove(self: &dyn LocalSecureStorage, key: String) -> Result<Option<Vec<u8>>, LssError>;
+        fn remove(self: &dyn LocalSecureStorage, key: String) -> Result<Option<String>, LssError>;
         fn len(self: &dyn LocalSecureStorage) -> Result<usize, LssError>;
         fn is_empty(self: &dyn LocalSecureStorage) -> Result<bool, LssError>;
     }

@@ -35,6 +35,7 @@ use thiserror::Error;
 use wildland_corex::{LocalSecureStorage, LssService};
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
+#[repr(C)]
 pub enum CargoLibCreationError {
     #[error("CargoLib creation error: {0}")]
     Error(String),
@@ -104,12 +105,12 @@ impl CargoLib {
 ///
 /// impl LocalSecureStorage for TestLss {
 /// // ...implementation here
-/// #    fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>>{todo!()}
-/// #    fn get(&self, key: String) -> LssResult<Option<Vec<u8>>>{todo!()}
+/// #    fn insert(&self, key: String, value: String) -> LssResult<Option<String>>{todo!()}
+/// #    fn get(&self, key: String) -> LssResult<Option<String>>{todo!()}
 /// #    fn contains_key(&self, key: String) -> LssResult<bool>{todo!()}
 /// #    fn keys(&self) -> LssResult<Vec<String>>{todo!()}
 /// #    fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>>{todo!()}
-/// #    fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>>{todo!()}
+/// #    fn remove(&self, key: String) -> LssResult<Option<String>>{todo!()}
 /// #    fn len(&self) -> LssResult<usize>{todo!()}
 /// #    fn is_empty(&self) -> LssResult<bool>{todo!()}
 /// }

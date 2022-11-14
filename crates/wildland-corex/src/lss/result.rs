@@ -18,6 +18,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
+#[repr(C)]
 #[error("Local Secure Storage error: {0}")]
 pub enum LssError {
     Error(String),

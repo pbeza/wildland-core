@@ -36,22 +36,22 @@ namespace Main
     }
 
     class LocalSecureStorageImpl : LocalSecureStorage {
-        private Dictionary <string, Vecu8> store = new Dictionary<string, Vecu8>();
+        private Dictionary <string, RustString> store = new Dictionary<string, RustString>();
 
         /// Inserts a key-value pair into the LSS.
         /// If the map did not have this key present, None is returned.
         /// If the map did have this key present, the value is updated, and the old value is returned.
-        public override OptionalVecu8ResultWithLssError insert(RustString key, Vecu8 value)
+        public override OptionalRustStringResultWithLssError insert(RustString key, RustString value)
         {
             var std_key = key.to_string();
-            OptionalVecu8ResultWithLssError result;
+            OptionalRustStringResultWithLssError result;
             if (store.ContainsKey(std_key))
             {
-                result = OptionalVecu8ResultWithLssError.from_ok(new OptionalVecu8(store[std_key]));
+                result = OptionalRustStringResultWithLssError.from_ok(new OptionalRustString(store[std_key]));
             }
             else
             {
-                result = OptionalVecu8ResultWithLssError.from_ok(new OptionalVecu8());
+                result = OptionalRustStringResultWithLssError.from_ok(new OptionalRustString());
             }
             store[std_key] = value;
             return result;
@@ -59,16 +59,16 @@ namespace Main
         }
 
         /// Returns a copy of the value corresponding to the key.
-        public override OptionalVecu8ResultWithLssError get(RustString key)
+        public override OptionalRustStringResultWithLssError get(RustString key)
         {
             var std_key = key.to_string();
             if (store.ContainsKey(std_key))
             {
-                return OptionalVecu8ResultWithLssError.from_ok(new OptionalVecu8(store[std_key]));
+                return OptionalRustStringResultWithLssError.from_ok(new OptionalRustString(store[std_key]));
             }
             else
             {
-                return OptionalVecu8ResultWithLssError.from_ok(new OptionalVecu8());
+                return OptionalRustStringResultWithLssError.from_ok(new OptionalRustString());
             }
         }
 
@@ -83,7 +83,7 @@ namespace Main
         public override VecRustStringResultWithLssError keys()
         {
             VecRustString keys = new VecRustString();
-            foreach(KeyValuePair<string, Vecu8> entry in store)
+            foreach(KeyValuePair<string, RustString> entry in store)
             {
                 keys.push(new RustString(entry.Key));
             }
@@ -91,18 +91,18 @@ namespace Main
         }
 
         /// Removes a key from the map, returning the value at the key if the key was previously in the map.
-        public override OptionalVecu8ResultWithLssError remove(RustString key)
+        public override OptionalRustStringResultWithLssError remove(RustString key)
         {
             var std_key = key.to_string();
-            OptionalVecu8ResultWithLssError result;
+            OptionalRustStringResultWithLssError result;
             if (store.ContainsKey(std_key))
             {
-                result = OptionalVecu8ResultWithLssError.from_ok(new OptionalVecu8(store[std_key]));
+                result = OptionalRustStringResultWithLssError.from_ok(new OptionalRustString(store[std_key]));
                 store.Remove(std_key);
             }
             else
             {
-                result = OptionalVecu8ResultWithLssError.from_ok(new OptionalVecu8());
+                result = OptionalRustStringResultWithLssError.from_ok(new OptionalRustString());
             }
             return result;
         }
