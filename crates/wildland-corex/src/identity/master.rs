@@ -29,6 +29,7 @@ pub struct MasterIdentity {
 }
 
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
+#[repr(C)]
 pub enum ForestIdentityCreationError {
     #[error("Crypto identity is required to create a new forest")]
     CryptoIdentityNotFound,
