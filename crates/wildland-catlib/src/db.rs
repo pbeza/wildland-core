@@ -15,55 +15,62 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use wildland_corex::entities::{Container as IContainer, Forest as IForest, Storage as IStorage};
+
 use super::*;
+use crate::error::to_catlib_error;
 use std::rc::Rc;
 
-pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: Uuid) -> CatlibResult<Forest> {
-    db.load()?;
-    let data = db.read(|db| db.clone()).map_err(CatlibError::from)?;
+pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibResult<Box<dyn IForest>> {
+    db.load().map_err(to_catlib_error)?;
+    let data = db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
-    let forest: Vec<Forest> = data
+    let forest: Vec<_> = data
         .iter()
-        .filter(|(id, _)| (**id).starts_with(format!("forest-{uuid}").as_str()))
-        .map(|(_, forest_str)| Forest::try_from(forest_str.as_str()).unwrap())
+        .filter(|(id, _)| id.starts_with(format!("forest-{uuid}").as_str()))
+        .map(|(_, forest_str)| forest_str.parse::<Forest>().unwrap())
         .collect();
 
     match forest.len() {
         0 => Err(CatlibError::NoRecordsFound),
-        1 => Ok(forest[0].clone()),
-        _ => Err(CatlibError::MalformedDatabaseEntry),
+        1 => Ok(Box::new(forest[0].clone())),
+        _ => Err(CatlibError::MalformedDatabaseRecord),
     }
 }
 
-pub(crate) fn fetch_container_by_uuid(db: Rc<StoreDb>, uuid: Uuid) -> CatlibResult<Container> {
-    db.load()?;
-    let data = db.read(|db| db.clone()).map_err(CatlibError::from)?;
+pub(crate) fn fetch_container_by_uuid(
+    db: Rc<StoreDb>,
+    uuid: &Uuid,
+) -> CatlibResult<Box<dyn IContainer>> {
+    db.load().map_err(to_catlib_error)?;
+    let data = db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
-    let container: Vec<Container> = data
+    let container: Vec<_> = data
         .iter()
-        .filter(|(id, _)| (**id).starts_with(format!("container-{uuid}").as_str()))
-        .map(|(_, forest_str)| Container::try_from(forest_str.as_str()).unwrap())
+        .filter(|(id, _)| id.starts_with(format!("container-{uuid}").as_str()))
+        .map(|(_, container_str)| container_str.parse::<Container>().unwrap())
         .collect();
 
     match container.len() {
         0 => Err(CatlibError::NoRecordsFound),
-        1 => Ok(container[0].clone()),
-        _ => Err(CatlibError::MalformedDatabaseEntry),
+        1 => Ok(Box::new(container[0].clone())),
+        _ => Err(CatlibError::MalformedDatabaseRecord),
     }
 }
 
 pub(crate) fn fetch_storages_by_container_uuid(
     db: Rc<StoreDb>,
-    uuid: Uuid,
-) -> CatlibResult<Vec<Storage>> {
-    db.load()?;
-    let data = db.read(|db| db.clone()).map_err(CatlibError::from)?;
+    uuid: &Uuid,
+) -> CatlibResult<Vec<Box<dyn IStorage>>> {
+    db.load().map_err(to_catlib_error)?;
+    let data = db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
-    let storages: Vec<Storage> = data
+    let storages: Vec<_> = data
         .iter()
-        .filter(|(id, _)| (**id).starts_with("storage-"))
-        .map(|(_, storage_str)| Storage::try_from(storage_str.as_str()).unwrap())
-        .filter(|storage| storage.container().unwrap().uuid() == uuid)
+        .filter(|(id, _)| id.starts_with("storage-"))
+        .map(|(_, storage_str)| storage_str.parse::<Storage>().unwrap())
+        .filter(|storage| (*storage.container().unwrap()).as_ref().uuid == *uuid)
+        .map(|storage| Box::new(storage) as Box<dyn IStorage>)
         .collect();
 
     match storages.len() {
@@ -73,21 +80,21 @@ pub(crate) fn fetch_storages_by_container_uuid(
 }
 
 pub(crate) fn save_model(db: Rc<StoreDb>, key: String, data: String) -> CatlibResult<()> {
-    db.load()?;
+    db.load().map_err(to_catlib_error)?;
 
     db.write(|db| db.insert(key, data))
-        .map_err(CatlibError::from)?;
+        .map_err(to_catlib_error)?;
 
-    db.save().map_err(CatlibError::from)
+    db.save().map_err(to_catlib_error)
 }
 
 pub(crate) fn delete_model(db: Rc<StoreDb>, key: String) -> CatlibResult<()> {
-    db.load()?;
+    db.load().map_err(to_catlib_error)?;
 
     db.write(|db| db.remove_entry(&key))
-        .map_err(CatlibError::from)?;
+        .map_err(to_catlib_error)?;
 
-    db.save().map_err(CatlibError::from)
+    db.save().map_err(to_catlib_error)
 }
 
 #[cfg(test)]
