@@ -23,7 +23,7 @@ use std::{
 
 use crate::{
     api::{container::*, storage_template::*},
-    errors::{single_variant::*, storage::GetStorageTemplateError, user::*},
+    errors::{storage::GetStorageTemplateError, user::*},
 };
 use derivative::Derivative;
 use uuid::Uuid;
@@ -118,7 +118,7 @@ All devices:
     }
 
     /// TODO
-    pub fn mount_forest(&self) -> SingleErrVariantResult<(), ForestMountError> {
+    pub fn mount_forest(&self) -> Result<(), ForestMountError> {
         todo!()
     }
 
@@ -198,7 +198,7 @@ All devices:
             .get_storage_templates_data()?
             .into_iter()
             .map(|st_data| {
-                serde_json::from_slice(&st_data)
+                serde_json::from_str(&st_data)
                     .map_err(|e| GetStorageTemplateError::DeserializationError(e.to_string()))
             })
             .collect()

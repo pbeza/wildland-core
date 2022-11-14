@@ -17,7 +17,7 @@
 
 use crate::{
     api::{storage::Storage, storage_template::StorageTemplate},
-    errors::{container::*, single_variant::*, storage::*},
+    errors::{container::*, storage::*},
 };
 use uuid::Uuid;
 use wildland_corex::catlib_service::{
@@ -49,33 +49,27 @@ impl From<Box<dyn InnerContainer>> for Container {
 
 impl Container {
     /// TODO
-    pub fn mount(&self) -> SingleErrVariantResult<(), ContainerMountError> {
+    pub fn mount(&self) -> Result<(), ContainerMountError> {
         todo!()
     }
 
     /// TODO
-    pub fn unmount(&self) -> SingleErrVariantResult<(), ContainerUnmountError> {
+    pub fn unmount(&self) -> Result<(), ContainerUnmountError> {
         todo!()
     }
 
     /// TODO
-    pub fn get_storages(&self) -> SingleErrVariantResult<Vec<Storage>, GetStoragesError> {
+    pub fn get_storages(&self) -> Result<Vec<Storage>, GetStoragesError> {
         todo!()
     }
 
     /// TODO
-    pub fn delete_storage(
-        &self,
-        _storage: &Storage,
-    ) -> SingleErrVariantResult<(), DeleteStorageError> {
+    pub fn delete_storage(&self, _storage: &Storage) -> Result<(), DeleteStorageError> {
         todo!()
     }
 
     /// TODO
-    pub fn add_storage(
-        &self,
-        _storage: &StorageTemplate,
-    ) -> SingleErrVariantResult<(), AddStorageError> {
+    pub fn add_storage(&self, _storage: &StorageTemplate) -> Result<(), AddStorageError> {
         todo!()
     }
 
