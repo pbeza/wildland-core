@@ -16,10 +16,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    errors::{retrieval_error::*, single_variant::*, user::*},
+    errors::{CreateMnemonicError, UserCreationError, UserRetrievalError},
     user::{generate_random_mnemonic, CreateUserInput, UserService},
 };
-use wildland_corex::{utils, CryptoError, MnemonicPhrase};
+use wildland_corex::{utils, MnemonicPhrase};
 
 use super::cargo_user::CargoUser;
 
@@ -29,20 +29,20 @@ pub struct MnemonicPayload(MnemonicPhrase);
 /// Wrapper to check the mnemonic.
 /// Accepts string. Returns Ok if the mnemonic is valid or Err otherwise
 /// throws [`CryptoError`] if the mnemonic is invalid
-pub fn check_phrase_mnemonic(phrase: String) -> SingleErrVariantResult<(), CryptoError> {
+pub fn check_phrase_mnemonic(phrase: String) -> Result<(), CreateMnemonicError> {
     match utils::new_mnemonic_from_phrase(phrase.as_str()) {
         Ok(_) => Ok(()),
-        Err(e) => Err(SingleVariantError::Failure(e)),
+        Err(_) => Err(CreateMnemonicError::InvalidMnemonicWords),
     }
 }
 
 /// Wrapper to check the mnemonic.
 /// Accepts raw bytes. Returns Ok if the mnemonic is valid, Err otherwise
 /// throws [`CryptoError`] if the mnemonic is invalid
-pub fn check_entropy_mnemonic(bytes: Vec<u8>) -> SingleErrVariantResult<(), CryptoError> {
+pub fn check_entropy_mnemonic(bytes: Vec<u8>) -> Result<(), CreateMnemonicError> {
     match utils::new_mnemonic_from_entropy(bytes.as_slice()) {
         Ok(_) => Ok(()),
-        Err(e) => Err(SingleVariantError::Failure(e)),
+        Err(_) => Err(CreateMnemonicError::InvalidMnemonicWords),
     }
 }
 
@@ -90,10 +90,10 @@ impl UserApi {
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
-    pub fn generate_mnemonic(&self) -> SingleErrVariantResult<MnemonicPayload, CryptoError> {
+    pub fn generate_mnemonic(&self) -> Result<MnemonicPayload, CreateMnemonicError> {
         tracing::trace!("generating mnemonic");
         generate_random_mnemonic()
-            .map_err(SingleVariantError::Failure)
+            .map_err(|_| CreateMnemonicError::InvalidMnemonicWords)
             .map(MnemonicPayload::from)
     }
 
@@ -104,11 +104,12 @@ impl UserApi {
     pub fn create_mnemonic_from_vec(
         &self,
         words: Vec<String>,
-    ) -> SingleErrVariantResult<MnemonicPayload, String> {
+    ) -> Result<MnemonicPayload, CreateMnemonicError> {
         tracing::trace!("creating mnemonic from vec");
-        Ok(MnemonicPayload(MnemonicPhrase::try_from(words).map_err(
-            |_| SingleVariantError::Failure("Invalid mnemonic words".to_owned()),
-        )?))
+        Ok(MnemonicPayload(
+            MnemonicPhrase::try_from(words)
+                .map_err(|_| CreateMnemonicError::InvalidMnemonicWords)?,
+        ))
     }
 
     #[tracing::instrument(level = "debug", skip(self, entropy))]
@@ -116,11 +117,10 @@ impl UserApi {
         &self,
         entropy: Vec<u8>,
         device_name: String,
-    ) -> SingleErrVariantResult<CargoUser, UserCreationError> {
+    ) -> Result<CargoUser, UserCreationError> {
         tracing::debug!("creating new user");
         self.user_service
             .create_user(CreateUserInput::Entropy(entropy), device_name)
-            .map_err(SingleVariantError::Failure)
     }
 
     #[tracing::instrument(level = "debug", skip(self, mnemonic))]
@@ -128,30 +128,22 @@ impl UserApi {
         &self,
         mnemonic: &MnemonicPayload,
         device_name: String,
-    ) -> SingleErrVariantResult<CargoUser, UserCreationError> {
+    ) -> Result<CargoUser, UserCreationError> {
         tracing::debug!("creating new user");
-        self.user_service
-            .create_user(
-                CreateUserInput::Mnemonic(Box::new(mnemonic.0.clone())),
-                device_name,
-            )
-            .map_err(SingleVariantError::Failure)
+        self.user_service.create_user(
+            CreateUserInput::Mnemonic(Box::new(mnemonic.0.clone())),
+            device_name,
+        )
     }
 
     /// Gets user if it exists
     ///
-    pub fn get_user(&self) -> RetrievalResult<CargoUser, UserRetrievalError> {
+    pub fn get_user(&self) -> Result<CargoUser, UserRetrievalError> {
         tracing::debug!("getting user");
-        let user = self.user_service.get_user().map_err(|e| match e {
-            UserRetrievalError::ForestRetrievalError(_)
-            | UserRetrievalError::LssError(_)
-            | UserRetrievalError::CatlibError(_)
-            | UserRetrievalError::DeviceMetadataNotFound => RetrievalError::Unexpected(e),
-            UserRetrievalError::ForestNotFound(e) => RetrievalError::NotFound(e),
-        })?;
+        let user = self.user_service.get_user()?;
         match user {
             Some(user) => Ok(user),
-            None => Err(RetrievalError::NotFound("User not found.".to_string())),
+            None => Err(UserRetrievalError::UserNotFound),
         }
     }
 }
