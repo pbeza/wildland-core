@@ -82,18 +82,18 @@ pub trait Forest: AsRef<ForestData> + std::fmt::Debug {
     /// Delete Forest
     ///
     /// **WARN: The underlying objects are not removed recursively**
-    fn delete(/* just self? */ &mut self) -> CatlibResult<bool>;
+    fn delete(&mut self) -> CatlibResult<bool>;
 
     /// Create an empty container, bound to the Forest.
     ///
     /// To set container paths, use [`Container::add_path`]
-    fn create_container(/* mut? */ &self, name: String) -> CatlibResult<Box<dyn Container>>;
+    fn create_container(&self, name: String) -> CatlibResult<Box<dyn Container>>;
 
     /// Create a Bridge object with arbitrary link data to another Forest.
     ///
     /// The aforementioned link data will be defined by the D/FS module.
     fn create_bridge(
-        /* mut? */ &self,
+        &self,
         path: ContainerPath,
         link_data: Vec<u8>,
     ) -> CatlibResult<Box<dyn Bridge>>;
@@ -141,18 +141,18 @@ pub trait Container: AsRef<ContainerData> + std::fmt::Debug {
     ///
     /// `data` represents arbitrary data that is defined and used by the DF/S module.
     fn create_storage(
-        /* mut? */ &self,
+        &self,
         template_uuid: Option<Uuid>,
         data: Vec<u8>,
     ) -> CatlibResult<Box<dyn Storage>>;
 
     /// Sets the container's name
-    fn set_name(&mut self, new_name: String);
+    fn set_name(&mut self, new_name: String) -> CatlibResult<()>;
 
     /// Delete Container
     ///
     /// **WARN: The underlying objects are not removed recursively**
-    fn delete(/* just self? */ &mut self) -> CatlibResult<bool>;
+    fn delete(&mut self) -> CatlibResult<bool>;
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -171,7 +171,7 @@ pub trait Storage: AsRef<StorageData> + std::fmt::Debug {
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<&mut dyn Storage>;
 
     /// Delete Storage
-    fn delete(/* just self? */ &mut self) -> CatlibResult<bool>;
+    fn delete(&mut self) -> CatlibResult<bool>;
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -190,5 +190,5 @@ pub trait Bridge: AsRef<BridgeData> + std::fmt::Debug {
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<&mut dyn Bridge>;
 
     /// Delete Bridge
-    fn delete(/* just self? */ &mut self) -> CatlibResult<bool>;
+    fn delete(&mut self) -> CatlibResult<bool>;
 }

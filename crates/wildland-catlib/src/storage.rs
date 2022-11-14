@@ -16,15 +16,16 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use serde::{Deserialize, Serialize};
+use derivative::Derivative;
 use std::{rc::Rc, str::FromStr};
 use wildland_corex::entities::{Container, Storage as IStorage, StorageData};
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Derivative)]
+#[derivative(Debug)]
 pub struct Storage {
     data: StorageData,
 
-    #[serde(skip, default = "use_default_database")]
+    #[derivative(Debug = "ignore")]
     db: Rc<StoreDb>,
 }
 
@@ -33,7 +34,8 @@ impl FromStr for Storage {
     type Err = ron::error::SpannedError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        ron::from_str(value)
+        let data = ron::from_str(value)?;
+        Ok(Self::from_data_and_db(data, use_default_database()))
     }
 }
 
@@ -44,7 +46,7 @@ impl Storage {
         data: Vec<u8>,
         db: Rc<StoreDb>,
     ) -> Self {
-        Storage {
+        Self {
             data: StorageData {
                 uuid: Uuid::new_v4(),
                 container_uuid,
@@ -53,6 +55,10 @@ impl Storage {
             },
             db,
         }
+    }
+
+    pub fn from_data_and_db(data: StorageData, db: Rc<StoreDb>) -> Self {
+        Self { data, db }
     }
 }
 
@@ -95,7 +101,7 @@ impl Model for Storage {
         save_model(
             self.db.clone(),
             format!("storage-{}", self.data.uuid),
-            ron::to_string(self).unwrap(),
+            ron::to_string(&self.data).unwrap(),
         )
     }
 

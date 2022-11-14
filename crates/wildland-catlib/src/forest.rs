@@ -18,7 +18,6 @@
 use super::*;
 use crate::{db::delete_model, db::save_model};
 use derivative::Derivative;
-use serde::{Deserialize, Serialize};
 use std::{rc::Rc, str::FromStr};
 
 use wildland_corex::entities::{
@@ -26,13 +25,12 @@ use wildland_corex::entities::{
     Identity, Signers,
 };
 
-#[derive(Clone, Serialize, Deserialize, Derivative)]
+#[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub struct Forest {
     data: ForestData,
 
     #[derivative(Debug = "ignore")]
-    #[serde(skip, default = "use_default_database")]
     db: Rc<StoreDb>,
 }
 
@@ -41,13 +39,14 @@ impl FromStr for Forest {
     type Err = ron::error::SpannedError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        ron::from_str(value)
+        let data = ron::from_str(value)?;
+        Ok(Self::from_data_and_db(data, use_default_database()))
     }
 }
 
 impl Forest {
     pub fn new(owner: Identity, signers: Signers, data: Vec<u8>, db: Rc<StoreDb>) -> Self {
-        Forest {
+        Self {
             data: ForestData {
                 uuid: Uuid::new_v4(),
                 signers,
@@ -56,6 +55,10 @@ impl Forest {
             },
             db,
         }
+    }
+
+    pub fn from_data_and_db(data: ForestData, db: Rc<StoreDb>) -> Self {
+        Self { data, db }
     }
 }
 
@@ -271,7 +274,7 @@ impl Model for Forest {
         save_model(
             self.db.clone(),
             format!("forest-{}", self.data.uuid),
-            ron::to_string(self).unwrap(),
+            ron::to_string(&self.data).unwrap(),
         )
     }
 

@@ -132,7 +132,7 @@ impl Container {
     }
 
     pub fn set_name(&mut self, new_name: String) {
-        self.inner.set_name(new_name)
+        let _ = self.inner.set_name(new_name);
     }
 }
 

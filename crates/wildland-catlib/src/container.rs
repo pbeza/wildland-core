@@ -17,7 +17,6 @@
 
 use super::*;
 use derivative::Derivative;
-use serde::{Deserialize, Serialize};
 use std::{rc::Rc, str::FromStr};
 
 use wildland_corex::entities::{
@@ -25,13 +24,12 @@ use wildland_corex::entities::{
     Storage as IStorage,
 };
 
-#[derive(Clone, Serialize, Deserialize, Derivative)]
+#[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub struct Container {
     data: ContainerData,
 
     #[derivative(Debug = "ignore")]
-    #[serde(skip, default = "use_default_database")]
     db: Rc<StoreDb>,
 }
 
@@ -40,7 +38,8 @@ impl FromStr for Container {
     type Err = ron::error::SpannedError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        ron::from_str(value)
+        let data = ron::from_str(value)?;
+        Ok(Self::from_data_and_db(data, use_default_database()))
     }
 }
 
@@ -52,7 +51,7 @@ impl AsRef<ContainerData> for Container {
 
 impl Container {
     pub fn new(forest_uuid: Uuid, name: String, db: Rc<StoreDb>) -> Self {
-        Container {
+        Self {
             data: ContainerData {
                 uuid: Uuid::new_v4(),
                 forest_uuid,
@@ -61,6 +60,10 @@ impl Container {
             },
             db,
         }
+    }
+
+    pub fn from_data_and_db(data: ContainerData, db: Rc<StoreDb>) -> Self {
+        Self { data, db }
     }
 }
 
@@ -170,9 +173,9 @@ impl IContainer for Container {
         Ok(storage)
     }
 
-    fn set_name(&mut self, new_name: String) {
+    fn set_name(&mut self, new_name: String) -> CatlibResult<()> {
         self.data.name = new_name;
-        /* storage.save() is missing? */
+        self.save()
     }
 
     /// ## Errors
@@ -189,7 +192,7 @@ impl Model for Container {
         save_model(
             self.db.clone(),
             format!("container-{}", self.data.uuid),
-            ron::to_string(self).unwrap(),
+            ron::to_string(&self.data).unwrap(),
         )
     }
 

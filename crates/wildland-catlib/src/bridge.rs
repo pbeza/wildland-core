@@ -16,15 +16,16 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use serde::{Deserialize, Serialize};
+use derivative::Derivative;
 use std::{rc::Rc, str::FromStr};
 use wildland_corex::entities::{Bridge as IBridge, BridgeData, ContainerPath, Forest};
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Derivative)]
+#[derivative(Debug)]
 pub struct Bridge {
     data: BridgeData,
 
-    #[serde(skip, default = "use_default_database")]
+    #[derivative(Debug = "ignore")]
     db: Rc<StoreDb>,
 }
 
@@ -33,7 +34,8 @@ impl FromStr for Bridge {
     type Err = ron::error::SpannedError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        ron::from_str(value)
+        let data = ron::from_str(value)?;
+        Ok(Self::from_data_and_db(data, use_default_database()))
     }
 }
 
@@ -45,7 +47,7 @@ impl AsRef<BridgeData> for Bridge {
 
 impl Bridge {
     pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>, db: Rc<StoreDb>) -> Self {
-        Bridge {
+        Self {
             data: BridgeData {
                 uuid: Uuid::new_v4(),
                 forest_uuid,
@@ -54,6 +56,10 @@ impl Bridge {
             },
             db,
         }
+    }
+
+    pub fn from_data_and_db(data: BridgeData, db: Rc<StoreDb>) -> Self {
+        Self { data, db }
     }
 }
 
@@ -89,7 +95,7 @@ impl Model for Bridge {
         save_model(
             self.db.clone(),
             format!("bridge-{}", self.data.uuid),
-            ron::to_string(self).unwrap(),
+            ron::to_string(&self.data).unwrap(),
         )
     }
 
