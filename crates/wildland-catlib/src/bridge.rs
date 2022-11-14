@@ -16,62 +16,77 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use serde::{Deserialize, Serialize};
-use std::rc::Rc;
+use derivative::Derivative;
+use std::{rc::Rc, str::FromStr};
+use wildland_corex::entities::{Bridge as IBridge, BridgeData, ContainerPath, Forest};
+
+#[derive(Clone, Derivative)]
+#[derivative(Debug)]
+pub struct Bridge {
+    data: BridgeData,
+
+    #[derivative(Debug = "ignore")]
+    db: Rc<StoreDb>,
+}
 
 /// Create Bridge object from its representation in Rust Object Notation
-impl TryFrom<String> for Bridge {
-    type Error = ron::error::SpannedError;
+impl FromStr for Bridge {
+    type Err = ron::error::SpannedError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        ron::from_str(value.as_str())
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let data = ron::from_str(value)?;
+        Ok(Self::from_data_and_db(data, use_default_database()))
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Bridge {
-    uuid: Uuid,
-    forest_uuid: Uuid,
-    path: ContainerPath,
-    link: Vec<u8>,
-
-    #[serde(skip, default = "use_default_database")]
-    db: Rc<StoreDb>,
+impl AsRef<BridgeData> for Bridge {
+    fn as_ref(&self) -> &BridgeData {
+        &self.data
+    }
 }
 
 impl Bridge {
     pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>, db: Rc<StoreDb>) -> Self {
-        Bridge {
-            uuid: Uuid::new_v4(),
-            forest_uuid,
-            path,
-            link,
+        Self {
+            data: BridgeData {
+                uuid: Uuid::new_v4(),
+                forest_uuid,
+                path,
+                link,
+            },
             db,
         }
+    }
+
+    pub fn from_data_and_db(data: BridgeData, db: Rc<StoreDb>) -> Self {
+        Self { data, db }
     }
 }
 
 impl IBridge for Bridge {
-    fn uuid(&self) -> Uuid {
-        self.uuid
+    /// ## Errors
+    ///
+    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
+    /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
+    fn forest(&self) -> CatlibResult<Box<dyn Forest>> {
+        fetch_forest_by_uuid(self.db.clone(), &self.data.forest_uuid)
     }
 
-    fn path(&self) -> ContainerPath {
-        self.path.clone()
-    }
-
-    fn forest(&self) -> CatlibResult<crate::forest::Forest> {
-        fetch_forest_by_uuid(self.db.clone(), self.forest_uuid)
-    }
-
-    fn link(&self) -> Vec<u8> {
-        self.link.clone()
-    }
-
-    fn update(&mut self, link: Vec<u8>) -> CatlibResult<crate::bridge::Bridge> {
-        self.link = link;
+    /// ## Errors
+    ///
+    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    fn update(&mut self, link: Vec<u8>) -> CatlibResult<&mut dyn IBridge> {
+        self.data.link = link;
         self.save()?;
-        Ok(self.clone())
+        Ok(self)
+    }
+
+    /// ## Errors
+    ///
+    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    fn delete(&mut self) -> CatlibResult<bool> {
+        Model::delete(self)?;
+        Ok(true)
     }
 }
 
@@ -79,13 +94,13 @@ impl Model for Bridge {
     fn save(&mut self) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
-            format!("bridge-{}", self.uuid),
-            ron::to_string(self).unwrap(),
+            format!("bridge-{}", self.data.uuid),
+            ron::to_string(&self.data).unwrap(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("bridge-{}", self.uuid))
+        delete_model(self.db.clone(), format!("bridge-{}", self.data.uuid))
     }
 }
 

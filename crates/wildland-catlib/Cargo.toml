@@ -11,17 +11,19 @@ repository  = "https://gitlab.com/wildland/corex/wildland-core"
 version     = "0.30.0"
 
 [dependencies]
-derivative  = { version = "2.2" }
-directories = { version = "4.0.1" }
-hex         = { version = "0.4" }
-ron         = { version = "0.8.0" }
-rustbreak   = { version = "2.0.0", features = ["serde_yaml", "ron_enc", "yaml_enc", "mmap"] }
-serde       = { version = "1.0.144", features = ["derive"] }
-serde_yaml  = { version = "0.9.11" }
-tempfile    = { version = "3.3.0" }
-thiserror   = { version = "1.0.35" }
-tracing     = { version = "0.1" }
-uuid        = { version = "1.1.2", features = ["v4", "serde"] }
+derivative     = { version = "2.2" }
+directories    = { version = "4.0.1" }
+hex            = { version = "0.4" }
+ron            = { version = "0.8.0" }
+rustbreak      = { version = "2.0.0", features = ["serde_yaml", "ron_enc", "yaml_enc", "mmap"] }
+serde          = { version = "1.0.144", features = ["derive"] }
+serde_yaml     = { version = "0.9.11" }
+tempfile       = { version = "3.3.0" }
+thiserror      = { version = "1.0.35" }
+tracing        = { version = "0.1" }
+uuid           = { version = "1.1.2", features = ["v4", "serde"] }
+wildland-corex = { version = "0.30.0", path = "../wildland-corex", registry = "wl-dev" }
+
 
 [dev-dependencies]
 mocktopus = { version = "0.7.11" }
