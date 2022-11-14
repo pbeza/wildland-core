@@ -250,6 +250,6 @@ mkdir $PKG_OUT
 ditto -c -k --sequesterRsrc --keepParent wildlandx.xcframework $PKG_OUT/wildlandx.xcframework.zip
 cd $PKG_OUT
 
-if [ "$CI_COMMIT_BRANCH" = "main" ]; then
+if [ "$CI_COMMIT_BRANCH" = "master" ] || [ "$CI_COMMIT_BRANCH" = "develop" ]; then
     upload_framework wildlandx.xcframework.zip
 fi
