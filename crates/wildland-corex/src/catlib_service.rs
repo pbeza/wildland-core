@@ -15,20 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashSet;
+pub mod entities;
+pub mod error;
+pub mod interface;
+
+use std::{collections::HashSet, rc::Rc};
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use wildland_catlib::{CatLib, CatlibError, Container, Forest, IContainer, IForest, Model};
 use wildland_crypto::identity::signing_keypair::PubKey;
 
 use crate::{storage::StorageTemplateTrait, WildlandIdentity};
+
+use self::entities::{Container, Forest};
+use self::error::{CatlibError, CatlibResult};
+use self::interface::CatLib;
 
 #[derive(Serialize, Deserialize)]
 pub struct DeviceMetadata {
     pub name: String,
     pub pubkey: PubKey,
 }
+
 #[derive(Serialize, Deserialize)]
 pub struct UserMetaData {
     pub devices: Vec<DeviceMetadata>,
@@ -40,16 +48,14 @@ impl UserMetaData {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct CatLibService {
-    catlib: CatLib,
+    catlib: Rc<dyn CatLib>,
 }
 
 impl CatLibService {
-    pub fn new() -> Self {
-        Self {
-            catlib: CatLib::default(),
-        }
+    pub fn new(catlib: Rc<dyn CatLib>) -> Self {
+        Self { catlib }
     }
 
     pub fn add_forest(
@@ -57,7 +63,7 @@ impl CatLibService {
         forest_identity: &WildlandIdentity,
         this_device_identity: &WildlandIdentity,
         data: UserMetaData,
-    ) -> Result<Forest, CatlibError> {
+    ) -> CatlibResult<Box<dyn Forest>> {
         self.catlib.create_forest(
             forest_identity.get_public_key().into(),
             HashSet::from([this_device_identity.get_public_key().into()]),
@@ -66,16 +72,16 @@ impl CatLibService {
         )
     }
 
-    pub fn get_forest(&self, forest_uuid: Uuid) -> Result<Forest, CatlibError> {
+    pub fn get_forest(&self, forest_uuid: &Uuid) -> CatlibResult<Box<dyn Forest>> {
         self.catlib.get_forest(forest_uuid)
     }
 
     pub fn create_container(
         &self,
         name: String,
-        forest: &Forest,
+        forest: &dyn Forest,
         storage_template: &impl StorageTemplateTrait,
-    ) -> Result<Container, CatlibError> {
+    ) -> CatlibResult<Box<dyn Container>> {
         let container = forest.create_container(name)?;
 
         let serialized_storage_template = serde_json::to_vec(&storage_template).map_err(|e| {
@@ -88,7 +94,7 @@ impl CatLibService {
         Ok(container)
     }
 
-    pub fn delete_container(&self, container: &mut Container) -> Result<(), CatlibError> {
-        container.delete()
+    pub fn delete_container(&self, container: &mut dyn Container) -> CatlibResult<()> {
+        container.delete().map(|_| ())
     }
 }

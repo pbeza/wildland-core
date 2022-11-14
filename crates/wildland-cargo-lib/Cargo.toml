@@ -35,6 +35,7 @@ tracing-log          = { version = "0.1", features = ["env_logger"] }
 tracing-oslog        = { version = "0.1" }
 tracing-subscriber   = { version = "0.3", features = ["json", "env-filter", "fmt", "std", "registry"] }
 uuid                 = { version = "1.2", features = ["serde"] }
+wildland-catlib      = { version = "0.30.1-rc.0", path = "../wildland-catlib", registry = "wl-dev" }
 wildland-corex       = { version = "0.30.1-rc.0", path = "../wildland-corex", registry = "wl-dev" }
 wildland-http-client = { version = "0.30.1-rc.0", path = "../wildland-http-client", registry = "wl-dev" }
 

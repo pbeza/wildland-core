@@ -17,6 +17,7 @@
 
 use std::{
     collections::HashMap,
+    rc::Rc,
     sync::{Arc, Mutex},
 };
 
@@ -26,7 +27,8 @@ use crate::{
 };
 use derivative::Derivative;
 use uuid::Uuid;
-use wildland_corex::{CatLibService, CatlibError, Forest, IForest, LssService};
+use wildland_corex::catlib_service::{entities::Forest, error::CatlibError, CatLibService};
+use wildland_corex::LssService;
 
 pub type SharedContainer = Arc<Mutex<Container>>;
 #[derive(Debug, Clone)]
@@ -66,7 +68,7 @@ pub struct CargoUser {
     this_device: String,
     all_devices: Vec<String>,
 
-    forest: Forest,
+    forest: Rc<dyn Forest>,
 
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
@@ -80,14 +82,14 @@ impl CargoUser {
     pub fn new(
         this_device: String,
         all_devices: Vec<String>,
-        forest: Forest,
+        forest: Box<dyn Forest>,
         catlib_service: CatLibService,
         lss_service: LssService,
     ) -> Self {
         Self {
             this_device,
             all_devices,
-            forest,
+            forest: forest.into(),
             catlib_service,
             lss_service,
             user_context: UserContext::new(),
@@ -161,7 +163,7 @@ All devices:
     ) -> Result<SharedContainer, CatlibError> {
         let container: Container = self
             .catlib_service
-            .create_container(name, &self.forest, template)
+            .create_container(name, self.forest.as_ref(), template)
             .map(|c| c.into())?;
         let container_uuid = container.uuid();
         let shared_container = Arc::new(Mutex::new(container));
