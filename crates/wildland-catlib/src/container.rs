@@ -17,7 +17,7 @@
 
 use super::*;
 use derivative::Derivative;
-use std::{rc::Rc, str::FromStr};
+use std::rc::Rc;
 
 use wildland_corex::entities::{
     Container as IContainer, ContainerData, ContainerPath, ContainerPaths, Forest,
@@ -31,16 +31,6 @@ pub struct Container {
 
     #[derivative(Debug = "ignore")]
     db: Rc<StoreDb>,
-}
-
-/// Create Container object from its representation in Rust Object Notation
-impl FromStr for Container {
-    type Err = ron::error::SpannedError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let data = ron::from_str(value)?;
-        Ok(Self::from_data_and_db(data, use_default_database()))
-    }
 }
 
 impl AsRef<ContainerData> for Container {
@@ -62,7 +52,8 @@ impl Container {
         }
     }
 
-    pub fn from_data_and_db(data: ContainerData, db: Rc<StoreDb>) -> Self {
+    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
+        let data = ron::from_str(value).unwrap();
         Self { data, db }
     }
 }
@@ -205,14 +196,13 @@ impl Model for Container {
 mod tests {
     use std::collections::HashSet;
 
+    use super::db::test::catlib;
     use crate::*;
     use rstest::*;
-    use uuid::Bytes;
     use wildland_corex::entities::Container;
-    #[fixture]
-    fn catlib() -> CatLib {
-        let catlib = db::init_catlib(rand::random::<Bytes>());
 
+    #[fixture]
+    fn catlib_with_forest(catlib: CatLib) -> CatLib {
         // Create a dummy forest to which containers will be bound
         catlib
             .create_forest(
@@ -231,7 +221,7 @@ mod tests {
         forest.create_container("name".to_owned()).unwrap()
     }
 
-    #[rstest]
+    #[rstest(catlib_with_forest as catlib)]
     fn fetch_created_container(catlib: CatLib) {
         let container = make_container(&catlib);
         let container = catlib.get_container(&(*container).as_ref().uuid).unwrap();
@@ -242,7 +232,7 @@ mod tests {
         );
     }
 
-    #[rstest]
+    #[rstest(catlib_with_forest as catlib)]
     fn fetch_created_container_from_forest_obj(catlib: CatLib) {
         let container = make_container(&catlib);
         let container = catlib.get_container(&(*container).as_ref().uuid).unwrap();
@@ -253,7 +243,7 @@ mod tests {
         );
     }
 
-    #[rstest]
+    #[rstest(catlib_with_forest as catlib)]
     fn container_with_paths(catlib: CatLib) {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
@@ -294,7 +284,7 @@ mod tests {
         assert_eq!(containers.len(), 1);
     }
 
-    #[rstest]
+    #[rstest(catlib_with_forest as catlib)]
     fn multiple_containers_with_paths(catlib: CatLib) {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
@@ -329,7 +319,7 @@ mod tests {
         );
     }
 
-    #[rstest]
+    #[rstest(catlib_with_forest as catlib)]
     fn create_containers_with_different_storages(catlib: CatLib) {
         let alpha = make_container(&catlib);
         let beta = make_container(&catlib);
@@ -362,7 +352,7 @@ mod tests {
         );
     }
 
-    #[rstest]
+    #[rstest(catlib_with_forest as catlib)]
     fn multiple_containers_with_subpaths(catlib: CatLib) {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 

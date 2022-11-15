@@ -18,7 +18,7 @@
 use super::*;
 use crate::{db::delete_model, db::save_model};
 use derivative::Derivative;
-use std::{rc::Rc, str::FromStr};
+use std::rc::Rc;
 
 use wildland_corex::entities::{
     Bridge as IBridge, Container as IContainer, ContainerPath, Forest as IForest, ForestData,
@@ -34,16 +34,6 @@ pub struct Forest {
     db: Rc<StoreDb>,
 }
 
-/// Create Forest object from its representation in Rust Object Notation
-impl FromStr for Forest {
-    type Err = ron::error::SpannedError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let data = ron::from_str(value)?;
-        Ok(Self::from_data_and_db(data, use_default_database()))
-    }
-}
-
 impl Forest {
     pub fn new(owner: Identity, signers: Signers, data: Vec<u8>, db: Rc<StoreDb>) -> Self {
         Self {
@@ -57,7 +47,8 @@ impl Forest {
         }
     }
 
-    pub fn from_data_and_db(data: ForestData, db: Rc<StoreDb>) -> Self {
+    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
+        let data = ron::from_str(value).unwrap();
         Self { data, db }
     }
 }
@@ -98,7 +89,7 @@ impl IForest for Forest {
         let containers: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("container-"))
-            .map(|(_, container_str)| container_str.parse::<Container>().unwrap())
+            .map(|(_, container_str)| Container::from_db_entry(container_str, self.db.clone()))
             .filter(|container| {
                 container.forest().is_ok()
                     && (*container.forest().unwrap()).as_ref().uuid == self.data.uuid
@@ -204,7 +195,7 @@ impl IForest for Forest {
         let bridges: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("bridge-"))
-            .map(|(_, bridge_str)| bridge_str.parse::<Bridge>().unwrap())
+            .map(|(_, bridge_str)| Bridge::from_db_entry(bridge_str, self.db.clone()))
             .filter(|bridge| {
                 (*bridge.forest().unwrap()).as_ref().uuid == self.data.uuid
                     && bridge.as_ref().path == path
@@ -249,7 +240,7 @@ impl IForest for Forest {
         let containers: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("container-"))
-            .map(|(_, container_str)| container_str.parse::<Container>().unwrap())
+            .map(|(_, container_str)| Container::from_db_entry(container_str, self.db.clone()))
             .filter(|container| {
                 (*container.forest().unwrap()).as_ref().uuid == self.data.uuid
                     && container.as_ref().paths.iter().any(|container_path| {
@@ -285,15 +276,10 @@ impl Model for Forest {
 
 #[cfg(test)]
 mod tests {
+    use super::db::test::catlib;
     use crate::*;
     use rstest::*;
-    use uuid::Bytes;
     use wildland_corex::catlib_service::entities::Forest;
-
-    #[fixture]
-    fn catlib() -> CatLib {
-        db::init_catlib(rand::random::<Bytes>())
-    }
 
     fn make_forest(catlib: &CatLib) -> Box<dyn Forest> {
         let owner = Identity([1; 32]);
