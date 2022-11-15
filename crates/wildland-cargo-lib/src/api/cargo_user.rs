@@ -250,6 +250,8 @@ All devices:
     }
 }
 
+// TODO WILX-312 write tests of Foundation Storage API using some mocked http server
+
 // TODO WILX-302 creating, retrieving and deleting container tests are commented because
 // CatLib uses for now a single file for all tests which can be run in parallel, hence tests race
 // to the database file
