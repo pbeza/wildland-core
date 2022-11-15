@@ -21,7 +21,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 use wildland_corex::{
-    storage::StorageTemplateTrait, CryptoError, EncryptingKeypair, LssError, LssService,
+    catlib_service::error::CatlibError, storage::StorageTemplateTrait, CryptoError,
+    EncryptingKeypair, LssError,
 };
 use wildland_http_client::{
     error::WildlandHttpClientError,
@@ -85,21 +86,23 @@ pub enum FsaError {
     InvalidCredentialsFormat(String),
     #[error(transparent)]
     LssError(#[from] LssError),
+    #[error(transparent)]
+    CatlibError(#[from] CatlibError),
+    #[error("{0}")]
+    Generic(String),
 }
 
 #[derive(Clone)]
 pub struct FoundationStorageApi {
     evs_client: EvsClient,
     sc_url: String,
-    lss_service: LssService,
 }
 
 impl FoundationStorageApi {
-    pub fn new(config: &FoundationStorageApiConfig, lss_service: LssService) -> Self {
+    pub fn new(config: &FoundationStorageApiConfig) -> Self {
         Self {
             evs_client: EvsClient::new(&config.evs_url),
             sc_url: config.sc_url.clone(),
-            lss_service,
         }
     }
 
@@ -121,7 +124,6 @@ impl FoundationStorageApi {
                     encrypting_keypair: Rc::new(encrypting_keypair),
                     evs_client: self.evs_client.clone(),
                     sc_url: self.sc_url.clone(),
-                    lss_service: self.lss_service.clone(),
                 }),
             })
     }
@@ -132,10 +134,9 @@ impl FoundationStorageApi {
 #[derive(Clone)]
 pub struct FreeTierProcessHandle {
     email: String,
-    encrypting_keypair: Rc<EncryptingKeypair>, // TODO remove it
+    encrypting_keypair: Rc<EncryptingKeypair>, // TODO WILX-269 EVS communication encryption (remove it if choose to relay on SSL only)
     evs_client: EvsClient,
     sc_url: String,
-    lss_service: LssService,
 }
 
 impl FreeTierProcessHandle {
@@ -166,8 +167,7 @@ impl FreeTierProcessHandle {
                     let storage_template = StorageTemplate::FoundationStorageTemplate(
                         storage_credentials.into_storage_template(self.sc_url.clone()),
                     );
-                    self.lss_service.save_storage_template(&storage_template)?;
-                    // todo save info in catlib that storage has been granted
+
                     Ok(storage_template)
                 }
                 None => Err(FsaError::EvsError(WildlandHttpClientError::HttpError(

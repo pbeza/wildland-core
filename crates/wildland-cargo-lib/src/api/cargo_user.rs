@@ -101,7 +101,7 @@ impl CargoUser {
             catlib_service,
             lss_service: lss_service.clone(),
             user_context: UserContext::new(),
-            fsa_api: FoundationStorageApi::new(fsa_config, lss_service),
+            fsa_api: FoundationStorageApi::new(fsa_config),
         }
     }
 
@@ -225,6 +225,28 @@ All devices:
         email: String,
     ) -> Result<FreeTierProcessHandle, FsaError> {
         self.fsa_api.request_free_tier_storage(email)
+    }
+
+    pub fn verify_email(
+        &mut self,
+        process_handle: &FreeTierProcessHandle,
+        token: String,
+    ) -> Result<StorageTemplate, FsaError> {
+        let storage_template = process_handle.verify_email(token)?;
+        self.lss_service.save_storage_template(&storage_template)?;
+        self.catlib_service
+            .mark_free_storage_granted(
+                Rc::get_mut(&mut self.forest)
+                .ok_or(
+                    FsaError::Generic("Could mutate user's state - probably there is more than one user's handle which is considered as not safe".to_string())
+                )?
+            )?;
+        Ok(storage_template)
+    }
+
+    pub fn is_free_storage_granted(&self) -> Result<bool, CatlibError> {
+        self.catlib_service
+            .is_free_storage_granted(self.forest.as_ref())
     }
 }
 

@@ -76,6 +76,9 @@ pub trait Forest: AsRef<ForestData> + std::fmt::Debug {
     /// Return list of Forest Containers
     fn containers(&self) -> CatlibResult<Vec<Box<dyn Container>>>;
 
+    /// Returns metadata bytes
+    fn data(&self) -> CatlibResult<&[u8]>;
+
     /// Set Forest arbitrary data
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<&mut dyn Forest>;
 

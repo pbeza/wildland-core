@@ -202,14 +202,17 @@ mod ffi_binding {
         ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
 
         // Foundation Storage
+        type FreeTierProcessHandle;
         fn request_free_tier_storage(
             self: &CargoUser,
             email: String,
         ) -> Result<FreeTierProcessHandle, FsaError>;
         fn verify_email(
-            self: &FreeTierProcessHandle,
+            self: &CargoUser,
+            process_handle: &FreeTierProcessHandle,
             verification_token: String,
         ) -> Result<StorageTemplate, FsaError>;
+        fn is_free_storage_granted(self: &CargoUser) -> Result<bool, CatlibError>;
 
         //
         // Container

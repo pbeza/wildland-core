@@ -173,13 +173,19 @@ void config_parser_test() // test
 
 auto foundation_storage_test(CargoUser &cargo_user)
 {
-    auto process_handle = cargo_user.request_free_tier_storage("test@email.com");
+    std::cout << "is user onboard? " << std::boolalpha << cargo_user.is_free_storage_granted() << std::endl;
+
+    auto process_handle = cargo_user.request_free_tier_storage("test@wildland.io");
+
     std::cout << "Provide a verification token:\n";
     std::string verification_token;
     std::cin >> verification_token;
     // may be used for creating container
-    StorageTemplate storage_template = process_handle.verify_email(RustString{verification_token});
+    StorageTemplate storage_template = cargo_user.verify_email(process_handle, RustString{verification_token});
     std::cout << storage_template.stringify().to_string() << std::endl;
+
+    std::cout << "is user onboard? " << std::boolalpha << cargo_user.is_free_storage_granted() << std::endl;
+
     return storage_template;
 }
 
@@ -205,7 +211,7 @@ int main()
 {
     CargoCfgProviderImpl cfg_provider{};
     CargoConfig cfg = collect_config(cfg_provider);
-    cfg.override_evs_url(RustString{"new url"});
+    // cfg.override_evs_url(RustString{"new url"});
     LocalSecureStorageImpl lss{};
     SharedMutexCargoLib cargo_lib;
     try
