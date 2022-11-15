@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-mod catlib_service;
+pub mod catlib_service;
 mod error;
 mod identity;
 mod lss;
@@ -25,7 +25,6 @@ pub use catlib_service::*;
 pub use error::*;
 pub use identity::{master::*, wildland::*};
 pub use lss::*;
-pub use wildland_catlib::{contracts::*, CatlibError, Container, Forest, PubKey};
 pub use wildland_crypto::{
     error::CryptoError,
     identity::{

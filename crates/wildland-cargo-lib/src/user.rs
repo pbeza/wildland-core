@@ -15,16 +15,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::rc::Rc;
+
 use crate::{
     api::{cargo_user::CargoUser, config::FoundationStorageApiConfig},
     errors::user::{UserCreationError, UserRetrievalError},
 };
 use uuid::Uuid;
+use wildland_catlib::CatLib;
 use wildland_corex::{
-    CatLibService, CatlibError, CryptoError, DeviceMetadata, IForest, Identity, LssService,
-    MasterIdentity, MnemonicPhrase, UserMetaData,
+    catlib_service::error::CatlibError, CatLibService, CryptoError, DeviceMetadata, Identity,
+    LssService, MasterIdentity, MnemonicPhrase, UserMetaData,
 };
-
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     wildland_corex::generate_random_mnemonic()
 }
@@ -47,7 +49,7 @@ impl UserService {
     pub(crate) fn new(lss_service: LssService, fsa_config: FoundationStorageApiConfig) -> Self {
         Self {
             lss_service,
-            catlib_service: CatLibService::new(),
+            catlib_service: CatLibService::new(Rc::new(CatLib::default())),
             fsa_config,
         }
     }
@@ -86,7 +88,7 @@ impl UserService {
             },
         )?;
 
-        self.lss_service.save_forest_uuid(&forest)?;
+        self.lss_service.save_forest_uuid((*forest).as_ref())?;
 
         self.lss_service.save_identity(&default_forest_identity)?;
         self.lss_service.save_identity(&device_identity)?;
@@ -108,10 +110,10 @@ impl UserService {
     pub(crate) fn get_user(&self) -> Result<Option<CargoUser>, UserRetrievalError> {
         let default_forest_uuid = self.get_default_forest_uuid()?;
 
-        match self.catlib_service.get_forest(default_forest_uuid) {
+        match self.catlib_service.get_forest(&default_forest_uuid) {
             Ok(forest) => {
-                let user_metadata: UserMetaData =
-                    serde_json::from_slice(&forest.data()).map_err(|e| {
+                let user_metadata: UserMetaData = serde_json::from_slice(&(*forest).as_ref().data)
+                    .map_err(|e| {
                         CatlibError::Generic(format!(
                             "Could not parse forest data retrieved from Catlib: {e}"
                         ))

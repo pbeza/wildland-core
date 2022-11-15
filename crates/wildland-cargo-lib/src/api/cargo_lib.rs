@@ -20,7 +20,6 @@ use crate::{
         config::{CargoConfig, FoundationStorageApiConfig},
         user::UserApi,
     },
-    errors::single_variant::*,
     logging,
     user::UserService,
 };
@@ -35,8 +34,11 @@ use thiserror::Error;
 use wildland_corex::{LocalSecureStorage, LssService};
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
-#[error("CargoLib creation error: {0}")]
-pub struct CargoLibCreationError(pub String);
+#[repr(C)]
+pub enum CargoLibCreationError {
+    #[error("CargoLib creation error: {0}")]
+    Error(String),
+}
 
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -94,12 +96,12 @@ impl CargoLib {
 ///
 /// impl LocalSecureStorage for TestLss {
 /// // ...implementation here
-/// #    fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>>{todo!()}
-/// #    fn get(&self, key: String) -> LssResult<Option<Vec<u8>>>{todo!()}
+/// #    fn insert(&self, key: String, value: String) -> LssResult<Option<String>>{todo!()}
+/// #    fn get(&self, key: String) -> LssResult<Option<String>>{todo!()}
 /// #    fn contains_key(&self, key: String) -> LssResult<bool>{todo!()}
 /// #    fn keys(&self) -> LssResult<Vec<String>>{todo!()}
 /// #    fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>>{todo!()}
-/// #    fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>>{todo!()}
+/// #    fn remove(&self, key: String) -> LssResult<Option<String>>{todo!()}
 /// #    fn len(&self) -> LssResult<usize>{todo!()}
 /// #    fn is_empty(&self) -> LssResult<bool>{todo!()}
 /// }
@@ -130,12 +132,12 @@ impl CargoLib {
 pub fn create_cargo_lib(
     lss: &'static dyn LocalSecureStorage,
     cfg: CargoConfig,
-) -> SingleErrVariantResult<SharedCargoLib, CargoLibCreationError> {
+) -> Result<SharedCargoLib, CargoLibCreationError> {
     if !INITIALIZED.load(Ordering::Relaxed) {
         INITIALIZED.store(true, Ordering::Relaxed);
 
         logging::init_subscriber(cfg.logger_config)
-            .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e.to_string())))?;
+            .map_err(|e| CargoLibCreationError::Error(e.to_string()))?;
 
         let cargo_lib = Arc::new(Mutex::new(CargoLib::new(lss, cfg.fsa_config)));
 

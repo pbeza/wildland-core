@@ -1411,9 +1411,9 @@ dependencies = [
 
 [[package]]
 name = "rusty-bind-parser"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "96cf29f994d69bc5f2164f62255c068f00431d946a1a1c8c5884d55aa7b616a1"
+checksum = "9ae385ad98bac0521c5f9d2dcd248ba715f00ed6515bf779087544503aee10a3"
 dependencies = [
  "const_format",
  "convert_case",
@@ -2082,6 +2082,7 @@ dependencies = [
  "tracing-oslog",
  "tracing-subscriber",
  "uuid",
+ "wildland-catlib",
  "wildland-corex",
  "wildland-http-client",
 ]
@@ -2104,6 +2105,7 @@ dependencies = [
  "thiserror",
  "tracing",
  "uuid",
+ "wildland-corex",
 ]
 
 [[package]]
@@ -2119,7 +2121,6 @@ dependencies = [
  "thiserror",
  "tracing",
  "uuid",
- "wildland-catlib",
  "wildland-crypto",
  "wildland-dfs",
 ]

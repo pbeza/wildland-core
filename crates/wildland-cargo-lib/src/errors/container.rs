@@ -18,7 +18,15 @@
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum ContainerMountError {}
+#[repr(C)]
+pub enum ContainerMountError {
+    #[error("Container mount error")]
+    Error,
+}
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum ContainerUnmountError {}
+#[repr(C)]
+pub enum ContainerUnmountError {
+    #[error("Container unmount error")]
+    Error,
+}

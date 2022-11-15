@@ -17,16 +17,18 @@
 
 use std::{
     collections::HashMap,
+    rc::Rc,
     sync::{Arc, Mutex},
 };
 
 use crate::{
     api::{container::*, storage_template::*},
-    errors::{single_variant::*, storage::GetStorageTemplateError, user::*},
+    errors::{storage::GetStorageTemplateError, user::*},
 };
 use derivative::Derivative;
 use uuid::Uuid;
-use wildland_corex::{CatLibService, CatlibError, Forest, IForest, LssService};
+use wildland_corex::catlib_service::{entities::Forest, error::CatlibError, CatLibService};
+use wildland_corex::LssService;
 
 use super::{
     config::FoundationStorageApiConfig,
@@ -71,7 +73,7 @@ pub struct CargoUser {
     this_device: String,
     all_devices: Vec<String>,
 
-    forest: Forest,
+    forest: Rc<dyn Forest>,
 
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
@@ -87,7 +89,7 @@ impl CargoUser {
     pub fn new(
         this_device: String,
         all_devices: Vec<String>,
-        forest: Forest,
+        forest: Box<dyn Forest>,
         catlib_service: CatLibService,
         lss_service: LssService,
         fsa_config: &FoundationStorageApiConfig,
@@ -95,7 +97,7 @@ impl CargoUser {
         Self {
             this_device,
             all_devices,
-            forest,
+            forest: forest.into(),
             catlib_service,
             lss_service: lss_service.clone(),
             user_context: UserContext::new(),
@@ -125,7 +127,7 @@ All devices:
     }
 
     /// TODO
-    pub fn mount_forest(&self) -> SingleErrVariantResult<(), ForestMountError> {
+    pub fn mount_forest(&self) -> Result<(), ForestMountError> {
         todo!()
     }
 
@@ -170,7 +172,7 @@ All devices:
     ) -> Result<SharedContainer, CatlibError> {
         let container: Container = self
             .catlib_service
-            .create_container(name, &self.forest, template)
+            .create_container(name, self.forest.as_ref(), template)
             .map(|c| c.into())?;
         let container_uuid = container.uuid();
         let shared_container = Arc::new(Mutex::new(container));
@@ -205,7 +207,7 @@ All devices:
             .get_storage_templates_data()?
             .into_iter()
             .map(|st_data| {
-                serde_json::from_slice(&st_data)
+                serde_json::from_str(&st_data)
                     .map_err(|e| GetStorageTemplateError::DeserializationError(e.to_string()))
             })
             .collect()

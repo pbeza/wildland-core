@@ -178,6 +178,7 @@ apple:
   stage: Bridges
   only:
     - master
+    - develop
     - merge_requests
   tags:
     - macos
@@ -219,8 +220,8 @@ apple:
 #    - windows
 #    - x64
 #  rules:
-#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-#    - if: $CI_COMMIT_BRANCH == "main"
+#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"
+#    - if: $CI_COMMIT_BRANCH == "master"
 #    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
 #      when: manual
 #      allow_failure: true

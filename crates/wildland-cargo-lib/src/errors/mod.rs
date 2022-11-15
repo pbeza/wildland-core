@@ -16,12 +16,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod container;
-pub mod retrieval_error;
-pub mod single_variant;
 pub mod storage;
 pub mod user;
-
 use std::fmt::Display;
+pub use user::*;
 
 pub trait ExceptionTrait {
     fn reason(&self) -> String;
