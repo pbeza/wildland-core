@@ -28,6 +28,11 @@ use derivative::Derivative;
 use uuid::Uuid;
 use wildland_corex::{CatLibService, CatlibError, Forest, IForest, LssService};
 
+use super::{
+    config::FoundationStorageApiConfig,
+    foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError},
+};
+
 pub type SharedContainer = Arc<Mutex<Container>>;
 #[derive(Debug, Clone)]
 struct UserContext {
@@ -74,6 +79,8 @@ pub struct CargoUser {
     lss_service: LssService,
     #[derivative(Debug = "ignore")]
     user_context: UserContext,
+    #[derivative(Debug = "ignore")]
+    fsa_api: FoundationStorageApi,
 }
 
 impl CargoUser {
@@ -83,14 +90,16 @@ impl CargoUser {
         forest: Forest,
         catlib_service: CatLibService,
         lss_service: LssService,
+        fsa_config: &FoundationStorageApiConfig,
     ) -> Self {
         Self {
             this_device,
             all_devices,
             forest,
             catlib_service,
-            lss_service,
+            lss_service: lss_service.clone(),
             user_context: UserContext::new(),
+            fsa_api: FoundationStorageApi::new(fsa_config, lss_service),
         }
     }
 
@@ -200,6 +209,20 @@ All devices:
                     .map_err(|e| GetStorageTemplateError::DeserializationError(e.to_string()))
             })
             .collect()
+    }
+
+    /// Starts process of granting Free Tier Foundation Storage.
+    ///
+    /// `CargoUser` encapsulates `FoundationStorageApi` functionalities in order to avoid requesting
+    /// Free Foundation Tier outside of the user context.
+    ///
+    /// Returns `FreeTierProcessHandle` structure which can be used to verify an email address and
+    /// finalize the process.
+    pub fn request_free_tier_storage(
+        &self,
+        email: String,
+    ) -> Result<FreeTierProcessHandle, FsaError> {
+        self.fsa_api.request_free_tier_storage(email)
     }
 }
 

@@ -246,21 +246,6 @@ mod ffi_binding {
             config: CargoConfig,
         ) -> Result<Arc<Mutex<CargoLib>>, CargoLibCreationExc>;
         fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
-        fn foundation_storage_api(self: &Arc<Mutex<CargoLib>>) -> FoundationStorageApi;
-
-        //
-        // FoundationStorageApi
-        //
-        fn request_free_tier_storage(
-            self: &FoundationStorageApi,
-            email: String,
-        ) -> Result<FreeTierProcessHandle, FsaExc>;
-        fn verify_email(
-            self: &FoundationStorageApi,
-            process_handle: &FreeTierProcessHandle,
-            verification_token: String,
-        ) -> Result<StorageTemplate, FsaExc>;
-        type FreeTierProcessHandle;
 
         //
         // UserApi
@@ -308,6 +293,16 @@ mod ffi_binding {
         fn get_storage_templates(
             self: &CargoUser,
         ) -> Result<Vec<StorageTemplate>, GetStorageTemplateExc>;
+
+        // Foundation Storage
+        fn request_free_tier_storage(
+            self: &CargoUser,
+            email: String,
+        ) -> Result<FreeTierProcessHandle, FsaExc>;
+        fn verify_email(
+            self: &FreeTierProcessHandle,
+            verification_token: String,
+        ) -> Result<StorageTemplate, FsaExc>;
 
         //
         // Container

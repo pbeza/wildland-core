@@ -16,7 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    api::cargo_user::CargoUser,
+    api::{cargo_user::CargoUser, config::FoundationStorageApiConfig},
     errors::user::{UserCreationError, UserRetrievalError},
 };
 use uuid::Uuid;
@@ -40,13 +40,15 @@ pub enum CreateUserInput {
 pub(crate) struct UserService {
     lss_service: LssService,
     catlib_service: CatLibService,
+    fsa_config: FoundationStorageApiConfig,
 }
 
 impl UserService {
-    pub(crate) fn new(lss_service: LssService) -> Self {
+    pub(crate) fn new(lss_service: LssService, fsa_config: FoundationStorageApiConfig) -> Self {
         Self {
             lss_service,
             catlib_service: CatLibService::new(),
+            fsa_config,
         }
     }
 
@@ -95,6 +97,7 @@ impl UserService {
             forest,
             self.catlib_service.clone(),
             self.lss_service.clone(),
+            &self.fsa_config,
         ))
     }
 
@@ -130,6 +133,7 @@ impl UserService {
                         forest,
                         self.catlib_service.clone(),
                         self.lss_service.clone(),
+                        &self.fsa_config,
                     ))),
                     None => Err(UserRetrievalError::DeviceMetadataNotFound),
                 }
