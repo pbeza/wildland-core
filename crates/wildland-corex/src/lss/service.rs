@@ -18,13 +18,13 @@
 use std::fmt::{Debug, Display};
 
 use super::{api::LocalSecureStorage, result::LssResult};
+use crate::catlib_service::entities::{ForestData, Identity};
 use crate::{
     storage::StorageTemplateTrait, ForestRetrievalError, LssError, WildlandIdentity,
     DEFAULT_FOREST_KEY,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use uuid::Uuid;
-use wildland_catlib::{Forest, IForest, Identity};
 use wildland_crypto::identity::SigningKeypair;
 
 const STORAGE_TEMPLATE_PREFIX: &str = "wildland.storage_template.";
@@ -65,9 +65,9 @@ impl LssService {
         })
     }
 
-    pub fn save_forest_uuid(&self, forest: &Forest) -> LssResult<bool> {
+    pub fn save_forest_uuid(&self, forest: &ForestData) -> LssResult<bool> {
         tracing::trace!("Saving forest uuid");
-        self.serialize_and_save(forest.owner().encode(), &forest.uuid())
+        self.serialize_and_save(forest.owner.encode(), &forest.uuid)
     }
 
     pub fn get_forest_uuid_by_identity(
@@ -82,9 +82,9 @@ impl LssService {
 
         let optional_this_device_identity = self.get_this_device_keypair()?;
         optional_this_device_identity.map_or(Ok(None), |this_device_identity| {
-            let device_name = self
-                .get_this_device_name()?
-                .ok_or_else(|| LssError("Could not retrieve device name from LSS".to_owned()))?;
+            let device_name = self.get_this_device_name()?.ok_or_else(|| {
+                LssError::Error("Could not retrieve device name from LSS".to_owned())
+            })?;
             Ok(Some(WildlandIdentity::Device(
                 device_name,
                 this_device_identity,
@@ -103,7 +103,7 @@ impl LssService {
         )
     }
 
-    pub fn get_storage_templates_data(&self) -> LssResult<Vec<Vec<u8>>> {
+    pub fn get_storage_templates_data(&self) -> LssResult<Vec<String>> {
         let st_keys = self
             .lss
             .keys_starting_with(STORAGE_TEMPLATE_PREFIX.to_owned())?;
@@ -111,7 +111,7 @@ impl LssService {
         Ok(st_keys
             .into_iter()
             .map(|key| self.lss.get(key))
-            .collect::<Result<Vec<Option<Vec<u8>>>, _>>()?
+            .collect::<Result<Vec<Option<String>>, _>>()?
             .into_iter()
             .flatten()
             .collect())
@@ -139,8 +139,8 @@ impl LssService {
         self.lss
             .insert(
                 key.to_string(),
-                serde_json::to_vec(obj)
-                    .map_err(|e| LssError(format!("Could not serialize object: {e}")))?,
+                serde_json::to_string(obj)
+                    .map_err(|e| LssError::Error(format!("Could not serialize object: {e}")))?,
             )
             .map(|bytes| bytes.is_some())
     }
@@ -149,9 +149,9 @@ impl LssService {
     /// this is the only method which should use `serde_json::from_slice` function so it could be easily replaced
     fn get_parsed<T: DeserializeOwned>(&self, key: impl Display + Debug) -> LssResult<Option<T>> {
         self.lss.get(key.to_string()).and_then(|optional_bytes| {
-            optional_bytes.map_or(Ok(None), |bytes| {
-                serde_json::from_slice(bytes.as_slice())
-                    .map_err(|e| LssError(format!("Could not parse LSS entry: {e}")))
+            optional_bytes.map_or(Ok(None), |input| {
+                serde_json::from_str(&input)
+                    .map_err(|e| LssError::Error(format!("Could not parse LSS entry: {e}")))
             })
         })
     }
@@ -164,9 +164,10 @@ mod tests {
         collections::{HashMap, HashSet},
     };
 
+    use crate::catlib_service::entities::{ForestData, Identity};
     use serde::Serialize;
     use uuid::Uuid;
-    use wildland_catlib::{CatLib, IForest, Identity};
+
     use wildland_crypto::identity::SigningKeypair;
 
     use crate::{
@@ -177,15 +178,15 @@ mod tests {
 
     #[derive(Default)]
     struct LssStub {
-        storage: RefCell<HashMap<String, Vec<u8>>>,
+        storage: RefCell<HashMap<String, String>>,
     }
 
     impl LocalSecureStorage for LssStub {
-        fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>> {
+        fn insert(&self, key: String, value: String) -> LssResult<Option<String>> {
             Ok(self.storage.borrow_mut().insert(key, value))
         }
 
-        fn get(&self, key: String) -> LssResult<Option<Vec<u8>>> {
+        fn get(&self, key: String) -> LssResult<Option<String>> {
             Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
         }
 
@@ -207,7 +208,7 @@ mod tests {
                 .collect())
         }
 
-        fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>> {
+        fn remove(&self, key: String) -> LssResult<Option<String>> {
             Ok(self.storage.borrow_mut().remove(&key))
         }
 
@@ -233,7 +234,7 @@ mod tests {
         let expected_key = "wildland.forest.5".to_string();
 
         let deserialized_keypair: SigningKeypair =
-            serde_json::from_slice(&lss.get(expected_key).unwrap().unwrap()).unwrap();
+            serde_json::from_str(&lss.get(expected_key).unwrap().unwrap()).unwrap();
         assert_eq!(deserialized_keypair, keypair);
     }
 
@@ -249,7 +250,7 @@ mod tests {
             WildlandIdentity::Device(device_name.clone(), SigningKeypair::from(&keypair));
         service.save_identity(&device_identity).unwrap();
 
-        let deserialized_keypair: SigningKeypair = serde_json::from_slice(
+        let deserialized_keypair: SigningKeypair = serde_json::from_str(
             &lss.get(THIS_DEVICE_KEYPAIR_KEY.to_string())
                 .unwrap()
                 .unwrap(),
@@ -258,7 +259,7 @@ mod tests {
         assert_eq!(deserialized_keypair, keypair);
 
         let deserialized_name: String =
-            serde_json::from_slice(&lss.get(THIS_DEVICE_NAME_KEY.to_owned()).unwrap().unwrap())
+            serde_json::from_str(&lss.get(THIS_DEVICE_NAME_KEY.to_owned()).unwrap().unwrap())
                 .unwrap();
         assert_eq!(deserialized_name, device_name);
     }
@@ -283,7 +284,7 @@ mod tests {
         let keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
         lss.insert(
             DEFAULT_FOREST_KEY.to_owned(),
-            serde_json::to_vec(&keypair).unwrap(),
+            serde_json::to_string(&keypair).unwrap(),
         )
         .unwrap();
 
@@ -299,20 +300,20 @@ mod tests {
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
-        let tmp = tempfile::tempdir().unwrap().path().into();
-        let catlib = CatLib::new(tmp);
-
         let forest_identity = Identity([1; 32]);
-        let forest = catlib
-            .create_forest(forest_identity.clone(), HashSet::new(), vec![])
-            .unwrap();
+        let forest = ForestData {
+            uuid: Uuid::new_v4(),
+            owner: forest_identity.clone(),
+            signers: HashSet::new(),
+            data: vec![],
+        };
 
         service.save_forest_uuid(&forest).unwrap();
 
         let retrieved_uuid: Uuid =
-            serde_json::from_slice(&lss.get(forest_identity.encode()).unwrap().unwrap()).unwrap();
+            serde_json::from_str(&lss.get(forest_identity.encode()).unwrap().unwrap()).unwrap();
 
-        assert_eq!(retrieved_uuid, forest.uuid());
+        assert_eq!(retrieved_uuid, forest.uuid);
     }
 
     #[test]
@@ -326,7 +327,7 @@ mod tests {
         let forest_identity = Identity(forest_pubkey);
         lss.insert(
             forest_identity.encode(),
-            serde_json::to_vec(&forest_uuid).unwrap(),
+            serde_json::to_string(&forest_uuid).unwrap(),
         )
         .unwrap();
 
@@ -363,12 +364,12 @@ mod tests {
 
         lss.insert(
             THIS_DEVICE_NAME_KEY.to_owned(),
-            serde_json::to_vec(&device_name).unwrap(),
+            serde_json::to_string(&device_name).unwrap(),
         )
         .unwrap();
         lss.insert(
             THIS_DEVICE_KEYPAIR_KEY.to_owned(),
-            serde_json::to_vec(&keypair).unwrap(),
+            serde_json::to_string(&keypair).unwrap(),
         )
         .unwrap();
 
@@ -407,7 +408,6 @@ mod tests {
             .unwrap();
 
         let expected_data = r#"{"s":"some string"}"#.to_string();
-        let expected_data = expected_data.as_bytes();
         assert_eq!(retrieved_storage_template_data, expected_data);
     }
 }

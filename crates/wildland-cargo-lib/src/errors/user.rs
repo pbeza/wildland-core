@@ -17,10 +17,19 @@
 
 use thiserror::Error;
 use wildland_corex::{
-    CatlibError, CryptoError, ForestIdentityCreationError, ForestRetrievalError, LssError,
+    catlib_service::error::CatlibError, CryptoError, ForestIdentityCreationError,
+    ForestRetrievalError, LssError,
 };
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
+pub enum CreateMnemonicError {
+    #[error("Invalid Mnemonic words")]
+    InvalidMnemonicWords,
+}
+
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
 pub enum UserCreationError {
     #[error("User already exists")]
     UserAlreadyExists,
@@ -62,7 +71,7 @@ impl From<CatlibError> for UserCreationError {
     fn from(catlib_err: CatlibError) -> Self {
         match catlib_err {
             CatlibError::NoRecordsFound
-            | CatlibError::MalformedDatabaseEntry
+            | CatlibError::MalformedDatabaseRecord
             | CatlibError::Generic(_) => UserCreationError::CatlibError(catlib_err.to_string()),
             CatlibError::RecordAlreadyExists => UserCreationError::UserAlreadyExists,
         }
@@ -70,6 +79,7 @@ impl From<CatlibError> for UserCreationError {
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
 pub enum UserRetrievalError {
     #[error(transparent)]
     ForestRetrievalError(#[from] ForestRetrievalError),
@@ -81,7 +91,13 @@ pub enum UserRetrievalError {
     CatlibError(#[from] CatlibError),
     #[error("Metadata of this device has not been found in Forest")]
     DeviceMetadataNotFound,
+    #[error("User not found")]
+    UserNotFound,
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum ForestMountError {}
+#[repr(C)]
+pub enum ForestMountError {
+    #[error("Forest Mount error")]
+    Error,
+}

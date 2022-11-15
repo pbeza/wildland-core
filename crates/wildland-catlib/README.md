@@ -7,9 +7,9 @@ Current implementation stores all entities in an inefficient, single-file, schem
 
 Location of the database file depends on the platform where the application runs, these are:
 
-- `Linux:   /home/alice/.config/catlib`
+- `Linux: /home/alice/.config/catlib`
 - `Windows: C:\Users\Alice\AppData\Roaming\com.wildland.Cargo\catlib`
-- `macOS:   /Users/Alice/Library/Application Support/com.wildland.Cargo/catlib`
+- `macOS: /Users/Alice/Library/Application Support/com.wildland.Cargo/catlib`
 
 ## Example usages
 
@@ -18,7 +18,7 @@ Location of the database file depends on the platform where the application runs
 ```rust
 let catlib = CatLib::default();
 let forest = catlib.create_forest(b"owner".to_vec(), Signers::new(), vec![]).unwrap();
-let container = forest.create_container().unwrap();
+let container = forest.create_container("container name".to_owned()).unwrap();
 container.add_path("/foo/bar".to_string());
 ```
 

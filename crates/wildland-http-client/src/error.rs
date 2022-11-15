@@ -20,11 +20,12 @@ use thiserror::Error;
 use wildland_crypto::error::CryptoError;
 
 #[derive(Error, Debug, Clone)]
+#[repr(C)]
 pub enum WildlandHttpClientError {
     #[error("{0}")]
     HttpError(String),
-    #[error("Cannot serialize request")]
-    CannotSerializeRequestError { source: Rc<serde_json::Error> },
+    #[error("Cannot serialize request - source: {0}")]
+    CannotSerializeRequestError(Rc<serde_json::Error>),
     #[error(transparent)]
     CommonLibError(#[from] CryptoError),
     #[error(transparent)]

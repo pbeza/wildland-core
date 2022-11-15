@@ -23,6 +23,7 @@ use wildland_crypto::identity::{
 };
 
 #[derive(Debug, PartialEq)]
+#[repr(C)]
 pub enum WildlandIdentity {
     Forest(u64, SigningKeypair),
     Device(String, SigningKeypair),

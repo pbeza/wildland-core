@@ -178,6 +178,7 @@ apple:
   stage: Bridges
   only:
     - master
+    - develop
     - merge_requests
   tags:
     - macos
@@ -219,8 +220,8 @@ apple:
 #    - windows
 #    - x64
 #  rules:
-#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-#    - if: $CI_COMMIT_BRANCH == "main"
+#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"
+#    - if: $CI_COMMIT_BRANCH == "master"
 #    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
 #      when: manual
 #      allow_failure: true
@@ -253,26 +254,27 @@ csharp x86_64 linux:
     - master
     - merge_requests
 
-webassembly emscripten linux:
-  stage: Bindings
-  needs: ['cargo test', 'x86_64 linux build']
-  script:
-    - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
-    - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
-    - mv /out ${CI_PROJECT_DIR}/build
-  artifacts:
-    expose_as: 'wasm'
-    name: wasm
-    paths:
-      - build/
-    expire_in: 1 week
-  tags:
-    - docker
-    - linux
-    - metal
-  only:
-    - master
-    - merge_requests
+# minreq (http client) does not compile on target wasm32-unknown-emscripten
+# webassembly emscripten linux:
+#   stage: Bindings
+#   needs: ['cargo test', 'x86_64 linux build']
+#   script:
+#     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
+#     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
+#     - mv /out ${CI_PROJECT_DIR}/build
+#   artifacts:
+#     expose_as: 'wasm'
+#     name: wasm
+#     paths:
+#       - build/
+#     expire_in: 1 week
+#   tags:
+#     - docker
+#     - linux
+#     - metal
+#   only:
+#     - master
+#     - merge_requests
 
 swift x86_64 linux:
   stage: Bindings

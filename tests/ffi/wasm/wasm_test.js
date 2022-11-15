@@ -1,6 +1,23 @@
 var wildland = require("./wildland.js")
 
+
 wildland().then((wlib) => {
+    // function rust_vec_u8_of_bytes_to_js_string(vec) {
+    //     result = "";
+    //     for (let i = 0; i < vec.size(); i++) {
+    //         result += String.fromCharCode(parseInt(vec.at(i).unwrap()))
+    //     }
+    //     return result;
+    // }
+
+    // function js_string_to_rust_vec_u8(js_str) {
+    //     var result = new wlib.RustVec_u8();
+    //     for (var i = 0; i < js_str.length; i++) {
+    //         result.push(js_str[i].charCodeAt(0));
+    //     }
+    //     return result
+    // }
+
     // Local Secure Storage native implementation
     var Lss = wlib.LocalSecureStorage.extend("LocalSecureStorage", {
         store: {},
@@ -11,10 +28,10 @@ wildland().then((wlib) => {
             var str_key = key.to_string(); // JS cannot compare Rust strings so conversion to native type is necessary
             if (str_key in this.store) {
                 console.log("LSS insert: found");
-                result = wlib.new_ok_lss_optional_bytes(wlib.new_some_bytes(this.store[str_key]))
+                result = wlib.OptionalRustStringResultWithLssError.from_ok(wlib.OptionalRustString(this.store[str_key]))
             } else {
                 console.log("LSS insert: not found");
-                result = wlib.new_ok_lss_optional_bytes(wlib.new_none_bytes());
+                result = wlib.OptionalRustStringResultWithLssError.from_ok(wlib.OptionalRustString());
             }
             this.store[str_key] = val;
             return result;
@@ -24,10 +41,10 @@ wildland().then((wlib) => {
             var str_key = key.to_string(); // JS cannot compare Rust strings so conversion to native type is necessary
             if (str_key in this.store) {
                 console.log("LSS get: found");
-                return wlib.new_ok_lss_optional_bytes(wlib.new_some_bytes(store[str_key]))
+                return wlib.OptionalRustStringResultWithLssError(wlib.OptionalRustString(store[str_key]))
             } else {
                 console.log("LSS get: not found");
-                return wlib.new_ok_lss_optional_bytes(wlib.new_none_bytes());
+                return wlib.OptionalRustStringResultWithLssError(wlib.OptionalRustString());
             }
         },
         contains_key: function (key) {
@@ -62,22 +79,20 @@ wildland().then((wlib) => {
     // or by parsing JSON string with parse_config function
     var CargoCfgProvider = wlib.CargoCfgProvider.extend("CargoCfgProvider", {
         // config: logger general
-        get_use_logger: function () { return true; },
+        get_use_logger: function () { return false; },
         get_log_level: function () { return new wlib.String("debug"); },
         get_log_use_ansi: function () { return false; },
 
         // config: logger file log
         get_log_file_enabled: function () { return false; },
-        get_log_file_path: function () { return new wlib.new_none_string(); },
-        get_log_file_rotate_directory: function () { return new wlib.new_none_string(); },
+        get_log_file_path: function () { return new wlib.OptionalRustString(); },
+        get_log_file_rotate_directory: function () { return new wlib.OptionalRustString(); },
 
         // config: logger oslog
-        get_oslog_category: function () { return new wlib.new_none_string(); },
-        get_oslog_subsystem: function () { return new wlib.new_none_string(); },
+        get_oslog_category: function () { return new wlib.OptionalRustString(); },
+        get_oslog_subsystem: function () { return new wlib.OptionalRustString(); },
 
-        // config: urls
-        get_evs_url: function () { return new wlib.String("evs url will be here"); },
-        get_sc_url: function () { return new wlib.String("sc url will be here"); }
+        get_foundation_cloud_env_mode: function () { return wlib.FoundationCloudMode.Dev }
     });
 
     var lss = new Lss;

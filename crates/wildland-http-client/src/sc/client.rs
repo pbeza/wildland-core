@@ -132,9 +132,7 @@ impl StorageControllerClient {
         T: Serialize,
     {
         let message = serde_json::to_vec(request).map_err(|source| {
-            WildlandHttpClientError::CannotSerializeRequestError {
-                source: Rc::new(source),
-            }
+            WildlandHttpClientError::CannotSerializeRequestError(Rc::new(source))
         })?;
         let keypair =
             SigningKeypair::try_from_str(self.get_credential_id(), self.get_credential_secret())?;
