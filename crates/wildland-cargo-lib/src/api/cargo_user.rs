@@ -99,7 +99,7 @@ impl CargoUser {
             all_devices,
             forest: forest.into(),
             catlib_service,
-            lss_service: lss_service.clone(),
+            lss_service,
             user_context: UserContext::new(),
             fsa_api: FoundationStorageApi::new(fsa_config),
         }
@@ -237,7 +237,7 @@ All devices:
         self.catlib_service
             .mark_free_storage_granted(
                 Rc::get_mut(&mut self.forest)
-                .ok_or(
+                .ok_or_else(||
                     FsaError::Generic("Could mutate user's state - probably there is more than one user's handle which is considered as not safe".to_string())
                 )?
             )?;

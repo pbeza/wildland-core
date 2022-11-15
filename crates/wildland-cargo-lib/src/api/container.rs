@@ -165,12 +165,10 @@ mod tests {
             .add_forest(
                 &forest_identity,
                 &device_identity,
-                ForestMetaData {
-                    devices: vec![DeviceMetadata {
-                        name: dev_name,
-                        pubkey: device_identity.get_public_key(),
-                    }],
-                },
+                ForestMetaData::new(vec![DeviceMetadata {
+                    name: dev_name,
+                    pubkey: device_identity.get_public_key(),
+                }]),
             )
             .unwrap();
 

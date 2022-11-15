@@ -131,7 +131,7 @@ impl CatLibService {
     }
 
     fn get_parsed_forest_metadata(&self, forest: &dyn Forest) -> CatlibResult<ForestMetaData> {
-        serde_json::from_slice(&forest.data()?)
+        serde_json::from_slice(forest.data()?)
             .map_err(|e| CatlibError::Generic(format!("Could not deserialize forest metadata {e}")))
     }
 }

@@ -62,7 +62,7 @@ impl CargoLib {
     ) -> Self {
         let lss_service = LssService::new(lss);
         Self {
-            user_api: UserApi::new(UserService::new(lss_service.clone(), fsa_config)),
+            user_api: UserApi::new(UserService::new(lss_service, fsa_config)),
         }
     }
 
