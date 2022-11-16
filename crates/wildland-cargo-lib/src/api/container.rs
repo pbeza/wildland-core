@@ -132,8 +132,7 @@ impl Container {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
+    use crate::api::utils::test::catlib_service;
     use crate::api::{
         container::tests::utils::compare_unordered, foundation_storage::FoundationStorageTemplate,
     };
@@ -143,14 +142,10 @@ mod tests {
         CatLibService, DeviceMetadata, ForestMetaData, SigningKeypair, WildlandIdentity,
     };
 
-    use wildland_catlib::CatLib;
-
     use super::Container;
 
     #[fixture]
-    fn container() -> Container {
-        let catlib_service = CatLibService::new(Rc::new(CatLib::default()));
-
+    fn container(catlib_service: CatLibService) -> Container {
         let dev_name = "dev name".to_string();
         let forest_identity = WildlandIdentity::Forest(
             0,

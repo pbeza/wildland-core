@@ -148,112 +148,88 @@ impl UserApi {
     }
 }
 
-// TODO WILX-302 user tests are commented because CatLib uses for now a single file for all tests
-// which can be run in parallel, hence tests race to the database file
-// #[cfg(test)]
-// mod tests {
-//     use std::{cell::RefCell, collections::HashMap};
+#[cfg(test)]
+mod tests {
+    use super::UserApi;
+    use crate::api::config::FoundationStorageApiConfig;
+    use crate::api::utils::test::{catlib_service, lss_stub};
+    use crate::{errors::UserRetrievalError, user::UserService};
+    use rstest::rstest;
+    use wildland_corex::{CatLibService, LocalSecureStorage, LssService};
 
-//     use wildland_corex::{LocalSecureStorage, LssResult, LssService};
+    #[rstest]
+    fn get_user_should_return_none_if_it_does_not_exist(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let lss_service = LssService::new(lss_stub);
+        let user_service = UserService::new(
+            lss_service,
+            catlib_service,
+            FoundationStorageApiConfig {
+                evs_url: "".to_string(),
+                sc_url: "".to_string(),
+            },
+        );
+        let user_api = UserApi::new(user_service);
 
-//     use crate::{errors::retrieval_error::RetrievalError, user::UserService};
+        let user_result = user_api.get_user();
+        assert_eq!(
+            user_result.unwrap_err(),
+            UserRetrievalError::ForestNotFound("Forest identity keypair not found".to_owned())
+        )
+    }
 
-//     use super::UserApi;
+    #[rstest]
+    fn create_user_should_return_user_structure(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let lss_service = LssService::new(lss_stub);
+        let user_service = UserService::new(
+            lss_service,
+            catlib_service,
+            FoundationStorageApiConfig {
+                evs_url: "".to_string(),
+                sc_url: "".to_string(),
+            },
+        );
+        let user_api = UserApi::new(user_service);
 
-//     #[derive(Default)]
-//     struct LssStub {
-//         storage: RefCell<HashMap<String, Vec<u8>>>,
-//     }
+        let mnemonic = user_api.generate_mnemonic().unwrap();
+        let device_name = "device name".to_string();
+        let user = user_api
+            .create_user_from_mnemonic(&mnemonic, device_name.clone())
+            .unwrap();
 
-//     impl LocalSecureStorage for LssStub {
-//         fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>> {
-//             Ok(self.storage.borrow_mut().insert(key, value))
-//         }
+        assert_eq!(user.this_device(), device_name);
+        assert_eq!(user.all_devices(), [device_name]);
+    }
 
-//         fn get(&self, key: String) -> LssResult<Option<Vec<u8>>> {
-//             Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
-//         }
+    #[rstest]
+    fn get_user_should_return_some_if_it_was_created(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let lss_service = LssService::new(lss_stub);
+        let user_service = UserService::new(
+            lss_service,
+            catlib_service,
+            FoundationStorageApiConfig {
+                evs_url: "".to_string(),
+                sc_url: "".to_string(),
+            },
+        );
+        let user_api = UserApi::new(user_service);
 
-//         fn contains_key(&self, key: String) -> LssResult<bool> {
-//             Ok(self.storage.borrow().contains_key(&key))
-//         }
+        let mnemonic = user_api.generate_mnemonic().unwrap();
+        let device_name = "device name".to_string();
+        let _ = user_api
+            .create_user_from_mnemonic(&mnemonic, device_name.clone())
+            .unwrap();
 
-//         fn keys(&self) -> LssResult<Vec<String>> {
-//             Ok(self.storage.borrow().keys().cloned().collect())
-//         }
-
-//         fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
-//             Ok(self
-//                 .storage
-//                 .borrow()
-//                 .keys()
-//                 .filter(|key| key.starts_with(&prefix))
-//                 .cloned()
-//                 .collect())
-//         }
-
-//         fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>> {
-//             Ok(self.storage.borrow_mut().remove(&key))
-//         }
-
-//         fn len(&self) -> LssResult<usize> {
-//             Ok(self.storage.borrow().len())
-//         }
-
-//         fn is_empty(&self) -> LssResult<bool> {
-//             Ok(self.storage.borrow().is_empty())
-//         }
-//     }
-
-//     #[test]
-//     fn get_user_should_return_none_if_it_does_not_exist() {
-//         let lss = LssStub::default(); // LSS must live through the whole test
-//         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-//         let lss_service = LssService::new(lss_ref);
-//         let user_service = UserService::new(lss_service);
-//         let user_api = UserApi::new(user_service);
-
-//         let user_result = user_api.get_user();
-//         assert_eq!(
-//             user_result.unwrap_err(),
-//             RetrievalError::NotFound("Forest identity keypair not found".to_owned())
-//         )
-//     }
-
-//     #[test]
-//     fn create_user_should_return_user_structure() {
-//         let lss = LssStub::default(); // LSS must live through the whole test
-//         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-//         let lss_service = LssService::new(lss_ref);
-//         let user_service = UserService::new(lss_service);
-//         let user_api = UserApi::new(user_service);
-
-//         let mnemonic = user_api.generate_mnemonic().unwrap();
-//         let device_name = "device name".to_string();
-//         let user = user_api
-//             .create_user_from_mnemonic(&mnemonic, device_name.clone())
-//             .unwrap();
-
-//         assert_eq!(user.this_device(), device_name);
-//         assert_eq!(user.all_devices(), [device_name]);
-//     }
-
-//     #[test]
-//     fn get_user_should_return_some_if_it_was_created() {
-//         let lss = LssStub::default(); // LSS must live through the whole test
-//         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-//         let lss_service = LssService::new(lss_ref);
-//         let user_service = UserService::new(lss_service);
-//         let user_api = UserApi::new(user_service);
-
-//         let mnemonic = user_api.generate_mnemonic().unwrap();
-//         let device_name = "device name".to_string();
-//         let _ = user_api
-//             .create_user_from_mnemonic(&mnemonic, device_name.clone())
-//             .unwrap();
-
-//         let user = user_api.get_user().unwrap();
-//         assert_eq!(user.this_device(), device_name);
-//         assert_eq!(user.all_devices(), [device_name]);
-//     }
-// }
+        let user = user_api.get_user().unwrap();
+        assert_eq!(user.this_device(), device_name);
+        assert_eq!(user.all_devices(), [device_name]);
+    }
+}

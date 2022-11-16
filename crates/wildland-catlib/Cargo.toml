@@ -26,6 +26,5 @@ wildland-corex = { version = "0.30.0", path = "../wildland-corex", registry = "w
 
 
 [dev-dependencies]
-mocktopus = { version = "0.7.11" }
-rand      = { version = "0.8.5" }
-rstest    = { version = "0.15.0" }
+rand   = { version = "0.8.5" }
+rstest = { version = "0.15.0" }
