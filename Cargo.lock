@@ -2045,6 +2045,7 @@ dependencies = [
  "hex-literal",
  "log",
  "mockall",
+ "mockito",
  "pretty_assertions",
  "rand 0.8.5",
  "rstest",

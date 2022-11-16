@@ -227,6 +227,12 @@ All devices:
         self.fsa_api.request_free_tier_storage(email)
     }
 
+    /// Finishes process of granting Free Tier Foundation Storage.
+    ///
+    /// After successful server verification it saves Storage Template in LSS
+    /// and saves information that storage has been granted in forest's metadata in CatLib.
+    ///
+    /// Returns the same storage template which is saved in LSS.
     pub fn verify_email(
         &mut self,
         process_handle: &FreeTierProcessHandle,
@@ -254,6 +260,7 @@ All devices:
 mod tests {
     use std::str::FromStr;
 
+    use mockito::Matcher;
     use rstest::*;
     use uuid::Uuid;
     use wildland_corex::catlib_service::entities::Forest;
@@ -304,12 +311,53 @@ mod tests {
             catlib_service.clone(),
             lss_service,
             &FoundationStorageApiConfig {
-                evs_url: "".to_string(),
+                evs_url: mockito::server_url(),
                 sc_url: "".to_string(),
             },
         );
 
         (cargo_user, catlib_service, forest_copy)
+    }
+
+    #[rstest]
+    fn test_http_requests_to_evs(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+        // given setup
+        let (mut cargo_user, _catlib_service, _forest) = setup;
+
+        // when storage request is sent
+        let storage_req_mock_1 = mockito::mock("PUT", "/get_storage")
+            .with_status(202)
+            .create();
+
+        let process_handle = cargo_user
+            .request_free_tier_storage("test@wildland.io".to_string())
+            .unwrap();
+
+        // and verification is performed
+        let verify_token_mock = mockito::mock("PUT", "/confirm_token")
+            .match_body(Matcher::JsonString(
+                "{\"email\":\"test@wildland.io\",\"verification_token\":\"123456\"}".to_string(),
+            ))
+            .with_status(200)
+            .create();
+
+        let response_json_str = r#"{"id": "00000000-0000-0000-0000-000000000000", "credentialID": "cred_id", "credentialSecret": "cred_secret"}"#;
+        let response_base64 = base64::encode(response_json_str);
+        let full_response = format!("{{ \"encrypted_credentials\": \"{response_base64}\" }}");
+        let storage_req_mock_2 = mockito::mock("PUT", "/get_storage")
+            .with_status(200)
+            .with_body(full_response)
+            .create();
+
+        cargo_user
+            .verify_email(&process_handle, "123456".to_string())
+            .unwrap();
+
+        // then all http requests expectations are met
+
+        storage_req_mock_1.assert();
+        verify_token_mock.assert();
+        storage_req_mock_2.assert();
     }
 
     #[rstest]
