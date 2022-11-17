@@ -17,7 +17,7 @@
 
 use super::*;
 use derivative::Derivative;
-use std::{rc::Rc, str::FromStr};
+use std::rc::Rc;
 use wildland_corex::entities::{Bridge as IBridge, BridgeData, ContainerPath, Forest};
 
 #[derive(Clone, Derivative)]
@@ -27,16 +27,6 @@ pub struct Bridge {
 
     #[derivative(Debug = "ignore")]
     db: Rc<StoreDb>,
-}
-
-/// Create Bridge object from its representation in Rust Object Notation
-impl FromStr for Bridge {
-    type Err = ron::error::SpannedError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let data = ron::from_str(value)?;
-        Ok(Self::from_data_and_db(data, use_default_database()))
-    }
 }
 
 impl AsRef<BridgeData> for Bridge {
@@ -58,7 +48,8 @@ impl Bridge {
         }
     }
 
-    pub fn from_data_and_db(data: BridgeData, db: Rc<StoreDb>) -> Self {
+    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
+        let data = ron::from_str(value).unwrap();
         Self { data, db }
     }
 }
@@ -108,12 +99,8 @@ impl Model for Bridge {
 mod tests {
     use crate::*;
     use rstest::*;
-    use uuid::Bytes;
 
-    #[fixture]
-    fn catlib() -> CatLib {
-        db::init_catlib(rand::random::<Bytes>())
-    }
+    use super::db::test::catlib;
 
     #[rstest]
     fn create_bridge(catlib: CatLib) {

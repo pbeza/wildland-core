@@ -71,8 +71,6 @@
 //! ```
 //!
 
-#![cfg_attr(test, feature(proc_macro_hygiene))]
-
 pub use bridge::Bridge;
 pub use common::*;
 pub use container::Container;
@@ -167,7 +165,7 @@ impl ICatLib for CatLib {
         let forests: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("forest-"))
-            .map(|(_, forest_str)| forest_str.parse::<Forest>().unwrap())
+            .map(|(_, forest_str)| Forest::from_db_entry(forest_str, self.db.clone()))
             .filter(|forest| &forest.as_ref().owner == owner)
             .collect();
 
@@ -196,7 +194,7 @@ impl ICatLib for CatLib {
         let storages: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("storage-"))
-            .map(|(_, storage_str)| storage_str.parse::<Storage>().unwrap())
+            .map(|(_, storage_str)| Storage::from_db_entry(storage_str, self.db.clone()))
             .filter(
                 |storage| matches!(storage.as_ref().template_uuid, Some(val) if val == *template_id),
             )
@@ -243,11 +241,4 @@ impl Default for CatLib {
             db: Rc::new(PathDatabase::load_from_path_or_default(db_file).unwrap()),
         }
     }
-}
-
-#[cfg_attr(test, mocktopus::macros::mockable)]
-fn use_default_database() -> Rc<StoreDb> {
-    let db = CatLib::default().db;
-    db.load().unwrap(); // Definitely not thread safe
-    db
 }
