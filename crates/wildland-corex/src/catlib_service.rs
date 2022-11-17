@@ -38,13 +38,34 @@ pub struct DeviceMetadata {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct UserMetaData {
-    pub devices: Vec<DeviceMetadata>,
+pub struct ForestMetaData {
+    devices: Vec<DeviceMetadata>,
+    free_storage_granted: bool,
 }
 
-impl UserMetaData {
+impl ForestMetaData {
+    pub fn new(devices: Vec<DeviceMetadata>) -> Self {
+        Self {
+            devices,
+            free_storage_granted: false,
+        }
+    }
+
     pub fn get_device_metadata(&self, device_pubkey: PubKey) -> Option<&DeviceMetadata> {
         self.devices.iter().find(|d| d.pubkey == device_pubkey)
+    }
+
+    pub fn devices(&self) -> impl Iterator<Item = &DeviceMetadata> {
+        self.devices.iter()
+    }
+}
+
+impl TryFrom<ForestMetaData> for Vec<u8> {
+    type Error = CatlibError;
+
+    fn try_from(data: ForestMetaData) -> Result<Self, Self::Error> {
+        serde_json::to_vec(&data)
+            .map_err(|e| CatlibError::Generic(format!("Serialization error: {e}")))
     }
 }
 
@@ -62,14 +83,25 @@ impl CatLibService {
         &self,
         forest_identity: &WildlandIdentity,
         this_device_identity: &WildlandIdentity,
-        data: UserMetaData,
+        data: ForestMetaData,
     ) -> CatlibResult<Box<dyn Forest>> {
         self.catlib.create_forest(
             forest_identity.get_public_key().into(),
             HashSet::from([this_device_identity.get_public_key().into()]),
-            serde_json::to_vec(&data)
-                .map_err(|e| CatlibError::Generic(format!("Serialization error: {e}")))?,
+            data.try_into()?,
         )
+    }
+
+    pub fn mark_free_storage_granted(&self, forest: &mut Box<dyn Forest>) -> CatlibResult<()> {
+        let mut forest_metadata = self.get_parsed_forest_metadata(forest.as_ref())?;
+        forest_metadata.free_storage_granted = true;
+        forest.as_mut().update(forest_metadata.try_into()?)?;
+        Ok(())
+    }
+
+    pub fn is_free_storage_granted(&self, forest: &dyn Forest) -> CatlibResult<bool> {
+        let forest_metadata = self.get_parsed_forest_metadata(forest)?;
+        Ok(forest_metadata.free_storage_granted)
     }
 
     pub fn get_forest(&self, forest_uuid: &Uuid) -> CatlibResult<Box<dyn Forest>> {
@@ -96,5 +128,10 @@ impl CatLibService {
 
     pub fn delete_container(&self, container: &mut dyn Container) -> CatlibResult<()> {
         container.delete().map(|_| ())
+    }
+
+    fn get_parsed_forest_metadata(&self, forest: &dyn Forest) -> CatlibResult<ForestMetaData> {
+        serde_json::from_slice(&forest.as_ref().data)
+            .map_err(|e| CatlibError::Generic(format!("Could not deserialize forest metadata {e}")))
     }
 }

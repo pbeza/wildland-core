@@ -17,7 +17,6 @@
 
 use std::{
     collections::HashMap,
-    rc::Rc,
     sync::{Arc, Mutex},
 };
 
@@ -29,6 +28,11 @@ use derivative::Derivative;
 use uuid::Uuid;
 use wildland_corex::catlib_service::{entities::Forest, error::CatlibError, CatLibService};
 use wildland_corex::LssService;
+
+use super::{
+    config::FoundationStorageApiConfig,
+    foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError},
+};
 
 pub type SharedContainer = Arc<Mutex<Container>>;
 #[derive(Debug, Clone)]
@@ -68,7 +72,7 @@ pub struct CargoUser {
     this_device: String,
     all_devices: Vec<String>,
 
-    forest: Rc<dyn Forest>,
+    forest: Box<dyn Forest>,
 
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
@@ -76,6 +80,8 @@ pub struct CargoUser {
     lss_service: LssService,
     #[derivative(Debug = "ignore")]
     user_context: UserContext,
+    #[derivative(Debug = "ignore")]
+    fsa_api: FoundationStorageApi,
 }
 
 impl CargoUser {
@@ -85,14 +91,16 @@ impl CargoUser {
         forest: Box<dyn Forest>,
         catlib_service: CatLibService,
         lss_service: LssService,
+        fsa_config: &FoundationStorageApiConfig,
     ) -> Self {
         Self {
             this_device,
             all_devices,
-            forest: forest.into(),
+            forest,
             catlib_service,
             lss_service,
             user_context: UserContext::new(),
+            fsa_api: FoundationStorageApi::new(fsa_config),
         }
     }
 
@@ -203,20 +211,59 @@ All devices:
             })
             .collect()
     }
+
+    /// Starts process of granting Free Tier Foundation Storage.
+    ///
+    /// `CargoUser` encapsulates `FoundationStorageApi` functionalities in order to avoid requesting
+    /// Free Foundation Tier outside of the user context.
+    ///
+    /// Returns `FreeTierProcessHandle` structure which can be used to verify an email address and
+    /// finalize the process.
+    pub fn request_free_tier_storage(
+        &self,
+        email: String,
+    ) -> Result<FreeTierProcessHandle, FsaError> {
+        self.fsa_api.request_free_tier_storage(email)
+    }
+
+    /// Finishes process of granting Free Tier Foundation Storage.
+    ///
+    /// After successful server verification it saves Storage Template in LSS
+    /// and saves information that storage has been granted in forest's metadata in CatLib.
+    ///
+    /// Returns the same storage template which is saved in LSS.
+    pub fn verify_email(
+        &mut self,
+        process_handle: &FreeTierProcessHandle,
+        token: String,
+    ) -> Result<StorageTemplate, FsaError> {
+        let storage_template = process_handle.verify_email(token)?;
+        self.lss_service.save_storage_template(&storage_template)?;
+        self.catlib_service
+            .mark_free_storage_granted(&mut self.forest)?;
+        Ok(storage_template)
+    }
+
+    pub fn is_free_storage_granted(&self) -> Result<bool, CatlibError> {
+        self.catlib_service
+            .is_free_storage_granted(self.forest.as_ref())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
+    use mockito::Matcher;
     use rstest::*;
     use uuid::Uuid;
     use wildland_corex::catlib_service::entities::Forest;
     use wildland_corex::{
-        CatLibService, DeviceMetadata, LocalSecureStorage, LssService, SigningKeypair,
-        UserMetaData, WildlandIdentity,
+        CatLibService, DeviceMetadata, ForestMetaData, LocalSecureStorage, LssService,
+        SigningKeypair, WildlandIdentity,
     };
 
+    use crate::api::config::FoundationStorageApiConfig;
     use crate::api::utils::test::{catlib_service, lss_stub};
     use crate::api::{
         foundation_storage::FoundationStorageTemplate, storage_template::StorageTemplate,
@@ -242,12 +289,10 @@ mod tests {
             .add_forest(
                 &forest_identity,
                 &device_identity,
-                UserMetaData {
-                    devices: vec![DeviceMetadata {
-                        name: this_dev_name.clone(),
-                        pubkey: device_keypair.public(),
-                    }],
-                },
+                ForestMetaData::new(vec![DeviceMetadata {
+                    name: this_dev_name.clone(),
+                    pubkey: device_keypair.public(),
+                }]),
             )
             .unwrap();
 
@@ -259,9 +304,54 @@ mod tests {
             forest,
             catlib_service.clone(),
             lss_service,
+            &FoundationStorageApiConfig {
+                evs_url: mockito::server_url(),
+                sc_url: "".to_string(),
+            },
         );
 
         (cargo_user, catlib_service, forest_copy)
+    }
+
+    #[rstest]
+    fn test_http_requests_to_evs(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+        // given setup
+        let (mut cargo_user, _catlib_service, _forest) = setup;
+
+        // when storage request is sent
+        let storage_req_mock_1 = mockito::mock("PUT", "/get_storage")
+            .with_status(202)
+            .create();
+
+        let process_handle = cargo_user
+            .request_free_tier_storage("test@wildland.io".to_string())
+            .unwrap();
+
+        // and verification is performed
+        let verify_token_mock = mockito::mock("PUT", "/confirm_token")
+            .match_body(Matcher::JsonString(
+                "{\"email\":\"test@wildland.io\",\"verification_token\":\"123456\"}".to_string(),
+            ))
+            .with_status(200)
+            .create();
+
+        let response_json_str = r#"{"id": "00000000-0000-0000-0000-000000000000", "credentialID": "cred_id", "credentialSecret": "cred_secret"}"#;
+        let response_base64 = base64::encode(response_json_str);
+        let full_response = format!("{{ \"encrypted_credentials\": \"{response_base64}\" }}");
+        let storage_req_mock_2 = mockito::mock("PUT", "/get_storage")
+            .with_status(200)
+            .with_body(full_response)
+            .create();
+
+        cargo_user
+            .verify_email(&process_handle, "123456".to_string())
+            .unwrap();
+
+        // then all http requests expectations are met
+
+        storage_req_mock_1.assert();
+        verify_token_mock.assert();
+        storage_req_mock_2.assert();
     }
 
     #[rstest]

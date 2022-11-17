@@ -171,16 +171,21 @@ void config_parser_test() // test
     }
 }
 
-auto foundation_storage_test(SharedMutexCargoLib &cargo_lib)
+auto foundation_storage_test(CargoUser &cargo_user)
 {
-    FoundationStorageApi fsa_api = cargo_lib.foundation_storage_api();
-    auto process_handle = fsa_api.request_free_tier_storage("test@email.com");
+    std::cout << "is user onboard? " << std::boolalpha << cargo_user.is_free_storage_granted() << std::endl;
+
+    auto process_handle = cargo_user.request_free_tier_storage("test@wildland.io");
+
     std::cout << "Provide a verification token:\n";
     std::string verification_token;
     std::cin >> verification_token;
     // may be used for creating container
-    StorageTemplate storage_template = fsa_api.verify_email(process_handle, RustString{verification_token});
+    StorageTemplate storage_template = cargo_user.verify_email(process_handle, RustString{verification_token});
     std::cout << storage_template.stringify().to_string() << std::endl;
+
+    std::cout << "is user onboard? " << std::boolalpha << cargo_user.is_free_storage_granted() << std::endl;
+
     return storage_template;
 }
 
@@ -206,7 +211,7 @@ int main()
 {
     CargoCfgProviderImpl cfg_provider{};
     CargoConfig cfg = collect_config(cfg_provider);
-    cfg.override_evs_url(RustString{"new url"});
+    // cfg.override_evs_url(RustString{"new url"});
     LocalSecureStorageImpl lss{};
     SharedMutexCargoLib cargo_lib;
     try
@@ -242,7 +247,7 @@ int main()
 
             try
             {
-                auto storage_template = foundation_storage_test(cargo_lib);
+                auto storage_template = foundation_storage_test(new_user);
 
                 RustVec<StorageTemplate> storage_templates = new_user.get_storage_templates();
                 StorageTemplate first_st = storage_templates.at(0).unwrap();

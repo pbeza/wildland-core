@@ -156,21 +156,6 @@ mod ffi_binding {
             config: CargoConfig,
         ) -> Result<Arc<Mutex<CargoLib>>, CargoLibCreationError>;
         fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
-        fn foundation_storage_api(self: &Arc<Mutex<CargoLib>>) -> FoundationStorageApi;
-
-        //
-        // FoundationStorageApi
-        //
-        fn request_free_tier_storage(
-            self: &FoundationStorageApi,
-            email: String,
-        ) -> Result<FreeTierProcessHandle, FsaError>;
-        fn verify_email(
-            self: &FoundationStorageApi,
-            process_handle: &FreeTierProcessHandle,
-            verification_token: String,
-        ) -> Result<StorageTemplate, FsaError>;
-        type FreeTierProcessHandle;
 
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, CreateMnemonicError>;
         fn check_phrase_mnemonic(phrase: String) -> Result<VoidType, CreateMnemonicError>;
@@ -215,6 +200,19 @@ mod ffi_binding {
         fn get_storage_templates(
             self: &CargoUser,
         ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
+
+        // Foundation Storage
+        type FreeTierProcessHandle;
+        fn request_free_tier_storage(
+            self: &CargoUser,
+            email: String,
+        ) -> Result<FreeTierProcessHandle, FsaError>;
+        fn verify_email(
+            self: &CargoUser,
+            process_handle: &FreeTierProcessHandle,
+            verification_token: String,
+        ) -> Result<StorageTemplate, FsaError>;
+        fn is_free_storage_granted(self: &CargoUser) -> Result<bool, CatlibError>;
 
         //
         // Container
