@@ -112,11 +112,6 @@ impl IForest for Forest {
         Ok(self)
     }
 
-    /// Returns forest metadata as bytes
-    fn data(&self) -> CatlibResult<&[u8]> {
-        Ok(&self.data.data)
-    }
-
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
