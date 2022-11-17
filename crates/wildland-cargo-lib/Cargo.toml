@@ -14,7 +14,7 @@ version     = "0.30.0"
 bindings = ["rusty-bind", "rusty-bind-build"]
 
 [lib]
-crate-type = ["staticlib", "lib"]
+crate-type = ["staticlib", "lib", "cdylib"]
 
 [dependencies]
 anyhow               = { version = "1.0" }
@@ -38,6 +38,10 @@ uuid                 = { version = "1.2", features = ["serde"] }
 wildland-catlib      = { version = "0.30.0", path = "../wildland-catlib", registry = "wl-dev" }
 wildland-corex       = { version = "0.30.0", path = "../wildland-corex", registry = "wl-dev" }
 wildland-http-client = { version = "0.30.0", path = "../wildland-http-client", registry = "wl-dev" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom    = { version = "0.2", features = ["js"] }
+wasm-bindgen = { version = "0.2" }
 
 [build-dependencies]
 rusty-bind-build = { version = "0.1.3", registry = "wl-dev", optional = true }

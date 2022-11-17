@@ -78,9 +78,7 @@ use db::*;
 use directories::ProjectDirs;
 use error::*;
 pub use forest::Forest;
-use rustbreak::PathDatabase;
 use std::path::PathBuf;
-use std::rc::Rc;
 pub use storage::Storage;
 use uuid::Uuid;
 use wildland_corex::catlib_service::interface::CatLib as ICatLib;
@@ -97,22 +95,11 @@ mod forest;
 mod storage;
 
 #[derive(Clone)]
-pub struct CatLib {
-    db: Rc<StoreDb>,
-}
+pub struct CatLib {}
 
 impl CatLib {
-    pub fn new(path: PathBuf) -> Self {
-        let db = PathDatabase::create_at_path(path.clone(), CatLibData::new());
-
-        if db.is_err() {
-            let path_str = path.to_str().unwrap();
-            panic!("Could not create CatLib database at {path_str}");
-        }
-
-        CatLib {
-            db: Rc::new(db.unwrap()),
-        }
+    pub fn new(_path: PathBuf) -> Self {
+        CatLib {}
     }
 }
 
@@ -144,13 +131,13 @@ impl ICatLib for CatLib {
         signers: Signers,
         data: Vec<u8>,
     ) -> CatlibResult<Box<dyn IForest>> {
-        let mut forest = Box::new(Forest::new(owner, signers, data, self.db.clone()));
+        let mut forest = Box::new(Forest::new(owner, signers, data));
         forest.save()?;
         Ok(forest)
     }
 
     fn get_forest(&self, uuid: &Uuid) -> CatlibResult<Box<dyn IForest>> {
-        fetch_forest_by_uuid(self.db.clone(), uuid)
+        fetch_forest_by_uuid(uuid)
     }
 
     /// ## Errors
@@ -158,26 +145,24 @@ impl ICatLib for CatLib {
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn find_forest(&self, owner: &Identity) -> CatlibResult<Box<dyn IForest>> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
+    fn find_forest(&self, _owner: &Identity) -> CatlibResult<Box<dyn IForest>> {
+        // let forests: Vec<_> = data
+        //     .iter()
+        //     .filter(|(id, _)| id.starts_with("forest-"))
+        //     .map(|(_, forest_str)| Forest::from_db_entry(forest_str, self.db.clone()))
+        //     .filter(|forest| &forest.as_ref().owner == owner)
+        //     .collect();
 
-        let forests: Vec<_> = data
-            .iter()
-            .filter(|(id, _)| id.starts_with("forest-"))
-            .map(|(_, forest_str)| Forest::from_db_entry(forest_str, self.db.clone()))
-            .filter(|forest| &forest.as_ref().owner == owner)
-            .collect();
-
-        match forests.len() {
-            0 => Err(CatlibError::NoRecordsFound),
-            1 => Ok(Box::new(forests[0].clone())),
-            _ => Err(CatlibError::MalformedDatabaseRecord),
-        }
+        // match forests.len() {
+        //     0 => Err(CatlibError::NoRecordsFound),
+        //     1 => Ok(Box::new(forests[0].clone())),
+        //     _ => Err(CatlibError::MalformedDatabaseRecord),
+        // }
+        todo!()
     }
 
     fn get_container(&self, uuid: &Uuid) -> CatlibResult<Box<dyn IContainer>> {
-        fetch_container_by_uuid(self.db.clone(), uuid)
+        fetch_container_by_uuid(uuid)
     }
 
     /// ## Errors
@@ -186,25 +171,9 @@ impl ICatLib for CatLib {
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
     fn find_storages_with_template(
         &self,
-        template_id: &Uuid,
+        _template_id: &Uuid,
     ) -> CatlibResult<Vec<Box<dyn IStorage>>> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-
-        let storages: Vec<_> = data
-            .iter()
-            .filter(|(id, _)| id.starts_with("storage-"))
-            .map(|(_, storage_str)| Storage::from_db_entry(storage_str, self.db.clone()))
-            .filter(
-                |storage| matches!(storage.as_ref().template_uuid, Some(val) if val == *template_id),
-            )
-            .map(|storage| Box::new(storage) as Box<dyn IStorage>)
-            .collect();
-
-        match storages.len() {
-            0 => Err(CatlibError::NoRecordsFound),
-            _ => Ok(storages),
-        }
+        todo!()
     }
 
     /// ## Errors
@@ -224,7 +193,7 @@ impl Default for CatLib {
     fn default() -> Self {
         let project_dirs = ProjectDirs::from("com", "wildland", "Cargo");
 
-        let db_file = if let Some(project_dirs) = project_dirs {
+        let _db_file = if let Some(project_dirs) = project_dirs {
             let db_dir = project_dirs.data_local_dir().join("catlib");
 
             if !db_dir.exists() {
@@ -237,8 +206,6 @@ impl Default for CatLib {
             "./catlib.database".into()
         };
 
-        CatLib {
-            db: Rc::new(PathDatabase::load_from_path_or_default(db_file).unwrap()),
-        }
+        CatLib {}
     }
 }

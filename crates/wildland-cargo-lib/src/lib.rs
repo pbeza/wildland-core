@@ -32,5 +32,9 @@ pub mod api;
 pub mod errors;
 #[cfg(feature = "bindings")]
 pub mod ffi;
+
 mod logging;
 mod user;
+
+#[cfg(target_arch = "wasm32")]
+mod wasm;

@@ -12,7 +12,7 @@ pub(crate) mod test {
     pub(crate) fn catlib_service() -> CatLibService {
         let uuid = uuid::Builder::from_random_bytes(rand::random::<Bytes>()).into_uuid();
         let dir = tempfile::tempdir().unwrap().into_path();
-        let path = dir.join(format!("{uuid}-db.ron"));
+        let path = dir.join(format!("{uuid}-db.yaml"));
         let catlib = Rc::new(CatLib::new(path));
         CatLibService::new(catlib)
     }

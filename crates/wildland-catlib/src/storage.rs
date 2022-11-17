@@ -17,25 +17,16 @@
 
 use super::*;
 use derivative::Derivative;
-use std::rc::Rc;
 use wildland_corex::entities::{Container, Storage as IStorage, StorageData};
 
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub struct Storage {
     data: StorageData,
-
-    #[derivative(Debug = "ignore")]
-    db: Rc<StoreDb>,
 }
 
 impl Storage {
-    pub fn new(
-        container_uuid: Uuid,
-        template_uuid: Option<Uuid>,
-        data: Vec<u8>,
-        db: Rc<StoreDb>,
-    ) -> Self {
+    pub fn new(container_uuid: Uuid, template_uuid: Option<Uuid>, data: Vec<u8>) -> Self {
         Self {
             data: StorageData {
                 uuid: Uuid::new_v4(),
@@ -43,13 +34,12 @@ impl Storage {
                 template_uuid,
                 data,
             },
-            db,
         }
     }
 
-    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
-        let data = ron::from_str(value).unwrap();
-        Self { data, db }
+    pub fn from_db_entry(value: &str) -> Self {
+        let data = serde_yaml::from_str(value).unwrap();
+        Self { data }
     }
 }
 
@@ -66,7 +56,7 @@ impl IStorage for Storage {
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Container`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
     fn container(&self) -> CatlibResult<Box<dyn Container>> {
-        fetch_container_by_uuid(self.db.clone(), &self.data.container_uuid)
+        fetch_container_by_uuid(&self.data.container_uuid)
     }
 
     /// ## Errors
@@ -89,15 +79,11 @@ impl IStorage for Storage {
 
 impl Model for Storage {
     fn save(&mut self) -> CatlibResult<()> {
-        save_model(
-            self.db.clone(),
-            format!("storage-{}", self.data.uuid),
-            ron::to_string(&self.data).unwrap(),
-        )
+        todo!()
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("storage-{}", self.data.uuid))
+        todo!()
     }
 }
 

@@ -16,9 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::{db::delete_model, db::save_model};
 use derivative::Derivative;
-use std::rc::Rc;
 
 use wildland_corex::entities::{
     Bridge as IBridge, Container as IContainer, ContainerPath, Forest as IForest, ForestData,
@@ -29,13 +27,10 @@ use wildland_corex::entities::{
 #[derivative(Debug)]
 pub struct Forest {
     data: ForestData,
-
-    #[derivative(Debug = "ignore")]
-    db: Rc<StoreDb>,
 }
 
 impl Forest {
-    pub fn new(owner: Identity, signers: Signers, data: Vec<u8>, db: Rc<StoreDb>) -> Self {
+    pub fn new(owner: Identity, signers: Signers, data: Vec<u8>) -> Self {
         Self {
             data: ForestData {
                 uuid: Uuid::new_v4(),
@@ -43,13 +38,12 @@ impl Forest {
                 owner,
                 data,
             },
-            db,
         }
     }
 
-    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
-        let data = ron::from_str(value).unwrap();
-        Self { data, db }
+    pub fn from_db_entry(value: &str) -> Self {
+        let data = serde_yaml::from_str(value).unwrap();
+        Self { data }
     }
 }
 
@@ -83,24 +77,7 @@ impl IForest for Forest {
     /// - Returns [`CatlibError::NoRecordsFound`] if Forest has no [`Container`].
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
     fn containers(&self) -> CatlibResult<Vec<Box<dyn IContainer>>> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-
-        let containers: Vec<_> = data
-            .iter()
-            .filter(|(id, _)| id.starts_with("container-"))
-            .map(|(_, container_str)| Container::from_db_entry(container_str, self.db.clone()))
-            .filter(|container| {
-                container.forest().is_ok()
-                    && (*container.forest().unwrap()).as_ref().uuid == self.data.uuid
-            })
-            .map(|container| Box::new(container) as Box<dyn IContainer>)
-            .collect();
-
-        match containers.len() {
-            0 => Err(CatlibError::NoRecordsFound),
-            _ => Ok(containers),
-        }
+        todo!()
     }
 
     /// ## Errors
@@ -142,7 +119,7 @@ impl IForest for Forest {
     /// container.add_path("/bar/baz".to_string());
     /// ```
     fn create_container(&self, name: String) -> CatlibResult<Box<dyn IContainer>> {
-        let mut container = Box::new(Container::new(self.data.uuid, name, self.db.clone()));
+        let mut container = Box::new(Container::new(self.data.uuid, name));
         container.save()?;
 
         Ok(container)
@@ -172,12 +149,7 @@ impl IForest for Forest {
         path: ContainerPath,
         link_data: Vec<u8>,
     ) -> CatlibResult<Box<dyn IBridge>> {
-        let mut bridge = Box::new(Bridge::new(
-            self.data.uuid,
-            path,
-            link_data,
-            self.db.clone(),
-        ));
+        let mut bridge = Box::new(Bridge::new(self.data.uuid, path, link_data));
         bridge.save()?;
 
         Ok(bridge)
@@ -188,25 +160,8 @@ impl IForest for Forest {
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Bridge`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Bridge`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn find_bridge(&self, path: ContainerPath) -> CatlibResult<Box<dyn IBridge>> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-
-        let bridges: Vec<_> = data
-            .iter()
-            .filter(|(id, _)| id.starts_with("bridge-"))
-            .map(|(_, bridge_str)| Bridge::from_db_entry(bridge_str, self.db.clone()))
-            .filter(|bridge| {
-                (*bridge.forest().unwrap()).as_ref().uuid == self.data.uuid
-                    && bridge.as_ref().path == path
-            })
-            .collect();
-
-        match bridges.len() {
-            0 => Err(CatlibError::NoRecordsFound),
-            1 => Ok(Box::new(bridges[0].clone())),
-            _ => Err(CatlibError::MalformedDatabaseRecord),
-        }
+    fn find_bridge(&self, _path: ContainerPath) -> CatlibResult<Box<dyn IBridge>> {
+        todo!()
     }
 
     /// ## Errors
@@ -231,46 +186,20 @@ impl IForest for Forest {
     /// let containers = forest.find_containers(vec!["/foo/bar".to_string()], false).unwrap();
     fn find_containers(
         &self,
-        paths: Vec<String>,
-        include_subdirs: bool,
+        _paths: Vec<String>,
+        _include_subdirs: bool,
     ) -> CatlibResult<Vec<Box<dyn IContainer>>> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-
-        let containers: Vec<_> = data
-            .iter()
-            .filter(|(id, _)| id.starts_with("container-"))
-            .map(|(_, container_str)| Container::from_db_entry(container_str, self.db.clone()))
-            .filter(|container| {
-                (*container.forest().unwrap()).as_ref().uuid == self.data.uuid
-                    && container.as_ref().paths.iter().any(|container_path| {
-                        paths.iter().any(|path| {
-                            (include_subdirs && container_path.starts_with(path))
-                                || container_path.eq(path)
-                        })
-                    })
-            })
-            .map(|container| Box::new(container) as Box<dyn IContainer>)
-            .collect();
-
-        match containers.len() {
-            0 => Err(CatlibError::NoRecordsFound),
-            _ => Ok(containers),
-        }
+        todo!()
     }
 }
 
 impl Model for Forest {
     fn save(&mut self) -> CatlibResult<()> {
-        save_model(
-            self.db.clone(),
-            format!("forest-{}", self.data.uuid),
-            ron::to_string(&self.data).unwrap(),
-        )
+        todo!()
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("forest-{}", self.data.uuid))
+        todo!()
     }
 }
 

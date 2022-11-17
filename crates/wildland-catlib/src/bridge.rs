@@ -17,16 +17,12 @@
 
 use super::*;
 use derivative::Derivative;
-use std::rc::Rc;
 use wildland_corex::entities::{Bridge as IBridge, BridgeData, ContainerPath, Forest};
 
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub struct Bridge {
     data: BridgeData,
-
-    #[derivative(Debug = "ignore")]
-    db: Rc<StoreDb>,
 }
 
 impl AsRef<BridgeData> for Bridge {
@@ -36,7 +32,7 @@ impl AsRef<BridgeData> for Bridge {
 }
 
 impl Bridge {
-    pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>, db: Rc<StoreDb>) -> Self {
+    pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>) -> Self {
         Self {
             data: BridgeData {
                 uuid: Uuid::new_v4(),
@@ -44,13 +40,12 @@ impl Bridge {
                 path,
                 link,
             },
-            db,
         }
     }
 
-    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
-        let data = ron::from_str(value).unwrap();
-        Self { data, db }
+    pub fn from_db_entry(value: &str) -> Self {
+        let data = serde_yaml::from_str(value).unwrap();
+        Self { data }
     }
 }
 
@@ -60,7 +55,7 @@ impl IBridge for Bridge {
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
     fn forest(&self) -> CatlibResult<Box<dyn Forest>> {
-        fetch_forest_by_uuid(self.db.clone(), &self.data.forest_uuid)
+        fetch_forest_by_uuid(&self.data.forest_uuid)
     }
 
     /// ## Errors
@@ -83,15 +78,11 @@ impl IBridge for Bridge {
 
 impl Model for Bridge {
     fn save(&mut self) -> CatlibResult<()> {
-        save_model(
-            self.db.clone(),
-            format!("bridge-{}", self.data.uuid),
-            ron::to_string(&self.data).unwrap(),
-        )
+        todo!()
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("bridge-{}", self.data.uuid))
+        todo!()
     }
 }
 

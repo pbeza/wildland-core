@@ -15,12 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use rustbreak::{deser::Ron, PathDatabase};
-
 use wildland_corex::catlib_service::error::CatlibResult;
 
-pub(crate) type CatLibData = std::collections::HashMap<String, String>;
-pub(crate) type StoreDb = PathDatabase<CatLibData, Ron>;
+// pub(crate) type CatLibData = std::collections::HashMap<String, String>;
 
 pub trait Model {
     fn delete(&mut self) -> CatlibResult<()>;

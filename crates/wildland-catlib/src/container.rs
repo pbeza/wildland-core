@@ -17,7 +17,6 @@
 
 use super::*;
 use derivative::Derivative;
-use std::rc::Rc;
 
 use wildland_corex::entities::{
     Container as IContainer, ContainerData, ContainerPath, ContainerPaths, Forest,
@@ -28,9 +27,6 @@ use wildland_corex::entities::{
 #[derivative(Debug)]
 pub struct Container {
     data: ContainerData,
-
-    #[derivative(Debug = "ignore")]
-    db: Rc<StoreDb>,
 }
 
 impl AsRef<ContainerData> for Container {
@@ -40,7 +36,7 @@ impl AsRef<ContainerData> for Container {
 }
 
 impl Container {
-    pub fn new(forest_uuid: Uuid, name: String, db: Rc<StoreDb>) -> Self {
+    pub fn new(forest_uuid: Uuid, name: String) -> Self {
         Self {
             data: ContainerData {
                 uuid: Uuid::new_v4(),
@@ -48,13 +44,12 @@ impl Container {
                 name,
                 paths: ContainerPaths::new(),
             },
-            db,
         }
     }
 
-    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
-        let data = ron::from_str(value).unwrap();
-        Self { data, db }
+    pub fn from_db_entry(value: &str) -> Self {
+        let data = serde_yaml::from_str(value).unwrap();
+        Self { data }
     }
 }
 
@@ -64,7 +59,7 @@ impl IContainer for Container {
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
     fn forest(&self) -> CatlibResult<Box<dyn Forest>> {
-        fetch_forest_by_uuid(self.db.clone(), &self.data.forest_uuid)
+        fetch_forest_by_uuid(&self.data.forest_uuid)
     }
 
     /// ## Errors
@@ -123,7 +118,7 @@ impl IContainer for Container {
     ///
     /// Returns [`CatlibError::NoRecordsFound`] if Forest has no [`Storage`].
     fn storages(&self) -> CatlibResult<Vec<Box<dyn IStorage>>> {
-        fetch_storages_by_container_uuid(self.db.clone(), &self.data.uuid)
+        fetch_storages_by_container_uuid(&self.data.uuid)
     }
 
     /// ## Errors
@@ -153,12 +148,7 @@ impl IContainer for Container {
         template_uuid: Option<Uuid>,
         data: Vec<u8>,
     ) -> CatlibResult<Box<dyn IStorage>> {
-        let mut storage = Box::new(Storage::new(
-            self.data.uuid,
-            template_uuid,
-            data,
-            self.db.clone(),
-        ));
+        let mut storage = Box::new(Storage::new(self.data.uuid, template_uuid, data));
         storage.save()?;
 
         Ok(storage)
@@ -180,15 +170,11 @@ impl IContainer for Container {
 
 impl Model for Container {
     fn save(&mut self) -> CatlibResult<()> {
-        save_model(
-            self.db.clone(),
-            format!("container-{}", self.data.uuid),
-            ron::to_string(&self.data).unwrap(),
-        )
+        todo!()
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("container-{}", self.data.uuid))
+        todo!()
     }
 }
 
