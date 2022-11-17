@@ -17,7 +17,6 @@
 
 use std::{
     collections::HashMap,
-    rc::Rc,
     sync::{Arc, Mutex},
 };
 
@@ -73,7 +72,7 @@ pub struct CargoUser {
     this_device: String,
     all_devices: Vec<String>,
 
-    forest: Rc<dyn Forest>,
+    forest: Box<dyn Forest>,
 
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
@@ -97,7 +96,7 @@ impl CargoUser {
         Self {
             this_device,
             all_devices,
-            forest: forest.into(),
+            forest,
             catlib_service,
             lss_service,
             user_context: UserContext::new(),
@@ -241,12 +240,7 @@ All devices:
         let storage_template = process_handle.verify_email(token)?;
         self.lss_service.save_storage_template(&storage_template)?;
         self.catlib_service
-            .mark_free_storage_granted(
-                Rc::get_mut(&mut self.forest)
-                .ok_or_else(||
-                    FsaError::Generic("Could mutate user's state - probably there is more than one user's handle which is considered as not safe".to_string())
-                )?
-            )?;
+            .mark_free_storage_granted(&mut self.forest)?;
         Ok(storage_template)
     }
 

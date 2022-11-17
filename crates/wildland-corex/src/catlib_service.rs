@@ -92,10 +92,10 @@ impl CatLibService {
         )
     }
 
-    pub fn mark_free_storage_granted(&self, forest: &mut dyn Forest) -> CatlibResult<()> {
-        let mut forest_metadata = self.get_parsed_forest_metadata(forest)?;
+    pub fn mark_free_storage_granted(&self, forest: &mut Box<dyn Forest>) -> CatlibResult<()> {
+        let mut forest_metadata = self.get_parsed_forest_metadata(forest.as_ref())?;
         forest_metadata.free_storage_granted = true;
-        forest.update(forest_metadata.try_into()?)?;
+        forest.as_mut().update(forest_metadata.try_into()?)?;
         Ok(())
     }
 

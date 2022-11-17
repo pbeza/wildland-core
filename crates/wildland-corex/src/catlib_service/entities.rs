@@ -56,7 +56,26 @@ pub struct ForestData {
     pub data: Vec<u8>,
 }
 
-pub trait Forest: AsRef<ForestData> + std::fmt::Debug {
+pub trait ForestClone {
+    fn clone_box(&self) -> Box<dyn Forest>;
+}
+
+impl<T> ForestClone for T
+where
+    T: 'static + Forest + Clone,
+{
+    fn clone_box(&self) -> Box<dyn Forest> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Forest> {
+    fn clone(&self) -> Box<dyn Forest> {
+        self.clone_box()
+    }
+}
+
+pub trait Forest: AsRef<ForestData> + std::fmt::Debug + ForestClone {
     /// Add manifest Signer
     ///
     /// Returns whether the value was newly inserted. That is:
