@@ -205,189 +205,147 @@ All devices:
     }
 }
 
-// TODO WILX-302 creating, retrieving and deleting container tests are commented because
-// CatLib uses for now a single file for all tests which can be run in parallel, hence tests race
-// to the database file
-// #[cfg(test)]
-// mod tests {
-//     use std::{cell::RefCell, collections::HashMap, str::FromStr};
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
 
-//     use rstest::*;
-//     use uuid::Uuid;
-//     use wildland_corex::{
-//         CatLibService, DeviceMetadata, Forest, IContainer, IForest, LocalSecureStorage, LssResult,
-//         LssService, SigningKeypair, UserMetaData, WildlandIdentity,
-//     };
+    use rstest::*;
+    use uuid::Uuid;
+    use wildland_corex::catlib_service::entities::Forest;
+    use wildland_corex::{
+        CatLibService, DeviceMetadata, LocalSecureStorage, LssService, SigningKeypair,
+        UserMetaData, WildlandIdentity,
+    };
 
-//     use crate::api::{
-//         foundation_storage::FoundationStorageTemplate, storage_template::StorageTemplate,
-//     };
+    use crate::api::utils::test::{catlib_service, lss_stub};
+    use crate::api::{
+        foundation_storage::FoundationStorageTemplate, storage_template::StorageTemplate,
+    };
 
-//     use super::CargoUser;
+    use super::CargoUser;
 
-//     #[derive(Default)]
-//     struct LssStub {
-//         storage: RefCell<HashMap<String, Vec<u8>>>,
-//     }
+    #[fixture]
+    fn setup(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) -> (CargoUser, CatLibService, Box<dyn Forest>) {
+        let lss_service = LssService::new(lss_stub);
 
-//     impl LocalSecureStorage for LssStub {
-//         fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>> {
-//             Ok(self.storage.borrow_mut().insert(key, value))
-//         }
+        let this_dev_name = "My device".to_string();
 
-//         fn get(&self, key: String) -> LssResult<Option<Vec<u8>>> {
-//             Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
-//         }
+        let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
+        let forest_identity = WildlandIdentity::Forest(5, SigningKeypair::from(&forest_keypair));
+        let device_keypair = SigningKeypair::try_from_bytes_slices([3; 32], [4; 32]).unwrap();
+        let device_identity =
+            WildlandIdentity::Device(this_dev_name.clone(), SigningKeypair::from(&device_keypair));
+        let forest = catlib_service
+            .add_forest(
+                &forest_identity,
+                &device_identity,
+                UserMetaData {
+                    devices: vec![DeviceMetadata {
+                        name: this_dev_name.clone(),
+                        pubkey: device_keypair.public(),
+                    }],
+                },
+            )
+            .unwrap();
 
-//         fn contains_key(&self, key: String) -> LssResult<bool> {
-//             Ok(self.storage.borrow().contains_key(&key))
-//         }
+        let forest_copy = catlib_service.get_forest(&(*forest).as_ref().uuid).unwrap();
 
-//         fn keys(&self) -> LssResult<Vec<String>> {
-//             Ok(self.storage.borrow().keys().cloned().collect())
-//         }
+        let cargo_user = CargoUser::new(
+            this_dev_name.clone(),
+            vec![this_dev_name],
+            forest,
+            catlib_service.clone(),
+            lss_service,
+        );
 
-//         fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
-//             Ok(self
-//                 .storage
-//                 .borrow()
-//                 .keys()
-//                 .filter(|key| key.starts_with(&prefix))
-//                 .cloned()
-//                 .collect())
-//         }
+        (cargo_user, catlib_service, forest_copy)
+    }
 
-//         fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>> {
-//             Ok(self.storage.borrow_mut().remove(&key))
-//         }
+    #[rstest]
+    fn test_creating_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+        // given setup
+        let (cargo_user, catlib_service, forest) = setup;
 
-//         fn len(&self) -> LssResult<usize> {
-//             Ok(self.storage.borrow().len())
-//         }
+        // when container is created
+        let container_uuid_str = "00000000-0000-0000-0000-000000000001";
+        let storage_template =
+            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
+                uuid: Uuid::from_str(container_uuid_str).unwrap(),
+                credential_id: "cred_id".to_owned(),
+                credential_secret: "cred_secret".to_owned(),
+                sc_url: "some url".to_owned(),
+            });
+        let container_name = "new container".to_string();
+        cargo_user
+            .create_container(container_name.clone(), &storage_template)
+            .unwrap();
 
-//         fn is_empty(&self) -> LssResult<bool> {
-//             Ok(self.storage.borrow().is_empty())
-//         }
-//     }
+        // then it is stored in catlib
+        let retrieved_forest = catlib_service.get_forest(&(*forest).as_ref().uuid).unwrap();
+        let containers = retrieved_forest.containers().unwrap();
+        assert_eq!(containers.len(), 1);
+        assert_eq!((*containers[0]).as_ref().name, container_name);
+        assert_eq!(
+            (*containers[0].forest().unwrap()).as_ref().uuid,
+            (*forest).as_ref().uuid
+        );
+    }
 
-//     #[fixture]
-//     fn setup() -> (CargoUser, CatLibService, Forest) {
-//         let lss = LssStub::default(); // LSS must live through the whole test
-//         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-//         let lss_service = LssService::new(lss_ref);
+    #[rstest]
+    fn test_getting_created_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+        // given setup
+        let (cargo_user, _catlib_service, _forest) = setup;
 
-//         let catlib_service = CatLibService::new();
+        // when container is created
+        let container_uuid_str = "00000000-0000-0000-0000-000000000001";
+        let storage_template =
+            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
+                uuid: Uuid::from_str(container_uuid_str).unwrap(),
+                credential_id: "cred_id".to_owned(),
+                credential_secret: "cred_secret".to_owned(),
+                sc_url: "some url".to_owned(),
+            });
+        let container_name = "new container".to_string();
+        cargo_user
+            .create_container(container_name.clone(), &storage_template)
+            .unwrap();
 
-//         let this_dev_name = "My device".to_string();
+        // then it can be retrieved via CargoUser api
+        let containers = cargo_user.get_containers().unwrap();
+        assert_eq!(containers.len(), 1);
+        assert_eq!(containers[0].lock().unwrap().get_name(), container_name);
+    }
 
-//         let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
-//         let forest_identity = WildlandIdentity::Forest(5, SigningKeypair::from(&forest_keypair));
-//         let device_keypair = SigningKeypair::try_from_bytes_slices([3; 32], [4; 32]).unwrap();
-//         let device_identity =
-//             WildlandIdentity::Device(this_dev_name.clone(), SigningKeypair::from(&device_keypair));
-//         let forest = catlib_service
-//             .add_forest(
-//                 &forest_identity,
-//                 &device_identity,
-//                 UserMetaData {
-//                     devices: vec![DeviceMetadata {
-//                         name: this_dev_name.clone(),
-//                         pubkey: device_keypair.public(),
-//                     }],
-//                 },
-//             )
-//             .unwrap();
+    #[rstest]
+    fn test_delete_created_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+        // given setup
+        let (cargo_user, _catlib_service, _forest) = setup;
 
-//         let cargo_user = CargoUser::new(
-//             this_dev_name.clone(),
-//             vec![this_dev_name],
-//             forest.clone(),
-//             catlib_service.clone(),
-//             lss_service,
-//         );
+        // when a container is created
+        let container_uuid_str = "00000000-0000-0000-0000-000000000001";
+        let storage_template =
+            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
+                uuid: Uuid::from_str(container_uuid_str).unwrap(),
+                credential_id: "cred_id".to_owned(),
+                credential_secret: "cred_secret".to_owned(),
+                sc_url: "some url".to_owned(),
+            });
+        let container_name = "new container".to_string();
+        let container = cargo_user
+            .create_container(container_name, &storage_template)
+            .unwrap();
 
-//         (cargo_user, catlib_service, forest)
-//     }
+        // and the container is deleted
+        cargo_user.delete_container(&container).unwrap();
 
-//     #[rstest]
-//     fn test_creating_container(setup: (CargoUser, CatLibService, Forest)) {
-//         // given setup
-//         let (cargo_user, catlib_service, forest) = setup;
+        // then it cannot be retrieved via CargoUser api
+        let containers = cargo_user.get_containers().unwrap();
+        assert_eq!(containers.len(), 0);
 
-//         // when container is created
-//         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-//         let storage_template =
-//             StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
-//                 uuid: Uuid::from_str(&container_uuid_str).unwrap(),
-//                 credential_id: "cred_id".to_owned(),
-//                 credential_secret: "cred_secret".to_owned(),
-//                 sc_url: "some url".to_owned(),
-//             });
-//         let container_name = "new container".to_string();
-//         cargo_user
-//             .create_container(container_name.clone(), &storage_template)
-//             .unwrap();
-
-//         // then it is stored in catlib
-//         let retrieved_forest = catlib_service.get_forest(forest.uuid()).unwrap();
-//         let containers = retrieved_forest.containers().unwrap();
-//         assert_eq!(containers.len(), 1);
-//         assert_eq!(containers[0].name(), container_name);
-//         assert_eq!(containers[0].forest().unwrap().uuid(), forest.uuid());
-//     }
-
-//     #[rstest]
-//     fn test_getting_created_container(setup: (CargoUser, CatLibService, Forest)) {
-//         // given setup
-//         let (cargo_user, _catlib_service, _forest) = setup;
-
-//         // when container is created
-//         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-//         let storage_template =
-//             StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
-//                 uuid: Uuid::from_str(&container_uuid_str).unwrap(),
-//                 credential_id: "cred_id".to_owned(),
-//                 credential_secret: "cred_secret".to_owned(),
-//                 sc_url: "some url".to_owned(),
-//             });
-//         let container_name = "new container".to_string();
-//         cargo_user
-//             .create_container(container_name.clone(), &storage_template)
-//             .unwrap();
-
-//         // then it can be retrieved via CargoUser api
-//         let containers = cargo_user.get_containers().unwrap();
-//         assert_eq!(containers.len(), 1);
-//         assert_eq!(containers[0].lock().unwrap().get_name(), container_name);
-//     }
-
-//     #[rstest]
-//     fn test_delete_created_container(setup: (CargoUser, CatLibService, Forest)) {
-//         // given setup
-//         let (cargo_user, _catlib_service, _forest) = setup;
-
-//         // when a container is created
-//         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-//         let storage_template =
-//             StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
-//                 uuid: Uuid::from_str(&container_uuid_str).unwrap(),
-//                 credential_id: "cred_id".to_owned(),
-//                 credential_secret: "cred_secret".to_owned(),
-//                 sc_url: "some url".to_owned(),
-//             });
-//         let container_name = "new container".to_string();
-//         let container = cargo_user
-//             .create_container(container_name.clone(), &storage_template)
-//             .unwrap();
-
-//         // and the container is deleted
-//         cargo_user.delete_container(&container).unwrap();
-
-//         // then it cannot be retrieved via CargoUser api
-//         let containers = cargo_user.get_containers().unwrap();
-//         assert_eq!(containers.len(), 0);
-
-//         // and the container handle received during creation is marked as deleted
-//         assert!(container.lock().unwrap().is_deleted());
-//     }
-// }
+        // and the container handle received during creation is marked as deleted
+        assert!(container.lock().unwrap().is_deleted());
+    }
+}
