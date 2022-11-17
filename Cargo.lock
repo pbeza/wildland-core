@@ -939,26 +939,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mocktopus"
-version = "0.7.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1e54a5bbecd61a064cb9c6ef396f8c896aee14e5baba8d1d555f35167dfd7c3"
-dependencies = [
- "mocktopus_macros",
-]
-
-[[package]]
-name = "mocktopus_macros"
-version = "0.7.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3048ef3680533a27f9f8e7d6a0bce44dc61e4895ea0f42709337fa1c8616fefe"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "nom"
 version = "7.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2066,6 +2046,7 @@ dependencies = [
  "log",
  "mockall",
  "pretty_assertions",
+ "rand 0.8.5",
  "rstest",
  "rusty-bind",
  "rusty-bind-build",
@@ -2073,6 +2054,7 @@ dependencies = [
  "serde_json",
  "serde_yaml 0.9.14",
  "sha2 0.10.6",
+ "tempfile",
  "thiserror",
  "tracing",
  "tracing-appender",
@@ -2094,7 +2076,6 @@ dependencies = [
  "derivative",
  "directories",
  "hex",
- "mocktopus",
  "rand 0.8.5",
  "ron 0.8.0",
  "rstest",

@@ -17,7 +17,7 @@
 
 use super::*;
 use derivative::Derivative;
-use std::{rc::Rc, str::FromStr};
+use std::rc::Rc;
 use wildland_corex::entities::{Container, Storage as IStorage, StorageData};
 
 #[derive(Clone, Derivative)]
@@ -27,16 +27,6 @@ pub struct Storage {
 
     #[derivative(Debug = "ignore")]
     db: Rc<StoreDb>,
-}
-
-/// Create Storage object from its representation in Rust Object Notation
-impl FromStr for Storage {
-    type Err = ron::error::SpannedError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let data = ron::from_str(value)?;
-        Ok(Self::from_data_and_db(data, use_default_database()))
-    }
 }
 
 impl Storage {
@@ -57,7 +47,8 @@ impl Storage {
         }
     }
 
-    pub fn from_data_and_db(data: StorageData, db: Rc<StoreDb>) -> Self {
+    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
+        let data = ron::from_str(value).unwrap();
         Self { data, db }
     }
 }
@@ -114,14 +105,13 @@ impl Model for Storage {
 mod tests {
     use std::collections::HashSet;
 
+    use super::db::test::catlib;
     use crate::*;
     use rstest::*;
-    use uuid::Bytes;
     use wildland_corex::catlib_service::entities::{Container, Storage};
 
-    fn _catlib() -> CatLib {
-        let catlib = db::init_catlib(rand::random::<Bytes>());
-
+    #[fixture]
+    fn catlib_with_forest(catlib: CatLib) -> CatLib {
         // Create a dummy forest and container to which storages will be bound
         catlib
             .create_forest(
@@ -140,14 +130,8 @@ mod tests {
     }
 
     #[fixture]
-    fn catlib() -> CatLib {
-        _catlib()
-    }
-
-    #[fixture]
-    fn container() -> Box<dyn Container> {
-        let catlib = _catlib();
-        _container(&catlib)
+    fn container(catlib_with_forest: CatLib) -> Box<dyn Container> {
+        _container(&catlib_with_forest)
     }
 
     fn make_storage(container: &dyn Container) -> Box<dyn Storage> {
@@ -182,7 +166,7 @@ mod tests {
         assert_eq!(container.storages().unwrap().len(), 1);
     }
 
-    #[rstest]
+    #[rstest(catlib_with_forest as catlib)]
     fn create_storage_with_template_id(catlib: CatLib) {
         let container = _container(&catlib);
         make_storage(container.as_ref()); // Create storage w/o template id on purpose

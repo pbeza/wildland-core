@@ -15,14 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::rc::Rc;
-
 use crate::{
     api::cargo_user::CargoUser,
     errors::user::{UserCreationError, UserRetrievalError},
 };
 use uuid::Uuid;
-use wildland_catlib::CatLib;
 use wildland_corex::{
     catlib_service::error::CatlibError, CatLibService, CryptoError, DeviceMetadata, Identity,
     LssService, MasterIdentity, MnemonicPhrase, UserMetaData,
@@ -45,10 +42,10 @@ pub(crate) struct UserService {
 }
 
 impl UserService {
-    pub(crate) fn new(lss_service: LssService) -> Self {
+    pub(crate) fn new(lss_service: LssService, catlib_service: CatLibService) -> Self {
         Self {
             lss_service,
-            catlib_service: CatLibService::new(Rc::new(CatLib::default())),
+            catlib_service,
         }
     }
 

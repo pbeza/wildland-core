@@ -28,7 +28,7 @@ pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibResult
     let forest: Vec<_> = data
         .iter()
         .filter(|(id, _)| id.starts_with(format!("forest-{uuid}").as_str()))
-        .map(|(_, forest_str)| forest_str.parse::<Forest>().unwrap())
+        .map(|(_, forest_str)| Forest::from_db_entry(forest_str, db.clone()))
         .collect();
 
     match forest.len() {
@@ -48,7 +48,7 @@ pub(crate) fn fetch_container_by_uuid(
     let container: Vec<_> = data
         .iter()
         .filter(|(id, _)| id.starts_with(format!("container-{uuid}").as_str()))
-        .map(|(_, container_str)| container_str.parse::<Container>().unwrap())
+        .map(|(_, container_str)| Container::from_db_entry(container_str, db.clone()))
         .collect();
 
     match container.len() {
@@ -68,7 +68,7 @@ pub(crate) fn fetch_storages_by_container_uuid(
     let storages: Vec<_> = data
         .iter()
         .filter(|(id, _)| id.starts_with("storage-"))
-        .map(|(_, storage_str)| storage_str.parse::<Storage>().unwrap())
+        .map(|(_, storage_str)| Storage::from_db_entry(storage_str, db.clone()))
         .filter(|storage| (*storage.container().unwrap()).as_ref().uuid == *uuid)
         .map(|storage| Box::new(storage) as Box<dyn IStorage>)
         .collect();
@@ -98,26 +98,16 @@ pub(crate) fn delete_model(db: Rc<StoreDb>, key: String) -> CatlibResult<()> {
 }
 
 #[cfg(test)]
-pub(crate) fn init_catlib(random: uuid::Bytes) -> crate::CatLib {
-    use mocktopus::mocking::*;
+pub(crate) mod test {
 
-    let uuid = uuid::Builder::from_random_bytes(random).into_uuid();
-    let dir = tempfile::tempdir().unwrap().into_path();
+    use rstest::fixture;
 
-    let path = dir.join(format!("{uuid}-db.ron"));
-
-    // Mock the `use_default_database` function to return a unique path to a file database
-    // for each test. This allows not only to avoid having to mock whole Catlib structs to use
-    // a different DB deserializer, but also allows tests to run in parallel due to the fact
-    // that every test will have it's own, random UUID.
-    crate::use_default_database.mock_safe(move || {
+    #[fixture]
+    pub fn catlib() -> crate::CatLib {
+        let random = rand::random::<uuid::Bytes>();
+        let uuid = uuid::Builder::from_random_bytes(random).into_uuid();
+        let dir = tempfile::tempdir().unwrap().into_path();
         let path = dir.join(format!("{uuid}-db.ron"));
-        println!("{}", path.to_str().unwrap());
-        let db = CatLib::new(path).db;
-        db.load().unwrap();
-
-        MockResult::Return(db)
-    });
-
-    CatLib::new(path)
+        crate::CatLib::new(path)
+    }
 }

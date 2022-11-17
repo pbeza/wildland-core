@@ -26,13 +26,15 @@ use crate::{
 };
 use std::{
     mem::MaybeUninit,
+    rc::Rc,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
     },
 };
 use thiserror::Error;
-use wildland_corex::{LocalSecureStorage, LssService};
+use wildland_catlib::CatLib;
+use wildland_corex::{CatLibService, LocalSecureStorage, LssService};
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[repr(C)]
@@ -64,7 +66,10 @@ impl CargoLib {
     ) -> Self {
         let lss_service = LssService::new(lss);
         Self {
-            user_api: UserApi::new(UserService::new(lss_service.clone())),
+            user_api: UserApi::new(UserService::new(
+                lss_service.clone(),
+                CatLibService::new(Rc::new(CatLib::default())),
+            )),
             foundation_storage_api: FoundationStorageApi::new(fsa_config, lss_service),
         }
     }
@@ -118,7 +123,7 @@ impl CargoLib {
 /// let lss = TestLss{};
 ///
 /// # use std::path::PathBuf;
-/// let cfg = CargoConfig{     
+/// let cfg = CargoConfig{
 ///     logger_config: LoggerConfig {
 ///         use_logger: true,
 ///         log_level: Level::TRACE,
