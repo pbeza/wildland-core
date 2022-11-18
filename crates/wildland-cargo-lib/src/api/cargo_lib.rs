@@ -18,7 +18,6 @@
 use crate::{
     api::{
         config::{CargoConfig, FoundationStorageApiConfig},
-        foundation_storage::FoundationStorageApi,
         user::UserApi,
     },
     logging,
@@ -56,7 +55,6 @@ static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 #[derive(Clone)]
 pub struct CargoLib {
     user_api: UserApi,
-    foundation_storage_api: FoundationStorageApi,
 }
 
 impl CargoLib {
@@ -67,10 +65,10 @@ impl CargoLib {
         let lss_service = LssService::new(lss);
         Self {
             user_api: UserApi::new(UserService::new(
-                lss_service.clone(),
+                lss_service,
                 CatLibService::new(Rc::new(CatLib::default())),
+                fsa_config,
             )),
-            foundation_storage_api: FoundationStorageApi::new(fsa_config, lss_service),
         }
     }
 
@@ -78,12 +76,6 @@ impl CargoLib {
     #[tracing::instrument(skip(self))]
     pub fn user_api(&self) -> UserApi {
         self.user_api.clone()
-    }
-
-    /// Returns structure aggregating API for Foundation Storage management
-    #[tracing::instrument(skip(self))]
-    pub fn foundation_storage_api(&self) -> FoundationStorageApi {
-        self.foundation_storage_api.clone()
     }
 }
 

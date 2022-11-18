@@ -30,6 +30,10 @@ pub(crate) fn check_status_code(response: Response) -> Result<Response, Wildland
         StatusCode::OK | StatusCode::CREATED | StatusCode::ACCEPTED | StatusCode::NO_CONTENT => {
             Ok(response)
         }
-        _ => Err(HttpError(response.as_str().map_err(Rc::new)?.to_owned())),
+        _ => Err(HttpError(format!(
+            "HTTP response code: {}; {}",
+            response.status_code,
+            response.as_str().map_err(Rc::new)?.to_owned()
+        ))),
     }
 }

@@ -139,7 +139,7 @@ mod tests {
     use rstest::*;
     use uuid::Uuid;
     use wildland_corex::{
-        CatLibService, DeviceMetadata, SigningKeypair, UserMetaData, WildlandIdentity,
+        CatLibService, DeviceMetadata, ForestMetaData, SigningKeypair, WildlandIdentity,
     };
 
     use super::Container;
@@ -160,12 +160,10 @@ mod tests {
             .add_forest(
                 &forest_identity,
                 &device_identity,
-                UserMetaData {
-                    devices: vec![DeviceMetadata {
-                        name: dev_name,
-                        pubkey: device_identity.get_public_key(),
-                    }],
-                },
+                ForestMetaData::new(vec![DeviceMetadata {
+                    name: dev_name,
+                    pubkey: device_identity.get_public_key(),
+                }]),
             )
             .unwrap();
 
