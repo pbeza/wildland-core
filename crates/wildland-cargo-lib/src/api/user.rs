@@ -151,6 +151,7 @@ impl UserApi {
 #[cfg(test)]
 mod tests {
     use super::UserApi;
+    use crate::api::config::FoundationStorageApiConfig;
     use crate::api::utils::test::{catlib_service, lss_stub};
     use crate::{errors::UserRetrievalError, user::UserService};
     use rstest::rstest;
@@ -162,7 +163,14 @@ mod tests {
         lss_stub: &'static dyn LocalSecureStorage,
     ) {
         let lss_service = LssService::new(lss_stub);
-        let user_service = UserService::new(lss_service, catlib_service);
+        let user_service = UserService::new(
+            lss_service,
+            catlib_service,
+            FoundationStorageApiConfig {
+                evs_url: "".to_string(),
+                sc_url: "".to_string(),
+            },
+        );
         let user_api = UserApi::new(user_service);
 
         let user_result = user_api.get_user();
@@ -178,7 +186,14 @@ mod tests {
         lss_stub: &'static dyn LocalSecureStorage,
     ) {
         let lss_service = LssService::new(lss_stub);
-        let user_service = UserService::new(lss_service, catlib_service);
+        let user_service = UserService::new(
+            lss_service,
+            catlib_service,
+            FoundationStorageApiConfig {
+                evs_url: "".to_string(),
+                sc_url: "".to_string(),
+            },
+        );
         let user_api = UserApi::new(user_service);
 
         let mnemonic = user_api.generate_mnemonic().unwrap();
@@ -197,7 +212,14 @@ mod tests {
         lss_stub: &'static dyn LocalSecureStorage,
     ) {
         let lss_service = LssService::new(lss_stub);
-        let user_service = UserService::new(lss_service, catlib_service);
+        let user_service = UserService::new(
+            lss_service,
+            catlib_service,
+            FoundationStorageApiConfig {
+                evs_url: "".to_string(),
+                sc_url: "".to_string(),
+            },
+        );
         let user_api = UserApi::new(user_service);
 
         let mnemonic = user_api.generate_mnemonic().unwrap();

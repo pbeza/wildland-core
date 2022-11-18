@@ -21,7 +21,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 use wildland_corex::{
-    storage::StorageTemplateTrait, CryptoError, EncryptingKeypair, LssError, LssService,
+    catlib_service::error::CatlibError, storage::StorageTemplateTrait, CryptoError,
+    EncryptingKeypair, LssError,
 };
 use wildland_http_client::{
     error::WildlandHttpClientError,
@@ -85,27 +86,23 @@ pub enum FsaError {
     InvalidCredentialsFormat(String),
     #[error(transparent)]
     LssError(#[from] LssError),
-}
-
-#[derive(Clone)]
-pub struct FreeTierProcessHandle {
-    email: String,
-    encrypting_keypair: Rc<EncryptingKeypair>,
+    #[error(transparent)]
+    CatlibError(#[from] CatlibError),
+    #[error("{0}")]
+    Generic(String),
 }
 
 #[derive(Clone)]
 pub struct FoundationStorageApi {
     evs_client: EvsClient,
     sc_url: String,
-    lss_service: LssService,
 }
 
 impl FoundationStorageApi {
-    pub fn new(config: FoundationStorageApiConfig, lss_service: LssService) -> Self {
+    pub fn new(config: &FoundationStorageApiConfig) -> Self {
         Self {
             evs_client: EvsClient::new(&config.evs_url),
-            sc_url: config.sc_url,
-            lss_service,
+            sc_url: config.sc_url.clone(),
         }
     }
 
@@ -125,47 +122,51 @@ impl FoundationStorageApi {
                 None => Ok(FreeTierProcessHandle {
                     email,
                     encrypting_keypair: Rc::new(encrypting_keypair),
+                    evs_client: self.evs_client.clone(),
+                    sc_url: self.sc_url.clone(),
                 }),
             })
     }
+}
 
-    pub fn verify_email(
-        &self,
-        process_handle: &FreeTierProcessHandle,
-        verification_token: String,
-    ) -> Result<StorageTemplate, FsaError> {
+/// Represents ongoing process of granting Free Foundation Storage and allows to run email verifications
+/// via `verify_email` method.
+#[derive(Clone)]
+pub struct FreeTierProcessHandle {
+    email: String,
+    encrypting_keypair: Rc<EncryptingKeypair>, // TODO WILX-269 EVS communication encryption (remove it if choose to relay on SSL only)
+    evs_client: EvsClient,
+    sc_url: String,
+}
+
+impl FreeTierProcessHandle {
+    /// Verifies user's email.
+    /// After successful verification it returns Foundation Storage Template (which is also saved in LSS)
+    /// and saves information in CatLib that Foundation storage has been granted.
+    pub fn verify_email(&self, verification_token: String) -> Result<StorageTemplate, FsaError> {
         self.evs_client
             .confirm_token(ConfirmTokenReq {
-                email: process_handle.email.clone(),
+                email: self.email.clone(),
                 verification_token,
             })
             .map_err(FsaError::EvsError)?;
 
         self.evs_client
             .get_storage(GetStorageReq {
-                email: process_handle.email.clone(),
-                pubkey: process_handle.encrypting_keypair.encode_pub(),
+                email: self.email.clone(),
+                pubkey: self.encrypting_keypair.encode_pub(),
             })
             .map_err(FsaError::EvsError)
             .and_then(|resp| match resp.encrypted_credentials {
                 Some(payload) => {
                     let payload = payload.replace('\n', ""); // make sure that content is properly encoded
                     let decoded = base64::decode(payload).unwrap();
-                    // TODO WILX-269 EVS communication encryption
-                    // let decrypted_hex = process_handle
-                    //     .encrypting_keypair
-                    //     .decrypt(decoded)
-                    //     .map_err(FsaError::CryptoError)?;
-                    // let decrypted = hex::decode(decrypted_hex).unwrap();
-                    let decrypted = decoded;
-                    let storage_credentials: StorageCredentials =
-                        serde_json::from_slice(&decrypted)
-                            .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
+                    let storage_credentials: StorageCredentials = serde_json::from_slice(&decoded)
+                        .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
 
                     let storage_template = StorageTemplate::FoundationStorageTemplate(
                         storage_credentials.into_storage_template(self.sc_url.clone()),
                     );
-                    self.lss_service.save_storage_template(&storage_template)?;
 
                     Ok(storage_template)
                 }
