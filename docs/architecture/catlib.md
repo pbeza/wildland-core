@@ -10,7 +10,7 @@ not private, and nothing security-sensitive should be stored here.
 
 Currently stored in catlib are:
 
-* Forest Identity (public)
+* Forest (pubkey identity, full forest manifest)
 * Containers
 * Bridges (shared containers)
 
