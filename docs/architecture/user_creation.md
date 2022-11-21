@@ -5,13 +5,12 @@
 ```mermaid
 sequenceDiagram
 app->>cargo: create user
-cargo->>lss: asks for forest uuid
-alt user exists
-    cargo->>catlib: check forest uuid
+cargo->>lss: asks for default forest uuid
+cargo->>catlib: check forest manifest
+alt forest exists
     catlib->>cargo: uuid exists
     catlib->>catlib: error, user already exists
-else user does not exist
-    cargo->>catlib: check forest uuid
+else forest does not exist
     catlib->>cargo: uuid does not exists
     cargo->>wl-crypto: new master identity
     cargo->>wl-crypto: new forest identity

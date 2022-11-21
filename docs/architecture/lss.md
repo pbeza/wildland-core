@@ -6,11 +6,12 @@ LSS is a platform specific component that is only exposed from Wildland as a
 set of traits. That means each platform (os) have to have their own
 implementations that are then passed as an instance to wildland.
 
-LSS is responsible for storing security oriented data:
+LSS data is persistant for specific device.
 
-- device identity (private key)
-- forest identity (private key)
-- master identity (private key)
+LSS is responsible for storing security oriented data, for example:
+
+- private keys (device, forest, master identity)
+- storage definitions
 
 Example implementations of LSS:
 
