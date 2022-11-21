@@ -10,8 +10,6 @@ not private, and nothing security-sensitive should be stored here.
 
 Currently stored in catlib are:
 
-* Device Identity (public)
-* Master Identity (public)
 * Forest Identity (public)
 * Containers
 * Bridges (shared containers)
