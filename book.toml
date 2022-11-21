@@ -19,6 +19,7 @@ copy-fonts = true
 #additional-css = ["custom.css", "custom2.css"]
 #additional-js = ["custom.js"]
 no-section-label = false
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
 #git-repository-url = "https://github.com/rust-lang/mdBook"
 #git-repository-icon = "fa-github"
 #edit-url-template = "https://github.com/rust-lang/mdBook/edit/master/guide/{path}"
@@ -48,6 +49,11 @@ boost-paragraph = 1      # ranking boost factor for matches in text
 expand = true            # partial words will match longer terms
 heading-split-level = 3  # link results to heading levels
 copy-js = true           # include Javascript code for search
+
+[preprocessor]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
 
 #[output.html]
 # git-repository-url = "https://docs.wildland.dev"
