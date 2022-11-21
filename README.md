@@ -20,6 +20,17 @@ HLD link: <https://docs.wildland.dev/>
 MLD link: <https://docs.wildland.dev/docs/wildland/mld/index.html>
 LLD link: <https://docs.wildland.dev/docs/wildland/lld/doc/wildland_cargo_lib/index.html>
 
+## Local Documentation
+
+to build the documentation locally, cargo tool and some dependencies are required.
+
+* install dependencies:
+`cargo install mdbook mdbook-mermaid mdbook-plantuml mdbook-toc mdbook-linkcheck mdbook-graphviz mdbook-katex`
+* setup dependency config
+`mdbook-mermaid install .`
+* generate and open the documentation
+`mdbook build --open`
+
 ## Logging
 
 Logging works over tracing::subscriber and is only configurable via client
