@@ -48,14 +48,6 @@ pub type ContainerPath = String;
 pub type ContainerPaths = HashSet<ContainerPath>;
 pub type Signers = HashSet<Identity>;
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct ForestData {
-    pub uuid: Uuid,
-    pub signers: Signers,
-    pub owner: Identity,
-    pub data: Vec<u8>,
-}
-
 pub trait ForestClone {
     fn clone_box(&self) -> Box<dyn Forest>;
 }
@@ -75,7 +67,7 @@ impl Clone for Box<dyn Forest> {
     }
 }
 
-pub trait Forest: AsRef<ForestData> + std::fmt::Debug + ForestClone {
+pub trait Forest: std::fmt::Debug + ForestClone {
     /// Add manifest Signer
     ///
     /// Returns whether the value was newly inserted. That is:
@@ -96,7 +88,7 @@ pub trait Forest: AsRef<ForestData> + std::fmt::Debug + ForestClone {
     fn containers(&self) -> CatlibResult<Vec<Box<dyn Container>>>;
 
     /// Set Forest arbitrary data
-    fn update(&mut self, data: Vec<u8>) -> CatlibResult<&mut dyn Forest>;
+    fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;
 
     /// Delete Forest
     ///
@@ -129,19 +121,26 @@ pub trait Forest: AsRef<ForestData> + std::fmt::Debug + ForestClone {
         paths: Vec<ContainerPath>,
         include_subdirs: bool,
     ) -> CatlibResult<Vec<Box<dyn Container>>>;
+
+    /// Retrieve Forest's metadata
+    fn data(&mut self) -> CatlibResult<Vec<u8>>;
+
+    /// Retrieve Forest's uuid
+    fn uuid(&self) -> Uuid;
+
+    /// Retrieve Forest's owner identity
+    fn owner(&self) -> Identity;
+
+    /// Retrieve Forests's signers
+    fn signers(&mut self) -> CatlibResult<Signers>;
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct ContainerData {
-    pub uuid: Uuid,
-    pub forest_uuid: Uuid,
-    pub name: String,
-    pub paths: ContainerPaths,
-}
-
-pub trait Container: AsRef<ContainerData> + std::fmt::Debug {
+pub trait Container: std::fmt::Debug {
     /// Return [`Forest`] that contains the [`Container`].
     fn forest(&self) -> CatlibResult<Box<dyn Forest>>;
+
+    /// Return paths copies
+    fn paths(&self) -> HashSet<ContainerPath>;
 
     /// Add a path to the Container.
     fn add_path(&mut self, path: ContainerPath) -> CatlibResult<bool>;
@@ -168,21 +167,19 @@ pub trait Container: AsRef<ContainerData> + std::fmt::Debug {
     /// Sets the container's name
     fn set_name(&mut self, new_name: String) -> CatlibResult<()>;
 
+    /// Get the container's name
+    fn name(&mut self) -> CatlibResult<String>;
+
     /// Delete Container
     ///
     /// **WARN: The underlying objects are not removed recursively**
     fn delete(&mut self) -> CatlibResult<bool>;
+
+    /// Retrieve Container's uuid
+    fn uuid(&self) -> Uuid;
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct StorageData {
-    pub uuid: Uuid,
-    pub container_uuid: Uuid,
-    pub template_uuid: Option<Uuid>,
-    pub data: Vec<u8>,
-}
-
-pub trait Storage: AsRef<StorageData> + std::fmt::Debug {
+pub trait Storage: std::fmt::Debug {
     /// Return [`Container`] that contains the [`Storage`].
     fn container(&self) -> CatlibResult<Box<dyn Container>>;
 
@@ -191,23 +188,21 @@ pub trait Storage: AsRef<StorageData> + std::fmt::Debug {
 
     /// Delete Storage
     fn delete(&mut self) -> CatlibResult<bool>;
+
+    /// Retrieve Storage data
+    fn data(&mut self) -> CatlibResult<Vec<u8>>;
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct BridgeData {
-    pub uuid: Uuid,
-    pub forest_uuid: Uuid,
-    pub path: ContainerPath,
-    pub link: Vec<u8>,
-}
-
-pub trait Bridge: AsRef<BridgeData> + std::fmt::Debug {
+pub trait Bridge: std::fmt::Debug {
     /// Return [`Forest`] that contains the [`Bridge`].
     fn forest(&self) -> CatlibResult<Box<dyn Forest>>;
 
     /// Update Bridge link data
-    fn update(&mut self, data: Vec<u8>) -> CatlibResult<&mut dyn Bridge>;
+    fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;
 
     /// Delete Bridge
     fn delete(&mut self) -> CatlibResult<bool>;
+
+    /// Retrieve Bridge path
+    fn path(&mut self) -> CatlibResult<ContainerPath>;
 }

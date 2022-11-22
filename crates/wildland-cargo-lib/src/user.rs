@@ -87,7 +87,7 @@ impl UserService {
             }]),
         )?;
 
-        self.lss_service.save_forest_uuid((*forest).as_ref())?;
+        self.lss_service.save_forest_uuid(forest.as_ref())?;
 
         self.lss_service.save_identity(&default_forest_identity)?;
         self.lss_service.save_identity(&device_identity)?;
@@ -110,13 +110,15 @@ impl UserService {
         let default_forest_uuid = self.get_default_forest_uuid()?;
 
         match self.catlib_service.get_forest(&default_forest_uuid) {
-            Ok(forest) => {
-                let user_metadata: ForestMetaData =
-                    serde_json::from_slice(&(*forest).as_ref().data).map_err(|e| {
-                        CatlibError::Generic(format!(
-                            "Could not parse forest data retrieved from Catlib: {e}"
-                        ))
-                    })?;
+            Ok(mut forest) => {
+                let user_metadata: ForestMetaData = serde_json::from_slice(
+                    &forest.data().map_err(UserRetrievalError::CatlibError)?,
+                )
+                .map_err(|e| {
+                    CatlibError::Generic(format!(
+                        "Could not parse forest data retrieved from Catlib: {e}"
+                    ))
+                })?;
 
                 let device_identity = self
                     .lss_service

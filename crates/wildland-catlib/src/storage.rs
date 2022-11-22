@@ -17,16 +17,31 @@
 
 use super::*;
 use derivative::Derivative;
+use serde::{Deserialize, Serialize};
 use std::rc::Rc;
-use wildland_corex::entities::{Container, Storage as IStorage, StorageData};
+use wildland_corex::entities::{Container, Storage as IStorage};
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub(crate) struct StorageData {
+    pub uuid: Uuid,
+    pub container_uuid: Uuid,
+    pub template_uuid: Option<Uuid>,
+    pub data: Vec<u8>,
+}
+
+impl From<&str> for StorageData {
+    fn from(data_str: &str) -> Self {
+        ron::from_str(data_str).unwrap()
+    }
+}
 
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
-pub struct Storage {
-    data: StorageData,
+pub(crate) struct Storage {
+    pub(crate) data: StorageData,
 
     #[derivative(Debug = "ignore")]
-    db: Rc<StoreDb>,
+    pub(crate) db: Rc<StoreDb>,
 }
 
 impl Storage {
@@ -45,11 +60,6 @@ impl Storage {
             },
             db,
         }
-    }
-
-    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
-        let data = ron::from_str(value).unwrap();
-        Self { data, db }
     }
 }
 
@@ -71,6 +81,14 @@ impl IStorage for Storage {
 
     /// ## Errors
     ///
+    /// Retrieves Storage data
+    fn data(&mut self) -> CatlibResult<Vec<u8>> {
+        self.sync()?;
+        Ok(self.data.data.clone())
+    }
+
+    /// ## Errors
+    ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<&mut dyn IStorage> {
         self.data.data = data;
@@ -88,7 +106,7 @@ impl IStorage for Storage {
 }
 
 impl Model for Storage {
-    fn save(&mut self) -> CatlibResult<()> {
+    fn save(&self) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
             format!("storage-{}", self.data.uuid),
@@ -98,6 +116,12 @@ impl Model for Storage {
 
     fn delete(&mut self) -> CatlibResult<()> {
         delete_model(self.db.clone(), format!("storage-{}", self.data.uuid))
+    }
+
+    fn sync(&mut self) -> CatlibResult<()> {
+        let data = fetch_storage_data_by_uuid(self.db.clone(), &self.data.uuid)?;
+        self.data = data;
+        Ok(())
     }
 }
 
@@ -192,7 +216,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            (*container.storages().unwrap()[0]).as_ref().data,
+            container.storages().unwrap()[0].data().unwrap(),
             b"storage data"
         )
     }

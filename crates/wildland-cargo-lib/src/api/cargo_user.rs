@@ -240,13 +240,13 @@ All devices:
         let storage_template = process_handle.verify_email(token)?;
         self.lss_service.save_storage_template(&storage_template)?;
         self.catlib_service
-            .mark_free_storage_granted(&mut self.forest)?;
+            .mark_free_storage_granted(self.forest.as_mut())?;
         Ok(storage_template)
     }
 
-    pub fn is_free_storage_granted(&self) -> Result<bool, CatlibError> {
+    pub fn is_free_storage_granted(&mut self) -> Result<bool, CatlibError> {
         self.catlib_service
-            .is_free_storage_granted(self.forest.as_ref())
+            .is_free_storage_granted(self.forest.as_mut())
     }
 }
 
@@ -256,6 +256,7 @@ mod tests {
 
     use mockito::Matcher;
     use rstest::*;
+    use serde_json::json;
     use uuid::Uuid;
     use wildland_corex::catlib_service::entities::Forest;
     use wildland_corex::{
@@ -275,9 +276,13 @@ mod tests {
     fn setup(
         catlib_service: CatLibService,
         lss_stub: &'static dyn LocalSecureStorage,
-    ) -> (CargoUser, CatLibService, Box<dyn Forest>) {
+    ) -> (
+        CargoUser,
+        CatLibService,
+        Box<dyn Forest>,
+        &'static dyn LocalSecureStorage,
+    ) {
         let lss_service = LssService::new(lss_stub);
-
         let this_dev_name = "My device".to_string();
 
         let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
@@ -296,7 +301,7 @@ mod tests {
             )
             .unwrap();
 
-        let forest_copy = catlib_service.get_forest(&(*forest).as_ref().uuid).unwrap();
+        let forest_copy = catlib_service.get_forest(&forest.uuid()).unwrap();
 
         let cargo_user = CargoUser::new(
             this_dev_name.clone(),
@@ -310,13 +315,20 @@ mod tests {
             },
         );
 
-        (cargo_user, catlib_service, forest_copy)
+        (cargo_user, catlib_service, forest_copy, lss_stub)
     }
 
     #[rstest]
-    fn test_http_requests_to_evs(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_requesting_free_tier_storage(
+        setup: (
+            CargoUser,
+            CatLibService,
+            Box<dyn Forest>,
+            &'static dyn LocalSecureStorage,
+        ),
+    ) {
         // given setup
-        let (mut cargo_user, _catlib_service, _forest) = setup;
+        let (mut cargo_user, catlib_service, mut forest, lss_stub) = setup;
 
         // when storage request is sent
         let storage_req_mock_1 = mockito::mock("PUT", "/get_storage")
@@ -335,7 +347,7 @@ mod tests {
             .with_status(200)
             .create();
 
-        let response_json_str = r#"{"id": "00000000-0000-0000-0000-000000000000", "credentialID": "cred_id", "credentialSecret": "cred_secret"}"#;
+        let response_json_str = r#"{"id": "00000000-0000-0000-0000-000000000001", "credentialID": "cred_id", "credentialSecret": "cred_secret"}"#;
         let response_base64 = base64::encode(response_json_str);
         let full_response = format!("{{ \"encrypted_credentials\": \"{response_base64}\" }}");
         let storage_req_mock_2 = mockito::mock("PUT", "/get_storage")
@@ -348,16 +360,53 @@ mod tests {
             .unwrap();
 
         // then all http requests expectations are met
-
         storage_req_mock_1.assert();
         verify_token_mock.assert();
         storage_req_mock_2.assert();
+
+        // and storage template is saved in LSS
+        let expected_template_json = json!(
+            {
+                "type":"FoundationStorageTemplate",
+                "template":
+                {
+                    "uuid":"00000000-0000-0000-0000-000000000001",
+                    "credential_id":"cred_id",
+                    "credential_secret":"cred_secret","sc_url":""
+                }
+            }
+        );
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(
+                &lss_stub
+                    .get(
+                        "wildland.storage_template.00000000-0000-0000-0000-000000000001"
+                            .to_string()
+                    )
+                    .unwrap()
+                    .unwrap()
+            )
+            .unwrap(),
+            expected_template_json
+        );
+
+        // and storage granted flag is set in catlib
+        assert!(catlib_service
+            .is_free_storage_granted(forest.as_mut())
+            .unwrap())
     }
 
     #[rstest]
-    fn test_creating_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_creating_container(
+        setup: (
+            CargoUser,
+            CatLibService,
+            Box<dyn Forest>,
+            &'static dyn LocalSecureStorage,
+        ),
+    ) {
         // given setup
-        let (cargo_user, catlib_service, forest) = setup;
+        let (cargo_user, catlib_service, forest, _lss_stub) = setup;
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
@@ -374,20 +423,24 @@ mod tests {
             .unwrap();
 
         // then it is stored in catlib
-        let retrieved_forest = catlib_service.get_forest(&(*forest).as_ref().uuid).unwrap();
-        let containers = retrieved_forest.containers().unwrap();
+        let retrieved_forest = catlib_service.get_forest(&forest.uuid()).unwrap();
+        let mut containers = retrieved_forest.containers().unwrap();
         assert_eq!(containers.len(), 1);
-        assert_eq!((*containers[0]).as_ref().name, container_name);
-        assert_eq!(
-            (*containers[0].forest().unwrap()).as_ref().uuid,
-            (*forest).as_ref().uuid
-        );
+        assert_eq!(containers[0].name().unwrap(), container_name);
+        assert_eq!((*containers[0].forest().unwrap()).uuid(), (*forest).uuid());
     }
 
     #[rstest]
-    fn test_getting_created_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_getting_created_container(
+        setup: (
+            CargoUser,
+            CatLibService,
+            Box<dyn Forest>,
+            &'static dyn LocalSecureStorage,
+        ),
+    ) {
         // given setup
-        let (cargo_user, _catlib_service, _forest) = setup;
+        let (cargo_user, _catlib_service, _forest, _lss_stub) = setup;
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
@@ -410,9 +463,16 @@ mod tests {
     }
 
     #[rstest]
-    fn test_delete_created_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_delete_created_container(
+        setup: (
+            CargoUser,
+            CatLibService,
+            Box<dyn Forest>,
+            &'static dyn LocalSecureStorage,
+        ),
+    ) {
         // given setup
-        let (cargo_user, _catlib_service, _forest) = setup;
+        let (cargo_user, _catlib_service, _forest, _lss_stub) = setup;
 
         // when a container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";

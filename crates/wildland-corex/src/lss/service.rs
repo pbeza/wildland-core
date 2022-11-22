@@ -18,7 +18,8 @@
 use std::fmt::{Debug, Display};
 
 use super::{api::LocalSecureStorage, result::LssResult};
-use crate::catlib_service::entities::{ForestData, Identity};
+use crate::catlib_service::entities::Identity;
+use crate::entities::Forest;
 use crate::{
     storage::StorageTemplateTrait, ForestRetrievalError, LssError, WildlandIdentity,
     DEFAULT_FOREST_KEY,
@@ -65,9 +66,9 @@ impl LssService {
         })
     }
 
-    pub fn save_forest_uuid(&self, forest: &ForestData) -> LssResult<bool> {
+    pub fn save_forest_uuid(&self, forest: &dyn Forest) -> LssResult<bool> {
         tracing::trace!("Saving forest uuid");
-        self.serialize_and_save(forest.owner.encode(), &forest.uuid)
+        self.serialize_and_save(forest.owner().encode(), &forest.uuid())
     }
 
     pub fn get_forest_uuid_by_identity(
@@ -159,12 +160,13 @@ impl LssService {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        cell::RefCell,
-        collections::{HashMap, HashSet},
-    };
+    use std::{cell::RefCell, collections::HashMap};
 
-    use crate::catlib_service::entities::{ForestData, Identity};
+    use crate::{
+        catlib_service::{entities::Identity, error::CatlibResult},
+        entities::{Bridge, Container, ContainerPath, Forest as IForest, Signers},
+    };
+    use mockall::mock;
     use serde::Serialize;
     use uuid::Uuid;
 
@@ -294,6 +296,40 @@ mod tests {
         assert_eq!(default_forest.unwrap(), expecte_forest_identity)
     }
 
+    mock! {
+        pub Forest {}
+        impl std::fmt::Debug for Forest {
+            fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> std::fmt::Result;
+        }
+        impl Clone for Forest {
+            fn clone(&self) -> Self;
+        }
+        impl IForest for Forest {
+            fn add_signer(&mut self, signer: Identity) -> CatlibResult<bool>;
+            fn del_signer(&mut self, signer: Identity) -> CatlibResult<bool>;
+            fn containers(&self) -> CatlibResult<Vec<Box<dyn Container>>>;
+            fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;
+            fn delete(&mut self) -> CatlibResult<bool>;
+            fn create_container(&self, name: String) -> CatlibResult<Box<dyn Container>>;
+            fn create_bridge(
+                &self,
+                path: ContainerPath,
+                link_data: Vec<u8>,
+            ) -> CatlibResult<Box<dyn Bridge>>;
+            fn find_bridge(&self, path: ContainerPath) -> CatlibResult<Box<dyn Bridge>>;
+            fn find_containers(
+                &self,
+                paths: Vec<ContainerPath>,
+                include_subdirs: bool,
+            ) -> CatlibResult<Vec<Box<dyn Container>>>;
+
+            fn data(&mut self) -> CatlibResult<Vec<u8>>;
+            fn uuid(&self) -> Uuid;
+            fn owner(&self) -> Identity;
+            fn signers(&mut self) -> CatlibResult<Signers>;
+        }
+    }
+
     #[test]
     fn test_save_forest_uuid() {
         let lss = LssStub::default(); // LSS must live through the whole test
@@ -301,19 +337,20 @@ mod tests {
         let service = LssService::new(lss_ref);
 
         let forest_identity = Identity([1; 32]);
-        let forest = ForestData {
-            uuid: Uuid::new_v4(),
-            owner: forest_identity.clone(),
-            signers: HashSet::new(),
-            data: vec![],
-        };
+        let uuid = Uuid::new_v4();
+        let mut forest = MockForest::new();
+        forest.expect_owner().returning({
+            let fi = forest_identity.clone();
+            move || fi.clone()
+        });
+        forest.expect_uuid().returning(move || uuid);
 
         service.save_forest_uuid(&forest).unwrap();
 
         let retrieved_uuid: Uuid =
             serde_json::from_str(&lss.get(forest_identity.encode()).unwrap().unwrap()).unwrap();
 
-        assert_eq!(retrieved_uuid, forest.uuid);
+        assert_eq!(retrieved_uuid, forest.uuid());
     }
 
     #[test]

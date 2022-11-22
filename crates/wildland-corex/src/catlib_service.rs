@@ -92,14 +92,14 @@ impl CatLibService {
         )
     }
 
-    pub fn mark_free_storage_granted(&self, forest: &mut Box<dyn Forest>) -> CatlibResult<()> {
-        let mut forest_metadata = self.get_parsed_forest_metadata(forest.as_ref())?;
+    pub fn mark_free_storage_granted(&self, forest: &mut dyn Forest) -> CatlibResult<()> {
+        let mut forest_metadata = self.get_parsed_forest_metadata(forest)?;
         forest_metadata.free_storage_granted = true;
-        forest.as_mut().update(forest_metadata.try_into()?)?;
+        forest.update(forest_metadata.try_into()?)?;
         Ok(())
     }
 
-    pub fn is_free_storage_granted(&self, forest: &dyn Forest) -> CatlibResult<bool> {
+    pub fn is_free_storage_granted(&self, forest: &mut dyn Forest) -> CatlibResult<bool> {
         let forest_metadata = self.get_parsed_forest_metadata(forest)?;
         Ok(forest_metadata.free_storage_granted)
     }
@@ -130,8 +130,8 @@ impl CatLibService {
         container.delete().map(|_| ())
     }
 
-    fn get_parsed_forest_metadata(&self, forest: &dyn Forest) -> CatlibResult<ForestMetaData> {
-        serde_json::from_slice(&forest.as_ref().data)
+    fn get_parsed_forest_metadata(&self, forest: &mut dyn Forest) -> CatlibResult<ForestMetaData> {
+        serde_json::from_slice(&forest.data()?)
             .map_err(|e| CatlibError::Generic(format!("Could not deserialize forest metadata {e}")))
     }
 }

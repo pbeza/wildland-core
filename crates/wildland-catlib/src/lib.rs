@@ -71,17 +71,17 @@
 //! ```
 //!
 
-pub use bridge::Bridge;
+use bridge::Bridge;
 pub use common::*;
-pub use container::Container;
+use container::Container;
 use db::*;
 use directories::ProjectDirs;
 use error::*;
-pub use forest::Forest;
+use forest::{Forest, ForestData};
 use rustbreak::PathDatabase;
 use std::path::PathBuf;
 use std::rc::Rc;
-pub use storage::Storage;
+use storage::{Storage, StorageData};
 use uuid::Uuid;
 use wildland_corex::catlib_service::interface::CatLib as ICatLib;
 use wildland_corex::entities::{
@@ -144,7 +144,7 @@ impl ICatLib for CatLib {
         signers: Signers,
         data: Vec<u8>,
     ) -> CatlibResult<Box<dyn IForest>> {
-        let mut forest = Box::new(Forest::new(owner, signers, data, self.db.clone()));
+        let forest = Box::new(Forest::new(owner, signers, data, self.db.clone()));
         forest.save()?;
         Ok(forest)
     }
@@ -165,8 +165,11 @@ impl ICatLib for CatLib {
         let forests: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("forest-"))
-            .map(|(_, forest_str)| Forest::from_db_entry(forest_str, self.db.clone()))
-            .filter(|forest| &forest.as_ref().owner == owner)
+            .map(|(_, forest_str)| Forest {
+                data: ForestData::from(forest_str.as_str()),
+                db: self.db.clone(),
+            })
+            .filter(|forest| &forest.owner() == owner)
             .collect();
 
         match forests.len() {
@@ -194,7 +197,10 @@ impl ICatLib for CatLib {
         let storages: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("storage-"))
-            .map(|(_, storage_str)| Storage::from_db_entry(storage_str, self.db.clone()))
+            .map(|(_, storage_str)|  Storage {
+                data: StorageData::from(storage_str.as_str()),
+                db: self.db.clone(),
+            })
             .filter(
                 |storage| matches!(storage.as_ref().template_uuid, Some(val) if val == *template_id),
             )
