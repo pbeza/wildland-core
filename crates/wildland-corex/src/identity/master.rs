@@ -38,13 +38,13 @@ pub enum ForestIdentityCreationError {
 }
 
 impl MasterIdentity {
-    #[tracing::instrument(level = "debug", skip(crypto_identity))]
+    #[tracing::instrument(level="debug", skip_all)]
     pub fn new(crypto_identity: Option<CryptoIdentity>) -> Self {
         tracing::debug!("creating new identity");
         Self { crypto_identity }
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level="debug", skip_all)]
     pub fn create_forest_identity(
         &self,
         index: u64,
@@ -59,7 +59,7 @@ impl MasterIdentity {
         Ok(identity)
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level="debug", skip_all)]
     pub fn create_device_identity(&self, name: String) -> WildlandIdentity {
         let keypair = new_device_identity();
         WildlandIdentity::Device(name, keypair)

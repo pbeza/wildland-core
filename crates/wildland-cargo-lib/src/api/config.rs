@@ -44,7 +44,7 @@ use serde::{
     Deserialize, Deserializer,
 };
 use thiserror::Error;
-use tracing::{instrument, Level};
+use tracing::{Level};
 
 const DEV_DEFAULT_EVS_URL: &str = "https://evs.cargo.wildland.dev/";
 const DEV_DEFAULT_SC_URL: &str = "https://storage-controller.cargo.wildland.dev/";
@@ -233,7 +233,6 @@ impl LoggerConfig {
     /// Whenever the file log facilities are available and properly configured,
     /// returns `true`. However if the configuration uses paths that do not exist
     /// we will fail to initialize the logger and return `false`.
-    #[instrument(skip(self))]
     pub fn is_file_eligible(&self) -> bool {
         if !self.log_file_enabled {
             return false;
@@ -299,6 +298,7 @@ impl CargoConfig {
 /// Uses an implementation of [`CargoCfgProvider`] to collect a configuration storing structure ([`CargoConfig`])
 /// which then can be passed to [`super::cargo_lib::create_cargo_lib`] in order to instantiate main API object ([`super::CargoLib`])
 ///
+#[tracing::instrument(level="debug", skip_all)]
 pub fn collect_config(
     config_provider: &'static dyn CargoCfgProvider,
 ) -> Result<CargoConfig, ParseConfigError> {
@@ -332,6 +332,7 @@ pub fn collect_config(
 /// into an instance of [`CargoConfig`]
 /// The `settings` must be a string with JSON formatted configuration.
 ///
+#[tracing::instrument(level="debug", skip_all)]
 pub fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ParseConfigError> {
     let parsed: CargoConfig =
         serde_json::from_slice(&raw_content).map_err(|e| ParseConfigError::Error(e.to_string()))?;

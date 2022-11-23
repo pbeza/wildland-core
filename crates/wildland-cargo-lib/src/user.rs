@@ -55,7 +55,7 @@ impl UserService {
         }
     }
 
-    #[tracing::instrument(level = "debug", skip(input, self))]
+    #[tracing::instrument(level="debug", skip_all)]
     pub(crate) fn create_user(
         &self,
         input: CreateUserInput,
@@ -67,7 +67,7 @@ impl UserService {
             Err(UserRetrievalError::ForestNotFound(_)) => Ok(()),
             Err(e) => Err(UserCreationError::UserRetrievalError(e)),
         }?;
-        tracing::trace!("User does not exist yet");
+        tracing::trace!("User does not exist yet, creating new one");
         let crypto_identity = match input {
             CreateUserInput::Mnemonic(mnemonic) => Identity::try_from(mnemonic.as_ref())?,
             CreateUserInput::Entropy(entropy) => Identity::try_from(entropy.as_slice())?,
@@ -87,8 +87,8 @@ impl UserService {
             }]),
         )?;
 
+        tracing::trace!("saving identities to lss");
         self.lss_service.save_forest_uuid((*forest).as_ref())?;
-
         self.lss_service.save_identity(&default_forest_identity)?;
         self.lss_service.save_identity(&device_identity)?;
 
@@ -105,7 +105,7 @@ impl UserService {
     /// Retrieves default forest keypair from LSS and then basing on that reads User metadata from CatLib.
     /// Result is presented in from of [`crate::api::user::CargoUser`].
     ///
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level="debug", skip_all)]
     pub(crate) fn get_user(&self) -> Result<Option<CargoUser>, UserRetrievalError> {
         let default_forest_uuid = self.get_default_forest_uuid()?;
 
@@ -142,8 +142,9 @@ impl UserService {
 
     /// Retrieves default forest uuid from LSS
     ///
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level="debug", skip_all)]
     fn get_default_forest_uuid(&self) -> Result<Uuid, UserRetrievalError> {
+        tracing::debug!("searching for user");
         let forest_identity = self
             .lss_service
             .get_default_forest_identity()?

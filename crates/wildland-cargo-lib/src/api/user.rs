@@ -47,19 +47,16 @@ pub fn check_entropy_mnemonic(bytes: Vec<u8>) -> Result<(), CreateMnemonicError>
 }
 
 impl MnemonicPayload {
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn stringify(&self) -> String {
         self.0.join(" ")
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_vec(&self) -> Vec<String> {
         self.0.clone().into()
     }
 }
 
 impl From<MnemonicPhrase> for MnemonicPayload {
-    #[tracing::instrument(level = "debug")]
     fn from(mnemonic: MnemonicPhrase) -> Self {
         Self(mnemonic)
     }
@@ -89,7 +86,7 @@ impl UserApi {
         Self { user_service }
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level="debug", skip_all)]
     pub fn generate_mnemonic(&self) -> Result<MnemonicPayload, CreateMnemonicError> {
         tracing::trace!("generating mnemonic");
         generate_random_mnemonic()
@@ -100,7 +97,7 @@ impl UserApi {
     /// Creates [`MnemonicPayload`] basing on a vector of words. The result may be used for creation
     /// User with [`UserApi::create_user_from_mnemonic`].
     ///
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level="debug", skip_all)]
     pub fn create_mnemonic_from_vec(
         &self,
         words: Vec<String>,
@@ -112,7 +109,7 @@ impl UserApi {
         ))
     }
 
-    #[tracing::instrument(level = "debug", skip(self, entropy))]
+    #[tracing::instrument(level="debug", skip_all)]
     pub fn create_user_from_entropy(
         &self,
         entropy: Vec<u8>,
@@ -123,7 +120,7 @@ impl UserApi {
             .create_user(CreateUserInput::Entropy(entropy), device_name)
     }
 
-    #[tracing::instrument(level = "debug", skip(self, mnemonic))]
+    #[tracing::instrument(level="debug", skip_all)]
     pub fn create_user_from_mnemonic(
         &self,
         mnemonic: &MnemonicPayload,

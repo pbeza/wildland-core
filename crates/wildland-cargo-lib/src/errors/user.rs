@@ -50,7 +50,6 @@ pub enum UserCreationError {
 }
 
 impl From<CryptoError> for UserCreationError {
-    #[tracing::instrument(level = "debug", ret)]
     fn from(crypto_err: CryptoError) -> Self {
         match &crypto_err {
             CryptoError::MnemonicGenerationError(_) => {
