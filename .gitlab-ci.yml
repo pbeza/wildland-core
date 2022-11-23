@@ -342,6 +342,7 @@ pages-mld:
     - tags
   script:
     - mkdir -p .docs/mld
+    - mdbook-mermaid install .
     - mdbook build
   artifacts:
     paths:
