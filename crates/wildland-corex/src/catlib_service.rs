@@ -79,7 +79,7 @@ impl CatLibService {
         Self { catlib }
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn add_forest(
         &self,
         forest_identity: &WildlandIdentity,
@@ -109,7 +109,7 @@ impl CatLibService {
         self.catlib.get_forest(forest_uuid)
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_container(
         &self,
         name: String,

@@ -126,13 +126,13 @@ All devices:
     }
 
     /// TODO
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn mount_forest(&self) -> Result<(), ForestMountError> {
         todo!()
     }
 
     /// Returns vector of handles to all containers (mounted or not) found in the user's forest.
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn get_containers(&self) -> Result<Vec<Arc<Mutex<Container>>>, CatlibError> {
         match self.forest.containers() {
             Ok(inner_containers) => {
@@ -166,7 +166,7 @@ All devices:
     }
 
     /// Creates a new container within user's forest and return its handle
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_container(
         &self,
         name: String,
@@ -187,7 +187,7 @@ All devices:
     /// because in future it may require some additional changes in user's context
     /// (which `Container` structure has no access to).
     ///
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn delete_container(&self, container: &SharedContainer) -> Result<(), CatlibError> {
         container
             .lock()
@@ -205,7 +205,7 @@ All devices:
 
     /// Returns vector of user's storage templates
     ///
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn get_storage_templates(&self) -> Result<Vec<StorageTemplate>, GetStorageTemplateError> {
         self.lss_service
             .get_storage_templates_data()?
@@ -224,7 +224,7 @@ All devices:
     ///
     /// Returns `FreeTierProcessHandle` structure which can be used to verify an email address and
     /// finalize the process.
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn request_free_tier_storage(
         &self,
         email: String,
@@ -238,7 +238,7 @@ All devices:
     /// and saves information that storage has been granted in forest's metadata in CatLib.
     ///
     /// Returns the same storage template which is saved in LSS.
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn verify_email(
         &mut self,
         process_handle: &FreeTierProcessHandle,

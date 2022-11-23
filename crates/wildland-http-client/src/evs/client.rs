@@ -43,14 +43,14 @@ pub struct EvsClient {
 }
 
 impl EvsClient {
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn new(base_url: &str) -> Self {
         Self {
             base_url: base_url.to_string(),
         }
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn confirm_token(&self, request: ConfirmTokenReq) -> Result<(), WildlandHttpClientError> {
         let url = format!("{}/confirm_token", self.base_url);
         let response = minreq::put(url)
@@ -62,7 +62,7 @@ impl EvsClient {
         Ok(())
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn get_storage(
         &self,
         request: GetStorageReq,

@@ -48,7 +48,7 @@ pub struct StorageControllerClient {
 }
 
 impl StorageControllerClient {
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn new(base_url: &str) -> Self {
         Self {
             sc_storage_client: SCStorageClient {
@@ -67,14 +67,14 @@ impl StorageControllerClient {
         }
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub async fn create_storage(&self) -> Result<CreateStorageRes, WildlandHttpClientError> {
         let response = self.sc_storage_client.create_storage().map_err(Rc::new)?;
         let response_json = check_status_code(response)?.json().map_err(Rc::new)?;
         Ok(response_json)
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub async fn create_credentials(
         &self,
         request: CreateCredentialsReq,
@@ -88,7 +88,7 @@ impl StorageControllerClient {
         Ok(response_json)
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub async fn request_signature(
         &self,
         request: SignatureRequestReq,
@@ -102,7 +102,7 @@ impl StorageControllerClient {
         Ok(response_json)
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub async fn request_metrics(
         &self,
         request: RequestMetricsReq,
@@ -116,17 +116,17 @@ impl StorageControllerClient {
         Ok(response_json)
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn get_credential_id(&self) -> &str {
         &self.credential_id
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn get_credential_secret(&self) -> &str {
         &self.credential_secret
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn sign_request<T>(&self, request: &T) -> Result<String, WildlandHttpClientError>
     where
         T: Serialize,

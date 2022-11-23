@@ -23,7 +23,7 @@ use hkdf::Hkdf;
 use sha2::Sha256;
 
 /// Generate a new random mnemonic phrase
-#[tracing::instrument(level="debug", skip_all)]
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     Mnemonic::new(
         MnemonicType::for_word_count(MNEMONIC_LEN)

@@ -148,7 +148,7 @@ impl IContainer for Container {
     /// container.add_path("/foo/bar".to_string());
     /// container.create_storage(Some(Uuid::from_u128(1)), vec![]).unwrap();
     /// ```
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn create_storage(
         &self,
         template_uuid: Option<Uuid>,

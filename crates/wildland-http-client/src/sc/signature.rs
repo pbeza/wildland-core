@@ -41,7 +41,7 @@ pub(crate) struct SCSignatureClient {
 }
 
 impl SCSignatureClient {
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub(crate) fn signature_request(
         &self,
         request: SignatureRequestReq,

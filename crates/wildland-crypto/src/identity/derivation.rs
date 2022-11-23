@@ -141,7 +141,7 @@ impl Identity {
         self.words.clone()
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn from_mnemonic(mnemonic: Mnemonic) -> Result<Self, CryptoError> {
         tracing::debug!("Deriving Identity from mnemonic");
         // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
@@ -181,7 +181,7 @@ impl Identity {
         })
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn derive_forest_keypair(&self, path: &str) -> Result<SigningKeypair, KeyDeriveError> {
         let derived_extended_seckey = self.derive_private_key_from_path(path)?;
 
@@ -190,7 +190,7 @@ impl Identity {
         SigningKeypair::try_from_secret_bytes(&sec_key).map_err(|e| KeyDeriveError(e.to_string()))
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn derive_encryption_keypair(&self, path: &str) -> Result<EncryptingKeypair, KeyDeriveError> {
         let derived_extended_seckey = self.derive_private_key_from_path(path)?;
 
@@ -206,7 +206,7 @@ impl Identity {
         })
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn derive_private_key_from_path(
         &self,
         path: &str,

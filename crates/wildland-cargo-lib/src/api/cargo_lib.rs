@@ -73,7 +73,7 @@ impl CargoLib {
     }
 
     /// Returns structure aggregating API for user management
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn user_api(&self) -> UserApi {
         self.user_api.clone()
     }

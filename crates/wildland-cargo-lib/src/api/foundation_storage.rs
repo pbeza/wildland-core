@@ -106,7 +106,7 @@ impl FoundationStorageApi {
         }
     }
 
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn request_free_tier_storage(
         &self,
         email: String,
@@ -144,7 +144,7 @@ impl FreeTierProcessHandle {
     /// Verifies user's email.
     /// After successful verification it returns Foundation Storage Template (which is also saved in LSS)
     /// and saves information in CatLib that Foundation storage has been granted.
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn verify_email(&self, verification_token: String) -> Result<StorageTemplate, FsaError> {
         self.evs_client
             .confirm_token(ConfirmTokenReq {

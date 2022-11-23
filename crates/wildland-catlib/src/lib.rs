@@ -138,7 +138,7 @@ impl ICatLib for CatLib {
     ///                  vec![],
     ///              ).unwrap();
     /// ```
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn create_forest(
         &self,
         owner: Identity,
@@ -159,7 +159,7 @@ impl ICatLib for CatLib {
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn find_forest(&self, owner: &Identity) -> CatlibResult<Box<dyn IForest>> {
         self.db.load().map_err(to_catlib_error)?;
         let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
@@ -186,7 +186,7 @@ impl ICatLib for CatLib {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Storage`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn find_storages_with_template(
         &self,
         template_id: &Uuid,
@@ -214,7 +214,7 @@ impl ICatLib for CatLib {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    #[tracing::instrument(level="debug", skip_all)]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn find_containers_with_template(
         &self,
         template_id: &Uuid,

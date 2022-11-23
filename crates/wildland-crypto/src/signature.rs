@@ -27,8 +27,8 @@ impl Signature {
     pub fn encode_signature(self) -> String {
         self.0.encode_hex::<String>()
     }
-    
-    #[tracing::instrument(level="debug", skip_all)]
+
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn verify(&self, msg: &[u8], public_key: &[u8; 32]) -> Result<(), CryptoError> {
         PublicKey::from_bytes(public_key)
             .map_err(|e| CryptoError::MessageVerificationError(e.to_string()))?
