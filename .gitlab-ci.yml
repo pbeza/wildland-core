@@ -352,6 +352,7 @@ pages-mld:
   only:
     refs:
       - master
+      - develop
 
 pages-lld:
   stage: docs
@@ -368,6 +369,7 @@ pages-lld:
   only:
     refs:
       - master
+      - develop
 
 pages-publish-develop:
   image: google/cloud-sdk
