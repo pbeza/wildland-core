@@ -54,7 +54,6 @@ impl Serialize for SigningKeypair {
 impl TryFrom<Vec<u8>> for SigningKeypair {
     type Error = CryptoError;
 
-    #[tracing::instrument(level = "debug", skip(value))]
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         Ok(Self(
             ed25519_dalek::Keypair::from_bytes(value.as_slice())
@@ -79,7 +78,6 @@ impl From<&SigningKeypair> for SigningKeypair {
 }
 
 impl SigningKeypair {
-    #[tracing::instrument(level = "debug", skip(csprng))]
     pub fn generate<R>(csprng: &mut R) -> Self
     where
         R: CryptoRng + RngCore,
@@ -87,7 +85,6 @@ impl SigningKeypair {
         Self(ed25519_dalek::Keypair::generate(csprng))
     }
 
-    #[tracing::instrument(level = "debug", skip(pubkey, seckey))]
     pub fn try_from_bytes_slices(pubkey: PubKey, seckey: SecKey) -> Result<Self, CryptoError> {
         Ok(Self(
             ed25519_dalek::Keypair::from_bytes([seckey, pubkey].concat().as_slice())
@@ -95,14 +92,12 @@ impl SigningKeypair {
         ))
     }
 
-    #[tracing::instrument(level = "debug", skip(public_key))]
     pub fn try_from_str(public_key: &str, secret_key: &str) -> Result<Self, CryptoError> {
         let pubkey = bytes_key_from_str(public_key)?;
         let seckey = bytes_key_from_str(secret_key)?;
         Self::try_from_bytes_slices(pubkey, seckey)
     }
 
-    #[tracing::instrument(level = "debug", skip(secret_key_bytes))]
     pub fn try_from_secret_bytes(secret_key_bytes: &SecKey) -> Result<Self, CryptoError> {
         let sec_key = ed25519_dalek::SecretKey::from_bytes(secret_key_bytes)
             .map_err(|e| CryptoError::InvalidSignatureBytesError(e.to_string()))?;
@@ -113,22 +108,18 @@ impl SigningKeypair {
         }))
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn public(&self) -> PubKey {
         self.0.public.to_bytes()
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn secret(&self) -> SecKey {
         self.0.secret.to_bytes()
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn to_bytes(&self) -> Vec<u8> {
         Vec::from(self.0.to_bytes())
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn sign(&self, msg: &[u8]) -> Signature {
         Signature(self.0.sign(msg))
     }
