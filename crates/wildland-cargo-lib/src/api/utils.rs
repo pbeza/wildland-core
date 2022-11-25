@@ -64,6 +64,6 @@ pub(crate) mod test {
             }
         }
 
-        Box::leak(Box::new(LssStub::default()))
+        Box::leak(Box::<LssStub>::default())
     }
 }
