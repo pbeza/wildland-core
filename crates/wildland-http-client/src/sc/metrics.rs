@@ -50,7 +50,7 @@ pub(crate) struct SCMetricsClient {
 }
 
 impl SCMetricsClient {
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub(crate) fn request_metrics(
         &self,
         request: RequestMetricsReq,

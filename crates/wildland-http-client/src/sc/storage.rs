@@ -34,7 +34,7 @@ pub(crate) struct SCStorageClient {
 }
 
 impl SCStorageClient {
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub(crate) fn create_storage(&self) -> Result<Response, Error> {
         let url = format!("{}/storage/create", self.base_url);
         minreq::post(url).send()
