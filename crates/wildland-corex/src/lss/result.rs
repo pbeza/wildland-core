@@ -16,12 +16,22 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use thiserror::Error;
+use wasm_bindgen::JsValue;
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
 #[repr(C)]
 #[error("Local Secure Storage error: {0}")]
 pub enum LssError {
     Error(String),
+}
+
+impl From<JsValue> for LssError {
+    fn from(json: JsValue) -> Self {
+        LssError::Error(
+            json.as_string()
+                .unwrap_or("JS didn't provide an error message!".to_string()),
+        )
+    }
 }
 
 pub type LssResult<T> = Result<T, LssError>;

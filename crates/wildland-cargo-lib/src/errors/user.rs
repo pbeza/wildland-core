@@ -27,6 +27,12 @@ pub enum CreateMnemonicError {
     #[error("Invalid Mnemonic words")]
     InvalidMnemonicWords,
 }
+use wasm_bindgen::JsValue;
+impl Into<JsValue> for CreateMnemonicError {
+    fn into(self) -> JsValue {
+        JsValue::from_str(&self.to_string())
+    }
+}
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[repr(C)]
@@ -47,6 +53,12 @@ pub enum UserCreationError {
     EntropyTooLow,
     #[error("Generic error: {0}")]
     CatlibError(String),
+}
+
+impl Into<JsValue> for UserCreationError {
+    fn into(self) -> JsValue {
+        JsValue::from_str(&self.to_string())
+    }
 }
 
 impl From<CryptoError> for UserCreationError {
@@ -93,6 +105,12 @@ pub enum UserRetrievalError {
     DeviceMetadataNotFound,
     #[error("User not found")]
     UserNotFound,
+}
+
+impl Into<JsValue> for UserRetrievalError {
+    fn into(self) -> JsValue {
+        JsValue::from_str(&self.to_string())
+    }
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]

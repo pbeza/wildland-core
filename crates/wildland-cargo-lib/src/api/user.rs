@@ -15,15 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use super::cargo_user::CargoUser;
 use crate::{
     errors::{CreateMnemonicError, UserCreationError, UserRetrievalError},
     user::{generate_random_mnemonic, CreateUserInput, UserService},
 };
+use wasm_bindgen::prelude::*;
 use wildland_corex::{utils, MnemonicPhrase};
 
-use super::cargo_user::CargoUser;
-
 #[derive(Clone)]
+#[wasm_bindgen]
 pub struct MnemonicPayload(MnemonicPhrase);
 
 /// Wrapper to check the mnemonic.
@@ -46,12 +47,15 @@ pub fn check_entropy_mnemonic(bytes: Vec<u8>) -> Result<(), CreateMnemonicError>
     }
 }
 
+#[wasm_bindgen]
 impl MnemonicPayload {
-    #[tracing::instrument(level = "debug", skip(self))]
+    // #[tracing::instrument(level = "debug", skip(self))]
     pub fn stringify(&self) -> String {
         self.0.join(" ")
     }
+}
 
+impl MnemonicPayload {
     #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_vec(&self) -> Vec<String> {
         self.0.clone().into()
@@ -80,6 +84,7 @@ impl From<MnemonicPhrase> for MnemonicPayload {
 /// - saving forest and device identities (keypairs) in LSS
 ///
 #[derive(Clone)]
+#[wasm_bindgen]
 pub struct UserApi {
     user_service: UserService,
 }
@@ -88,8 +93,11 @@ impl UserApi {
     pub(crate) fn new(user_service: UserService) -> Self {
         Self { user_service }
     }
+}
 
-    #[tracing::instrument(level = "debug", skip(self))]
+#[wasm_bindgen]
+impl UserApi {
+    // #[tracing::instrument(level = "debug", skip(self))]
     pub fn generate_mnemonic(&self) -> Result<MnemonicPayload, CreateMnemonicError> {
         tracing::trace!("generating mnemonic");
         generate_random_mnemonic()
@@ -100,30 +108,30 @@ impl UserApi {
     /// Creates [`MnemonicPayload`] basing on a vector of words. The result may be used for creation
     /// User with [`UserApi::create_user_from_mnemonic`].
     ///
-    #[tracing::instrument(level = "debug", skip(self))]
-    pub fn create_mnemonic_from_vec(
-        &self,
-        words: Vec<String>,
-    ) -> Result<MnemonicPayload, CreateMnemonicError> {
-        tracing::trace!("creating mnemonic from vec");
-        Ok(MnemonicPayload(
-            MnemonicPhrase::try_from(words)
-                .map_err(|_| CreateMnemonicError::InvalidMnemonicWords)?,
-        ))
-    }
+    // #[tracing::instrument(level = "debug", skip(self))]
+    // pub fn create_mnemonic_from_vec(
+    //     &self,
+    //     words: Vec<String>,
+    // ) -> Result<MnemonicPayload, CreateMnemonicError> {
+    //     tracing::trace!("creating mnemonic from vec");
+    //     Ok(MnemonicPayload(
+    //         MnemonicPhrase::try_from(words)
+    //             .map_err(|_| CreateMnemonicError::InvalidMnemonicWords)?,
+    //     ))
+    // }
 
-    #[tracing::instrument(level = "debug", skip(self, entropy))]
-    pub fn create_user_from_entropy(
-        &self,
-        entropy: Vec<u8>,
-        device_name: String,
-    ) -> Result<CargoUser, UserCreationError> {
-        tracing::debug!("creating new user");
-        self.user_service
-            .create_user(CreateUserInput::Entropy(entropy), device_name)
-    }
+    // #[tracing::instrument(level = "debug", skip(self, entropy))]
+    // pub fn create_user_from_entropy(
+    //     &self,
+    //     entropy: Vec<u8>,
+    //     device_name: String,
+    // ) -> Result<CargoUser, UserCreationError> {
+    //     tracing::debug!("creating new user");
+    //     self.user_service
+    //         .create_user(CreateUserInput::Entropy(entropy), device_name)
+    // }
 
-    #[tracing::instrument(level = "debug", skip(self, mnemonic))]
+    // #[tracing::instrument(level = "debug", skip(mnemonic))]
     pub fn create_user_from_mnemonic(
         &self,
         mnemonic: &MnemonicPayload,

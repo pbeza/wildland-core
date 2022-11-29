@@ -35,8 +35,8 @@
 //! ```
 //!
 //! It can be also provided via type implementing [`CargoCfgProvider`].
-
 use std::{path::PathBuf, str::FromStr};
+use wasm_bindgen::prelude::*;
 
 use derivative::Derivative;
 use serde::{
@@ -279,10 +279,13 @@ where
 /// - calling [`parse_config`]
 ///
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+#[wasm_bindgen]
 pub struct CargoConfig {
     #[serde(flatten)]
+    #[wasm_bindgen(skip)]
     pub fsa_config: FoundationStorageApiConfig,
     #[serde(flatten)]
+    #[wasm_bindgen(skip)]
     pub logger_config: LoggerConfig,
 }
 

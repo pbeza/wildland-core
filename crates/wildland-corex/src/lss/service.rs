@@ -58,7 +58,6 @@ impl LssService {
         &self,
     ) -> Result<Option<WildlandIdentity>, ForestRetrievalError> {
         tracing::trace!("Getting default forest identity.");
-
         let optional_default_forest_identity = self.get_default_forest_keypair()?;
         optional_default_forest_identity.map_or(Ok(None), |default_forest_value| {
             Ok(Some(WildlandIdentity::Forest(0, default_forest_value)))

@@ -47,6 +47,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e805d94e6b5001b651426cf4cd446b1ab5f319d27bab5c644f61de0a804360c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1681,6 +1692,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
+name = "tokio"
+version = "1.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d76ce4a75fb488c605c54bf610f221cea8b0dafb53333c1a67e8ee199dcd2ae3"
+dependencies = [
+ "autocfg",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "tracing"
 version = "0.1.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1904,6 +1925,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm-bindgen-futures"
+version = "0.4.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23639446165ca5a5de86ae1d8896b737ae80319560fbaa4c2887b7da6e7ebd7d"
+dependencies = [
+ "cfg-if",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "wasm-bindgen-macro"
 version = "0.2.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1977,11 +2010,14 @@ name = "wildland-cargo-lib"
 version = "0.30.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "base64",
  "derivative",
+ "futures",
  "getrandom 0.2.8",
  "hex",
  "hex-literal",
+ "js-sys",
  "log",
  "mockall",
  "mockito",
@@ -1996,6 +2032,7 @@ dependencies = [
  "sha2 0.10.6",
  "tempfile",
  "thiserror",
+ "tokio",
  "tracing",
  "tracing-appender",
  "tracing-attributes",
@@ -2005,6 +2042,8 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
  "wildland-catlib",
  "wildland-corex",
  "wildland-http-client",
@@ -2017,6 +2056,7 @@ dependencies = [
  "derivative",
  "directories",
  "hex",
+ "js-sys",
  "rand 0.8.5",
  "rstest",
  "serde",
@@ -2025,6 +2065,9 @@ dependencies = [
  "thiserror",
  "tracing",
  "uuid",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
  "wildland-corex",
 ]
 
@@ -2041,6 +2084,8 @@ dependencies = [
  "thiserror",
  "tracing",
  "uuid",
+ "wasm-bindgen",
+ "web-sys",
  "wildland-crypto",
  "wildland-dfs",
 ]

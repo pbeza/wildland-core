@@ -18,8 +18,10 @@ crate-type = ["staticlib", "lib", "cdylib"]
 
 [dependencies]
 anyhow               = { version = "1.0" }
+async-trait          = { version = "*" }
 base64               = { version = "0.13" }
 derivative           = { version = "2.2" }
+futures              = { version = "*" }
 hex                  = { version = "0.4" }
 log                  = { version = "0.4" }
 rusty-bind           = { version = "0.3.0", registry = "wl-dev", optional = true }
@@ -27,6 +29,7 @@ serde                = { version = "1.0", features = ["derive"] }
 serde_json           = { version = "1.0" }
 sha2                 = { version = "0.10" }
 thiserror            = { version = "1.0" }
+tokio                = { version = "*" }
 tracing              = { version = "0.1" }
 tracing-appender     = { version = "0.2" }
 tracing-attributes   = { version = "0.1" }
@@ -40,8 +43,18 @@ wildland-corex       = { version = "0.30.0", path = "../wildland-corex", registr
 wildland-http-client = { version = "0.30.0", path = "../wildland-http-client", registry = "wl-dev" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom    = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.2", features = ["js"] }
+js-sys = { version = "0.3" }
+serde_yaml = { version = "*" }
 wasm-bindgen = { version = "0.2" }
+wasm-bindgen-futures = { version = "0.4" }
+web-sys = { version = "0.3", features = [
+    "console",
+    "RequestInit",
+    "Request",
+    "RequestMode",
+    "Response",
+] }
 
 [build-dependencies]
 rusty-bind-build = { version = "0.1.3", registry = "wl-dev", optional = true }

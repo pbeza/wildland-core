@@ -63,12 +63,13 @@ impl UserContext {
             .cloned()
     }
 }
-
+use wasm_bindgen::prelude::*;
 /// Structure representing a User.
 ///
 /// It gives access to user's forest and containers.
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
+#[wasm_bindgen]
 pub struct CargoUser {
     this_device: String,
     all_devices: Vec<String>,

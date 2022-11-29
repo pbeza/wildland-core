@@ -32,6 +32,7 @@ use std::{
     },
 };
 use thiserror::Error;
+use wasm_bindgen::prelude::*;
 use wildland_catlib::CatLib;
 use wildland_corex::{CatLibService, LocalSecureStorage, LssService};
 
@@ -40,6 +41,12 @@ use wildland_corex::{CatLibService, LocalSecureStorage, LssService};
 pub enum CargoLibCreationError {
     #[error("CargoLib creation error: {0}")]
     Error(String),
+}
+
+impl Into<JsValue> for CargoLibCreationError {
+    fn into(self) -> JsValue {
+        JsValue::from_str(&self.to_string())
+    }
 }
 
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
@@ -52,6 +59,8 @@ static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 ///
 /// It can be created with [`create_cargo_lib`] function.
 ///
+
+#[wasm_bindgen]
 #[derive(Clone)]
 pub struct CargoLib {
     user_api: UserApi,
@@ -71,9 +80,18 @@ impl CargoLib {
             )),
         }
     }
+}
 
+impl std::fmt::Debug for CargoLib {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+#[wasm_bindgen]
+impl CargoLib {
     /// Returns structure aggregating API for user management
-    #[tracing::instrument(skip(self))]
+    // #[tracing::instrument(skip(self))]
     pub fn user_api(&self) -> UserApi {
         self.user_api.clone()
     }
@@ -135,6 +153,7 @@ impl CargoLib {
 /// let lss: &'static TestLss = unsafe { std::mem::transmute(&lss) };
 /// let cargo_lib = create_cargo_lib(lss, cfg);
 /// ```
+#[cfg(not(target_arch = "wasm32"))]
 pub fn create_cargo_lib(
     lss: &'static dyn LocalSecureStorage,
     cfg: CargoConfig,
@@ -152,4 +171,56 @@ pub fn create_cargo_lib(
         }
     }
     unsafe { Ok(CARGO_LIB.assume_init_ref().clone()) }
+}
+
+use crate::wasm::JsLss;
+use wasm_bindgen::JsCast;
+#[wasm_bindgen]
+pub fn create_cargo_lib_wasm(
+    cfg: CargoConfig,
+    lss: JsLss,
+) -> Result<CargoLib, CargoLibCreationError> {
+    let lss = Box::leak(Box::new(lss));
+    let lss = lss as &'static dyn LocalSecureStorage;
+    let cargo_lib = CargoLib::new(lss, cfg.fsa_config);
+
+    Ok(cargo_lib)
+}
+
+impl LocalSecureStorage for JsLss {
+    fn insert(&self, key: String, value: String) -> wildland_corex::LssResult<Option<String>> {
+        self.js_insert(key, value)
+    }
+
+    fn get(&self, key: String) -> wildland_corex::LssResult<Option<String>> {
+        self.js_get(key)
+    }
+
+    fn contains_key(&self, key: String) -> wildland_corex::LssResult<bool> {
+        self.js_contains_key(key)
+    }
+
+    fn keys(&self) -> wildland_corex::LssResult<Vec<String>> {
+        let keys = self.js_keys()?;
+        let keys: js_sys::Array = keys.unchecked_into();
+        Ok(keys.iter().map(|x| x.as_string().unwrap()).collect())
+    }
+
+    fn keys_starting_with(&self, prefix: String) -> wildland_corex::LssResult<Vec<String>> {
+        let keys = self.js_keys_starting_with(prefix)?;
+        let keys: js_sys::Array = keys.unchecked_into();
+        Ok(keys.iter().map(|x| x.as_string().unwrap()).collect())
+    }
+
+    fn remove(&self, key: String) -> wildland_corex::LssResult<Option<String>> {
+        self.js_remove(key)
+    }
+
+    fn len(&self) -> wildland_corex::LssResult<usize> {
+        self.js_len()
+    }
+
+    fn is_empty(&self) -> wildland_corex::LssResult<bool> {
+        self.is_empty()
+    }
 }

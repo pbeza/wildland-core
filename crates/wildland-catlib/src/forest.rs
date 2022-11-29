@@ -17,7 +17,9 @@
 
 use super::*;
 use derivative::Derivative;
-
+use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{ErrorEvent, MessageEvent, Request, RequestInit, RequestMode, TcpSocket, WebSocket};
 use wildland_corex::entities::{
     Bridge as IBridge, Container as IContainer, ContainerPath, Forest as IForest, ForestData,
     Identity, Signers,
@@ -195,12 +197,91 @@ impl IForest for Forest {
 
 impl Model for Forest {
     fn save(&mut self) -> CatlibResult<()> {
-        todo!()
+        web_sys::console::log_1(&"elo 1".into());
+        let mut req_options = RequestInit::new();
+        req_options.method("GET");
+        req_options.mode(RequestMode::Cors);
+        let req = Request::new_with_str_and_init(
+            &format!(
+                "http://127.0.0.1:7379/SET/forest-{}/{}",
+                self.data.uuid,
+                serde_yaml::to_string(&self.data).unwrap()
+            ),
+            &req_options,
+        )
+        .unwrap();
+        let window = web_sys::window().unwrap();
+        let resp_value_future = JsFuture::from(window.fetch_with_request(&req));
+
+        // start_ws();
+        send_tcp();
+
+        web_sys::console::log_1(&"elo 2".into());
+        Ok(())
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
         todo!()
     }
+}
+
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
+fn start_ws() {
+    // Connect to an echo server
+    let ws = WebSocket::new("ws://127.0.0.1:7379/.json").unwrap();
+    // For small binary messages, like CBOR, Arraybuffer is more efficient than Blob handling
+    ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
+    // create callback
+    let cloned_ws = ws.clone();
+    let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
+        // Handle difference Text/Binary,...
+        if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
+            console_log!("message event, received arraybuffer: {:?}", abuf);
+            let array = js_sys::Uint8Array::new(&abuf);
+            let len = array.byte_length() as usize;
+            console_log!("Arraybuffer received {}bytes: {:?}", len, array.to_vec());
+        } else if let Ok(blob) = e.data().dyn_into::<web_sys::Blob>() {
+            console_log!("message event, received blob: {:?}", blob);
+        } else if let Ok(txt) = e.data().dyn_into::<js_sys::JsString>() {
+            console_log!("message event, received Text: {:?}", txt);
+        } else {
+            console_log!("message event, received Unknown: {:?}", e.data());
+        }
+    });
+    // set message event handler on WebSocket
+    ws.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
+    // forget the callback to keep it alive
+    onmessage_callback.forget();
+
+    let onerror_callback = Closure::<dyn FnMut(_)>::new(move |e: ErrorEvent| {
+        console_log!("error event: {:?}", e);
+    });
+    ws.set_onerror(Some(onerror_callback.as_ref().unchecked_ref()));
+    onerror_callback.forget();
+
+    let cloned_ws = ws.clone();
+    let onopen_callback = Closure::<dyn FnMut()>::new(move || {
+        console_log!("socket opened");
+        match cloned_ws.send_with_str(r#"["SET", "WS", "WORKS"]"#) {
+            Ok(_) => console_log!("message successfully sent"),
+            Err(err) => console_log!("error sending message: {:?}", err),
+        }
+    });
+    ws.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+    onopen_callback.forget();
+}
+
+fn send_tcp() {
+    let socket_err = TcpSocket::new("localhost", 3333).unwrap_err();
+    web_sys::console::log_1(&format!("elo 1.1: {:?}", socket_err).into());
 }
 
 #[cfg(test)]
