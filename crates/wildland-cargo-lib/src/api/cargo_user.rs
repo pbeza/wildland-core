@@ -459,7 +459,10 @@ mod tests {
         // then it can be retrieved via CargoUser api
         let containers = cargo_user.get_containers().unwrap();
         assert_eq!(containers.len(), 1);
-        assert_eq!(containers[0].lock().unwrap().get_name(), container_name);
+        assert_eq!(
+            containers[0].lock().unwrap().get_name().unwrap(),
+            container_name
+        );
     }
 
     #[rstest]

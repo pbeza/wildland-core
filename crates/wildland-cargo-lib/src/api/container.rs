@@ -83,10 +83,10 @@ impl Container {
     }
 
     /// Returns string representation of a container
-    pub fn stringify(&mut self) -> String {
+    pub fn stringify(&mut self) -> Result<String, CatlibError> {
         let deleted_info = if self.is_deleted { "DELETED: " } else { "" };
-        let name = &self.inner.name().unwrap(); // TODO
-        format!("{deleted_info}Container (name: {name})")
+        let name = &self.inner.name()?;
+        Ok(format!("{deleted_info}Container (name: {name})"))
     }
 
     /// TODO
@@ -121,8 +121,8 @@ impl Container {
         Ok(self.inner.paths().iter().cloned().collect())
     }
 
-    pub fn get_name(&mut self) -> String {
-        self.inner.name().unwrap() // TODO unwrap
+    pub fn get_name(&mut self) -> Result<String, CatlibError> {
+        self.inner.name()
     }
 
     pub fn set_name(&mut self, new_name: String) {
@@ -184,9 +184,9 @@ mod tests {
 
     #[rstest]
     fn test_name(mut container: Container) {
-        assert_eq!(container.get_name(), "name");
+        assert_eq!(container.get_name().unwrap(), "name");
         container.set_name("new name".to_string());
-        assert_eq!(container.get_name(), "new name");
+        assert_eq!(container.get_name().unwrap(), "new name");
     }
 
     #[rstest]
