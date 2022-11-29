@@ -12,7 +12,7 @@ Feature ID      : WILX-267
 
 # Motivation
 
-Many problems were encounter while generating WASM package exposing CargoLib functionalities with rusty-bind and emscripten. They may be possible to solve but the motivation was to check if that problems can be easily to avoid by using wasm_bindgen. Those are:
+Many problems were encounter while generating WASM package exposing CargoLib functionalities with rusty-bind and emscripten. They may be possible to solve but the motivation was to check if that problems can be easily avoided by using wasm_bindgen. Those are:
 
 - We could not use async runtimes like `tokio` or `async_std` (although tokio's single threaded event loop may be possible to run)
 - We could not use crates that depends on `tokio` or `async_str`.
