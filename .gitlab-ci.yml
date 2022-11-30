@@ -117,6 +117,7 @@ cargo fmt (format):
   only:
     - master
     - merge_requests
+    - cpy
   script:
     - rustup component add rustfmt
     - cargo fmt -- --check
