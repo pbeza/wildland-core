@@ -12,13 +12,18 @@ Feature ID      : WILX-267
 
 # Motivation
 
-Many problems were encounter while generating WASM package exposing CargoLib functionalities with rusty-bind and emscripten. They may be possible to solve but the motivation was to check if that problems can be easily avoided by using wasm_bindgen. Those are:
+Many problems were encountered while generating WASM package exposing CargoLib functionalities with rusty-bind and emscripten. They may be possible to solve but the motivation was to check if that problems can be easily avoided by using wasm_bindgen. Those are:
 
 - We could not use async runtimes like `tokio` or `async_std` (although tokio's single threaded event loop may be possible to run)
 - We could not use crates that depends on `tokio` or `async_str`.
 - The only http client that compiles on `wasm32-unknown-emscripten`, which is `minreq`, can not be compiled on that target with `https` feature turned on (what is rather understandable since in wasm environment we should rather use fetch api of a browser).
 - It will be hardly possible to interact with JS event loop so we could expose some kind of asynchronous API (and use JS promises somehow)
 - We intend to use (for some time at least) Redis as a catalog backend which by default accepts raw tcp connections. Raw TCP is not accessible on wasm target. We could use though some proxy like Webdis (exposes http API).
+
+Workload estimate (for 1 developer, assuming that we have ready database exposing http or websocket api [not a file like now]):
+
+- Add wasm_bindgen gluecode - 2 days
+- Asynchronous version of corex (extract as much common sync code as possible ) - 5 days
 
 # Impact Analysis
 
