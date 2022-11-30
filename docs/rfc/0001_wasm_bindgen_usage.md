@@ -20,14 +20,16 @@ Many problems were encountered while generating WASM package exposing CargoLib f
 - It will be hardly possible to interact with JS event loop so we could expose some kind of asynchronous API (and use JS promises somehow)
 - We intend to use (for some time at least) Redis as a catalog backend which by default accepts raw tcp connections. Raw TCP is not accessible on wasm target. We could use though some proxy like Webdis (exposes http API).
 
-Workload estimate (for 1 developer, assuming that we have ready database exposing http or websocket api [not a file like now]):
-
-- Add wasm_bindgen gluecode - 2 days
-- Asynchronous version of corex (extract as much common sync code as possible ) - 5 days
-
 # Impact Analysis
 
 Experimental usage of wasm_bindgen for wildland-core can be found on branch `szymon/wasm-bindgen-spike`.
+
+# Workload estimate
+
+Estimate for 1 developer, assuming that we have ready database exposing http or websocket api (not a file like now):
+
+- Add wasm_bindgen gluecode - 2 days
+- Asynchronous version of corex (extract as much common sync code as possible ) - 5 days
 
 ## Dependencies
 
