@@ -40,3 +40,5 @@ Environment variables will not work.
 ### WASM
 
 WASM example project can be found in [this directory](./tests/ffi/wasm/) and it's readme file is located [here](./tests/ffi/wasm/README.md).
+
+cpy
