@@ -29,12 +29,11 @@ pub struct ConfirmTokenReq {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetStorageReq {
     pub email: String,
-    pub pubkey: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetStorageRes {
-    pub encrypted_credentials: Option<String>,
+    pub credentials: Option<String>,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -77,18 +76,14 @@ impl EvsClient {
         match response.status_code {
             200 => Ok(response.json().map_err(Rc::new)?),
             // Status 2xx without body
-            _ => Ok(GetStorageRes {
-                encrypted_credentials: None,
-            }),
+            _ => Ok(GetStorageRes { credentials: None }),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::evs::constants::test_utilities::{
-        EMAIL, ENCRYPTED_CREDENTIALS, PUBKEY, VERIFICATION_TOKEN,
-    };
+    use crate::evs::constants::test_utilities::{CREDENTIALS, EMAIL, VERIFICATION_TOKEN};
     use mockito::{mock, server_url};
     use serde_json::json;
 
@@ -123,11 +118,10 @@ mod tests {
         // given
         let request = GetStorageReq {
             email: EMAIL.into(),
-            pubkey: PUBKEY.into(),
         };
 
         let m = mock("PUT", "/get_storage")
-            .with_body(json!({ "encrypted_credentials": ENCRYPTED_CREDENTIALS }).to_string())
+            .with_body(json!({ "credentials": CREDENTIALS }).to_string())
             .create();
 
         // when
@@ -135,9 +129,6 @@ mod tests {
 
         // then
         m.assert();
-        assert_eq!(
-            response.encrypted_credentials.unwrap(),
-            ENCRYPTED_CREDENTIALS
-        );
+        assert_eq!(response.credentials.unwrap(), CREDENTIALS);
     }
 }
