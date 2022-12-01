@@ -153,7 +153,11 @@ impl FreeTierProcessHandle {
             .map_err(FsaError::EvsError)
             .and_then(|resp| match resp.credentials {
                 Some(payload) => {
-                    let decoded = base64::decode(payload).unwrap(); // TODO unwrap
+                    let decoded = base64::decode(payload).map_err(|e| {
+                        FsaError::Generic(format!(
+                            "EVS returned incorrectly formatted base64 credentials: {e}"
+                        ))
+                    })?;
                     let storage_credentials: StorageCredentials = serde_json::from_slice(&decoded)
                         .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
 
