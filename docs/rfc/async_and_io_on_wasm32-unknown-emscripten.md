@@ -446,7 +446,15 @@ It will not compile or fail on runtime.
 
 ### Emulation of TCP/UDP
 
-Emscripten will try to map tcp/udp sockets on websockets [under the hood](https://emscripten.org/docs/porting/networking.html#emulated-posix-tcp-sockets-over-websockets).
+Emscripten will try to map tcp/udp sockets on websockets [under the hood](https://emscripten.org/docs/porting/networking.html#emulated-posix-tcp-sockets-over-websockets). The emulation is very poor and mostly incompatible with native TCP sockets which makes practically impossible to achieve cross platform solution or expect any library that uses TCP to work properly.
+
+List of known incompatibilities:
+
+- Sockets can be created only in a nonblocking mode.
+- For some reason `connect` always returns an error.
+- Writing/reading socket will return an error if underlying websocket in a CONNECTING state. At this moment there is no api that can check connection state or listen to a change.
+- Creating web socket requires yielding control to the browser.
+
 This code will connect to 127.0.0.1:8000 using websocket protocol:
 
 <details>
@@ -456,27 +464,29 @@ This code will connect to 127.0.0.1:8000 using websocket protocol:
 use std::{net::TcpStream, os::unix::prelude::FromRawFd};
 
 fn main() {
-    let socket_d = unsafe { libc::socket(libc::AF_INET, libc::SOCK_STREAM, 0) };
+    std::thread::spawn(|| {
+        let socket_d = unsafe { libc::socket(libc::AF_INET, libc::SOCK_STREAM, 0) };
 
-    let addr = libc::sockaddr_in {
-        sin_family: libc::AF_INET as u16,
-        sin_addr: libc::in_addr {
-            s_addr: 16777343_u32,
-        },
-        sin_port: 8000_u16.to_be(),
-        sin_zero: [0, 0, 0, 0, 0, 0, 0, 0],
-    };
+        let addr = libc::sockaddr_in {
+            sin_family: libc::AF_INET as u16,
+            sin_addr: libc::in_addr {
+                s_addr: 16777343_u32,
+            },
+            sin_port: 8000_u16.to_be(),
+            sin_zero: [0, 0, 0, 0, 0, 0, 0, 0],
+        };
 
-    unsafe {
-        libc::connect(
-            socket_d,
-            std::mem::transmute::<*const libc::sockaddr_in, *const libc::sockaddr>(&addr),
-            std::mem::size_of::<libc::sockaddr_in>() as u32,
-        )
-    };
+        unsafe {
+            libc::connect(
+                socket_d,
+                std::mem::transmute::<*const libc::sockaddr_in, *const libc::sockaddr>(&addr),
+                std::mem::size_of::<libc::sockaddr_in>() as u32,
+            )
+        };
 
-    let mut con = unsafe { TcpStream::from_raw_fd(socket_d) };
-    loop {}
+        let mut con = unsafe { TcpStream::from_raw_fd(socket_d) };
+        loop {}
+    });
 }
 ```
 
@@ -493,5 +503,3 @@ libc = { version = "*" }
 ```
 
 </details>
-
-Using such socket will return an error if underlying websocket in a CONNECTING state. At this moment there is no api that can check connection state or listen to a change. The lack of such API makes using such socket very complicated.
