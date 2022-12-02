@@ -113,7 +113,7 @@ impl UserApi {
         tracing::trace!("creating mnemonic from vec");
         check_phrase_mnemonic(words.as_str())?;
         Ok(MnemonicPayload(
-            MnemonicPhrase::try_from(words.split(" ").map(|w| w.to_owned()).collect::<Vec<_>>())
+            MnemonicPhrase::try_from(words.split(' ').map(|w| w.to_owned()).collect::<Vec<_>>())
                 .map_err(|_| CreateMnemonicError::InvalidMnemonicWords)?,
         ))
     }
@@ -210,7 +210,7 @@ mod tests {
         let words = "wise exile kingdom cabbage improve also ridge fortune when joke market argue";
 
         assert!(api
-            .create_mnemonic_from_vec(words.split(" ").map(ToOwned::to_owned).collect::<Vec<_>>())
+            .create_mnemonic_from_vec(words.split(' ').map(ToOwned::to_owned).collect::<Vec<_>>())
             .is_ok());
     }
 
@@ -228,7 +228,7 @@ mod tests {
             "wise exile kingdom cabbage improve also ridge fortune when joke market invalid_word";
 
         assert!(api
-            .create_mnemonic_from_vec(words.split(" ").map(ToOwned::to_owned).collect::<Vec<_>>())
+            .create_mnemonic_from_vec(words.split(' ').map(ToOwned::to_owned).collect::<Vec<_>>())
             .is_err());
     }
 
