@@ -12,13 +12,13 @@ Feature ID      : WILX-267
 
 # Motivation
 
-Many problems were encountered while generating WASM package exposing CargoLib functionalities with rusty-bind and emscripten. They may be possible to solve but the motivation was to check if that problems can be easily avoided by using wasm_bindgen. Those are:
+Many problems were encountered while generating WASM package exposing CargoLib functionalities with rusty-bind and emscripten. They may be possible to solve but the motivation was to check if those problems can be easily avoided by using wasm_bindgen. Those are:
 
-- We could not use async runtimes like `tokio` or `async_std` (although tokio's single threaded event loop may be possible to run)
-- We could not use crates that depends on `tokio` or `async_str`.
-- The only http client that compiles on `wasm32-unknown-emscripten`, which is `minreq`, can not be compiled on that target with `https` feature turned on (what is rather understandable since in wasm environment we should rather use fetch api of a browser).
+- We could not use async runtimes like `tokio` or `async_std` (although tokio's single-threaded event loop may be possible to run)
+- We could not use crates that depend on `tokio` or `async_std`. The only runtime which was possible to compile for emscripten target was [smol](https://docs.rs/smol/latest/smol/).
+- The only HTTP client that compiles on `wasm32-unknown-emscripten`, which is `minreq`, can not be compiled on that target with `https` feature turned on (which is rather understandable since in wasm environment we should rather use Fetch API of a browser).
 - It will be hardly possible to interact with JS event loop so we could expose some kind of asynchronous API (and use JS promises somehow)
-- We intend to use (for some time at least) Redis as a catalog backend which by default accepts raw tcp connections. Raw TCP is not accessible on wasm target. We could use though some proxy like Webdis (exposes http API).
+- We intend to use (for some time at least) Redis as a catalog backend which by default accepts raw TCP connections. Raw TCP is not accessible on wasm target. We could use though some proxy like Webdis (exposes HTTP API).
 
 # Impact Analysis
 
@@ -26,14 +26,18 @@ Experimental usage of wasm_bindgen for wildland-core can be found on branch `szy
 
 # Workload estimate
 
-Estimate for 1 developer, assuming that we have ready database exposing http or websocket api (not a file like now):
+Estimate for 1 developer, assuming that we have a ready database exposing HTTP or websocket API (not a file like now):
 
 - Add wasm_bindgen gluecode - 2 days
 - Asynchronous version of corex (extract as much common sync code as possible ) - 5 days
 
 ## Dependencies
 
-`wasm_bindgen` requires compiling on `wasm32-unknown-unknown` target. In order to switch that target some dependency may need to be replaced or include some additional features.
+`wasm_bindgen` requires compiling on `wasm32-unknown-unknown` target. In order to switch that target some dependencies may need to be replaced or include some additional features.
+
+### Async runtime
+
+It is possible to compile `tokio` and `async-str` on `wasm32-unknown-unknown` target without additional features (the ones like `io` or `fs` may be impossible to compile).
 
 ### getrandom
 
@@ -41,9 +45,9 @@ This crate requires including `js` feature to compile.
 
 ### memmap
 
-This dependency of the `rustbreak` crate which provides file backed database. For obvious reasons this crate won't be used in case of WASM platform where communication with production database should be performed with Websockets or Http.
+This dependency of the `rustbreak` crate providing file backed database. For obvious reasons, this crate won't be used in the case of WASM platform where communication with the production database should be performed with Websockets or HTTP.
 
-## Code Injection from native app (WASM) to CargoLib
+## Code Injection from a native app (WASM) to CargoLib
 
 Used for instance for providing `LocalSecureStorage` implementation to CargoLib.
 
@@ -123,13 +127,13 @@ impl LocalSecureStorage for JsLss {
 }
 ```
 
-It is worth to notice that methods can't use `Vec<String>` as a return type so we must introduce new opaque type (`StringArray`) which represents JS array and then convert it to `js_sys::Array` and further collect it as a `Vec<String>`. In the above code, if JS developer provides non-string value in that array, the Rust code would crash, so some additional check would be required.
+It is worth noticing that methods can't use `Vec<String>` as a return type so we must introduce a new opaque type (`StringArray`) which represents JS array and then convert it to `js_sys::Array` and further collect it as a `Vec<String>`. In the above code, if JS developer provides a non-string value in that array, the Rust code would crash, so some additional check would be required.
 
 `Option` type works intuitively, meaning `null` value is converted into `None`.
 
 ## Using Results
 
-All `Result` types passed from JS to Rust (like in the previous section, `LssResult` has `LssError` defiend as its error type) must implement `From<wasm_bindgen::JsValue>`.
+All `Result` types passed from JS to Rust (like in the previous section, `LssResult` has `LssError` defined as its error type) must implement `From<wasm_bindgen::JsValue>`.
 
 ```Rust
 impl From<JsValue> for LssError {
@@ -154,7 +158,7 @@ impl Into<JsValue> for CargoLibCreationError {
 
 ## Passing `LocalSecureStorage` reference
 
-`create_cargo_lib` function on platforms handled by `rusty-bind` expect to get LSS as a `&'static dyn LocalSecureStorage` what is not allowed in wasm_bindgen.
+`create_cargo_lib` function on platforms handled by `rusty-bind` expects to get LSS as a `&'static `dyn LocalSecureStorage` which is not allowed in wasm_bindgen.
 
 > it is currently not sound to use lifetimes in function signatures
 
@@ -178,11 +182,11 @@ pub fn create_cargo_lib(
 }
 ```
 
-In the above code we can see how to cast `JsLSS` (which under the hood is only kind of reference to WASM JS stack [in fact this is an index: https://rustwasm.github.io/wasm-bindgen/reference/reference-types.html]) to `&'static dyn LocalSecureStorage`.
+In the above code, we can see how to cast `JsLSS` (which under the hood is only a kind of reference to WASM JS stack [in fact this is an index: https://rustwasm.github.io/wasm-bindgen/reference/reference-types.html]) to `&'static dyn LocalSecureStorage`.
 
 ## A lot of `skip` directives
 
-wasm_bindgen tries to expose all structures' fields or all methods placed within tha same `impl` block. It will require to use `skip directive` or to manage two `impl` block for a struct to differentiate things to be exposed from the ones that are not.
+wasm_bindgen tries to expose all structures' fields or all methods placed within the same `impl` block. It will require to use `skip directive` or managing two `impl` blocks for a struct to differentiate things to be exposed from the ones that are not.
 
 All fields that do not implement `Copy` trait must be skipped by wasm_bindgen design.
 
@@ -196,11 +200,11 @@ Passing some object to JS wrapped in a `Arc<Mutex<_>>` is not possible because t
 
 ## Using tracing::instrument
 
-Skipping arguments in `#[tracing::instrument(skip(self))]` does not compile within `impl` blocks marked as `#[wasm_bindgen]`, so we must give up either tracing::instrument or skips, what would mean obligatory defining `std::fmt::Debug` for all arguments (including `self`).
+Skipping arguments in `#[tracing::instrument(skip(self))]` does not compile within `impl` blocks marked as `#[wasm_bindgen]`, so we must give up either tracing::instrument or skips, which would mean obligatory defining `std::fmt::Debug` for all arguments (including `self`).
 
 ## Receiving `Vec<String>`
 
-As mentioned in [code injection section](#code-injection-from-native-app-wasm-to-cargolib) `Vec<String>` type is not supported by wasm_bindgen, so functions/methods that receive this type as an argument or a return type must be conditionally compiled for WASM and for other platforms.
+As mentioned in the [code injection section](#code-injection-from-native-app-wasm-to-cargolib) `Vec<String>` type is not supported by wasm_bindgen, so functions/methods that receive this type as an argument or a return type must be conditionally compiled for WASM and for other platforms.
 
 ```Rust
 #[cfg(not(target_arch = "wasm32"))]
@@ -230,10 +234,10 @@ Http or Websocket connection can be easily established:
 - http: https://rustwasm.github.io/wasm-bindgen/examples/fetch.html
 - websocket: https://rustwasm.github.io/wasm-bindgen/examples/websockets.html
 
-It requires browser environment to be loaded so projects like wasm-cli run in clear node environment may not have a lot of sense (it does not provide fetch and websocket api like the browsers do).
+It requires a browser environment to be loaded so projects like wasm-cli run in a clear node environment may not have a lot of sense (it does not provide fetch and websocket API like the browsers do).
 
-Unfortunately HTTP API returns `Promise` type which can be turned into `JsFuture` (implements Rust std Future trait). This raises some compatibility issues with our mechanisms of exposing bindings to other platforms than WASM. On those other platforms, our call stack is fully synchronous and bindings are also exposed as synchronous methods/functions. If we don't want to maintain two different code bases (async for WASM and sync for other) we could unify those call stacks (by stack I mean e.g. async http function in catlib, called by async corex function, called by async cargo_lib function) to be asynchronous somehow. Again unfortunately, `JsFuture` is not `Send`able and `Sync`able so we can't use async/await syntax what leaves us with returning explicit types like `Box<dyn Future<Output = String>>`. Although the problem in this case would be executing such a future. While on WASM we could just use JS executor which does not require futures to be `Send + Sync`, on other platforms using even single threaded runtime requires at least `Sync`.
+Unfortunately, HTTP API returns `Promise` type which can be turned into `JsFuture` (implements Rust std Future trait). This raises some compatibility issues with our mechanisms of exposing bindings to other platforms than WASM. On those other platforms, our call stack is fully synchronous and bindings are also exposed as synchronous methods/functions. If we don't want to maintain two different code bases (async for WASM and sync for other) we could unify those call stacks (by stack I mean e.g. async HTTP function in CatLib, called by async corex function, called by async cargo_lib function) to be asynchronous somehow. Unfortunately, `JsFuture` is not `Send`able and `Sync`able so we can't use async/await syntax which leaves us with returning explicit types like `Box<dyn Future<Output = String>>`. Although the problem, in this case, would be executing such a future. While on WASM we could just use JS executor which does not require futures to be `Send + Sync`, on other platforms using even single-threaded runtime requires at least `Sync`.
 
-Another problem is related with Websockets which API is based on callback so we would need also some unified (for WASM and others) way of passing ones from native language to Rust. Some solution can be always a kind of channel kept alive in other than main application thread.
+Another problem is related to Websockets which API is based on callback so we would need also some unified (for WASM and others) way of passing ones from a native language to Rust. Some solution can be always a kind of channel kept alive in other than main application thread.
 
-To sum up, it is unlikely that we would manage to workout some common approach for designing API for all platforms. WASM probably should be treated as other library, which in the best case could reuse some small components from other platforms core.
+To sum up, it is unlikely that we would manage to work out some common approach for designing API for all platforms. WASM probably should be treated as another library, which in the best case could reuse some small components from other platforms' core.
