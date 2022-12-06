@@ -28,7 +28,7 @@ pub struct MnemonicPayload(MnemonicPhrase);
 
 /// Wrapper to check the mnemonic.
 /// Accepts string. Returns Ok if the mnemonic is valid or Err otherwise
-/// throws [`CryptoError`] if the mnemonic is invalid
+/// throws [`CreateMnemonicError`] if the mnemonic is invalid
 pub fn check_phrase_mnemonic(phrase: String) -> Result<(), CreateMnemonicError> {
     match utils::new_mnemonic_from_phrase(phrase.as_str()) {
         Ok(_) => Ok(()),
@@ -38,7 +38,7 @@ pub fn check_phrase_mnemonic(phrase: String) -> Result<(), CreateMnemonicError> 
 
 /// Wrapper to check the mnemonic.
 /// Accepts raw bytes. Returns Ok if the mnemonic is valid, Err otherwise
-/// throws [`CryptoError`] if the mnemonic is invalid
+/// throws [`CreateMnemonicError`] if the mnemonic is invalid
 pub fn check_entropy_mnemonic(bytes: Vec<u8>) -> Result<(), CreateMnemonicError> {
     match utils::new_mnemonic_from_entropy(bytes.as_slice()) {
         Ok(_) => Ok(()),

@@ -65,7 +65,11 @@ impl UserContext {
 
 /// Structure representing a User.
 ///
-/// It gives access to user's forest and containers.
+/// It gives access to:
+/// - user's forest and containers,
+/// - Foundation Storage API which includes the following methods:
+///     - [`Self::request_free_tier_storage()`]
+///     - [`Self::verify_email()`]
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub struct CargoUser {
