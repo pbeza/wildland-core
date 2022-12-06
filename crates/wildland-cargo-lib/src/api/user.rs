@@ -28,19 +28,9 @@ pub struct MnemonicPayload(MnemonicPhrase);
 
 /// Wrapper to check the mnemonic.
 /// Accepts string. Returns Ok if the mnemonic is valid or Err otherwise
-/// throws [`CreateMnemonicError`] if the mnemonic is invalid
-pub fn check_phrase_mnemonic(phrase: String) -> Result<(), CreateMnemonicError> {
-    match utils::new_mnemonic_from_phrase(phrase.as_str()) {
-        Ok(_) => Ok(()),
-        Err(_) => Err(CreateMnemonicError::InvalidMnemonicWords),
-    }
-}
-
-/// Wrapper to check the mnemonic.
-/// Accepts raw bytes. Returns Ok if the mnemonic is valid, Err otherwise
-/// throws [`CreateMnemonicError`] if the mnemonic is invalid
-pub fn check_entropy_mnemonic(bytes: Vec<u8>) -> Result<(), CreateMnemonicError> {
-    match utils::new_mnemonic_from_entropy(bytes.as_slice()) {
+/// throws [`CryptoError`] if the mnemonic is invalid
+pub fn check_phrase_mnemonic(phrase: &str) -> Result<(), CreateMnemonicError> {
+    match utils::new_mnemonic_from_phrase(phrase) {
         Ok(_) => Ok(()),
         Err(_) => Err(CreateMnemonicError::InvalidMnemonicWords),
     }
@@ -97,18 +87,40 @@ impl UserApi {
     /// Creates [`MnemonicPayload`] basing on a vector of words. The result may be used for creation
     /// User with [`UserApi::create_user_from_mnemonic`].
     ///
+    /// It validates provided words
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_mnemonic_from_vec(
         &self,
         words: Vec<String>,
     ) -> Result<MnemonicPayload, CreateMnemonicError> {
         tracing::trace!("creating mnemonic from vec");
+        check_phrase_mnemonic(words.join(" ").as_str())?;
         Ok(MnemonicPayload(
             MnemonicPhrase::try_from(words)
                 .map_err(|_| CreateMnemonicError::InvalidMnemonicWords)?,
         ))
     }
 
+    /// Creates [`MnemonicPayload`] basing on a space separated 12-word string. The result may be used for creation
+    /// User with [`UserApi::create_user_from_mnemonic`].
+    ///
+    /// It validates provided words
+    #[tracing::instrument(level = "debug", skip_all)]
+    pub fn create_mnemonic_from_string(
+        &self,
+        words: String,
+    ) -> Result<MnemonicPayload, CreateMnemonicError> {
+        tracing::trace!("creating mnemonic from vec");
+        check_phrase_mnemonic(words.as_str())?;
+        Ok(MnemonicPayload(
+            MnemonicPhrase::try_from(words.split(' ').map(|w| w.to_owned()).collect::<Vec<_>>())
+                .map_err(|_| CreateMnemonicError::InvalidMnemonicWords)?,
+        ))
+    }
+
+    /// Creates user from entropy.
+    ///
+    /// Assumes high quality entropy of arbitrary length (>= 32 bytes) what is validated.
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_user_from_entropy(
         &self,
@@ -155,6 +167,72 @@ mod tests {
     use wildland_corex::{CatLibService, LocalSecureStorage, LssService};
 
     #[rstest]
+    fn create_mnemonic_from_string_with_valid_words_should_succeed(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let api = UserApi::new(UserService::new(
+            LssService::new(lss_stub),
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        ));
+        let words = "wise exile kingdom cabbage improve also ridge fortune when joke market argue";
+
+        assert!(api.create_mnemonic_from_string(words.to_owned()).is_ok());
+    }
+
+    #[rstest]
+    fn create_mnemonic_from_string_with_invalid_words_should_return_err(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let api = UserApi::new(UserService::new(
+            LssService::new(lss_stub),
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        ));
+        let words =
+            "wise exile kingdom cabbage improve also ridge fortune when joke market invalid_word";
+
+        assert!(api.create_mnemonic_from_string(words.to_owned()).is_err());
+    }
+
+    #[rstest]
+    fn create_mnemonic_from_vec_with_valid_words_should_succeed(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let api = UserApi::new(UserService::new(
+            LssService::new(lss_stub),
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        ));
+        let words = "wise exile kingdom cabbage improve also ridge fortune when joke market argue";
+
+        assert!(api
+            .create_mnemonic_from_vec(words.split(' ').map(ToOwned::to_owned).collect::<Vec<_>>())
+            .is_ok());
+    }
+
+    #[rstest]
+    fn create_mnemonic_from_vec_with_invalid_words_should_return_err(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let api = UserApi::new(UserService::new(
+            LssService::new(lss_stub),
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        ));
+        let words =
+            "wise exile kingdom cabbage improve also ridge fortune when joke market invalid_word";
+
+        assert!(api
+            .create_mnemonic_from_vec(words.split(' ').map(ToOwned::to_owned).collect::<Vec<_>>())
+            .is_err());
+    }
+
+    #[rstest]
     fn get_user_should_return_none_if_it_does_not_exist(
         catlib_service: CatLibService,
         lss_stub: &'static dyn LocalSecureStorage,
@@ -163,10 +241,7 @@ mod tests {
         let user_service = UserService::new(
             lss_service,
             catlib_service,
-            FoundationStorageApiConfig {
-                evs_url: "".to_string(),
-                sc_url: "".to_string(),
-            },
+            FoundationStorageApiConfig::default(),
         );
         let user_api = UserApi::new(user_service);
 
@@ -186,10 +261,7 @@ mod tests {
         let user_service = UserService::new(
             lss_service,
             catlib_service,
-            FoundationStorageApiConfig {
-                evs_url: "".to_string(),
-                sc_url: "".to_string(),
-            },
+            FoundationStorageApiConfig::default(),
         );
         let user_api = UserApi::new(user_service);
 
@@ -212,10 +284,7 @@ mod tests {
         let user_service = UserService::new(
             lss_service,
             catlib_service,
-            FoundationStorageApiConfig {
-                evs_url: "".to_string(),
-                sc_url: "".to_string(),
-            },
+            FoundationStorageApiConfig::default(),
         );
         let user_api = UserApi::new(user_service);
 
