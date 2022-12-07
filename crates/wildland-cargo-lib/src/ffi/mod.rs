@@ -157,13 +157,22 @@ mod ffi_binding {
         ) -> Result<Arc<Mutex<CargoLib>>, CargoLibCreationError>;
         fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
 
+        //
+        // UserApi
+        //
+
+        // Mnemonic
         fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, CreateMnemonicError>;
-        fn check_phrase_mnemonic(phrase: String) -> Result<VoidType, CreateMnemonicError>;
-        fn check_entropy_mnemonic(bytes: Vec<u8>) -> Result<VoidType, CreateMnemonicError>;
         fn create_mnemonic_from_vec(
             self: &UserApi,
             words: Vec<String>,
         ) -> Result<MnemonicPayload, CreateMnemonicError>;
+        fn create_mnemonic_from_string(
+            self: &UserApi,
+            mnemonic_str: String,
+        ) -> Result<MnemonicPayload, CreateMnemonicError>;
+
+        // User
         fn create_user_from_entropy(
             self: &UserApi,
             entropy: Vec<u8>,

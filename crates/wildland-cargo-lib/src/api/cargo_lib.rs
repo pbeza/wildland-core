@@ -48,9 +48,18 @@ type SharedCargoLib = Arc<Mutex<CargoLib>>;
 static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 
 /// Structure aggregating and exposing public API of CargoLib library.
-/// All functionalities are exposed to application side through this structure.
+/// All functionalities are exposed to application side through this structure (not all directly).
 ///
 /// It can be created with [`create_cargo_lib`] function.
+///
+/// As mentioned above, CargoLib does not try to expose all functionalities directly by its methods,
+/// but it can be treated as a starting point for using wildland core in a native app.
+/// To avoid programming invalid logic on the native app side, some functionalities are
+/// hidden in subsequent objects that can be obtained from CargoLib.
+///
+/// Usage of **Foundation Storage API** makes sense only within a user's context, so in order to avoid
+/// calling its methods before a user is created/retrieved access to **Foundation Storage API** is
+/// enclosed within [`crate::api::cargo_user::CargoUser`] object.
 ///
 #[derive(Clone)]
 pub struct CargoLib {
@@ -73,7 +82,7 @@ impl CargoLib {
     }
 
     /// Returns structure aggregating API for user management
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn user_api(&self) -> UserApi {
         self.user_api.clone()
     }

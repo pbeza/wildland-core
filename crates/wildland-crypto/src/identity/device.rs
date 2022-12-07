@@ -27,7 +27,7 @@ use rand_7::thread_rng;
 /// This establishes a trust chain, where by knowing forest identity pubkey,
 /// one can tell if particular container is legitimate or not.
 /// All without requiring that forest keypair secret is present on any of the devices.
-#[tracing::instrument(level = "debug")]
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn new_device_identity() -> SigningKeypair {
     let mut csprng: ThreadRng = thread_rng();
     let pair = SigningKeypair::generate(&mut csprng);

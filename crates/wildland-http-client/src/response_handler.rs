@@ -22,7 +22,6 @@ use minreq::Response;
 
 use crate::error::WildlandHttpClientError::{self, HttpError};
 
-#[tracing::instrument(level = "debug", ret)]
 pub(crate) fn check_status_code(response: Response) -> Result<Response, WildlandHttpClientError> {
     match StatusCode::from_u16(response.status_code as u16)
         .map_err(|e| WildlandHttpClientError::HttpError(e.to_string()))?

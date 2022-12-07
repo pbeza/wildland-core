@@ -75,6 +75,7 @@ impl IForest for Forest {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    #[tracing::instrument(level = "debug", skip_all)]
     fn del_signer(&mut self, signer: Identity) -> CatlibResult<bool> {
         let deleted = self.data.signers.remove(&signer);
         self.save()?;
@@ -85,6 +86,7 @@ impl IForest for Forest {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if Forest has no [`Container`].
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    #[tracing::instrument(level = "debug", skip_all)]
     fn containers(&self) -> CatlibResult<Vec<Box<dyn IContainer>>> {
         self.db.load().map_err(to_catlib_error)?;
         let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
@@ -112,6 +114,7 @@ impl IForest for Forest {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    #[tracing::instrument(level = "debug", skip_all)]
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<()> {
         self.data.data = data;
         self.save()?;
@@ -121,6 +124,7 @@ impl IForest for Forest {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    #[tracing::instrument(level = "debug", skip_all)]
     fn delete(&mut self) -> CatlibResult<bool> {
         Model::delete(self)?;
         Ok(true)
@@ -147,6 +151,7 @@ impl IForest for Forest {
     /// container.add_path("/foo/bar".to_string());
     /// container.add_path("/bar/baz".to_string());
     /// ```
+    #[tracing::instrument(level = "debug", skip_all)]
     fn create_container(&self, name: String) -> CatlibResult<Box<dyn IContainer>> {
         let container = Box::new(Container::new(self.data.uuid, name, self.db.clone()));
         container.save()?;
@@ -173,6 +178,7 @@ impl IForest for Forest {
     ///              ).unwrap();
     /// forest.create_bridge("/other/forest".to_string(), vec![]);
     /// ```
+    #[tracing::instrument(level = "debug", skip_all)]
     fn create_bridge(
         &self,
         path: ContainerPath,
@@ -194,6 +200,7 @@ impl IForest for Forest {
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Bridge`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Bridge`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    #[tracing::instrument(level = "debug", skip_all)]
     fn find_bridge(&self, path: ContainerPath) -> CatlibResult<Box<dyn IBridge>> {
         self.db.load().map_err(to_catlib_error)?;
         let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
@@ -237,6 +244,7 @@ impl IForest for Forest {
     /// container.add_path("/foo/bar".to_string());
     ///
     /// let containers = forest.find_containers(vec!["/foo/bar".to_string()], false).unwrap();
+    #[tracing::instrument(level = "debug", skip_all)]
     fn find_containers(
         &self,
         paths: Vec<String>,

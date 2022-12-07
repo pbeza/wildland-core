@@ -154,8 +154,8 @@ pub trait Container: std::fmt::Debug {
     /// Create a [`Storage`], bound to the [`Container`].
     ///
     /// `template_uuid` is an arbitrary, optional, [`String`] that is later used to find
-    /// [`Container`]s and [`Storage`]s using [`CatLib::find_storages_with_template`] and
-    /// [`CatLib::find_containers_with_template`].
+    /// [`Container`]s and [`Storage`]s using [`crate::catlib_service::interface::CatLib::find_storages_with_template()`] and
+    /// [`crate::catlib_service::interface::CatLib::find_containers_with_template`].
     ///
     /// `data` represents arbitrary data that is defined and used by the DF/S module.
     fn create_storage(

@@ -24,6 +24,7 @@ use crate::{
 };
 use std::rc::Rc;
 
+#[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibResult<Box<dyn IForest>> {
     let data = fetch_forest_data_by_uuid(db.clone(), uuid)?;
     let forest = Forest { data, db };
@@ -47,6 +48,7 @@ pub(crate) fn fetch_forest_data_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibR
     }
 }
 
+#[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn fetch_container_by_uuid(
     db: Rc<StoreDb>,
     uuid: &Uuid,
@@ -96,6 +98,7 @@ pub(crate) fn fetch_storage_data_by_uuid(
     }
 }
 
+#[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn fetch_storages_by_container_uuid(
     db: Rc<StoreDb>,
     uuid: &Uuid,
@@ -120,6 +123,7 @@ pub(crate) fn fetch_storages_by_container_uuid(
     }
 }
 
+#[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn fetch_bridge_data_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibResult<BridgeData> {
     db.load().map_err(to_catlib_error)?;
     let data = db.read(|db| db.clone()).map_err(to_catlib_error)?;
@@ -137,6 +141,7 @@ pub(crate) fn fetch_bridge_data_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibR
     }
 }
 
+#[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn save_model(db: Rc<StoreDb>, key: String, data: String) -> CatlibResult<()> {
     db.load().map_err(to_catlib_error)?;
 
@@ -146,6 +151,7 @@ pub(crate) fn save_model(db: Rc<StoreDb>, key: String, data: String) -> CatlibRe
     db.save().map_err(to_catlib_error)
 }
 
+#[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn delete_model(db: Rc<StoreDb>, key: String) -> CatlibResult<()> {
     db.load().map_err(to_catlib_error)?;
 

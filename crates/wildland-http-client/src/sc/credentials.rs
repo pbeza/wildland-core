@@ -45,7 +45,7 @@ pub(crate) struct SCCredentialsClient {
 }
 
 impl SCCredentialsClient {
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub(crate) fn create_credentials(
         &self,
         request: CreateCredentialsReq,
