@@ -63,6 +63,10 @@ let package = Package(
       name: "wildlandx",
       url: "$FETCH_URL/wildlandx.xcframework.zip",
       checksum: "$(shasum -a 256 $SAVED_WD/wildlandx.xcframework.zip | awk '{print $1}')"
+    ),
+    .testTarget(
+        name: "WildlandXTests",
+        dependencies: ["wildlandx"]
     )
   ]
 )
