@@ -23,7 +23,7 @@ use wildland_corex::{
 };
 use wildland_http_client::{
     error::WildlandHttpClientError,
-    evs::{ConfirmTokenReq, EvsClient, GetStorageReq},
+    evs::{ConfirmTokenReq, EvsClient, GetStorageReq, GetStorageRes},
 };
 
 use super::{config::FoundationStorageApiConfig, storage_template::StorageTemplate};
@@ -71,8 +71,6 @@ impl From<FoundationStorageTemplate> for StorageTemplate {
 #[repr(C)]
 #[derive(Error, Debug, Clone)]
 pub enum FsaError {
-    #[error("Storage already exists for given email address")]
-    StorageAlreadyExists,
     #[error("Evs Error: {0}")]
     EvsError(WildlandHttpClientError),
     #[error("Crypto error: {0}")]
@@ -111,12 +109,21 @@ impl FoundationStorageApi {
         self.evs_client
             .get_storage(GetStorageReq {
                 email: email.clone(),
+                session_id: None,
             })
             .map_err(FsaError::EvsError)
-            .and_then(|resp| match resp.credentials {
-                Some(_) => Err(FsaError::StorageAlreadyExists),
-                None => Ok(FreeTierProcessHandle {
+            .and_then(|resp| match resp {
+                GetStorageRes {
+                    session_id: None, ..
+                } => Err(FsaError::Generic(
+                    "EVS did not return expected session id".to_string(),
+                )),
+                GetStorageRes {
+                    session_id: Some(session_id),
+                    ..
+                } => Ok(FreeTierProcessHandle {
                     email,
+                    session_id,
                     evs_client: self.evs_client.clone(),
                     sc_url: self.sc_url.clone(),
                 }),
@@ -129,6 +136,7 @@ impl FoundationStorageApi {
 #[derive(Clone)]
 pub struct FreeTierProcessHandle {
     email: String,
+    session_id: String,
     evs_client: EvsClient,
     sc_url: String,
 }
@@ -141,6 +149,7 @@ impl FreeTierProcessHandle {
     pub fn verify_email(&self, verification_token: String) -> Result<StorageTemplate, FsaError> {
         self.evs_client
             .confirm_token(ConfirmTokenReq {
+                session_id: self.session_id.clone(),
                 email: self.email.clone(),
                 verification_token,
             })
@@ -149,6 +158,7 @@ impl FreeTierProcessHandle {
         self.evs_client
             .get_storage(GetStorageReq {
                 email: self.email.clone(),
+                session_id: Some(self.session_id.clone()),
             })
             .map_err(FsaError::EvsError)
             .and_then(|resp| match resp.credentials {

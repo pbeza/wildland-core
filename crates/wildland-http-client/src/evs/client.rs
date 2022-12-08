@@ -22,18 +22,21 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConfirmTokenReq {
+    pub session_id: String,
     pub email: String,
     pub verification_token: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetStorageReq {
+    pub session_id: Option<String>,
     pub email: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetStorageRes {
     pub credentials: Option<String>,
+    pub session_id: Option<String>,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -73,11 +76,7 @@ impl EvsClient {
             .send()
             .map_err(Rc::new)?;
         let response = check_status_code(response)?;
-        match response.status_code {
-            200 => Ok(response.json().map_err(Rc::new)?),
-            // Status 2xx without body
-            _ => Ok(GetStorageRes { credentials: None }),
-        }
+        Ok(response.json().map_err(Rc::new)?)
     }
 }
 
@@ -101,6 +100,7 @@ mod tests {
         let request = ConfirmTokenReq {
             email: EMAIL.into(),
             verification_token: VERIFICATION_TOKEN.into(),
+            session_id: "some uuid".to_string(),
         };
 
         let m = mock("PUT", "/confirm_token").create();
@@ -118,6 +118,7 @@ mod tests {
         // given
         let request = GetStorageReq {
             email: EMAIL.into(),
+            session_id: Some("some uuid".to_string()),
         };
 
         let m = mock("PUT", "/get_storage")
