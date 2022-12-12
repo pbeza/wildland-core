@@ -249,8 +249,8 @@ mod ffi_binding {
         fn get_paths(self: &Arc<Mutex<Container>>) -> Result<Vec<String>, CatlibError>;
 
         fn set_name(self: &Arc<Mutex<Container>>, new_name: String);
-        fn get_name(self: &Arc<Mutex<Container>>) -> String;
-        fn stringify(self: &Arc<Mutex<Container>>) -> String;
+        fn get_name(self: &Arc<Mutex<Container>>) -> Result<String, CatlibError>;
+        fn stringify(self: &Arc<Mutex<Container>>) -> Result<String, CatlibError>;
         fn duplicate(self: &Arc<Mutex<Container>>) -> Result<Arc<Mutex<Container>>, CatlibError>;
 
         //

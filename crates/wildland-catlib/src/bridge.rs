@@ -17,22 +17,31 @@
 
 use super::*;
 use derivative::Derivative;
+use serde::{Deserialize, Serialize};
 use std::rc::Rc;
-use wildland_corex::entities::{Bridge as IBridge, BridgeData, ContainerPath, Forest};
+use wildland_corex::entities::{Bridge as IBridge, ContainerPath, Forest};
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct BridgeData {
+    pub uuid: Uuid,
+    pub forest_uuid: Uuid,
+    pub path: ContainerPath,
+    pub link: Vec<u8>,
+}
+
+impl From<&str> for BridgeData {
+    fn from(data_str: &str) -> Self {
+        ron::from_str(data_str).unwrap()
+    }
+}
 
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
-pub struct Bridge {
-    data: BridgeData,
+pub(crate) struct Bridge {
+    pub(crate) data: BridgeData,
 
     #[derivative(Debug = "ignore")]
-    db: Rc<StoreDb>,
-}
-
-impl AsRef<BridgeData> for Bridge {
-    fn as_ref(&self) -> &BridgeData {
-        &self.data
-    }
+    pub(crate) db: Rc<StoreDb>,
 }
 
 impl Bridge {
@@ -46,11 +55,6 @@ impl Bridge {
             },
             db,
         }
-    }
-
-    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
-        let data = ron::from_str(value).unwrap();
-        Self { data, db }
     }
 }
 
@@ -66,10 +70,10 @@ impl IBridge for Bridge {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn update(&mut self, link: Vec<u8>) -> CatlibResult<&mut dyn IBridge> {
+    fn update(&mut self, link: Vec<u8>) -> CatlibResult<()> {
         self.data.link = link;
         self.save()?;
-        Ok(self)
+        Ok(())
     }
 
     /// ## Errors
@@ -79,10 +83,16 @@ impl IBridge for Bridge {
         Model::delete(self)?;
         Ok(true)
     }
+
+    /// ## Errors
+    fn path(&mut self) -> CatlibResult<ContainerPath> {
+        self.sync()?;
+        Ok(self.data.path.clone())
+    }
 }
 
 impl Model for Bridge {
-    fn save(&mut self) -> CatlibResult<()> {
+    fn save(&self) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
             format!("bridge-{}", self.data.uuid),
@@ -92,6 +102,12 @@ impl Model for Bridge {
 
     fn delete(&mut self) -> CatlibResult<()> {
         delete_model(self.db.clone(), format!("bridge-{}", self.data.uuid))
+    }
+
+    fn sync(&mut self) -> CatlibResult<()> {
+        let data = fetch_bridge_data_by_uuid(self.db.clone(), &self.data.uuid)?;
+        self.data = data;
+        Ok(())
     }
 }
 

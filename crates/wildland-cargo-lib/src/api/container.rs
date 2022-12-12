@@ -83,10 +83,10 @@ impl Container {
     }
 
     /// Returns string representation of a container
-    pub fn stringify(&self) -> String {
+    pub fn stringify(&mut self) -> Result<String, CatlibError> {
         let deleted_info = if self.is_deleted { "DELETED: " } else { "" };
-        let name = &(*self.inner).as_ref().name;
-        format!("{deleted_info}Container (name: {name})")
+        let name = &self.inner.name()?;
+        Ok(format!("{deleted_info}Container (name: {name})"))
     }
 
     /// TODO
@@ -103,7 +103,7 @@ impl Container {
 
     /// Returns container uuid
     pub fn uuid(&self) -> Uuid {
-        (*self.inner).as_ref().uuid
+        self.inner.uuid()
     }
 
     /// Returns true if path was actually added, false otherwise.
@@ -118,11 +118,11 @@ impl Container {
 
     /// Returns paths in arbitrary order.
     pub fn get_paths(&self) -> Result<Vec<String>, CatlibError> {
-        Ok((*self.inner).as_ref().paths.iter().cloned().collect())
+        Ok(self.inner.paths().iter().cloned().collect())
     }
 
-    pub fn get_name(&self) -> String {
-        (*self.inner).as_ref().name.clone()
+    pub fn get_name(&mut self) -> Result<String, CatlibError> {
+        self.inner.name()
     }
 
     pub fn set_name(&mut self, new_name: String) {
@@ -184,9 +184,9 @@ mod tests {
 
     #[rstest]
     fn test_name(mut container: Container) {
-        assert_eq!(container.get_name(), "name");
+        assert_eq!(container.get_name().unwrap(), "name");
         container.set_name("new name".to_string());
-        assert_eq!(container.get_name(), "new name");
+        assert_eq!(container.get_name().unwrap(), "new name");
     }
 
     #[rstest]

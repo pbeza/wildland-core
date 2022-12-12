@@ -18,23 +18,32 @@
 use wildland_corex::entities::{Container as IContainer, Forest as IForest, Storage as IStorage};
 
 use super::*;
-use crate::error::to_catlib_error;
+use crate::{
+    bridge::BridgeData, container::ContainerData, error::to_catlib_error, forest::ForestData,
+    storage::StorageData,
+};
 use std::rc::Rc;
 
 #[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibResult<Box<dyn IForest>> {
+    let data = fetch_forest_data_by_uuid(db.clone(), uuid)?;
+    let forest = Forest { data, db };
+    Ok(Box::new(forest))
+}
+
+pub(crate) fn fetch_forest_data_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibResult<ForestData> {
     db.load().map_err(to_catlib_error)?;
     let data = db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
     let forest: Vec<_> = data
         .iter()
         .filter(|(id, _)| id.starts_with(format!("forest-{uuid}").as_str()))
-        .map(|(_, forest_str)| Forest::from_db_entry(forest_str, db.clone()))
+        .map(|(_, forest_str)| ForestData::from(forest_str.as_str()))
         .collect();
 
     match forest.len() {
         0 => Err(CatlibError::NoRecordsFound),
-        1 => Ok(Box::new(forest[0].clone())),
+        1 => Ok(forest[0].clone()),
         _ => Err(CatlibError::MalformedDatabaseRecord),
     }
 }
@@ -44,18 +53,47 @@ pub(crate) fn fetch_container_by_uuid(
     db: Rc<StoreDb>,
     uuid: &Uuid,
 ) -> CatlibResult<Box<dyn IContainer>> {
+    let data = fetch_container_data_by_uuid(db.clone(), uuid)?;
+    let container = Container { data, db };
+    Ok(Box::new(container))
+}
+
+pub(crate) fn fetch_container_data_by_uuid(
+    db: Rc<StoreDb>,
+    uuid: &Uuid,
+) -> CatlibResult<ContainerData> {
     db.load().map_err(to_catlib_error)?;
     let data = db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
     let container: Vec<_> = data
         .iter()
         .filter(|(id, _)| id.starts_with(format!("container-{uuid}").as_str()))
-        .map(|(_, container_str)| Container::from_db_entry(container_str, db.clone()))
+        .map(|(_, container_str)| ContainerData::from(container_str.as_str()))
         .collect();
 
     match container.len() {
         0 => Err(CatlibError::NoRecordsFound),
-        1 => Ok(Box::new(container[0].clone())),
+        1 => Ok(container[0].clone()),
+        _ => Err(CatlibError::MalformedDatabaseRecord),
+    }
+}
+
+pub(crate) fn fetch_storage_data_by_uuid(
+    db: Rc<StoreDb>,
+    uuid: &Uuid,
+) -> CatlibResult<StorageData> {
+    db.load().map_err(to_catlib_error)?;
+    let data = db.read(|db| db.clone()).map_err(to_catlib_error)?;
+
+    let storages: Vec<_> = data
+        .iter()
+        .filter(|(id, _)| id.starts_with(&format!("storage-{uuid}")))
+        .map(|(_, storage_str)| StorageData::from(storage_str.as_str()))
+        .collect();
+
+    match storages.len() {
+        0 => Err(CatlibError::NoRecordsFound),
+        1 => Ok(storages[0].clone()),
         _ => Err(CatlibError::MalformedDatabaseRecord),
     }
 }
@@ -71,14 +109,35 @@ pub(crate) fn fetch_storages_by_container_uuid(
     let storages: Vec<_> = data
         .iter()
         .filter(|(id, _)| id.starts_with("storage-"))
-        .map(|(_, storage_str)| Storage::from_db_entry(storage_str, db.clone()))
-        .filter(|storage| (*storage.container().unwrap()).as_ref().uuid == *uuid)
+        .map(|(_, storage_str)| Storage {
+            data: StorageData::from(storage_str.as_str()),
+            db: db.clone(),
+        })
+        .filter(|storage| storage.container().unwrap().uuid() == *uuid)
         .map(|storage| Box::new(storage) as Box<dyn IStorage>)
         .collect();
 
     match storages.len() {
         0 => Err(CatlibError::NoRecordsFound),
         _ => Ok(storages),
+    }
+}
+
+#[tracing::instrument(level = "debug", skip_all)]
+pub(crate) fn fetch_bridge_data_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibResult<BridgeData> {
+    db.load().map_err(to_catlib_error)?;
+    let data = db.read(|db| db.clone()).map_err(to_catlib_error)?;
+
+    let bridges: Vec<_> = data
+        .iter()
+        .filter(|(id, _)| id.starts_with(&format!("bridge-{uuid}")))
+        .map(|(_, bridge_str)| BridgeData::from(bridge_str.as_str()))
+        .collect();
+
+    match bridges.len() {
+        0 => Err(CatlibError::NoRecordsFound),
+        1 => Ok(bridges[0].clone()),
+        _ => Err(CatlibError::MalformedDatabaseRecord),
     }
 }
 
