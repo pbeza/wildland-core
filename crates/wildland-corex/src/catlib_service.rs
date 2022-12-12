@@ -136,4 +136,19 @@ impl CatLibService {
         serde_json::from_slice(&forest.data()?)
             .map_err(|e| CatlibError::Generic(format!("Could not deserialize forest metadata {e}")))
     }
+
+    pub fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>> {
+        self.catlib.get_storage_templates_data()
+    }
+
+    pub fn save_storage_template(
+        &self,
+        storage_template: &impl StorageTemplateTrait,
+    ) -> CatlibResult<()> {
+        self.catlib.save_storage_template(
+            &storage_template.uuid(),
+            serde_json::to_string(storage_template)
+                .map_err(|e| CatlibError::Generic(format!("Could not serialize object: {e}")))?,
+        )
+    }
 }

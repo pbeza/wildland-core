@@ -98,7 +98,6 @@ impl UserService {
             vec![device_name],
             forest,
             self.catlib_service.clone(),
-            self.lss_service.clone(),
             &self.fsa_config,
         ))
     }
@@ -132,7 +131,6 @@ impl UserService {
                         user_metadata.devices().map(|dm| dm.name.clone()).collect(),
                         forest,
                         self.catlib_service.clone(),
-                        self.lss_service.clone(),
                         &self.fsa_config,
                     ))),
                     None => Err(UserRetrievalError::DeviceMetadataNotFound),

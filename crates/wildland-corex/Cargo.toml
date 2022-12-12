@@ -23,5 +23,5 @@ wildland-crypto = { version = "0.30.1-rc.0", path = "../wildland-crypto", regist
 wildland-dfs    = { version = "0.30.1-rc.0", path = "../wildland-dfs", registry = "wl-dev" }
 
 [dev-dependencies]
-mockall  = { version = "0.11" }
-tempfile = { version = "3.3" }
+mockall = { version = "0.11" }
+rstest  = { version = "0.16" }
