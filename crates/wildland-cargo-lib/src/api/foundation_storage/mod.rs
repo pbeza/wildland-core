@@ -15,21 +15,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+mod foundation_storage_template;
+
 use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 use wildland_corex::{
-    catlib_service::error::CatlibError, storage::StorageTemplateTrait, CryptoError,
-    EncryptingKeypair, LssError,
+    catlib_service::error::CatlibError, CryptoError, EncryptingKeypair, LssError, StorageTemplate,
 };
 use wildland_http_client::{
     error::WildlandHttpClientError,
     evs::{ConfirmTokenReq, EvsClient, GetStorageReq},
 };
 
-use super::{config::FoundationStorageApiConfig, storage_template::StorageTemplate};
+use super::config::FoundationStorageApiConfig;
+
+pub use foundation_storage_template::*;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StorageCredentials {
@@ -38,37 +41,6 @@ pub struct StorageCredentials {
     credential_id: String,
     #[serde(rename = "credentialSecret")]
     credential_secret: String,
-}
-
-impl StorageCredentials {
-    fn into_storage_template(self, sc_url: String) -> FoundationStorageTemplate {
-        FoundationStorageTemplate {
-            uuid: self.id,
-            credential_id: self.credential_id,
-            credential_secret: self.credential_secret,
-            sc_url,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FoundationStorageTemplate {
-    pub uuid: Uuid,
-    pub credential_id: String,
-    pub credential_secret: String,
-    pub sc_url: String,
-}
-
-impl StorageTemplateTrait for FoundationStorageTemplate {
-    fn uuid(&self) -> Uuid {
-        self.uuid
-    }
-}
-
-impl From<FoundationStorageTemplate> for StorageTemplate {
-    fn from(fst: FoundationStorageTemplate) -> Self {
-        Self::FoundationStorageTemplate(fst)
-    }
 }
 
 #[repr(C)]
@@ -166,9 +138,12 @@ impl FreeTierProcessHandle {
                     let storage_credentials: StorageCredentials = serde_json::from_slice(&decoded)
                         .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
 
-                    let storage_template = StorageTemplate::FoundationStorageTemplate(
-                        storage_credentials.into_storage_template(self.sc_url.clone()),
-                    );
+                    let storage_template: StorageTemplate =
+                        FoundationStorageTemplate::from_storage_credentials_and_sc_url(
+                            storage_credentials,
+                            self.sc_url.clone(),
+                        )
+                        .into();
 
                     Ok(storage_template)
                 }

@@ -15,9 +15,5 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use serde::Serialize;
-use uuid::Uuid;
-
-pub trait StorageTemplateTrait: std::fmt::Debug + Serialize {
-    fn uuid(&self) -> Uuid;
-}
+pub const CONTAINER_NAME_PARAM: &str = "CONTAINER NAME";
+pub const OWNER_PARAM: &str = "OWNER";

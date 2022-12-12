@@ -19,12 +19,13 @@ pub mod catlib_service;
 mod error;
 mod identity;
 mod lss;
-pub mod storage;
+mod storage_template;
 
 pub use catlib_service::*;
 pub use error::*;
 pub use identity::{master::*, wildland::*};
 pub use lss::*;
+pub use storage_template::*;
 pub use wildland_crypto::{
     error::CryptoError,
     identity::{

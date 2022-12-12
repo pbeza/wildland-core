@@ -19,10 +19,8 @@ use std::fmt::{Debug, Display};
 
 use super::{api::LocalSecureStorage, result::LssResult};
 use crate::catlib_service::entities::{ForestData, Identity};
-use crate::{
-    storage::StorageTemplateTrait, ForestRetrievalError, LssError, WildlandIdentity,
-    DEFAULT_FOREST_KEY,
-};
+use crate::storage_template::StorageTemplate;
+use crate::{ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY};
 use serde::{de::DeserializeOwned, Serialize};
 use uuid::Uuid;
 use wildland_crypto::identity::SigningKeypair;
@@ -92,10 +90,7 @@ impl LssService {
         })
     }
 
-    pub fn save_storage_template(
-        &self,
-        storage_template: &impl StorageTemplateTrait,
-    ) -> LssResult<bool> {
+    pub fn save_storage_template(&self, storage_template: &StorageTemplate) -> LssResult<bool> {
         tracing::trace!("Saving storage template");
         self.serialize_and_save(
             format!("{STORAGE_TEMPLATE_PREFIX}{}", storage_template.uuid()),
@@ -159,22 +154,21 @@ impl LssService {
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        catlib_service::entities::{ForestData, Identity},
+        lss::service::{THIS_DEVICE_KEYPAIR_KEY, THIS_DEVICE_NAME_KEY},
+        storage_template::SerializableTemplate,
+        LocalSecureStorage, LssResult, LssService, StorageBackendType, StorageTemplate,
+        WildlandIdentity, DEFAULT_FOREST_KEY,
+    };
+    use pretty_assertions::assert_eq;
+    use serde::{Deserialize, Serialize};
     use std::{
         cell::RefCell,
         collections::{HashMap, HashSet},
     };
-
-    use crate::catlib_service::entities::{ForestData, Identity};
-    use serde::Serialize;
     use uuid::Uuid;
-
     use wildland_crypto::identity::SigningKeypair;
-
-    use crate::{
-        lss::service::{THIS_DEVICE_KEYPAIR_KEY, THIS_DEVICE_NAME_KEY},
-        storage::StorageTemplateTrait,
-        LocalSecureStorage, LssResult, LssService, WildlandIdentity, DEFAULT_FOREST_KEY,
-    };
 
     #[derive(Default)]
     struct LssStub {
@@ -379,35 +373,49 @@ mod tests {
         assert_eq!(device_identity, expected_device_identity);
     }
 
-    #[derive(Debug, Serialize)]
-    struct StorageTemplateTestImpl {
-        s: String,
-    }
-    impl StorageTemplateTrait for StorageTemplateTestImpl {
-        fn uuid(&self) -> Uuid {
-            Uuid::from_u128(2)
-        }
-    }
-
     #[test]
     fn test_save_storage_template() {
         let lss = LssStub::default(); // LSS must live through the whole test
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
-        let storage_template = StorageTemplateTestImpl {
-            s: "some string".to_owned(),
-        };
+        #[derive(Serialize, Deserialize, Clone, Debug)]
+        struct TestTemplate {
+            field: String,
+        }
+        #[typetag::serde(name = "template")]
+        impl SerializableTemplate for TestTemplate {}
+        let storage_template = StorageTemplate::new(
+            StorageBackendType::FoundationStorage,
+            Box::new(TestTemplate {
+                field: "Some value".to_string(),
+            }),
+        );
+        let uuid = storage_template.uuid();
 
         service.save_storage_template(&storage_template).unwrap();
 
-        let expected_uuid = Uuid::from_u128(2);
+        let expected_uuid = storage_template.uuid();
         let retrieved_storage_template_data = lss
             .get(format!("wildland.storage_template.{expected_uuid}"))
             .unwrap()
             .unwrap();
 
-        let expected_data = r#"{"s":"some string"}"#.to_string();
-        assert_eq!(retrieved_storage_template_data, expected_data);
+        let expected_data = format!(
+            r#"
+            {{
+                "name": null,
+                "uuid": "{uuid}",
+                "backend_type": "FoundationStorage",
+                "template": {{
+                    "field": "Some value"
+                }}
+            }}
+        "#
+        );
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&retrieved_storage_template_data).unwrap(),
+            serde_json::from_str::<serde_json::Value>(&expected_data).unwrap()
+        );
     }
 }

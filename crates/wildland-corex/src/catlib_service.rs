@@ -25,7 +25,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use wildland_crypto::identity::signing_keypair::PubKey;
 
-use crate::{storage::StorageTemplateTrait, WildlandIdentity};
+use crate::storage_template::StorageTemplate;
+use crate::WildlandIdentity;
 
 use self::entities::{Container, Forest};
 use self::error::{CatlibError, CatlibResult};
@@ -114,7 +115,7 @@ impl CatLibService {
         &self,
         name: String,
         forest: &dyn Forest,
-        storage_template: &impl StorageTemplateTrait,
+        storage_template: &StorageTemplate,
     ) -> CatlibResult<Box<dyn Container>> {
         let container = forest.create_container(name)?;
 

@@ -21,13 +21,16 @@ use std::{
 };
 
 use crate::{
-    api::{container::*, storage_template::*},
+    api::container::*,
     errors::{storage::GetStorageTemplateError, user::*},
 };
 use derivative::Derivative;
 use uuid::Uuid;
-use wildland_corex::catlib_service::{entities::Forest, error::CatlibError, CatLibService};
 use wildland_corex::LssService;
+use wildland_corex::{
+    catlib_service::{entities::Forest, error::CatlibError, CatLibService},
+    StorageTemplate,
+};
 
 use super::{
     config::FoundationStorageApiConfig,
@@ -275,10 +278,8 @@ mod tests {
     };
 
     use crate::api::config::FoundationStorageApiConfig;
+    use crate::api::foundation_storage::FoundationStorageTemplate;
     use crate::api::utils::test::{catlib_service, lss_stub};
-    use crate::api::{
-        foundation_storage::FoundationStorageTemplate, storage_template::StorageTemplate,
-    };
 
     use super::CargoUser;
 
@@ -372,13 +373,13 @@ mod tests {
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-        let storage_template =
-            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
-                uuid: Uuid::from_str(container_uuid_str).unwrap(),
-                credential_id: "cred_id".to_owned(),
-                credential_secret: "cred_secret".to_owned(),
-                sc_url: "some url".to_owned(),
-            });
+        let storage_template = FoundationStorageTemplate::new(
+            Uuid::from_str(container_uuid_str).unwrap(),
+            "cred_id".to_owned(),
+            "cred_secret".to_owned(),
+            "some url".to_owned(),
+        )
+        .into();
         let container_name = "new container".to_string();
         cargo_user
             .create_container(container_name.clone(), &storage_template)
@@ -402,13 +403,13 @@ mod tests {
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-        let storage_template =
-            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
-                uuid: Uuid::from_str(container_uuid_str).unwrap(),
-                credential_id: "cred_id".to_owned(),
-                credential_secret: "cred_secret".to_owned(),
-                sc_url: "some url".to_owned(),
-            });
+        let storage_template = FoundationStorageTemplate::new(
+            Uuid::from_str(container_uuid_str).unwrap(),
+            "cred_id".to_owned(),
+            "cred_secret".to_owned(),
+            "some url".to_owned(),
+        )
+        .into();
         let container_name = "new container".to_string();
         cargo_user
             .create_container(container_name.clone(), &storage_template)
@@ -427,13 +428,13 @@ mod tests {
 
         // when a container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-        let storage_template =
-            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
-                uuid: Uuid::from_str(container_uuid_str).unwrap(),
-                credential_id: "cred_id".to_owned(),
-                credential_secret: "cred_secret".to_owned(),
-                sc_url: "some url".to_owned(),
-            });
+        let storage_template = FoundationStorageTemplate::new(
+            Uuid::from_str(container_uuid_str).unwrap(),
+            "cred_id".to_owned(),
+            "cred_secret".to_owned(),
+            "some url".to_owned(),
+        )
+        .into();
         let container_name = "new container".to_string();
         let container = cargo_user
             .create_container(container_name, &storage_template)

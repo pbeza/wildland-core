@@ -16,12 +16,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    api::{storage::Storage, storage_template::StorageTemplate},
+    api::storage::Storage,
     errors::{container::*, storage::*},
 };
 use uuid::Uuid;
-use wildland_corex::catlib_service::{
-    entities::Container as InnerContainer, error::CatlibError, CatLibService,
+use wildland_corex::{
+    catlib_service::{entities::Container as InnerContainer, error::CatlibError, CatLibService},
+    StorageTemplate,
 };
 
 use super::cargo_user::SharedContainer;
@@ -167,12 +168,13 @@ mod tests {
             )
             .unwrap();
 
-        let fst = FoundationStorageTemplate {
-            uuid: Uuid::new_v4(),
-            credential_id: "".to_owned(),
-            credential_secret: "".to_owned(),
-            sc_url: "".to_owned(),
-        };
+        let fst = FoundationStorageTemplate::new(
+            Uuid::new_v4(),
+            "".to_owned(),
+            "".to_owned(),
+            "".to_owned(),
+        )
+        .into();
 
         Container {
             inner: catlib_service

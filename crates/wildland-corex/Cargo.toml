@@ -18,10 +18,13 @@ serde_json      = { version = "1.0" }
 sha2            = { version = "0.10" }
 thiserror       = { version = "1.0" }
 tracing         = { version = "0.1" }
+typetag         = { version = "0.2" }
 uuid            = { version = "1.2", features = ["v4", "serde"] }
 wildland-crypto = { version = "0.30.1-rc.0", path = "../wildland-crypto", registry = "wl-dev" }
 wildland-dfs    = { version = "0.30.1-rc.0", path = "../wildland-dfs", registry = "wl-dev" }
 
 [dev-dependencies]
-mockall  = { version = "0.11" }
-tempfile = { version = "3.3" }
+mockall           = { version = "0.11" }
+pretty_assertions = { version = "1.3" }
+serde_yaml        = { version = "0.9" }
+tempfile          = { version = "3.3" }

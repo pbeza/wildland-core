@@ -15,17 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod cargo_lib;
-pub mod cargo_user;
-pub mod config;
-pub mod container;
-pub mod foundation_storage;
-pub mod storage;
-pub mod user;
-mod utils;
+use serde::{Deserialize, Serialize};
 
-pub use self::{
-    cargo_lib::CargoLib,
-    config::{CargoCfgProvider, CargoConfig},
-    user::UserApi,
-};
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum StorageBackendType {
+    FoundationStorage,
+}
