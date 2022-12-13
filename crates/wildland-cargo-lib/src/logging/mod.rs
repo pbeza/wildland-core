@@ -32,9 +32,15 @@ pub(crate) fn init_subscriber(cfg: LoggerConfig) -> anyhow::Result<()> {
 
     // check which logging type should be used, construct the subscriber and
     // init it
+
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     if cfg.is_oslog_eligible() {
         nondefault_oslog(&cfg)?;
-    } else if cfg.is_file_eligible() {
+        tracing::info!("logger initialized");
+        return Ok(());
+    }
+
+    if cfg.is_file_eligible() {
         default_with_file_copy(&cfg)?;
     } else {
         default_without_file_copy(&cfg)?;
@@ -86,6 +92,7 @@ pub fn default_without_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 pub fn nondefault_oslog(cfg: &LoggerConfig) -> anyhow::Result<()> {
     let subscriber = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
