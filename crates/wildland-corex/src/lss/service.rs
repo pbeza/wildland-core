@@ -20,15 +20,11 @@ use std::fmt::{Debug, Display};
 use super::{api::LocalSecureStorage, result::LssResult};
 use crate::catlib_service::entities::Identity;
 use crate::entities::Forest;
-use crate::{
-    storage::StorageTemplateTrait, ForestRetrievalError, LssError, WildlandIdentity,
-    DEFAULT_FOREST_KEY,
-};
+use crate::{ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY};
 use serde::{de::DeserializeOwned, Serialize};
 use uuid::Uuid;
 use wildland_crypto::identity::SigningKeypair;
 
-const STORAGE_TEMPLATE_PREFIX: &str = "wildland.storage_template.";
 #[derive(Clone)]
 pub struct LssService {
     lss: &'static dyn LocalSecureStorage,
@@ -93,31 +89,6 @@ impl LssService {
         })
     }
 
-    pub fn save_storage_template(
-        &self,
-        storage_template: &impl StorageTemplateTrait,
-    ) -> LssResult<bool> {
-        tracing::trace!("Saving storage template");
-        self.serialize_and_save(
-            format!("{STORAGE_TEMPLATE_PREFIX}{}", storage_template.uuid()),
-            storage_template,
-        )
-    }
-
-    pub fn get_storage_templates_data(&self) -> LssResult<Vec<String>> {
-        let st_keys = self
-            .lss
-            .keys_starting_with(STORAGE_TEMPLATE_PREFIX.to_owned())?;
-
-        Ok(st_keys
-            .into_iter()
-            .map(|key| self.lss.get(key))
-            .collect::<Result<Vec<Option<String>>, _>>()?
-            .into_iter()
-            .flatten()
-            .collect())
-    }
-
     fn get_this_device_name(&self) -> LssResult<Option<String>> {
         self.get_parsed(THIS_DEVICE_NAME_KEY)
     }
@@ -167,67 +138,69 @@ mod tests {
         entities::{Bridge, Container, ContainerPath, Forest as IForest, Signers},
     };
     use mockall::mock;
-    use serde::Serialize;
+    use rstest::{fixture, rstest};
     use uuid::Uuid;
 
     use wildland_crypto::identity::SigningKeypair;
 
     use crate::{
         lss::service::{THIS_DEVICE_KEYPAIR_KEY, THIS_DEVICE_NAME_KEY},
-        storage::StorageTemplateTrait,
         LocalSecureStorage, LssResult, LssService, WildlandIdentity, DEFAULT_FOREST_KEY,
     };
 
-    #[derive(Default)]
-    struct LssStub {
-        storage: RefCell<HashMap<String, String>>,
+    #[fixture]
+    fn lss_stub() -> &'static dyn LocalSecureStorage {
+        #[derive(Default)]
+        struct LssStub {
+            storage: RefCell<HashMap<String, String>>,
+        }
+
+        impl LocalSecureStorage for LssStub {
+            fn insert(&self, key: String, value: String) -> LssResult<Option<String>> {
+                Ok(self.storage.borrow_mut().insert(key, value))
+            }
+
+            fn get(&self, key: String) -> LssResult<Option<String>> {
+                Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
+            }
+
+            fn contains_key(&self, key: String) -> LssResult<bool> {
+                Ok(self.storage.borrow().contains_key(&key))
+            }
+
+            fn keys(&self) -> LssResult<Vec<String>> {
+                Ok(self.storage.borrow().keys().cloned().collect())
+            }
+
+            fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
+                Ok(self
+                    .storage
+                    .borrow()
+                    .keys()
+                    .filter(|key| key.starts_with(&prefix))
+                    .cloned()
+                    .collect())
+            }
+
+            fn remove(&self, key: String) -> LssResult<Option<String>> {
+                Ok(self.storage.borrow_mut().remove(&key))
+            }
+
+            fn len(&self) -> LssResult<usize> {
+                Ok(self.storage.borrow().len())
+            }
+
+            fn is_empty(&self) -> LssResult<bool> {
+                Ok(self.storage.borrow().is_empty())
+            }
+        }
+
+        Box::leak(Box::<LssStub>::default())
     }
 
-    impl LocalSecureStorage for LssStub {
-        fn insert(&self, key: String, value: String) -> LssResult<Option<String>> {
-            Ok(self.storage.borrow_mut().insert(key, value))
-        }
-
-        fn get(&self, key: String) -> LssResult<Option<String>> {
-            Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
-        }
-
-        fn contains_key(&self, key: String) -> LssResult<bool> {
-            Ok(self.storage.borrow().contains_key(&key))
-        }
-
-        fn keys(&self) -> LssResult<Vec<String>> {
-            Ok(self.storage.borrow().keys().cloned().collect())
-        }
-
-        fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
-            Ok(self
-                .storage
-                .borrow()
-                .keys()
-                .filter(|key| key.starts_with(&prefix))
-                .cloned()
-                .collect())
-        }
-
-        fn remove(&self, key: String) -> LssResult<Option<String>> {
-            Ok(self.storage.borrow_mut().remove(&key))
-        }
-
-        fn len(&self) -> LssResult<usize> {
-            Ok(self.storage.borrow().len())
-        }
-
-        fn is_empty(&self) -> LssResult<bool> {
-            Ok(self.storage.borrow().is_empty())
-        }
-    }
-
-    #[test]
-    fn test_save_forest_identity() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let service = LssService::new(lss_ref);
+    #[rstest]
+    fn test_save_forest_identity(lss_stub: &'static dyn LocalSecureStorage) {
+        let service = LssService::new(lss_stub);
 
         let keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
         let forest_identity = WildlandIdentity::Forest(5, SigningKeypair::from(&keypair));
@@ -236,15 +209,13 @@ mod tests {
         let expected_key = "wildland.forest.5".to_string();
 
         let deserialized_keypair: SigningKeypair =
-            serde_json::from_str(&lss.get(expected_key).unwrap().unwrap()).unwrap();
+            serde_json::from_str(&lss_stub.get(expected_key).unwrap().unwrap()).unwrap();
         assert_eq!(deserialized_keypair, keypair);
     }
 
-    #[test]
-    fn test_save_device_identity() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let service = LssService::new(lss_ref);
+    #[rstest]
+    fn test_save_device_identity(lss_stub: &'static dyn LocalSecureStorage) {
+        let service = LssService::new(lss_stub);
 
         let device_name = "some device".to_owned();
         let keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
@@ -253,42 +224,44 @@ mod tests {
         service.save_identity(&device_identity).unwrap();
 
         let deserialized_keypair: SigningKeypair = serde_json::from_str(
-            &lss.get(THIS_DEVICE_KEYPAIR_KEY.to_string())
+            &lss_stub
+                .get(THIS_DEVICE_KEYPAIR_KEY.to_string())
                 .unwrap()
                 .unwrap(),
         )
         .unwrap();
         assert_eq!(deserialized_keypair, keypair);
 
-        let deserialized_name: String =
-            serde_json::from_str(&lss.get(THIS_DEVICE_NAME_KEY.to_owned()).unwrap().unwrap())
-                .unwrap();
+        let deserialized_name: String = serde_json::from_str(
+            &lss_stub
+                .get(THIS_DEVICE_NAME_KEY.to_owned())
+                .unwrap()
+                .unwrap(),
+        )
+        .unwrap();
         assert_eq!(deserialized_name, device_name);
     }
 
-    #[test]
-    fn get_default_forest_should_return_none() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let service = LssService::new(lss_ref);
+    #[rstest]
+    fn get_default_forest_should_return_none(lss_stub: &'static dyn LocalSecureStorage) {
+        let service = LssService::new(lss_stub);
 
         let default_forest = service.get_default_forest_identity().unwrap();
 
         assert!(default_forest.is_none())
     }
 
-    #[test]
-    fn get_default_forest_should_return_identity() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let service = LssService::new(lss_ref);
+    #[rstest]
+    fn get_default_forest_should_return_identity(lss_stub: &'static dyn LocalSecureStorage) {
+        let service = LssService::new(lss_stub);
 
         let keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
-        lss.insert(
-            DEFAULT_FOREST_KEY.to_owned(),
-            serde_json::to_string(&keypair).unwrap(),
-        )
-        .unwrap();
+        lss_stub
+            .insert(
+                DEFAULT_FOREST_KEY.to_owned(),
+                serde_json::to_string(&keypair).unwrap(),
+            )
+            .unwrap();
 
         let default_forest = service.get_default_forest_identity().unwrap();
 
@@ -330,11 +303,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_save_forest_uuid() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let service = LssService::new(lss_ref);
+    #[rstest]
+    fn test_save_forest_uuid(lss_stub: &'static dyn LocalSecureStorage) {
+        let service = LssService::new(lss_stub);
 
         let forest_identity = Identity([1; 32]);
         let uuid = Uuid::new_v4();
@@ -348,25 +319,25 @@ mod tests {
         service.save_forest_uuid(&forest).unwrap();
 
         let retrieved_uuid: Uuid =
-            serde_json::from_str(&lss.get(forest_identity.encode()).unwrap().unwrap()).unwrap();
+            serde_json::from_str(&lss_stub.get(forest_identity.encode()).unwrap().unwrap())
+                .unwrap();
 
         assert_eq!(retrieved_uuid, forest.uuid());
     }
 
-    #[test]
-    fn test_get_forest_uuid_by_identity() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let service = LssService::new(lss_ref);
+    #[rstest]
+    fn test_get_forest_uuid_by_identity(lss_stub: &'static dyn LocalSecureStorage) {
+        let service = LssService::new(lss_stub);
 
         let forest_uuid = Uuid::new_v4();
         let forest_pubkey = [1; 32];
         let forest_identity = Identity(forest_pubkey);
-        lss.insert(
-            forest_identity.encode(),
-            serde_json::to_string(&forest_uuid).unwrap(),
-        )
-        .unwrap();
+        lss_stub
+            .insert(
+                forest_identity.encode(),
+                serde_json::to_string(&forest_uuid).unwrap(),
+            )
+            .unwrap();
 
         let retrieved_uuid = service
             .get_forest_uuid_by_identity(&WildlandIdentity::Forest(
@@ -379,72 +350,40 @@ mod tests {
         assert_eq!(retrieved_uuid, forest_uuid);
     }
 
-    #[test]
-    fn test_get_this_device_identity_should_return_none() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let service = LssService::new(lss_ref);
+    #[rstest]
+    fn test_get_this_device_identity_should_return_none(lss_stub: &'static dyn LocalSecureStorage) {
+        let service = LssService::new(lss_stub);
 
         let device_identity = service.get_this_device_identity().unwrap();
 
         assert!(device_identity.is_none())
     }
 
-    #[test]
-    fn test_get_this_device_identity_should_return_identity() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let service = LssService::new(lss_ref);
+    #[rstest]
+    fn test_get_this_device_identity_should_return_identity(
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let service = LssService::new(lss_stub);
 
         let device_name = "some device".to_owned();
         let keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
 
-        lss.insert(
-            THIS_DEVICE_NAME_KEY.to_owned(),
-            serde_json::to_string(&device_name).unwrap(),
-        )
-        .unwrap();
-        lss.insert(
-            THIS_DEVICE_KEYPAIR_KEY.to_owned(),
-            serde_json::to_string(&keypair).unwrap(),
-        )
-        .unwrap();
+        lss_stub
+            .insert(
+                THIS_DEVICE_NAME_KEY.to_owned(),
+                serde_json::to_string(&device_name).unwrap(),
+            )
+            .unwrap();
+        lss_stub
+            .insert(
+                THIS_DEVICE_KEYPAIR_KEY.to_owned(),
+                serde_json::to_string(&keypair).unwrap(),
+            )
+            .unwrap();
 
         let device_identity = service.get_this_device_identity().unwrap().unwrap();
         let expected_device_identity =
             WildlandIdentity::Device(device_name, SigningKeypair::from(&keypair));
         assert_eq!(device_identity, expected_device_identity);
-    }
-
-    #[derive(Debug, Serialize)]
-    struct StorageTemplateTestImpl {
-        s: String,
-    }
-    impl StorageTemplateTrait for StorageTemplateTestImpl {
-        fn uuid(&self) -> Uuid {
-            Uuid::from_u128(2)
-        }
-    }
-
-    #[test]
-    fn test_save_storage_template() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let service = LssService::new(lss_ref);
-
-        let storage_template = StorageTemplateTestImpl {
-            s: "some string".to_owned(),
-        };
-
-        service.save_storage_template(&storage_template).unwrap();
-
-        let expected_uuid = Uuid::from_u128(2);
-        let retrieved_storage_template_data = lss
-            .get(format!("wildland.storage_template.{expected_uuid}"))
-            .unwrap()
-            .unwrap();
-
-        let expected_data = r#"{"s":"some string"}"#.to_string();
-        assert_eq!(retrieved_storage_template_data, expected_data);
     }
 }

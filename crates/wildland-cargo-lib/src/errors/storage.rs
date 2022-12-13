@@ -16,7 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use thiserror::Error;
-use wildland_corex::LssError;
+use wildland_corex::catlib_service::error::CatlibError;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[repr(C)]
@@ -43,7 +43,7 @@ pub enum AddStorageError {
 #[repr(C)]
 pub enum GetStorageTemplateError {
     #[error(transparent)]
-    LssError(#[from] LssError),
+    CatlibError(#[from] CatlibError),
     #[error("Error while deserializing data retrieved from LSS: {0}")]
     DeserializationError(String),
 }
