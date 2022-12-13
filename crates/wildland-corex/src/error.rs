@@ -15,9 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::LssError;
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
+
+use crate::LssError;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[repr(C)]

@@ -25,12 +25,13 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use wildland_crypto::identity::signing_keypair::PubKey;
 
-use crate::storage_template::StorageTemplate;
-use crate::WildlandIdentity;
+use crate::{StorageTemplate, WildlandIdentity};
 
-use self::entities::{Container, Forest};
-use self::error::{CatlibError, CatlibResult};
-use self::interface::CatLib;
+use self::{
+    entities::{Container, Forest},
+    error::{CatlibError, CatlibResult},
+    interface::CatLib,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct DeviceMetadata {

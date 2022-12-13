@@ -19,7 +19,7 @@ use std::fmt::{Debug, Display};
 
 use super::{api::LocalSecureStorage, result::LssResult};
 use crate::catlib_service::entities::{ForestData, Identity};
-use crate::storage_template::StorageTemplate;
+use crate::storage::StorageTemplate;
 use crate::{ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY};
 use serde::{de::DeserializeOwned, Serialize};
 use uuid::Uuid;
@@ -157,12 +157,10 @@ mod tests {
     use crate::{
         catlib_service::entities::{ForestData, Identity},
         lss::service::{THIS_DEVICE_KEYPAIR_KEY, THIS_DEVICE_NAME_KEY},
-        storage_template::SerializableTemplate,
         LocalSecureStorage, LssResult, LssService, StorageBackendType, StorageTemplate,
         WildlandIdentity, DEFAULT_FOREST_KEY,
     };
     use pretty_assertions::assert_eq;
-    use serde::{Deserialize, Serialize};
     use std::{
         cell::RefCell,
         collections::{HashMap, HashSet},
@@ -379,17 +377,9 @@ mod tests {
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
-        #[derive(Serialize, Deserialize, Clone, Debug)]
-        struct TestTemplate {
-            field: String,
-        }
-        #[typetag::serde(name = "template")]
-        impl SerializableTemplate for TestTemplate {}
         let storage_template = StorageTemplate::new(
             StorageBackendType::FoundationStorage,
-            Box::new(TestTemplate {
-                field: "Some value".to_string(),
-            }),
+            HashMap::from([("field".to_owned(), "Some value".to_string())]),
         );
         let uuid = storage_template.uuid();
 

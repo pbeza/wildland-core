@@ -15,5 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub const CONTAINER_NAME_PARAM: &str = "CONTAINER NAME";
-pub const OWNER_PARAM: &str = "OWNER";
+mod backend;
+mod template;
+
+pub use backend::*;
+pub use template::*;
