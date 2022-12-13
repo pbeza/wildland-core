@@ -40,4 +40,10 @@ pub trait CatLib {
         &self,
         template_id: &Uuid,
     ) -> CatlibResult<Vec<Box<dyn Container>>>;
+
+    /// Save StorageTemplate data in CatLib.
+    fn save_storage_template(&self, template_id: &Uuid, value: String) -> CatlibResult<()>;
+
+    /// Fetche every StorageTemplate data from CatLib.
+    fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>>;
 }
