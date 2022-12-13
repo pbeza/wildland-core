@@ -29,14 +29,6 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     {
         return Optional<String>();
     }
-    Optional<String> get_oslog_category() override
-    {
-        return Optional<String>();
-    }
-    Optional<String> get_oslog_subsystem() override
-    {
-        return Optional<String>();
-    }
     FoundationCloudMode get_foundation_cloud_env_mode() override
     {
         return FoundationCloudMode::Dev;

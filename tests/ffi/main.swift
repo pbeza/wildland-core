@@ -20,13 +20,6 @@ class CargoCfgProviderImpl: CargoCfgProvider {
     public override func getLogFileRotateDirectory() -> RustOptional<RustString> {
         return Optional.none.toRustOptional()
     }
-    public override func getOslogCategory() -> RustOptional<RustString> {
-        return Optional.none.toRustOptional()
-    }
-    public override func getOslogSubsystem() -> RustOptional<RustString> {
-        return Optional.none.toRustOptional()
-    }
-
     public override func getFoundationCloudEnvMode() -> FoundationCloudMode {
         return FoundationCloudMode_Dev
     }
