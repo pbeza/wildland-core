@@ -17,7 +17,7 @@ EVS->>FoundationStorageApi: Ok
 FoundationStorageApi->>EVS: get_storage(email, session_id)
 EVS->>FoundationStorageApi: storage credentials
 FoundationStorageApi->>CargoUser: StorageTemplate{credentials}
-CargoUser->>LSS: save StorageTemplate
+CargoUser->>CatLib: save StorageTemplate
 CargoUser->>CatLib: mark free tier storage as granted
 CargoUser->>App: StorageTemplate handle
 else token does not match
