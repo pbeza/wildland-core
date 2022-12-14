@@ -379,7 +379,8 @@ mod tests {
             "cred_secret".to_owned(),
             "some url".to_owned(),
         )
-        .into();
+        .try_into()
+        .unwrap();
         let container_name = "new container".to_string();
         cargo_user
             .create_container(container_name.clone(), &storage_template)
@@ -409,7 +410,8 @@ mod tests {
             "cred_secret".to_owned(),
             "some url".to_owned(),
         )
-        .into();
+        .try_into()
+        .unwrap();
         let container_name = "new container".to_string();
         cargo_user
             .create_container(container_name.clone(), &storage_template)
@@ -434,7 +436,8 @@ mod tests {
             "cred_secret".to_owned(),
             "some url".to_owned(),
         )
-        .into();
+        .try_into()
+        .unwrap();
         let container_name = "new container".to_string();
         let container = cargo_user
             .create_container(container_name, &storage_template)

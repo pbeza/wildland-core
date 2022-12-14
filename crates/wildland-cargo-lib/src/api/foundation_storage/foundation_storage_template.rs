@@ -20,7 +20,9 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use wildland_corex::{StorageBackendType, StorageTemplate, CONTAINER_NAME_PARAM, OWNER_PARAM};
+use wildland_corex::{
+    StorageBackendType, StorageTemplate, StorageTemplateError, CONTAINER_NAME_PARAM, OWNER_PARAM,
+};
 
 use super::StorageCredentials;
 
@@ -78,9 +80,10 @@ impl Display for FoundationStorageTemplate {
     }
 }
 
-impl From<FoundationStorageTemplate> for StorageTemplate {
-    fn from(fst: FoundationStorageTemplate) -> Self {
-        StorageTemplate::new(StorageBackendType::FoundationStorage, Box::new(fst))
+impl TryFrom<FoundationStorageTemplate> for StorageTemplate {
+    type Error = StorageTemplateError;
+    fn try_from(fst: FoundationStorageTemplate) -> Result<Self, Self::Error> {
+        StorageTemplate::try_new(StorageBackendType::FoundationStorage, fst)
     }
 }
 
@@ -100,7 +103,8 @@ mod tests {
             "cred_secret".to_owned(),
             "sc_url".to_owned(),
         )
-        .into();
+        .try_into()
+        .unwrap();
         let fst = fst.with_name("name");
         let uuid = fst.uuid();
 
@@ -134,7 +138,8 @@ mod tests {
             "cred_secret".to_owned(),
             "sc_url".to_owned(),
         )
-        .into();
+        .try_into()
+        .unwrap();
         let fst = fst.with_name("name");
         let uuid = fst.uuid();
 
@@ -166,7 +171,8 @@ mod tests {
             "cred_secret".to_owned(),
             "sc_url".to_owned(),
         )
-        .into();
+        .try_into()
+        .unwrap();
         let expected_template = expected_template.with_name("name");
         let uuid = expected_template.uuid();
 
@@ -198,13 +204,16 @@ mod tests {
             "cred_secret".to_owned(),
             "sc_url".to_owned(),
         )
-        .into();
+        .try_into()
+        .unwrap();
 
-        let storage = fst.render(TemplateContext {
-            container_name: "Movies".to_owned(),
-            owner: "Quentin Tarantino".to_owned(),
-            access_mode: wildland_corex::StorageAccessMode::ReadWrite,
-        });
+        let storage = fst
+            .render(TemplateContext {
+                container_name: "Movies".to_owned(),
+                owner: "Quentin Tarantino".to_owned(),
+                access_mode: wildland_corex::StorageAccessMode::ReadWrite,
+            })
+            .unwrap();
         let storage_uuid = storage.uuid();
 
         let expected_storage_yaml: serde_yaml::Value = serde_yaml::from_str(&format!(

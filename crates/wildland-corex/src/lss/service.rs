@@ -377,10 +377,11 @@ mod tests {
         let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
         let service = LssService::new(lss_ref);
 
-        let storage_template = StorageTemplate::new(
+        let storage_template = StorageTemplate::try_new(
             StorageBackendType::FoundationStorage,
             HashMap::from([("field".to_owned(), "Some value".to_string())]),
-        );
+        )
+        .unwrap();
         let uuid = storage_template.uuid();
 
         service.save_storage_template(&storage_template).unwrap();

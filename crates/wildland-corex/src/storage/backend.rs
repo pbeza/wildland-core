@@ -55,7 +55,7 @@ pub enum StorageAccessMode {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum StorageBackendType {
-    FoundationStorage, // TODO maybe corex should not know anything about Foundation Storage, maybe backend type should be dynamic (like string value), not static enum type
+    FoundationStorage,
 }
 
 pub trait StorageBackend {}

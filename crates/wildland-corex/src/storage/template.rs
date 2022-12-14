@@ -18,6 +18,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use tera::{Context, Tera};
+use thiserror::Error;
 use uuid::Uuid;
 
 use super::StorageAccessMode;
@@ -37,6 +38,14 @@ pub struct TemplateContext {
     pub access_mode: StorageAccessMode,
 }
 
+#[derive(Debug, Error, Clone)]
+pub enum StorageTemplateError {
+    #[error("Ser/deserialization error: {0}")]
+    SerdeErr(String),
+    #[error("Template engine error : {0}")]
+    TemplateEngineErr(String),
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct StorageTemplate {
     name: Option<String>,
@@ -46,13 +55,17 @@ pub struct StorageTemplate {
 }
 
 impl StorageTemplate {
-    pub fn new(backend_type: StorageBackendType, template: impl Serialize) -> Self {
-        Self {
+    pub fn try_new(
+        backend_type: StorageBackendType,
+        template: impl Serialize,
+    ) -> Result<Self, StorageTemplateError> {
+        Ok(Self {
             name: None,
             uuid: Uuid::new_v4(),
             backend_type,
-            template: serde_json::to_value(&template).unwrap(), // TODO unwrap
-        }
+            template: serde_json::to_value(&template)
+                .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?,
+        })
     }
 
     pub fn with_name(mut self, name: impl ToString) -> Self {
@@ -72,16 +85,23 @@ impl StorageTemplate {
         self.uuid
     }
 
-    pub fn render(&self, params: TemplateContext) -> Storage {
-        let template_str = serde_json::to_string(&self.template).unwrap(); // TODO unwrap
+    pub fn render(&self, params: TemplateContext) -> Result<Storage, StorageTemplateError> {
+        let template_str = serde_json::to_string(&self.template)
+            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
         let filled_template = Tera::one_off(
-            &template_str,                             // TODO unwrap
-            &Context::from_serialize(params).unwrap(), // TODO unwrap
+            &template_str,
+            &Context::from_serialize(params)
+                .map_err(|e| StorageTemplateError::TemplateEngineErr(e.to_string()))?,
             true,
         )
-        .unwrap(); // TODO unwrap
-        let storage_data: serde_json::Value = serde_json::from_str(&filled_template).unwrap(); // TODO unwrap
-        Storage::new(self.name.clone(), self.backend_type, storage_data)
+        .map_err(|e| StorageTemplateError::TemplateEngineErr(e.to_string()))?;
+        let storage_data: serde_json::Value = serde_json::from_str(&filled_template)
+            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
+        Ok(Storage::new(
+            self.name.clone(),
+            self.backend_type,
+            storage_data,
+        ))
     }
 }
 
@@ -93,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_rendering_template() {
-        let storage_template = StorageTemplate::new(
+        let storage_template = StorageTemplate::try_new(
             StorageBackendType::FoundationStorage,
             HashMap::from([
                 (
@@ -105,7 +125,8 @@ mod tests {
                     "enum: {{ ACCESS_MODE }}".to_string(),
                 ),
             ]),
-        );
+        )
+        .unwrap();
 
         let params = TemplateContext {
             container_name: "Books".to_string(),
@@ -113,7 +134,7 @@ mod tests {
             access_mode: crate::StorageAccessMode::ReadOnly,
         };
 
-        let rendered_storage = storage_template.render(params);
+        let rendered_storage = storage_template.render(params).unwrap();
         let uuid = rendered_storage.uuid();
 
         let expected_storage_toml = format!(

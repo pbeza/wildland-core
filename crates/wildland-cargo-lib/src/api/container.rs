@@ -174,7 +174,8 @@ mod tests {
             "".to_owned(),
             "".to_owned(),
         )
-        .into();
+        .try_into()
+        .unwrap();
 
         Container {
             inner: catlib_service

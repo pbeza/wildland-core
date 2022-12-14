@@ -24,6 +24,7 @@ use thiserror::Error;
 use uuid::Uuid;
 use wildland_corex::{
     catlib_service::error::CatlibError, CryptoError, EncryptingKeypair, LssError, StorageTemplate,
+    StorageTemplateError,
 };
 use wildland_http_client::{
     error::WildlandHttpClientError,
@@ -43,6 +44,8 @@ pub struct StorageCredentials {
     credential_secret: String,
 }
 
+/// Errors that may happen during using Foundation Storage API (communication with EVS server)
+///
 #[repr(C)]
 #[derive(Error, Debug, Clone)]
 pub enum FsaError {
@@ -60,6 +63,8 @@ pub enum FsaError {
     LssError(#[from] LssError),
     #[error(transparent)]
     CatlibError(#[from] CatlibError),
+    #[error("Error while creating Storage Template: {0}")]
+    StorageTemplateError(StorageTemplateError),
     #[error("{0}")]
     Generic(String),
 }
@@ -143,7 +148,8 @@ impl FreeTierProcessHandle {
                             storage_credentials,
                             self.sc_url.clone(),
                         )
-                        .into();
+                        .try_into()
+                        .map_err(FsaError::StorageTemplateError)?;
 
                     Ok(storage_template)
                 }

@@ -52,6 +52,7 @@ mod ffi_binding {
         LssError(_),
         CatlibError(_),
         DeviceMetadataNotFound,
+        UserNotFound,
     }
     enum FsaError {
         StorageAlreadyExists,
@@ -59,6 +60,9 @@ mod ffi_binding {
         CryptoError(_),
         InvalidCredentialsFormat(_),
         LssError(_),
+        CatlibError(_),
+        StorageTemplateError(_),
+        Generic(_),
     }
     enum LssError {
         Error(_),
