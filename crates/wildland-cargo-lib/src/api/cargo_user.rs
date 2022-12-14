@@ -320,8 +320,15 @@ mod tests {
         let (mut cargo_user, catlib_service, mut forest) = setup;
 
         // when storage request is sent
+        let session_uuid = "00000000-0000-0000-0000-000000000001";
+        let session_id_response = format!(
+            r#"{{
+                "session_id": "{session_uuid}"
+            }}"#
+        );
         let storage_req_mock_1 = mockito::mock("PUT", "/get_storage")
             .with_status(202)
+            .with_body(session_id_response)
             .create();
 
         let process_handle = cargo_user
@@ -330,18 +337,22 @@ mod tests {
 
         // and verification is performed
         let verify_token_mock = mockito::mock("PUT", "/confirm_token")
-            .match_body(Matcher::JsonString(
-                "{\"email\":\"test@wildland.io\",\"verification_token\":\"123456\"}".to_string(),
-            ))
+            .match_body(Matcher::JsonString(format!(
+                r#"{{
+                    "email": "test@wildland.io",
+                    "verification_token": "123456",
+                    "session_id": "{session_uuid}"
+                }}"#
+            )))
             .with_status(200)
             .create();
 
         let response_json_str = r#"{"id": "00000000-0000-0000-0000-000000000001", "credentialID": "cred_id", "credentialSecret": "cred_secret"}"#;
         let response_base64 = base64::encode(response_json_str);
-        let full_response = format!("{{ \"encrypted_credentials\": \"{response_base64}\" }}");
+        let credentials_response = format!("{{ \"credentials\": \"{response_base64}\" }}");
         let storage_req_mock_2 = mockito::mock("PUT", "/get_storage")
             .with_status(200)
-            .with_body(full_response)
+            .with_body(credentials_response)
             .create();
 
         cargo_user
