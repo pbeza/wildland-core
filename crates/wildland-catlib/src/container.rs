@@ -17,26 +17,34 @@
 
 use super::*;
 use derivative::Derivative;
-use std::rc::Rc;
+use serde::{Deserialize, Serialize};
+use std::{collections::HashSet, rc::Rc};
 
 use wildland_corex::entities::{
-    Container as IContainer, ContainerData, ContainerPath, ContainerPaths, Forest,
-    Storage as IStorage,
+    Container as IContainer, ContainerPath, ContainerPaths, Forest, Storage as IStorage,
 };
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct ContainerData {
+    pub uuid: Uuid,
+    pub forest_uuid: Uuid,
+    pub name: String,
+    pub paths: ContainerPaths,
+}
+
+impl From<&str> for ContainerData {
+    fn from(str_data: &str) -> Self {
+        ron::from_str(str_data).unwrap()
+    }
+}
 
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
-pub struct Container {
-    data: ContainerData,
+pub(crate) struct Container {
+    pub(crate) data: ContainerData,
 
     #[derivative(Debug = "ignore")]
-    db: Rc<StoreDb>,
-}
-
-impl AsRef<ContainerData> for Container {
-    fn as_ref(&self) -> &ContainerData {
-        &self.data
-    }
+    pub(crate) db: Rc<StoreDb>,
 }
 
 impl Container {
@@ -50,11 +58,6 @@ impl Container {
             },
             db,
         }
-    }
-
-    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
-        let data = ron::from_str(value).unwrap();
-        Self { data, db }
     }
 }
 
@@ -154,7 +157,7 @@ impl IContainer for Container {
         template_uuid: Option<Uuid>,
         data: Vec<u8>,
     ) -> CatlibResult<Box<dyn IStorage>> {
-        let mut storage = Box::new(Storage::new(
+        let storage = Box::new(Storage::new(
             self.data.uuid,
             template_uuid,
             data,
@@ -170,6 +173,12 @@ impl IContainer for Container {
         self.save()
     }
 
+    /// Get the container's name
+    fn name(&mut self) -> CatlibResult<String> {
+        self.sync()?;
+        Ok(self.data.name.clone())
+    }
+
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
@@ -177,10 +186,19 @@ impl IContainer for Container {
         Model::delete(self)?;
         Ok(true)
     }
+
+    // Retrieve Container's uuid
+    fn uuid(&self) -> Uuid {
+        self.data.uuid
+    }
+
+    fn paths(&self) -> HashSet<ContainerPath> {
+        self.data.paths.clone()
+    }
 }
 
 impl Model for Container {
-    fn save(&mut self) -> CatlibResult<()> {
+    fn save(&self) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
             format!("container-{}", self.data.uuid),
@@ -190,6 +208,12 @@ impl Model for Container {
 
     fn delete(&mut self) -> CatlibResult<()> {
         delete_model(self.db.clone(), format!("container-{}", self.data.uuid))
+    }
+
+    fn sync(&mut self) -> CatlibResult<()> {
+        let data = fetch_container_data_by_uuid(self.db.clone(), &self.data.uuid)?;
+        self.data = data;
+        Ok(())
     }
 }
 
@@ -225,23 +249,17 @@ mod tests {
     #[rstest(catlib_with_forest as catlib)]
     fn fetch_created_container(catlib: CatLib) {
         let container = make_container(&catlib);
-        let container = catlib.get_container(&(*container).as_ref().uuid).unwrap();
+        let container = catlib.get_container(&container.uuid()).unwrap();
 
-        assert_eq!(
-            (*container.forest().unwrap()).as_ref().owner,
-            Identity([1; 32])
-        );
+        assert_eq!((*container.forest().unwrap()).owner(), Identity([1; 32]));
     }
 
     #[rstest(catlib_with_forest as catlib)]
     fn fetch_created_container_from_forest_obj(catlib: CatLib) {
         let container = make_container(&catlib);
-        let container = catlib.get_container(&(*container).as_ref().uuid).unwrap();
+        let container = catlib.get_container(&container.uuid()).unwrap();
 
-        assert_eq!(
-            (*container.forest().unwrap()).as_ref().owner,
-            Identity([1; 32])
-        );
+        assert_eq!((*container.forest().unwrap()).owner(), Identity([1; 32]));
     }
 
     #[rstest(catlib_with_forest as catlib)]
@@ -252,14 +270,8 @@ mod tests {
         container.add_path("/foo/bar".to_string()).unwrap();
         container.add_path("/bar/baz".to_string()).unwrap();
 
-        assert!((*container)
-            .as_ref()
-            .paths
-            .contains(&"/foo/bar".to_string()));
-        assert!((*container)
-            .as_ref()
-            .paths
-            .contains(&"/bar/baz".to_string()));
+        assert!(container.paths().contains(&"/foo/bar".to_string()));
+        assert!(container.paths().contains(&"/bar/baz".to_string()));
 
         // Try to find that container in the database
         let containers = forest
@@ -268,14 +280,8 @@ mod tests {
         assert_eq!(containers.len(), 1);
 
         // Ensure again that it still has the paths
-        assert!((*container)
-            .as_ref()
-            .paths
-            .contains(&"/foo/bar".to_string()));
-        assert!((*container)
-            .as_ref()
-            .paths
-            .contains(&"/bar/baz".to_string()));
+        assert!(container.paths().contains(&"/foo/bar".to_string()));
+        assert!(container.paths().contains(&"/bar/baz".to_string()));
 
         // Try to fetch the same (one) container, using two different paths. The result
         // should be only one (not two) containers.
@@ -314,10 +320,7 @@ mod tests {
         assert_eq!(containers.len(), 2);
 
         // Make sure that they are in fact two different containers
-        assert_ne!(
-            (*containers[0]).as_ref().uuid,
-            (*containers[1]).as_ref().uuid
-        );
+        assert_ne!(containers[0].uuid(), containers[1].uuid());
     }
 
     #[rstest(catlib_with_forest as catlib)]
@@ -340,17 +343,14 @@ mod tests {
             .unwrap();
 
         assert_eq!(containers.len(), 1);
-        assert_eq!((*containers[0]).as_ref().uuid, (*alpha).as_ref().uuid);
+        assert_eq!(containers[0].uuid(), alpha.uuid());
 
         let containers = catlib
             .find_containers_with_template(&Uuid::from_u128(1))
             .unwrap();
 
         assert_eq!(containers.len(), 2);
-        assert_ne!(
-            (*containers[0]).as_ref().uuid,
-            (*containers[1]).as_ref().uuid
-        );
+        assert_ne!(containers[0].uuid(), containers[1].uuid());
     }
 
     #[rstest(catlib_with_forest as catlib)]

@@ -31,7 +31,10 @@ pub use wildland_corex::{
 
 type VoidType = ();
 
-#[binding_wrapper]
+#[cfg_attr(
+    feature = "bindings",
+    binding_wrapper(source = "../../_generated_ffi_code/interface.rs")
+)]
 mod ffi_binding {
     extern "ExceptionTrait" {
         fn reason(&self) -> String;
@@ -118,7 +121,10 @@ mod ffi_binding {
         fn get_log_file_enabled(self: &dyn CargoCfgProvider) -> bool;
         fn get_log_file_path(self: &dyn CargoCfgProvider) -> Option<String>;
         fn get_log_file_rotate_directory(self: &dyn CargoCfgProvider) -> Option<String>;
+
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
         fn get_oslog_category(self: &dyn CargoCfgProvider) -> Option<String>;
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
         fn get_oslog_subsystem(self: &dyn CargoCfgProvider) -> Option<String>;
 
         fn get_foundation_cloud_env_mode(self: &dyn CargoCfgProvider) -> FoundationCloudMode;
@@ -253,8 +259,8 @@ mod ffi_binding {
         fn get_paths(self: &Arc<Mutex<Container>>) -> Result<Vec<String>, CatlibError>;
 
         fn set_name(self: &Arc<Mutex<Container>>, new_name: String);
-        fn get_name(self: &Arc<Mutex<Container>>) -> String;
-        fn stringify(self: &Arc<Mutex<Container>>) -> String;
+        fn get_name(self: &Arc<Mutex<Container>>) -> Result<String, CatlibError>;
+        fn stringify(self: &Arc<Mutex<Container>>) -> Result<String, CatlibError>;
         fn duplicate(self: &Arc<Mutex<Container>>) -> Result<Arc<Mutex<Container>>, CatlibError>;
 
         //

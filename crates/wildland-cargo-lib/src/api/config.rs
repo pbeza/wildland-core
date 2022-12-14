@@ -84,7 +84,10 @@ pub trait CargoCfgProvider {
     fn get_log_file_enabled(&self) -> bool;
     fn get_log_file_path(&self) -> Option<String>;
     fn get_log_file_rotate_directory(&self) -> Option<String>;
+
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     fn get_oslog_category(&self) -> Option<String>;
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     fn get_oslog_subsystem(&self) -> Option<String>;
 
     fn get_foundation_cloud_env_mode(&self) -> FoundationCloudMode;
@@ -205,12 +208,15 @@ pub struct LoggerConfig {
     /// Name of the system.log category. If Some() provided together with
     /// oslog_subsystem category, enables the oslog facility. If OsLog is enabled,
     /// then all other facilities are not initialized.
-    #[derivative(Default(value = "None"))] // todo change to something else?
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[derivative(Default(value = "None"))]
     pub oslog_category: Option<String>,
 
     /// Name of the system.log subsystem. If Some() provided together with
     /// oslog_category, enables the oslog facility. If OsLog is enabled,
     /// then all other facilities are not initialized.
+
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     #[derivative(Default(value = "None"))]
     pub oslog_subsystem: Option<String>,
 }
@@ -221,9 +227,9 @@ impl LoggerConfig {
     /// returns `true`. However if the configuration does not contain all the data
     /// necessary to start the logger or the platform does not support logging
     /// to the OsLog (i.e. linux,windows) then `false` is returned.
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     pub fn is_oslog_eligible(&self) -> bool {
-        let correct_platform = cfg!(target_os = "macos") || cfg!(target_os = "ios");
-        if self.oslog_category.is_some() && self.oslog_subsystem.is_some() && correct_platform {
+        if self.oslog_category.is_some() && self.oslog_subsystem.is_some() {
             return true;
         }
         false
@@ -321,7 +327,10 @@ pub fn collect_config(
                         serde_logger_default_rot_dir().to_string_lossy().to_string()
                     }),
             ),
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
             oslog_category: config_provider.get_oslog_category(),
+
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
             oslog_subsystem: config_provider.get_oslog_subsystem(),
         },
         fsa_config: config_provider.get_foundation_cloud_env_mode().into(),
@@ -374,8 +383,6 @@ mod tests {
                     log_file_path: PathBuf::from("cargo_lib_log"),
                     log_file_rotate_directory: PathBuf::from("."),
                     log_file_enabled: true,
-                    oslog_category: None,
-                    oslog_subsystem: None,
                 }
             }
         )
@@ -405,8 +412,6 @@ mod tests {
                     log_file_path: LoggerConfig::default().log_file_path,
                     log_file_rotate_directory: LoggerConfig::default().log_file_rotate_directory,
                     log_file_enabled: false,
-                    oslog_category: None,
-                    oslog_subsystem: None,
                 }
             }
         )

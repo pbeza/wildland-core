@@ -24,7 +24,8 @@ pub(crate) type StoreDb = PathDatabase<CatLibData, Ron>;
 
 pub trait Model {
     fn delete(&mut self) -> CatlibResult<()>;
-    fn save(&mut self) -> CatlibResult<()>;
+    fn save(&self) -> CatlibResult<()>;
+    fn sync(&mut self) -> CatlibResult<()>;
 }
 
 pub fn get_version() -> &'static str {

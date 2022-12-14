@@ -16,22 +16,36 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::{db::delete_model, db::save_model};
+use crate::{bridge::BridgeData, container::ContainerData, db::delete_model, db::save_model};
 use derivative::Derivative;
+use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
 use wildland_corex::entities::{
-    Bridge as IBridge, Container as IContainer, ContainerPath, Forest as IForest, ForestData,
-    Identity, Signers,
+    Bridge as IBridge, Container as IContainer, ContainerPath, Forest as IForest, Identity, Signers,
 };
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct ForestData {
+    pub uuid: Uuid,
+    pub signers: Signers,
+    pub owner: Identity,
+    pub data: Vec<u8>,
+}
+
+impl From<&str> for ForestData {
+    fn from(str_data: &str) -> Self {
+        ron::from_str(str_data).unwrap()
+    }
+}
 
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
-pub struct Forest {
-    data: ForestData,
+pub(crate) struct Forest {
+    pub(crate) data: ForestData,
 
     #[derivative(Debug = "ignore")]
-    db: Rc<StoreDb>,
+    pub(crate) db: Rc<StoreDb>,
 }
 
 impl Forest {
@@ -45,17 +59,6 @@ impl Forest {
             },
             db,
         }
-    }
-
-    pub fn from_db_entry(value: &str, db: Rc<StoreDb>) -> Self {
-        let data = ron::from_str(value).unwrap();
-        Self { data, db }
-    }
-}
-
-impl AsRef<ForestData> for Forest {
-    fn as_ref(&self) -> &ForestData {
-        &self.data
     }
 }
 
@@ -91,10 +94,13 @@ impl IForest for Forest {
         let containers: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("container-"))
-            .map(|(_, container_str)| Container::from_db_entry(container_str, self.db.clone()))
+            .map(|(_, container_str)| Container {
+                data: ContainerData::from(container_str.as_str()),
+                db: self.db.clone(),
+            })
             .filter(|container| {
                 container.forest().is_ok()
-                    && (*container.forest().unwrap()).as_ref().uuid == self.data.uuid
+                    && (*container.forest().unwrap()).uuid() == self.data.uuid
             })
             .map(|container| Box::new(container) as Box<dyn IContainer>)
             .collect();
@@ -109,10 +115,10 @@ impl IForest for Forest {
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
-    fn update(&mut self, data: Vec<u8>) -> CatlibResult<&mut dyn IForest> {
+    fn update(&mut self, data: Vec<u8>) -> CatlibResult<()> {
         self.data.data = data;
         self.save()?;
-        Ok(self)
+        Ok(())
     }
 
     /// ## Errors
@@ -147,7 +153,7 @@ impl IForest for Forest {
     /// ```
     #[tracing::instrument(level = "debug", skip_all)]
     fn create_container(&self, name: String) -> CatlibResult<Box<dyn IContainer>> {
-        let mut container = Box::new(Container::new(self.data.uuid, name, self.db.clone()));
+        let container = Box::new(Container::new(self.data.uuid, name, self.db.clone()));
         container.save()?;
 
         Ok(container)
@@ -178,7 +184,7 @@ impl IForest for Forest {
         path: ContainerPath,
         link_data: Vec<u8>,
     ) -> CatlibResult<Box<dyn IBridge>> {
-        let mut bridge = Box::new(Bridge::new(
+        let bridge = Box::new(Bridge::new(
             self.data.uuid,
             path,
             link_data,
@@ -202,10 +208,12 @@ impl IForest for Forest {
         let bridges: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("bridge-"))
-            .map(|(_, bridge_str)| Bridge::from_db_entry(bridge_str, self.db.clone()))
+            .map(|(_, bridge_str)| Bridge {
+                data: BridgeData::from(bridge_str.as_str()),
+                db: self.db.clone(),
+            })
             .filter(|bridge| {
-                (*bridge.forest().unwrap()).as_ref().uuid == self.data.uuid
-                    && bridge.as_ref().path == path
+                (*bridge.forest().unwrap()).uuid() == self.data.uuid && bridge.data.path == path
             })
             .collect();
 
@@ -248,10 +256,13 @@ impl IForest for Forest {
         let containers: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("container-"))
-            .map(|(_, container_str)| Container::from_db_entry(container_str, self.db.clone()))
+            .map(|(_, container_str)| Container {
+                data: ContainerData::from(container_str.as_str()),
+                db: self.db.clone(),
+            })
             .filter(|container| {
-                (*container.forest().unwrap()).as_ref().uuid == self.data.uuid
-                    && container.as_ref().paths.iter().any(|container_path| {
+                (*container.forest().unwrap()).uuid() == self.data.uuid
+                    && container.paths().iter().any(|container_path| {
                         paths.iter().any(|path| {
                             (include_subdirs && container_path.starts_with(path))
                                 || container_path.eq(path)
@@ -266,10 +277,28 @@ impl IForest for Forest {
             _ => Ok(containers),
         }
     }
+
+    fn data(&mut self) -> CatlibResult<Vec<u8>> {
+        self.sync()?;
+        Ok(self.data.data.clone())
+    }
+
+    fn uuid(&self) -> Uuid {
+        self.data.uuid // Uuid should not change - no need to sync with db
+    }
+
+    fn owner(&self) -> Identity {
+        self.data.owner.clone()
+    }
+
+    fn signers(&mut self) -> CatlibResult<Signers> {
+        self.sync()?;
+        Ok(self.data.signers.clone())
+    }
 }
 
 impl Model for Forest {
-    fn save(&mut self) -> CatlibResult<()> {
+    fn save(&self) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
             format!("forest-{}", self.data.uuid),
@@ -279,6 +308,12 @@ impl Model for Forest {
 
     fn delete(&mut self) -> CatlibResult<()> {
         delete_model(self.db.clone(), format!("forest-{}", self.data.uuid))
+    }
+
+    fn sync(&mut self) -> CatlibResult<()> {
+        let forest_data = fetch_forest_data_by_uuid(self.db.clone(), &self.data.uuid)?;
+        self.data = forest_data;
+        Ok(())
     }
 }
 
@@ -309,20 +344,20 @@ mod tests {
     fn read_new_forest(catlib: CatLib) {
         make_forest_with_signer(&catlib);
 
-        let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
+        let mut forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
-        assert_eq!((*forest).as_ref().owner, Identity([1; 32]));
-        assert_eq!((*forest).as_ref().signers.len(), 1);
+        assert_eq!(forest.owner(), Identity([1; 32]));
+        assert_eq!(forest.signers().unwrap().len(), 1);
     }
 
     #[rstest]
     fn read_new_forest_by_uuid(catlib: CatLib) {
         let f = make_forest_with_signer(&catlib);
 
-        let forest = catlib.get_forest(&(*f).as_ref().uuid).unwrap();
+        let mut forest = catlib.get_forest(&f.uuid()).unwrap();
 
-        assert_eq!((*forest).as_ref().owner, Identity([1; 32]));
-        assert_eq!((*forest).as_ref().signers.len(), 1);
+        assert_eq!(forest.owner(), Identity([1; 32]));
+        assert_eq!(forest.signers().unwrap().len(), 1);
     }
 
     #[rstest]
@@ -334,11 +369,11 @@ mod tests {
 
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
-        assert_eq!((*forest).as_ref().owner, Identity([1; 32]));
+        assert_eq!((*forest).owner(), Identity([1; 32]));
 
         let forest = catlib.find_forest(&Identity([2; 32])).unwrap();
 
-        assert_eq!((*forest).as_ref().owner, Identity([2; 32]));
+        assert_eq!((*forest).owner(), Identity([2; 32]));
     }
 
     #[rstest]
@@ -363,9 +398,9 @@ mod tests {
 
         f.update(b"some data".to_vec()).unwrap();
 
-        let forest = catlib.find_forest(&(*f).as_ref().owner).unwrap();
+        let mut forest = catlib.find_forest(&f.owner()).unwrap();
 
-        assert_eq!((*forest).as_ref().data, b"some data".to_vec());
+        assert_eq!(forest.data().unwrap(), b"some data".to_vec());
     }
 
     #[rstest]
@@ -375,7 +410,7 @@ mod tests {
         f.delete().unwrap();
 
         assert!(matches!(
-            catlib.find_forest(&(*f).as_ref().owner),
+            catlib.find_forest(&f.owner()),
             Err(CatlibError::NoRecordsFound)
         ));
     }
@@ -387,7 +422,7 @@ mod tests {
         f.delete().unwrap();
 
         assert!(matches!(
-            catlib.find_forest(&(*f).as_ref().owner),
+            catlib.find_forest(&f.owner()),
             Err(CatlibError::NoRecordsFound)
         ));
     }
@@ -398,15 +433,15 @@ mod tests {
 
         f.update(b"some data".to_vec()).unwrap();
 
-        let mut forest = catlib.find_forest(&(*f).as_ref().owner).unwrap();
+        let mut forest = catlib.find_forest(&f.owner()).unwrap();
 
-        assert_eq!((*forest).as_ref().data, b"some data".to_vec());
+        assert_eq!(forest.data().unwrap(), b"some data".to_vec());
 
         forest.update(b"updated data".to_vec()).unwrap();
 
-        let forest = catlib.find_forest(&(*f).as_ref().owner).unwrap();
+        let mut forest = catlib.find_forest(&f.owner()).unwrap();
 
-        assert_eq!((*forest).as_ref().data, b"updated data".to_vec());
+        assert_eq!(forest.data().unwrap(), b"updated data".to_vec());
     }
 
     #[rstest]
@@ -417,22 +452,22 @@ mod tests {
 
         let mut forest = make_forest_with_signer(&catlib);
 
-        assert_eq!((*forest).as_ref().owner, Identity([1; 32]));
+        assert_eq!(forest.owner(), Identity([1; 32]));
 
-        assert_eq!((*forest).as_ref().signers.len(), 1);
+        assert_eq!(forest.signers().unwrap().len(), 1);
 
         forest.add_signer(alice).unwrap();
 
         // Find the same forest by it's owner and add one more signer
         let mut forest = catlib.find_forest(&Identity([1; 32])).unwrap();
         forest.add_signer(bob).unwrap();
-        assert_eq!((*forest).as_ref().signers.len(), 3);
+        assert_eq!(forest.signers().unwrap().len(), 3);
 
         // Add one more...
         forest.add_signer(charlie).unwrap();
 
         // ...but this trime fetch with uuid
-        let forest = catlib.get_forest(&(*forest).as_ref().uuid).unwrap();
-        assert_eq!((*forest).as_ref().signers.len(), 4);
+        let mut forest = catlib.get_forest(&forest.uuid()).unwrap();
+        assert_eq!(forest.signers().unwrap().len(), 4);
     }
 }
