@@ -22,19 +22,21 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConfirmTokenReq {
+    pub session_id: String,
     pub email: String,
     pub verification_token: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetStorageReq {
+    pub session_id: Option<String>,
     pub email: String,
-    pub pubkey: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetStorageRes {
-    pub encrypted_credentials: Option<String>,
+    pub credentials: Option<String>,
+    pub session_id: Option<String>,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -74,21 +76,13 @@ impl EvsClient {
             .send()
             .map_err(Rc::new)?;
         let response = check_status_code(response)?;
-        match response.status_code {
-            200 => Ok(response.json().map_err(Rc::new)?),
-            // Status 2xx without body
-            _ => Ok(GetStorageRes {
-                encrypted_credentials: None,
-            }),
-        }
+        Ok(response.json().map_err(Rc::new)?)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::evs::constants::test_utilities::{
-        EMAIL, ENCRYPTED_CREDENTIALS, PUBKEY, VERIFICATION_TOKEN,
-    };
+    use crate::evs::constants::test_utilities::{CREDENTIALS, EMAIL, VERIFICATION_TOKEN};
     use mockito::{mock, server_url};
     use serde_json::json;
 
@@ -106,6 +100,7 @@ mod tests {
         let request = ConfirmTokenReq {
             email: EMAIL.into(),
             verification_token: VERIFICATION_TOKEN.into(),
+            session_id: "some uuid".to_string(),
         };
 
         let m = mock("PUT", "/confirm_token").create();
@@ -123,11 +118,11 @@ mod tests {
         // given
         let request = GetStorageReq {
             email: EMAIL.into(),
-            pubkey: PUBKEY.into(),
+            session_id: Some("some uuid".to_string()),
         };
 
         let m = mock("PUT", "/get_storage")
-            .with_body(json!({ "encrypted_credentials": ENCRYPTED_CREDENTIALS }).to_string())
+            .with_body(json!({ "credentials": CREDENTIALS }).to_string())
             .create();
 
         // when
@@ -135,9 +130,6 @@ mod tests {
 
         // then
         m.assert();
-        assert_eq!(
-            response.encrypted_credentials.unwrap(),
-            ENCRYPTED_CREDENTIALS
-        );
+        assert_eq!(response.credentials.unwrap(), CREDENTIALS);
     }
 }
