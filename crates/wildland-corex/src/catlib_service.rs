@@ -125,7 +125,7 @@ impl CatLibService {
             owner: forest.owner().encode(),
             access_mode: crate::StorageAccessMode::ReadWrite,
             container_uuid: container.uuid(),
-            paths: container.paths(),
+            paths: container.paths().into_iter().collect(),
         };
         // !!! RFC REVIEW TODO should we revert Container when creating Storage fails or maybe return Container in some incomplete state
         let storage = storage_template

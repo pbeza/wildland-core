@@ -16,7 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, fmt::Debug};
+use std::fmt::Debug;
 use tera::{Context, Tera};
 use thiserror::Error;
 use uuid::Uuid;
@@ -41,7 +41,7 @@ pub struct TemplateContext {
     #[serde(rename = "CONTAINER_UUID")]
     pub container_uuid: Uuid,
     #[serde(rename = "PATHS")]
-    pub paths: HashSet<String>,
+    pub paths: Vec<String>,
 }
 
 #[derive(Debug, Error, Clone)]
@@ -115,10 +115,7 @@ impl StorageTemplate {
 mod tests {
     use crate::{StorageBackendType, StorageTemplate, TemplateContext};
     use pretty_assertions::assert_eq;
-    use std::{
-        collections::{HashMap, HashSet},
-        str::FromStr,
-    };
+    use std::{collections::HashMap, str::FromStr};
     use uuid::Uuid;
 
     #[test]
@@ -145,7 +142,7 @@ mod tests {
             owner: "John Doe".to_owned(),
             access_mode: crate::StorageAccessMode::ReadOnly,
             container_uuid: Uuid::from_str("00000000-0000-0000-0000-000000001111").unwrap(),
-            paths: HashSet::from(["path1".to_owned(), "path2".to_owned()]),
+            paths: vec!["path1".to_owned(), "path2".to_owned()],
         };
 
         let rendered_storage = storage_template.render(params).unwrap();

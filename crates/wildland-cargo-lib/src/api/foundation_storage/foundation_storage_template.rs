@@ -91,7 +91,7 @@ impl TryFrom<FoundationStorageTemplate> for StorageTemplate {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
-    use std::{collections::HashSet, str::FromStr};
+    use std::str::FromStr;
     use uuid::Uuid;
     use wildland_corex::TemplateContext;
 
@@ -213,7 +213,7 @@ mod tests {
                 owner: "Quentin Tarantino".to_owned(),
                 access_mode: wildland_corex::StorageAccessMode::ReadWrite,
                 container_uuid: Uuid::new_v4(),
-                paths: HashSet::new(),
+                paths: Vec::new(),
             })
             .unwrap();
         let storage_uuid = storage.uuid();
