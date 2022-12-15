@@ -127,9 +127,10 @@ impl CatLibService {
             container_uuid: container.uuid(),
             paths: container.paths(),
         };
+        // !!! RFC REVIEW TODO should we revert Container when creating Storage fails or maybe return Container in some incomplete state
         let storage = storage_template
             .render(template_context)
-            .map_err(|e| CatlibError::Generic(e.to_string()))?; // TODO should we revert container?
+            .map_err(|e| CatlibError::Generic(e.to_string()))?;
 
         let serialized_storage = serde_json::to_vec(&storage).map_err(|e| {
             CatlibError::Generic(format!("Could not serialize storage template: {e}"))
