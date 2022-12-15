@@ -150,6 +150,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cfg-expr"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bbc13bf6290a6b202cc3efb36f7ec2b739a80634215630c8053a313edf6abef"
+dependencies = [
+ "smallvec",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -249,9 +258,12 @@ dependencies = [
 
 [[package]]
 name = "convert_case"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb4a24b1aaf0fd0ce8b45161144d6f42cd91677fd5940fd431183eb023b3a2b8"
+checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
+dependencies = [
+ "unicode-segmentation",
+]
 
 [[package]]
 name = "cpufeatures"
@@ -1306,9 +1318,9 @@ dependencies = [
 
 [[package]]
 name = "rstest"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9c9dc66cc29792b663ffb5269be669f1613664e69ad56441fdb895c2347b930"
+checksum = "b07f2d176c472198ec1e6551dc7da28f1c089652f66a7b722676c2238ebc0edf"
 dependencies = [
  "futures",
  "futures-timer",
@@ -1318,15 +1330,16 @@ dependencies = [
 
 [[package]]
 name = "rstest_macros"
-version = "0.14.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5015e68a0685a95ade3eee617ff7101ab6a3fc689203101ca16ebc16f2b89c66"
+checksum = "7229b505ae0706e64f37ffc54a9c163e11022a6636d58fe1f3f52018257ff9f7"
 dependencies = [
  "cfg-if",
  "proc-macro2",
  "quote",
  "rustc_version",
  "syn",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -1372,29 +1385,35 @@ dependencies = [
 
 [[package]]
 name = "rusty-bind"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "d73ab100b325b2e50fe1c9cdd9bf5185acdbd2d50ccd2a1c5b25cc30544fb97b"
+checksum = "bbfed8b148c01f6a9854ac6851b2675121144e10465e2b32183eeec77ecdd2af"
 dependencies = [
+ "quote",
  "rusty-bind-parser",
+ "syn",
 ]
 
 [[package]]
 name = "rusty-bind-build"
-version = "0.1.3"
+version = "0.2.0"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "08b0eacbe3ae909492cd1f4ac61d0762b04494761fcc6c42e734a2ee595c0769"
+checksum = "e5963d80b339938f6eee477e09ab31752b157f6e940b49f90657fc69e2cfa336"
 dependencies = [
+ "anyhow",
+ "cfg-expr",
  "rusty-bind-parser",
  "syn",
 ]
 
 [[package]]
 name = "rusty-bind-parser"
-version = "0.3.3"
+version = "0.4.0"
 source = "registry+https://crates.wildland.dev/git/index"
-checksum = "9ae385ad98bac0521c5f9d2dcd248ba715f00ed6515bf779087544503aee10a3"
+checksum = "af47f10bcf769a0fef986b8278635a96eee6601703fc0287f71c46bba1f616bf"
 dependencies = [
+ "anyhow",
+ "cfg-expr",
  "const_format",
  "convert_case",
  "proc-macro2",
@@ -1867,6 +1886,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "unicode-segmentation"
+version = "1.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fdbf052a0783de01e944a6ce7a8cb939e295b1e7be835a1112c3b9a7f047a5a"
+
+[[package]]
 name = "unicode-width"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2096,10 +2121,10 @@ version = "0.30.1-rc.0"
 dependencies = [
  "hex",
  "mockall",
+ "rstest",
  "serde",
  "serde_json",
  "sha2 0.10.6",
- "tempfile",
  "thiserror",
  "tracing",
  "uuid",

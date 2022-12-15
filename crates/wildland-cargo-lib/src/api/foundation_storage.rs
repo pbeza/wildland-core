@@ -15,18 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::rc::Rc;
-
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 use wildland_corex::{
-    catlib_service::error::CatlibError, storage::StorageTemplateTrait, CryptoError,
-    EncryptingKeypair, LssError,
+    catlib_service::error::CatlibError, storage::StorageTemplateTrait, CryptoError, LssError,
 };
 use wildland_http_client::{
     error::WildlandHttpClientError,
-    evs::{ConfirmTokenReq, EvsClient, GetStorageReq},
+    evs::{ConfirmTokenReq, EvsClient, GetStorageReq, GetStorageRes},
 };
 
 use super::{config::FoundationStorageApiConfig, storage_template::StorageTemplate};
@@ -74,8 +71,6 @@ impl From<FoundationStorageTemplate> for StorageTemplate {
 #[repr(C)]
 #[derive(Error, Debug, Clone)]
 pub enum FsaError {
-    #[error("Storage already exists for given email address")]
-    StorageAlreadyExists,
     #[error("Evs Error: {0}")]
     EvsError(WildlandHttpClientError),
     #[error("Crypto error: {0}")]
@@ -111,18 +106,24 @@ impl FoundationStorageApi {
         &self,
         email: String,
     ) -> Result<FreeTierProcessHandle, FsaError> {
-        let encrypting_keypair = EncryptingKeypair::new();
         self.evs_client
             .get_storage(GetStorageReq {
                 email: email.clone(),
-                pubkey: encrypting_keypair.encode_pub(),
+                session_id: None,
             })
             .map_err(FsaError::EvsError)
-            .and_then(|resp| match resp.encrypted_credentials {
-                Some(_) => Err(FsaError::StorageAlreadyExists),
-                None => Ok(FreeTierProcessHandle {
+            .and_then(|resp| match resp {
+                GetStorageRes {
+                    session_id: None, ..
+                } => Err(FsaError::Generic(
+                    "EVS did not return expected session id".to_string(),
+                )),
+                GetStorageRes {
+                    session_id: Some(session_id),
+                    ..
+                } => Ok(FreeTierProcessHandle {
                     email,
-                    encrypting_keypair: Rc::new(encrypting_keypair),
+                    session_id,
                     evs_client: self.evs_client.clone(),
                     sc_url: self.sc_url.clone(),
                 }),
@@ -135,7 +136,7 @@ impl FoundationStorageApi {
 #[derive(Clone)]
 pub struct FreeTierProcessHandle {
     email: String,
-    encrypting_keypair: Rc<EncryptingKeypair>, // TODO WILX-269 EVS communication encryption (remove it if choose to relay on SSL only)
+    session_id: String,
     evs_client: EvsClient,
     sc_url: String,
 }
@@ -148,6 +149,7 @@ impl FreeTierProcessHandle {
     pub fn verify_email(&self, verification_token: String) -> Result<StorageTemplate, FsaError> {
         self.evs_client
             .confirm_token(ConfirmTokenReq {
+                session_id: self.session_id.clone(),
                 email: self.email.clone(),
                 verification_token,
             })
@@ -156,13 +158,16 @@ impl FreeTierProcessHandle {
         self.evs_client
             .get_storage(GetStorageReq {
                 email: self.email.clone(),
-                pubkey: self.encrypting_keypair.encode_pub(),
+                session_id: Some(self.session_id.clone()),
             })
             .map_err(FsaError::EvsError)
-            .and_then(|resp| match resp.encrypted_credentials {
+            .and_then(|resp| match resp.credentials {
                 Some(payload) => {
-                    let payload = payload.replace('\n', ""); // make sure that content is properly encoded
-                    let decoded = base64::decode(payload).unwrap();
+                    let decoded = base64::decode(payload).map_err(|e| {
+                        FsaError::Generic(format!(
+                            "EVS returned incorrectly formatted base64 credentials: {e}"
+                        ))
+                    })?;
                     let storage_credentials: StorageCredentials = serde_json::from_slice(&decoded)
                         .map_err(|e| FsaError::InvalidCredentialsFormat(e.to_string()))?;
 

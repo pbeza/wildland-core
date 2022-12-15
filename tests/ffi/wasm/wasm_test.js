@@ -88,10 +88,6 @@ wildland().then((wlib) => {
         get_log_file_path: function () { return new wlib.OptionalRustString(); },
         get_log_file_rotate_directory: function () { return new wlib.OptionalRustString(); },
 
-        // config: logger oslog
-        get_oslog_category: function () { return new wlib.OptionalRustString(); },
-        get_oslog_subsystem: function () { return new wlib.OptionalRustString(); },
-
         get_foundation_cloud_env_mode: function () { return wlib.FoundationCloudMode.Dev }
     });
 

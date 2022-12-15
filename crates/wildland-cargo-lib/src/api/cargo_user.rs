@@ -27,7 +27,6 @@ use crate::{
 use derivative::Derivative;
 use uuid::Uuid;
 use wildland_corex::catlib_service::{entities::Forest, error::CatlibError, CatLibService};
-use wildland_corex::LssService;
 
 use super::{
     config::FoundationStorageApiConfig,
@@ -81,8 +80,6 @@ pub struct CargoUser {
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
     #[derivative(Debug = "ignore")]
-    lss_service: LssService,
-    #[derivative(Debug = "ignore")]
     user_context: UserContext,
     #[derivative(Debug = "ignore")]
     fsa_api: FoundationStorageApi,
@@ -94,7 +91,6 @@ impl CargoUser {
         all_devices: Vec<String>,
         forest: Box<dyn Forest>,
         catlib_service: CatLibService,
-        lss_service: LssService,
         fsa_config: &FoundationStorageApiConfig,
     ) -> Self {
         Self {
@@ -102,7 +98,6 @@ impl CargoUser {
             all_devices,
             forest,
             catlib_service,
-            lss_service,
             user_context: UserContext::new(),
             fsa_api: FoundationStorageApi::new(fsa_config),
         }
@@ -211,7 +206,7 @@ All devices:
     ///
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn get_storage_templates(&self) -> Result<Vec<StorageTemplate>, GetStorageTemplateError> {
-        self.lss_service
+        self.catlib_service
             .get_storage_templates_data()?
             .into_iter()
             .map(|st_data| {
@@ -249,7 +244,8 @@ All devices:
         token: String,
     ) -> Result<StorageTemplate, FsaError> {
         let storage_template = process_handle.verify_email(token)?;
-        self.lss_service.save_storage_template(&storage_template)?;
+        self.catlib_service
+            .save_storage_template(&storage_template)?;
         self.catlib_service
             .mark_free_storage_granted(self.forest.as_mut())?;
         Ok(storage_template)
@@ -271,12 +267,11 @@ mod tests {
     use uuid::Uuid;
     use wildland_corex::catlib_service::entities::Forest;
     use wildland_corex::{
-        CatLibService, DeviceMetadata, ForestMetaData, LocalSecureStorage, LssService,
-        SigningKeypair, WildlandIdentity,
+        CatLibService, DeviceMetadata, ForestMetaData, SigningKeypair, WildlandIdentity,
     };
 
     use crate::api::config::FoundationStorageApiConfig;
-    use crate::api::utils::test::{catlib_service, lss_stub};
+    use crate::api::utils::test::catlib_service;
     use crate::api::{
         foundation_storage::FoundationStorageTemplate, storage_template::StorageTemplate,
     };
@@ -284,16 +279,7 @@ mod tests {
     use super::CargoUser;
 
     #[fixture]
-    fn setup(
-        catlib_service: CatLibService,
-        lss_stub: &'static dyn LocalSecureStorage,
-    ) -> (
-        CargoUser,
-        CatLibService,
-        Box<dyn Forest>,
-        &'static dyn LocalSecureStorage,
-    ) {
-        let lss_service = LssService::new(lss_stub);
+    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Box<dyn Forest>) {
         let this_dev_name = "My device".to_string();
 
         let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
@@ -319,31 +305,30 @@ mod tests {
             vec![this_dev_name],
             forest,
             catlib_service.clone(),
-            lss_service,
             &FoundationStorageApiConfig {
                 evs_url: mockito::server_url(),
                 sc_url: "".to_string(),
             },
         );
 
-        (cargo_user, catlib_service, forest_copy, lss_stub)
+        (cargo_user, catlib_service, forest_copy)
     }
 
     #[rstest]
-    fn test_requesting_free_tier_storage(
-        setup: (
-            CargoUser,
-            CatLibService,
-            Box<dyn Forest>,
-            &'static dyn LocalSecureStorage,
-        ),
-    ) {
+    fn test_requesting_free_tier_storage(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
         // given setup
-        let (mut cargo_user, catlib_service, mut forest, lss_stub) = setup;
+        let (mut cargo_user, catlib_service, mut forest) = setup;
 
         // when storage request is sent
+        let session_uuid = "00000000-0000-0000-0000-000000000001";
+        let session_id_response = format!(
+            r#"{{
+                "session_id": "{session_uuid}"
+            }}"#
+        );
         let storage_req_mock_1 = mockito::mock("PUT", "/get_storage")
             .with_status(202)
+            .with_body(session_id_response)
             .create();
 
         let process_handle = cargo_user
@@ -352,18 +337,22 @@ mod tests {
 
         // and verification is performed
         let verify_token_mock = mockito::mock("PUT", "/confirm_token")
-            .match_body(Matcher::JsonString(
-                "{\"email\":\"test@wildland.io\",\"verification_token\":\"123456\"}".to_string(),
-            ))
+            .match_body(Matcher::JsonString(format!(
+                r#"{{
+                    "email": "test@wildland.io",
+                    "verification_token": "123456",
+                    "session_id": "{session_uuid}"
+                }}"#
+            )))
             .with_status(200)
             .create();
 
         let response_json_str = r#"{"id": "00000000-0000-0000-0000-000000000001", "credentialID": "cred_id", "credentialSecret": "cred_secret"}"#;
         let response_base64 = base64::encode(response_json_str);
-        let full_response = format!("{{ \"encrypted_credentials\": \"{response_base64}\" }}");
+        let credentials_response = format!("{{ \"credentials\": \"{response_base64}\" }}");
         let storage_req_mock_2 = mockito::mock("PUT", "/get_storage")
             .with_status(200)
-            .with_body(full_response)
+            .with_body(credentials_response)
             .create();
 
         cargo_user
@@ -389,13 +378,7 @@ mod tests {
         );
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(
-                &lss_stub
-                    .get(
-                        "wildland.storage_template.00000000-0000-0000-0000-000000000001"
-                            .to_string()
-                    )
-                    .unwrap()
-                    .unwrap()
+                &catlib_service.get_storage_templates_data().unwrap()[0]
             )
             .unwrap(),
             expected_template_json
@@ -408,16 +391,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_creating_container(
-        setup: (
-            CargoUser,
-            CatLibService,
-            Box<dyn Forest>,
-            &'static dyn LocalSecureStorage,
-        ),
-    ) {
+    fn test_creating_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
         // given setup
-        let (cargo_user, catlib_service, forest, _lss_stub) = setup;
+        let (cargo_user, catlib_service, forest) = setup;
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
@@ -442,16 +418,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_getting_created_container(
-        setup: (
-            CargoUser,
-            CatLibService,
-            Box<dyn Forest>,
-            &'static dyn LocalSecureStorage,
-        ),
-    ) {
+    fn test_getting_created_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
         // given setup
-        let (cargo_user, _catlib_service, _forest, _lss_stub) = setup;
+        let (cargo_user, _catlib_service, _forest) = setup;
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
@@ -477,16 +446,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_delete_created_container(
-        setup: (
-            CargoUser,
-            CatLibService,
-            Box<dyn Forest>,
-            &'static dyn LocalSecureStorage,
-        ),
-    ) {
+    fn test_delete_created_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
         // given setup
-        let (cargo_user, _catlib_service, _forest, _lss_stub) = setup;
+        let (cargo_user, _catlib_service, _forest) = setup;
 
         // when a container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";

@@ -26,5 +26,5 @@ wildland-corex = { version = "0.30.1-rc.0", path = "../wildland-corex", registry
 
 
 [dev-dependencies]
-rand   = { version = "0.8.5" }
-rstest = { version = "0.15.0" }
+rand   = { version = "0.8" }
+rstest = { version = "0.16" }

@@ -228,6 +228,29 @@ impl ICatLib for CatLib {
         let storages = self.find_storages_with_template(template_id)?;
         storages.iter().map(|storage| storage.container()).collect()
     }
+
+    #[tracing::instrument(level = "debug", skip_all)]
+    fn save_storage_template(&self, template_id: &Uuid, value: String) -> CatlibResult<()> {
+        save_model(
+            self.db.clone(),
+            format!("template-storage-{}", template_id),
+            value,
+        )
+    }
+
+    #[tracing::instrument(level = "debug", skip_all)]
+    fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>> {
+        self.db.load().map_err(to_catlib_error)?;
+        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
+
+        let storages: Vec<_> = data
+            .iter()
+            .filter(|(id, _)| id.starts_with("template-storage-"))
+            .map(|(_, storage_str)| storage_str)
+            .cloned()
+            .collect();
+        Ok(storages)
+    }
 }
 
 impl Default for CatLib {

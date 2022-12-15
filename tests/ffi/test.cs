@@ -23,13 +23,6 @@ namespace Main
         public override OptionalRustString get_log_file_rotate_directory() {
             return new OptionalRustString();
         }
-        public override OptionalRustString get_oslog_category() {
-            return new OptionalRustString();
-        }
-        public override OptionalRustString get_oslog_subsystem() {
-            return new OptionalRustString();
-        }
-
         public override FoundationCloudMode get_foundation_cloud_env_mode() {
             return FoundationCloudMode.Dev;
         }
