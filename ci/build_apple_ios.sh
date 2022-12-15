@@ -4,7 +4,7 @@
 set -ex
 DEBUG_OPTS="-g"
 DESTROOT="$1"
-RUST_SRCDIR="/Users/wildland/src/wildland-core"
+RUST_SRCDIR=$CI_PROJECT_DIR
 SWIFT_BRIDGE_OUTDIR="$RUST_SRCDIR/crates/wildland-cargo-lib/_generated_ffi_code"
 INPUT="$SWIFT_BRIDGE_OUTDIR/ffi_swift.swift"
 RUST_LIB="libwildland_cargo_lib.a"

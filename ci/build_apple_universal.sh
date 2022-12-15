@@ -16,7 +16,7 @@ MANIFEST_REPOSITORY="git@gitlab.com:wildland/corex/sdk-apple.git"
 MANIFEST_BRANCH="master"
 
 # Define 
-BUILD_ROOT="/Users/wildland/src/wildland-core"
+BUILD_ROOT=$CI_PROJECT_DIR
 MODULE="wildlandx"
 PKG_OUT="out_dir"
 
