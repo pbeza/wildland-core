@@ -190,7 +190,7 @@ apple:
     - rm $CLOUD_CREDENTIALS
   artifacts:
     paths:
-      - wildlandx_universal.build.build/out_dir/wildlandx.xcframework.zip
+      - wildlandx_universal.build/out_dir/wildlandx.xcframework.zip
 
 ################
 # STAGE: Bindings
