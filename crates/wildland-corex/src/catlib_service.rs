@@ -120,14 +120,16 @@ impl CatLibService {
     ) -> CatlibResult<Box<dyn ContainerManifest>> {
         let container = forest.create_container(name.clone())?;
 
-        // TODO access mode
-        // TODO other params
         let template_context = TemplateContext {
             container_name: name,
             owner: forest.owner().encode(),
             access_mode: crate::StorageAccessMode::ReadWrite,
+            container_uuid: container.uuid(),
+            paths: container.paths(),
         };
-        let storage = storage_template.render(template_context).unwrap(); // TODO unwrap
+        let storage = storage_template
+            .render(template_context)
+            .map_err(|e| CatlibError::Generic(e.to_string()))?; // TODO should we revert container?
 
         let serialized_storage = serde_json::to_vec(&storage).map_err(|e| {
             CatlibError::Generic(format!("Could not serialize storage template: {e}"))

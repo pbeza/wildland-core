@@ -16,7 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::{collections::HashSet, fmt::Debug};
 use tera::{Context, Tera};
 use thiserror::Error;
 use uuid::Uuid;
@@ -27,6 +27,8 @@ use crate::{Storage, StorageBackendType};
 pub const CONTAINER_NAME_PARAM: &str = "CONTAINER_NAME";
 pub const OWNER_PARAM: &str = "OWNER";
 pub const ACCESS_MODE_PARAM: &str = "ACCESS_MODE"; // read-write / readonly
+pub const CONTAINER_UUID_PARAM: &str = "CONTAINER_UUID";
+pub const PATHS_PARAM: &str = "PATHS";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateContext {
@@ -36,6 +38,10 @@ pub struct TemplateContext {
     pub owner: String,
     #[serde(rename = "ACCESS_MODE")]
     pub access_mode: StorageAccessMode,
+    #[serde(rename = "CONTAINER_UUID")]
+    pub container_uuid: Uuid,
+    #[serde(rename = "PATHS")]
+    pub paths: HashSet<String>,
 }
 
 #[derive(Debug, Error, Clone)]
@@ -109,7 +115,11 @@ impl StorageTemplate {
 mod tests {
     use crate::{StorageBackendType, StorageTemplate, TemplateContext};
     use pretty_assertions::assert_eq;
-    use std::collections::HashMap;
+    use std::{
+        collections::{HashMap, HashSet},
+        str::FromStr,
+    };
+    use uuid::Uuid;
 
     #[test]
     fn test_rendering_template() {
@@ -118,20 +128,24 @@ mod tests {
             HashMap::from([
                 (
                     "field1".to_owned(),
-                    "Some value with container name: {{ CONTAINER_NAME }}".to_string(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
                 ),
                 (
                     "parameter in key: {{ OWNER }}".to_owned(),
-                    "enum: {{ ACCESS_MODE }}".to_string(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
                 ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
             ]),
         )
         .unwrap();
 
         let params = TemplateContext {
-            container_name: "Books".to_string(),
-            owner: "John Doe".to_string(),
+            container_name: "Books".to_owned(),
+            owner: "John Doe".to_owned(),
             access_mode: crate::StorageAccessMode::ReadOnly,
+            container_uuid: Uuid::from_str("00000000-0000-0000-0000-000000001111").unwrap(),
+            paths: HashSet::from(["path1".to_owned(), "path2".to_owned()]),
         };
 
         let rendered_storage = storage_template.render(params).unwrap();
@@ -144,12 +158,14 @@ backend_type = "FoundationStorage"
 [data]
 field1 = "Some value with container name: Books"
 "parameter in key: John Doe" = "enum: ReadOnly"
+paths = "[path1, path2]"
+uuid = "00000000-0000-0000-0000-000000001111"
 "#
         );
 
         assert_eq!(
-            toml::to_string(&rendered_storage).unwrap(),
-            expected_storage_toml
+            toml::Value::try_from(&rendered_storage).unwrap(),
+            toml::Value::from_str(&expected_storage_toml).unwrap()
         );
     }
 }
