@@ -15,8 +15,51 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-mod backend;
 mod template;
 
-pub use backend::*;
 pub use template::*;
+
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+/// Storage is basically the same struct as [`super::StorageTemplate`] but it serializable/deserializable content is filled with values provided by corex for a particular container
+///
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Storage {
+    name: Option<String>,
+    uuid: Uuid,
+    backend_type: StorageBackendType, // If we want to allow users to create their own custom templates and backends then this parameter should be a String
+    data: serde_json::Value,
+}
+
+impl Storage {
+    pub fn new(
+        name: Option<String>,
+        backend_type: StorageBackendType,
+        data: serde_json::Value,
+    ) -> Self {
+        Self {
+            name,
+            uuid: Uuid::new_v4(),
+            backend_type,
+            data,
+        }
+    }
+
+    pub fn uuid(&self) -> Uuid {
+        self.uuid
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub enum StorageAccessMode {
+    ReadWrite,
+    ReadOnly,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum StorageBackendType {
+    FoundationStorage,
+}
+
+pub trait StorageBackend {}
