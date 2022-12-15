@@ -38,7 +38,7 @@ wildland-catlib      = { version = "0.30.1-rc.0", path = "../wildland-catlib", r
 wildland-corex       = { version = "0.30.1-rc.0", path = "../wildland-corex", registry = "wl-dev" }
 wildland-http-client = { version = "0.30.1-rc.0", path = "../wildland-http-client", registry = "wl-dev" }
 
-# [target.'cfg(target_vendor = "apple")'.dependencies]
+[target.'cfg(target_vendor = "apple")'.dependencies]
 tracing-oslog = { version = "0.1" }
 
 [build-dependencies]
