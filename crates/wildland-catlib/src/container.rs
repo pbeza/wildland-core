@@ -21,7 +21,8 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, rc::Rc};
 
 use wildland_corex::entities::{
-    Container as IContainer, ContainerPath, ContainerPaths, Forest, Storage as IStorage,
+    ContainerManifest as IContainer, ContainerPath, ContainerPaths, ForestManifest,
+    StorageManifest as IStorage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -66,7 +67,7 @@ impl IContainer for Container {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
-    fn forest(&self) -> CatlibResult<Box<dyn Forest>> {
+    fn forest(&self) -> CatlibResult<Box<dyn ForestManifest>> {
         fetch_forest_by_uuid(self.db.clone(), &self.data.forest_uuid)
     }
 
@@ -224,7 +225,7 @@ mod tests {
     use super::db::test::catlib;
     use crate::*;
     use rstest::*;
-    use wildland_corex::entities::Container;
+    use wildland_corex::entities::ContainerManifest;
 
     #[fixture]
     fn catlib_with_forest(catlib: CatLib) -> CatLib {
@@ -240,7 +241,7 @@ mod tests {
         catlib
     }
 
-    fn make_container(catlib: &CatLib) -> Box<dyn Container> {
+    fn make_container(catlib: &CatLib) -> Box<dyn ContainerManifest> {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
         forest.create_container("name".to_owned()).unwrap()

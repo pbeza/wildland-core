@@ -27,7 +27,7 @@ use crate::{
 use derivative::Derivative;
 use uuid::Uuid;
 use wildland_corex::{
-    catlib_service::{entities::Forest, error::CatlibError, CatLibService},
+    catlib_service::{entities::ForestManifest, error::CatlibError, CatLibService},
     StorageTemplate,
 };
 
@@ -78,7 +78,7 @@ pub struct CargoUser {
     this_device: String,
     all_devices: Vec<String>,
 
-    forest: Box<dyn Forest>,
+    forest: Box<dyn ForestManifest>,
 
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
@@ -92,7 +92,7 @@ impl CargoUser {
     pub fn new(
         this_device: String,
         all_devices: Vec<String>,
-        forest: Box<dyn Forest>,
+        forest: Box<dyn ForestManifest>,
         catlib_service: CatLibService,
         fsa_config: &FoundationStorageApiConfig,
     ) -> Self {
@@ -270,7 +270,7 @@ mod tests {
     use serde_json::json;
     use uuid::Uuid;
     use wildland_corex::{
-        catlib_service::entities::Forest, CatLibService, DeviceMetadata, ForestMetaData,
+        catlib_service::entities::ForestManifest, CatLibService, DeviceMetadata, ForestMetaData,
         SigningKeypair, WildlandIdentity,
     };
 
@@ -282,7 +282,7 @@ mod tests {
     use super::CargoUser;
 
     #[fixture]
-    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Box<dyn Forest>) {
+    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Box<dyn ForestManifest>) {
         let this_dev_name = "My device".to_string();
 
         let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
@@ -318,7 +318,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_requesting_free_tier_storage(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_requesting_free_tier_storage(
+        setup: (CargoUser, CatLibService, Box<dyn ForestManifest>),
+    ) {
         // given setup
         let (mut cargo_user, catlib_service, mut forest) = setup;
 
@@ -396,7 +398,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_creating_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_creating_container(setup: (CargoUser, CatLibService, Box<dyn ForestManifest>)) {
         // given setup
         let (cargo_user, catlib_service, forest) = setup;
 
@@ -424,7 +426,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_getting_created_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_getting_created_container(setup: (CargoUser, CatLibService, Box<dyn ForestManifest>)) {
         // given setup
         let (cargo_user, _catlib_service, _forest) = setup;
 
@@ -453,7 +455,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_delete_created_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_delete_created_container(setup: (CargoUser, CatLibService, Box<dyn ForestManifest>)) {
         // given setup
         let (cargo_user, _catlib_service, _forest) = setup;
 

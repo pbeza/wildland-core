@@ -19,7 +19,7 @@ use super::*;
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
-use wildland_corex::entities::{Container, Storage as IStorage};
+use wildland_corex::entities::{ContainerManifest, StorageManifest as IStorage};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub(crate) struct StorageData {
@@ -75,7 +75,7 @@ impl IStorage for Storage {
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Container`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn container(&self) -> CatlibResult<Box<dyn Container>> {
+    fn container(&self) -> CatlibResult<Box<dyn ContainerManifest>> {
         fetch_container_by_uuid(self.db.clone(), &self.data.container_uuid)
     }
 
@@ -90,10 +90,10 @@ impl IStorage for Storage {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn update(&mut self, data: Vec<u8>) -> CatlibResult<&mut dyn IStorage> {
+    fn update(&mut self, data: Vec<u8>) -> CatlibResult<()> {
         self.data.data = data;
         self.save()?;
-        Ok(self)
+        Ok(())
     }
 
     /// ## Errors
@@ -132,7 +132,7 @@ mod tests {
     use super::db::test::catlib;
     use crate::*;
     use rstest::*;
-    use wildland_corex::catlib_service::entities::{Container, Storage};
+    use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest};
 
     #[fixture]
     fn catlib_with_forest(catlib: CatLib) -> CatLib {
@@ -148,29 +148,29 @@ mod tests {
         catlib
     }
 
-    fn _container(catlib: &CatLib) -> Box<dyn Container> {
+    fn _container(catlib: &CatLib) -> Box<dyn ContainerManifest> {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
         forest.create_container("name".to_owned()).unwrap()
     }
 
     #[fixture]
-    fn container(catlib_with_forest: CatLib) -> Box<dyn Container> {
+    fn container(catlib_with_forest: CatLib) -> Box<dyn ContainerManifest> {
         _container(&catlib_with_forest)
     }
 
-    fn make_storage(container: &dyn Container) -> Box<dyn Storage> {
+    fn make_storage(container: &dyn ContainerManifest) -> Box<dyn StorageManifest> {
         container.create_storage(None, vec![]).unwrap()
     }
 
     fn make_storage_with_template(
-        container: &dyn Container,
+        container: &dyn ContainerManifest,
         template_id: Uuid,
-    ) -> Box<dyn Storage> {
+    ) -> Box<dyn StorageManifest> {
         container.create_storage(Some(template_id), vec![]).unwrap()
     }
 
     #[rstest]
-    fn create_empty_storage(container: Box<dyn Container>) {
+    fn create_empty_storage(container: Box<dyn ContainerManifest>) {
         make_storage(container.as_ref());
 
         assert_eq!(container.storages().unwrap().len(), 1);
@@ -181,7 +181,7 @@ mod tests {
     }
 
     #[rstest]
-    fn delete_a_storage(container: Box<dyn Container>) {
+    fn delete_a_storage(container: Box<dyn ContainerManifest>) {
         make_storage(container.as_ref());
         let mut storage = make_storage(container.as_ref());
 
@@ -210,7 +210,7 @@ mod tests {
     }
 
     #[rstest]
-    fn create_storage_with_data(container: Box<dyn Container>) {
+    fn create_storage_with_data(container: Box<dyn ContainerManifest>) {
         container
             .create_storage(None, b"storage data".to_vec())
             .unwrap();

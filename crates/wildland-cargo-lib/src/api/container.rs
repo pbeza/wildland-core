@@ -21,7 +21,9 @@ use crate::{
 };
 use uuid::Uuid;
 use wildland_corex::{
-    catlib_service::{entities::Container as InnerContainer, error::CatlibError, CatLibService},
+    catlib_service::{
+        entities::ContainerManifest as InnerContainer, error::CatlibError, CatLibService,
+    },
     StorageTemplate,
 };
 

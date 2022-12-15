@@ -19,7 +19,7 @@ use std::fmt::{Debug, Display};
 
 use super::{api::LocalSecureStorage, result::LssResult};
 use crate::{
-    catlib_service::entities::Identity, entities::Forest, ForestRetrievalError, LssError,
+    catlib_service::entities::Identity, entities::ForestManifest, ForestRetrievalError, LssError,
     WildlandIdentity, DEFAULT_FOREST_KEY,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -63,7 +63,7 @@ impl LssService {
         })
     }
 
-    pub fn save_forest_uuid(&self, forest: &dyn Forest) -> LssResult<bool> {
+    pub fn save_forest_uuid(&self, forest: &dyn ForestManifest) -> LssResult<bool> {
         tracing::trace!("Saving forest uuid");
         self.serialize_and_save(forest.owner().encode(), &forest.uuid())
     }
@@ -136,7 +136,7 @@ mod tests {
 
     use crate::{
         catlib_service::{entities::Identity, error::CatlibResult},
-        entities::{Bridge, Container, ContainerPath, Forest as IForest, Signers},
+        entities::{Bridge, ContainerManifest, ContainerPath, ForestManifest as IForest, Signers},
     };
     use mockall::mock;
     use rstest::{fixture, rstest};
@@ -280,10 +280,10 @@ mod tests {
         impl IForest for Forest {
             fn add_signer(&mut self, signer: Identity) -> CatlibResult<bool>;
             fn del_signer(&mut self, signer: Identity) -> CatlibResult<bool>;
-            fn containers(&self) -> CatlibResult<Vec<Box<dyn Container>>>;
+            fn containers(&self) -> CatlibResult<Vec<Box<dyn ContainerManifest>>>;
             fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;
             fn delete(&mut self) -> CatlibResult<bool>;
-            fn create_container(&self, name: String) -> CatlibResult<Box<dyn Container>>;
+            fn create_container(&self, name: String) -> CatlibResult<Box<dyn ContainerManifest>>;
             fn create_bridge(
                 &self,
                 path: ContainerPath,
@@ -294,7 +294,7 @@ mod tests {
                 &self,
                 paths: Vec<ContainerPath>,
                 include_subdirs: bool,
-            ) -> CatlibResult<Vec<Box<dyn Container>>>;
+            ) -> CatlibResult<Vec<Box<dyn ContainerManifest>>>;
 
             fn data(&mut self) -> CatlibResult<Vec<u8>>;
             fn uuid(&self) -> Uuid;
