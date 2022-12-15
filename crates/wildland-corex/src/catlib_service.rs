@@ -168,7 +168,10 @@ impl CatLibService {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, rc::Rc};
+    use std::{
+        collections::{HashMap, HashSet},
+        rc::Rc,
+    };
 
     use mockall::{mock, predicate};
     use rstest::rstest;
@@ -257,6 +260,8 @@ mod tests {
                     })
                     .times(1)
                     .returning(|_, _|Ok(Box::new(MockStorageManifest::new())));
+                container_mock.expect_uuid().times(1).returning(Uuid::new_v4);
+                container_mock.expect_paths().times(1).returning(HashSet::new);
                 Ok(Box::new(container_mock))
             });
         forest_mock
