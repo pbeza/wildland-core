@@ -37,6 +37,11 @@ FW_MAC_OUT="$DESTROOT/$MODULE.framework"
 
 # Create output folder
 FW_UNIVERSAL_OUT="wildlandx_universal.build"
+
+if [ -d "$FW_UNIVERSAL_OUT" ]; then
+    rm -rf "$FW_UNIVERSAL_OUT"
+fi
+
 mkdir $FW_UNIVERSAL_OUT
 
 # Create universal framework for all the previous jobs
@@ -101,8 +106,4 @@ EOF
 # Upload the framework
 if [ "$CI_COMMIT_BRANCH" = "master" ] || [ "$CI_COMMIT_BRANCH" = "develop" ]; then
     upload_framework wildlandx.xcframework.zip
-fi
-
-if [ -d "$FW_UNIVERSAL_OUT" ]; then
-    rm -rf "$FW_UNIVERSAL_OUT"
 fi
