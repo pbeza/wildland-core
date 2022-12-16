@@ -23,17 +23,17 @@ PKG_OUT="out_dir"
 # Build iOS framework
 DESTROOT="$BUILD_ROOT/wildlandx_ios.build"
 FW_IOS_OUT="$DESTROOT/$MODULE.framework"
-./ci/build_apple_ios.sh $DESTROOT
+./ci/apple/build_apple_ios.sh $DESTROOT
 
 # Build iOS Simulator framework
 DESTROOT="$BUILD_ROOT/wildlandx_ios_simulator.build"
 FW_IOS_SIM_OUT="$DESTROOT/$MODULE.framework"
-./ci/build_apple_ios_simulator.sh $DESTROOT
+./ci/apple/build_apple_ios_simulator.sh $DESTROOT
 
 # Build macOS framework
 DESTROOT="$BUILD_ROOT/wildlandx_mac.build"
 FW_MAC_OUT="$DESTROOT/$MODULE.framework"
-./ci/build_apple_mac.sh $DESTROOT
+./ci/apple/build_apple_mac.sh $DESTROOT
 
 # Create output folder
 FW_UNIVERSAL_OUT="wildlandx_apple_universal.build"
