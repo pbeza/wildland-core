@@ -1,6 +1,8 @@
 #!/bin/sh
 # Maintainers: 
 #     Piotr Isajew (pisajew@wildland.io)
+#     Ivan Sinitsa (ivan@wildland.io)
+
 set -ex
 DEBUG_OPTS="-g"
 DESTROOT="$1"
@@ -11,14 +13,14 @@ RUST_LIB="libwildland_cargo_lib.a"
 
 # Name of Swift module for the SDK.
 MODULE="wildlandx"
-ARCHS="arm64"
+ARCHS="x86_64 arm64"
 FW_OUT="$DESTROOT/$MODULE.framework"
-PKG_OUT="out_dir"
 
-RUST_ARCH_ARM64=aarch64-apple-ios
+RUST_ARCH_X86_64=x86_64-apple-ios
+RUST_ARCH_ARM64=aarch64-apple-ios-sim
 
 export IOS_DEPLOYMENT_TARGET=15.5
-export SDKROOT=$(xcrun -sdk iphoneos --show-sdk-path)
+export SDKROOT=$(xcrun -sdk iphonesimulator --show-sdk-path)
 
 if [ -d "$DESTROOT" ]; then
     rm -rf "$DESTROOT"
@@ -27,11 +29,7 @@ fi
 mkdir "$DESTROOT"
 mkdir "$FW_OUT"
 
-
-
 cd $DESTROOT
-
-
 
 for arch in $ARCHS; do
     DESTDIR="$DESTROOT/$arch"
@@ -98,7 +96,7 @@ ln -s $HEADER_OUT .
 INPUT=input.swift
     cat $SWIFT_BRIDGE_OUTDIR/ffi_swift.swift >> $INPUT
     
-    ARCH_TARGET=$arch-apple-ios$IOS_DEPLOYMENT_TARGET
+    ARCH_TARGET=$arch-apple-ios$IOS_DEPLOYMENT_TARGET-simulator
     
     # Prepare module metadata
     xcrun swiftc -v -module-name "$MODULE" \
@@ -139,11 +137,11 @@ INPUT=input.swift
           $OBJ_OUT \
           -install_name @rpath/$MODULE.framework/$MODULE \
           -L. \
-          -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos -L/usr/lib/swift \
+          -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift \
           -lwildland_cargo_lib \
           -o $DESTDIR/$MODULE
-    cp -v $MODULE_PATH $MOD_OUT/$arch-apple-ios.swiftmodule
-    cp -v $MODULE_INTERFACE_PATH $MOD_OUT/$arch-apple-ios.swiftinterface
+    cp -v $MODULE_PATH $MOD_OUT/$arch-apple-ios-simulator.swiftmodule
+    cp -v $MODULE_INTERFACE_PATH $MOD_OUT/$arch-apple-ios-simulator.swiftinterface
     cp -v $DESTDIR/$MODULE-Swift.h $HEADER_OUT
 done
 
@@ -170,7 +168,7 @@ cat > "$RES_OUT/Info.plist" <<EOF
         <string>1.0</string>
         <key>CFBundleSupportedPlatforms</key>
         <array>
-           <string>iPhoneOS</string>
+           <string>iPhoneSimulator</string>
         </array>
         <key>CFBundleVersion</key>
         <string>1</string>

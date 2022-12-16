@@ -1,6 +1,8 @@
 #!/bin/sh
 # Maintainers: 
 #     Piotr Isajew (pisajew@wildland.io)
+#     Ivan Sinitsa (ivan@wildland.io)
+
 set -ex
 DEBUG_OPTS="-g"
 DESTROOT="$1"
@@ -13,13 +15,12 @@ RUST_LIB="libwildland_cargo_lib.a"
 MODULE="wildlandx"
 ARCHS="x86_64 arm64"
 FW_OUT="$DESTROOT/$MODULE.framework"
-PKG_OUT="out_dir"
 
-RUST_ARCH_X86_64=x86_64-apple-ios
-RUST_ARCH_ARM64=aarch64-apple-ios-sim
+RUST_ARCH_X86_64=x86_64-apple-darwin
+RUST_ARCH_ARM64=aarch64-apple-darwin
 
-export IOS_DEPLOYMENT_TARGET=15.5
-export SDKROOT=$(xcrun -sdk iphonesimulator --show-sdk-path)
+export MACOS_DEPLOYMENT_TARGET=12.3
+export SDKROOT=$(xcrun -sdk macosx${MACOS_DEPLOYMENT_TARGET} --show-sdk-path)
 
 if [ -d "$DESTROOT" ]; then
     rm -rf "$DESTROOT"
@@ -28,11 +29,7 @@ fi
 mkdir "$DESTROOT"
 mkdir "$FW_OUT"
 
-
-
 cd $DESTROOT
-
-
 
 for arch in $ARCHS; do
     DESTDIR="$DESTROOT/$arch"
@@ -69,9 +66,9 @@ EOF
 #include "ffi_swift.h"
 #endif
 EOF
-    HEADER_OUT="$FW_OUT/Headers/"
+    HEADER_OUT="$FW_OUT/Versions/A/Headers/"
     test -d "$HEADER_OUT" || mkdir -p "$HEADER_OUT"
-    MOD_OUT="$FW_OUT/Modules/$MODULE.swiftmodule/"
+    MOD_OUT="$FW_OUT/Versions/A/Modules/$MODULE.swiftmodule/"
     mkdir -p $MOD_OUT
  
 
@@ -79,7 +76,7 @@ cat > "$HEADER_OUT/$MODULE.h" <<EOF
 #import <Foundation/Foundation.h>
 EOF
 cp $GLUE_MOD/*.h $HEADER_OUT
-cat > "$FW_OUT/Modules/module.modulemap" <<EOF
+cat > "$FW_OUT/Versions/A/Modules/module.modulemap" <<EOF
 
 framework module $MODULE {
   umbrella header "$MODULE.h"
@@ -94,19 +91,17 @@ framework module $MODULE {
   }
 }
 EOF
-cp $FW_OUT/Modules/module.modulemap .
+cp $FW_OUT/Versions/A/Modules/module.modulemap .
 ln -s $HEADER_OUT .
 INPUT=input.swift
     cat $SWIFT_BRIDGE_OUTDIR/ffi_swift.swift >> $INPUT
-    
-    ARCH_TARGET=$arch-apple-ios$IOS_DEPLOYMENT_TARGET-simulator
     
     # Prepare module metadata
     xcrun swiftc -v -module-name "$MODULE" \
           -I . \
           $INPUT \
           -Rmodule-loading \
-          -target $ARCH_TARGET \
+          -target $arch-apple-macos$MACOS_DEPLOYMENT_TARGET \
           $DEBUG_OPTS \
           -parse-as-library \
           -emit-dependencies \
@@ -125,7 +120,7 @@ INPUT=input.swift
           -I . \
           -module-name "$MODULE" \
           -stack-check \
-          -target $ARCH_TARGET \
+          -target $arch-apple-macos$MACOS_DEPLOYMENT_TARGET \
           $DEBUG_OPTS \
           -parse-as-library \
           -import-underlying-module \
@@ -135,21 +130,21 @@ INPUT=input.swift
     # Link architecture-specific binary
     xcrun clang \
           -v \
-          -target $ARCH_TARGET \
+          -target $arch-apple-macos$MACOS_DEPLOYMENT_TARGET \
           -dynamiclib \
           $OBJ_OUT \
-          -install_name @rpath/$MODULE.framework/$MODULE \
+          -install_name @rpath/$MODULE.framework/Versions/A/$MODULE \
           -L. \
-          -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift \
+          -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx -L/usr/lib/swift \
           -lwildland_cargo_lib \
           -o $DESTDIR/$MODULE
-    cp -v $MODULE_PATH $MOD_OUT/$arch-apple-ios-simulator.swiftmodule
-    cp -v $MODULE_INTERFACE_PATH $MOD_OUT/$arch-apple-ios-simulator.swiftinterface
+    cp -v $MODULE_PATH $MOD_OUT/$arch-apple-macos.swiftmodule
+    cp -v $MODULE_INTERFACE_PATH $MOD_OUT/$arch-apple-macos.swiftinterface
     cp -v $DESTDIR/$MODULE-Swift.h $HEADER_OUT
 done
 
-xcrun lipo -create $DESTROOT/*/$MODULE -output $FW_OUT/$MODULE
-RES_OUT="$FW_OUT/"
+xcrun lipo -create $DESTROOT/*/$MODULE -output $FW_OUT/Versions/A/$MODULE
+RES_OUT="$FW_OUT/Versions/A/Resources/"
 test -d "$RES_OUT" || mkdir -p "$RES_OUT"
 
 cat > "$RES_OUT/Info.plist" <<EOF
@@ -171,14 +166,23 @@ cat > "$RES_OUT/Info.plist" <<EOF
         <string>1.0</string>
         <key>CFBundleSupportedPlatforms</key>
         <array>
-           <string>iPhoneSimulator</string>
+           <string>MacOSX</string>
         </array>
         <key>CFBundleVersion</key>
         <string>1</string>
         <key>LSMinimumSystemVersion</key>
-        <string>$IOS_DEPLOYMENT_TARGET</string>
+        <string>$MACOS_DEPLOYMENT_TARGET</string>
         <key>NSHumanReadableCopyright</key>
         <string>Copyright (C) 2022, Golem Foundation</string>
 </dict>
 </plist>
 EOF
+
+cd $FW_OUT/Versions
+ln -s A Current
+cd ..
+ln -s Versions/Current/Headers .
+ln -s Versions/Current/Modules .
+ln -s Versions/Current/Resources .
+
+ln -s Versions/Current/$MODULE .

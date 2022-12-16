@@ -186,11 +186,11 @@ apple:
     - CLOUD_CREDENTIALS=`mktemp`
     - chmod 600 $CLOUD_CREDENTIALS
     - echo $APPLE_GCS_BUCKET_UPLODAER_ACCT | base64 -d > $CLOUD_CREDENTIALS
-    - CLOUD_CREDENTIALS=$CLOUD_CREDENTIALS ci/build_apple_universal.sh
+    - CLOUD_CREDENTIALS=$CLOUD_CREDENTIALS ci/apple/build_apple_universal.sh
     - rm $CLOUD_CREDENTIALS
   artifacts:
     paths:
-      - wildlandx_universal.build/out_dir/wildlandx.xcframework.zip
+      - wildlandx_apple_universal.build/out_dir/wildlandx.xcframework.zip
 
 ################
 # STAGE: Bindings

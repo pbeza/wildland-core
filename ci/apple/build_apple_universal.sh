@@ -36,7 +36,7 @@ FW_MAC_OUT="$DESTROOT/$MODULE.framework"
 ./ci/build_apple_mac.sh $DESTROOT
 
 # Create output folder
-FW_UNIVERSAL_OUT="wildlandx_universal.build"
+FW_UNIVERSAL_OUT="wildlandx_apple_universal.build"
 
 if [ -d "$FW_UNIVERSAL_OUT" ]; then
     rm -rf "$FW_UNIVERSAL_OUT"
