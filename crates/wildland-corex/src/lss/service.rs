@@ -135,10 +135,9 @@ mod tests {
     use std::{cell::RefCell, collections::HashMap};
 
     use crate::{
-        catlib_service::{entities::Identity, error::CatlibResult},
-        entities::{Bridge, ContainerManifest, ContainerPath, ForestManifest as IForest, Signers},
+        catlib_service::entities::Identity, entities::ForestManifest as IForest,
+        test_utils::MockForest,
     };
-    use mockall::mock;
     use rstest::{fixture, rstest};
     use uuid::Uuid;
     use wildland_crypto::identity::SigningKeypair;
@@ -267,40 +266,6 @@ mod tests {
 
         let expecte_forest_identity = WildlandIdentity::Forest(0, SigningKeypair::from(&keypair));
         assert_eq!(default_forest.unwrap(), expecte_forest_identity)
-    }
-
-    mock! {
-        pub Forest {}
-        impl std::fmt::Debug for Forest {
-            fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> std::fmt::Result;
-        }
-        impl Clone for Forest {
-            fn clone(&self) -> Self;
-        }
-        impl IForest for Forest {
-            fn add_signer(&mut self, signer: Identity) -> CatlibResult<bool>;
-            fn del_signer(&mut self, signer: Identity) -> CatlibResult<bool>;
-            fn containers(&self) -> CatlibResult<Vec<Box<dyn ContainerManifest>>>;
-            fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;
-            fn delete(&mut self) -> CatlibResult<bool>;
-            fn create_container(&self, name: String) -> CatlibResult<Box<dyn ContainerManifest>>;
-            fn create_bridge(
-                &self,
-                path: ContainerPath,
-                link_data: Vec<u8>,
-            ) -> CatlibResult<Box<dyn Bridge>>;
-            fn find_bridge(&self, path: ContainerPath) -> CatlibResult<Box<dyn Bridge>>;
-            fn find_containers(
-                &self,
-                paths: Vec<ContainerPath>,
-                include_subdirs: bool,
-            ) -> CatlibResult<Vec<Box<dyn ContainerManifest>>>;
-
-            fn data(&mut self) -> CatlibResult<Vec<u8>>;
-            fn uuid(&self) -> Uuid;
-            fn owner(&self) -> Identity;
-            fn signers(&mut self) -> CatlibResult<Signers>;
-        }
     }
 
     #[rstest]

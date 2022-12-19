@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::fmt::Display;
-
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -71,12 +69,6 @@ impl FoundationStorageTemplate {
 
     fn default_container_prefix() -> String {
         format!("{{{{ {OWNER_PARAM} }}}}/{{{{ {CONTAINER_NAME_PARAM} }}}}")
-    }
-}
-
-impl Display for FoundationStorageTemplate {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", serde_json::to_string(self).unwrap())
     }
 }
 

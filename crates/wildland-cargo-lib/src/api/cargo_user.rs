@@ -369,7 +369,7 @@ mod tests {
         verify_token_mock.assert();
         storage_req_mock_2.assert();
 
-        // and storage template is saved in LSS
+        // and storage template is saved in CatLib
         let template_data = serde_json::from_str::<serde_json::Value>(
             &catlib_service.get_storage_templates_data().unwrap()[0],
         )

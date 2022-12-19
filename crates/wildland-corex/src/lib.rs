@@ -20,6 +20,8 @@ mod error;
 mod identity;
 mod lss;
 mod storage;
+#[cfg(test)]
+mod test_utils;
 
 pub use catlib_service::*;
 pub use error::*;
