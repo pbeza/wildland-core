@@ -182,7 +182,7 @@ mod tests {
         entities::{Identity, MockContainerManifest, MockStorageManifest},
         interface::MockCatLib,
         test_utils::MockForest,
-        CatLibService, StorageBackendType, StorageTemplate,
+        CatLibService, StorageTemplate,
     };
 
     #[rstest]
@@ -198,8 +198,7 @@ mod tests {
             ("field2", "{{ CONTAINER_NAME }}"),
         ]);
         let storage_template =
-            StorageTemplate::try_new(StorageBackendType::FoundationStorage, hashmap_template)
-                .unwrap();
+            StorageTemplate::try_new("FoundationStorage", hashmap_template).unwrap();
 
         let mut forest_mock = MockForest::new();
         forest_mock

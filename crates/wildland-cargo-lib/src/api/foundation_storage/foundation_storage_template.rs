@@ -18,9 +18,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use wildland_corex::{
-    StorageBackendType, StorageTemplate, StorageTemplateError, CONTAINER_NAME_PARAM, OWNER_PARAM,
-};
+use wildland_corex::{StorageTemplate, StorageTemplateError, CONTAINER_NAME_PARAM, OWNER_PARAM};
+
+use crate::api::storage::StorageBackendType;
 
 use super::StorageCredentials;
 

@@ -22,7 +22,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use super::StorageAccessMode;
-use crate::{Storage, StorageBackendType};
+use crate::Storage;
 
 pub const CONTAINER_NAME_PARAM: &str = "CONTAINER_NAME";
 pub const OWNER_PARAM: &str = "OWNER";
@@ -56,19 +56,19 @@ pub enum StorageTemplateError {
 pub struct StorageTemplate {
     name: Option<String>,
     uuid: Uuid,
-    backend_type: StorageBackendType, // If we want to allow users to create their own custom templates and backends then this parameter should be a String
+    backend_type: String,
     template: serde_json::Value,
 }
 
 impl StorageTemplate {
     pub fn try_new(
-        backend_type: StorageBackendType,
+        backend_type: impl ToString,
         template: impl Serialize,
     ) -> Result<Self, StorageTemplateError> {
         Ok(Self {
             name: None,
             uuid: Uuid::new_v4(),
-            backend_type,
+            backend_type: backend_type.to_string(),
             template: serde_json::to_value(&template)
                 .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?,
         })
@@ -83,8 +83,8 @@ impl StorageTemplate {
         format!("{:?}", &self)
     }
 
-    pub fn backend_type(&self) -> StorageBackendType {
-        self.backend_type
+    pub fn backend_type(&self) -> String {
+        self.backend_type.clone()
     }
 
     pub fn uuid(&self) -> Uuid {
@@ -105,7 +105,7 @@ impl StorageTemplate {
             .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
         Ok(Storage::new(
             self.name.clone(),
-            self.backend_type,
+            self.backend_type.clone(),
             storage_data,
         ))
     }
@@ -113,7 +113,7 @@ impl StorageTemplate {
 
 #[cfg(test)]
 mod tests {
-    use crate::{StorageBackendType, StorageTemplate, TemplateContext};
+    use crate::{StorageTemplate, TemplateContext};
     use pretty_assertions::assert_eq;
     use std::{collections::HashMap, str::FromStr};
     use uuid::Uuid;
@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn test_rendering_template() {
         let storage_template = StorageTemplate::try_new(
-            StorageBackendType::FoundationStorage,
+            "FoundationStorage",
             HashMap::from([
                 (
                     "field1".to_owned(),
