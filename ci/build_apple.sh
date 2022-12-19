@@ -16,17 +16,6 @@ ARCHS="x86_64 arm64"
 FW_OUT="$DESTROOT/$MODULE.framework"
 PKG_OUT="out_dir"
 
-# Google storage URL for binary SDK uploads.
-UPLOAD_URL="gs://wildland-apple-dev-binaries"
-
-# URL from which binary packages can be fetched.
-FETCH_URL="https://xcode-proxy.wildland.dev/wildland-apple-dev-binaries"
-
-# GIT repository URL where package manifests should be pushed.
-MANIFEST_REPOSITORY="git@gitlab.com:wildland/corex/sdk-apple.git"
-# Target branch to which package manifests are to be pushed.
-MANIFEST_BRANCH="master"
-
 RUST_ARCH_X86_64=x86_64-apple-darwin
 RUST_ARCH_ARM64=aarch64-apple-darwin
 
@@ -37,57 +26,11 @@ if [ -d "$DESTROOT" ]; then
     rm -rf "$DESTROOT"
 fi
 
-upload_framework() {
-    local fw="$1"
-    echo uploading "$1"
 
-    MANIFEST_DIR=`mktemp -d`
-    rmdir $MANIFEST_DIR
-    git clone $MANIFEST_REPOSITORY $MANIFEST_DIR
-    SAVED_WD=`pwd`
-    cd $MANIFEST_DIR
-    git checkout $MANIFEST_BRANCH
-    
-    cat > Package.swift <<EOF
-// swift-tools-version: 5.6
-
-import PackageDescription
-
-let package = Package(
-  name: "wildlandx",
-  products: [
-    .library(name: "wildlandx", targets: ["wildlandx"])
-  ],
-  targets: [
-    .binaryTarget(
-      name: "wildlandx",
-      url: "$FETCH_URL/wildlandx.xcframework.zip",
-      checksum: "$(shasum -a 256 $SAVED_WD/wildlandx.xcframework.zip | awk '{print $1}')"
-    ),
-    .testTarget(
-        name: "WildlandXTests",
-        dependencies: ["wildlandx"]
-    )
-  ]
-)
-EOF
-
-    git add Package.swift
-    git commit -m "Build script updated package manifest at $(date +%Y-%m-%d)"
-    git push
-    cd $SAVED_WD
-    
-    gcloud auth activate-service-account --key-file=$CLOUD_CREDENTIALS
-    gsutil cp "$1" $UPLOAD_URL
-}
 mkdir "$DESTROOT"
 mkdir "$FW_OUT"
 
-
-
 cd $DESTROOT
-
-
 
 for arch in $ARCHS; do
     DESTDIR="$DESTROOT/$arch"
@@ -252,8 +195,3 @@ xcodebuild -create-xcframework \
            -output wildlandx.xcframework
 mkdir $PKG_OUT
 ditto -c -k --sequesterRsrc --keepParent wildlandx.xcframework $PKG_OUT/wildlandx.xcframework.zip
-cd $PKG_OUT
-
-if [ "$CI_COMMIT_BRANCH" = "master" ] || [ "$CI_COMMIT_BRANCH" = "develop" ]; then
-    upload_framework wildlandx.xcframework.zip
-fi
