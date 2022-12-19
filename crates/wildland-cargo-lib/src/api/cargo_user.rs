@@ -274,9 +274,9 @@ mod tests {
         SigningKeypair, WildlandIdentity,
     };
 
-    use crate::api::{
-        config::FoundationStorageApiConfig, foundation_storage::FoundationStorageTemplate,
-        utils::test::catlib_service,
+    use crate::{
+        api::{config::FoundationStorageApiConfig, utils::test::catlib_service},
+        templates::foundation_storage::FoundationStorageTemplate,
     };
 
     use super::CargoUser;
