@@ -22,7 +22,8 @@ use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
 use wildland_corex::entities::{
-    Bridge as IBridge, Container as IContainer, ContainerPath, Forest as IForest, Identity, Signers,
+    Bridge as IBridge, ContainerManifest as IContainer, ContainerPath, ForestManifest as IForest,
+    Identity, Signers,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -322,15 +323,15 @@ mod tests {
     use super::db::test::catlib;
     use crate::*;
     use rstest::*;
-    use wildland_corex::catlib_service::entities::Forest;
+    use wildland_corex::catlib_service::entities::ForestManifest;
 
-    fn make_forest(catlib: &CatLib) -> Box<dyn Forest> {
+    fn make_forest(catlib: &CatLib) -> Box<dyn ForestManifest> {
         let owner = Identity([1; 32]);
 
         catlib.create_forest(owner, Signers::new(), vec![]).unwrap()
     }
 
-    fn make_forest_with_signer(catlib: &CatLib) -> Box<dyn Forest> {
+    fn make_forest_with_signer(catlib: &CatLib) -> Box<dyn ForestManifest> {
         let owner = Identity([1; 32]);
         let signer = Identity([2; 32]);
 

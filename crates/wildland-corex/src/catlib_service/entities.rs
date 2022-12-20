@@ -49,25 +49,25 @@ pub type ContainerPaths = HashSet<ContainerPath>;
 pub type Signers = HashSet<Identity>;
 
 pub trait ForestClone {
-    fn clone_box(&self) -> Box<dyn Forest>;
+    fn clone_box(&self) -> Box<dyn ForestManifest>;
 }
 
 impl<T> ForestClone for T
 where
-    T: 'static + Forest + Clone,
+    T: 'static + ForestManifest + Clone,
 {
-    fn clone_box(&self) -> Box<dyn Forest> {
+    fn clone_box(&self) -> Box<dyn ForestManifest> {
         Box::new(self.clone())
     }
 }
 
-impl Clone for Box<dyn Forest> {
-    fn clone(&self) -> Box<dyn Forest> {
+impl Clone for Box<dyn ForestManifest> {
+    fn clone(&self) -> Box<dyn ForestManifest> {
         self.clone_box()
     }
 }
 
-pub trait Forest: std::fmt::Debug + ForestClone {
+pub trait ForestManifest: std::fmt::Debug + ForestClone {
     /// Add manifest Signer
     ///
     /// Returns whether the value was newly inserted. That is:
@@ -85,7 +85,7 @@ pub trait Forest: std::fmt::Debug + ForestClone {
     fn del_signer(&mut self, signer: Identity) -> CatlibResult<bool>;
 
     /// Return list of Forest Containers
-    fn containers(&self) -> CatlibResult<Vec<Box<dyn Container>>>;
+    fn containers(&self) -> CatlibResult<Vec<Box<dyn ContainerManifest>>>;
 
     /// Set Forest arbitrary data
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;
@@ -98,7 +98,7 @@ pub trait Forest: std::fmt::Debug + ForestClone {
     /// Create an empty container, bound to the Forest.
     ///
     /// To set container paths, use [`Container::add_path`]
-    fn create_container(&self, name: String) -> CatlibResult<Box<dyn Container>>;
+    fn create_container(&self, name: String) -> CatlibResult<Box<dyn ContainerManifest>>;
 
     /// Create a Bridge object with arbitrary link data to another Forest.
     ///
@@ -120,7 +120,7 @@ pub trait Forest: std::fmt::Debug + ForestClone {
         &self,
         paths: Vec<ContainerPath>,
         include_subdirs: bool,
-    ) -> CatlibResult<Vec<Box<dyn Container>>>;
+    ) -> CatlibResult<Vec<Box<dyn ContainerManifest>>>;
 
     /// Retrieve Forest's metadata
     fn data(&mut self) -> CatlibResult<Vec<u8>>;
@@ -135,9 +135,10 @@ pub trait Forest: std::fmt::Debug + ForestClone {
     fn signers(&mut self) -> CatlibResult<Signers>;
 }
 
-pub trait Container: std::fmt::Debug {
+#[cfg_attr(test, mockall::automock)]
+pub trait ContainerManifest: std::fmt::Debug {
     /// Return [`Forest`] that contains the [`Container`].
-    fn forest(&self) -> CatlibResult<Box<dyn Forest>>;
+    fn forest(&self) -> CatlibResult<Box<dyn ForestManifest>>;
 
     /// Return paths copies
     fn paths(&self) -> HashSet<ContainerPath>;
@@ -149,7 +150,7 @@ pub trait Container: std::fmt::Debug {
     fn del_path(&mut self, path: ContainerPath) -> CatlibResult<bool>;
 
     /// Return list of Forest [`Storage`]s.
-    fn storages(&self) -> CatlibResult<Vec<Box<dyn Storage>>>;
+    fn storages(&self) -> CatlibResult<Vec<Box<dyn StorageManifest>>>;
 
     /// Create a [`Storage`], bound to the [`Container`].
     ///
@@ -162,7 +163,7 @@ pub trait Container: std::fmt::Debug {
         &self,
         template_uuid: Option<Uuid>,
         data: Vec<u8>,
-    ) -> CatlibResult<Box<dyn Storage>>;
+    ) -> CatlibResult<Box<dyn StorageManifest>>;
 
     /// Sets the container's name
     fn set_name(&mut self, new_name: String) -> CatlibResult<()>;
@@ -179,12 +180,13 @@ pub trait Container: std::fmt::Debug {
     fn uuid(&self) -> Uuid;
 }
 
-pub trait Storage: std::fmt::Debug {
+#[cfg_attr(test, mockall::automock)]
+pub trait StorageManifest: std::fmt::Debug {
     /// Return [`Container`] that contains the [`Storage`].
-    fn container(&self) -> CatlibResult<Box<dyn Container>>;
+    fn container(&self) -> CatlibResult<Box<dyn ContainerManifest>>;
 
     /// Update Storage data
-    fn update(&mut self, data: Vec<u8>) -> CatlibResult<&mut dyn Storage>;
+    fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;
 
     /// Delete Storage
     fn delete(&mut self) -> CatlibResult<bool>;
@@ -195,7 +197,7 @@ pub trait Storage: std::fmt::Debug {
 
 pub trait Bridge: std::fmt::Debug {
     /// Return [`Forest`] that contains the [`Bridge`].
-    fn forest(&self) -> CatlibResult<Box<dyn Forest>>;
+    fn forest(&self) -> CatlibResult<Box<dyn ForestManifest>>;
 
     /// Update Bridge link data
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;

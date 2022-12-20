@@ -1,10 +1,11 @@
 use uuid::Uuid;
 
 use super::{
-    entities::{Container, Forest, Identity, Signers, Storage},
+    entities::{ContainerManifest, ForestManifest, Identity, Signers, StorageManifest},
     error::CatlibResult,
 };
 
+#[cfg_attr(test, mockall::automock)]
 pub trait CatLib {
     /// Create new Forest object.
     ///
@@ -18,28 +19,28 @@ pub trait CatLib {
         owner: Identity,
         signers: Signers,
         data: Vec<u8>,
-    ) -> CatlibResult<Box<dyn Forest>>;
+    ) -> CatlibResult<Box<dyn ForestManifest>>;
 
     /// Return [`Forest`] object by Forest UUID.
-    fn get_forest(&self, uuid: &Uuid) -> CatlibResult<Box<dyn Forest>>;
+    fn get_forest(&self, uuid: &Uuid) -> CatlibResult<Box<dyn ForestManifest>>;
 
     /// Return [`Forest`] owned by specified `owner`.
-    fn find_forest(&self, owner: &Identity) -> CatlibResult<Box<dyn Forest>>;
+    fn find_forest(&self, owner: &Identity) -> CatlibResult<Box<dyn ForestManifest>>;
 
     /// Return [`Container`] object by Container UUID.
-    fn get_container(&self, uuid: &Uuid) -> CatlibResult<Box<dyn Container>>;
+    fn get_container(&self, uuid: &Uuid) -> CatlibResult<Box<dyn ContainerManifest>>;
 
     /// Return [`Storage`]s that were created using given `template_id` UUID.
     fn find_storages_with_template(
         &self,
         template_id: &Uuid,
-    ) -> CatlibResult<Vec<Box<dyn Storage>>>;
+    ) -> CatlibResult<Vec<Box<dyn StorageManifest>>>;
 
     /// Return [`Container`]s that were created using given `template_id` UUID.
     fn find_containers_with_template(
         &self,
         template_id: &Uuid,
-    ) -> CatlibResult<Vec<Box<dyn Container>>>;
+    ) -> CatlibResult<Vec<Box<dyn ContainerManifest>>>;
 
     /// Save StorageTemplate data in CatLib.
     fn save_storage_template(&self, template_id: &Uuid, value: String) -> CatlibResult<()>;
