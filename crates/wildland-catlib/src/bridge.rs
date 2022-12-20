@@ -19,7 +19,7 @@ use super::*;
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
-use wildland_corex::entities::{Bridge as IBridge, ContainerPath, Forest};
+use wildland_corex::entities::{Bridge as IBridge, ContainerPath, ForestManifest};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct BridgeData {
@@ -63,7 +63,7 @@ impl IBridge for Bridge {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
-    fn forest(&self) -> CatlibResult<Box<dyn Forest>> {
+    fn forest(&self) -> CatlibResult<Box<dyn ForestManifest>> {
         fetch_forest_by_uuid(self.db.clone(), &self.data.forest_uuid)
     }
 

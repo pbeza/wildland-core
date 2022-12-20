@@ -15,7 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use wildland_corex::entities::{Container as IContainer, Forest as IForest, Storage as IStorage};
+use wildland_corex::entities::{
+    ContainerManifest as IContainer, ForestManifest as IForest, StorageManifest as IStorage,
+};
 
 use super::*;
 use crate::{
