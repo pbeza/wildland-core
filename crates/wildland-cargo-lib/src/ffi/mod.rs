@@ -18,7 +18,7 @@
 use crate::{
     api::{
         cargo_lib::*, cargo_user::*, config::*, container::*, foundation_storage::*, storage::*,
-        storage_template::*, user::*,
+        user::*,
     },
     errors::{container::*, storage::*, user::*, ExceptionTrait},
 };
@@ -26,7 +26,7 @@ use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
 pub use wildland_corex::catlib_service::error::CatlibError;
 pub use wildland_corex::{
-    CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError,
+    CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, StorageTemplate,
 };
 
 type VoidType = ();
@@ -55,6 +55,7 @@ mod ffi_binding {
         LssError(_),
         CatlibError(_),
         DeviceMetadataNotFound,
+        UserNotFound,
     }
     enum FsaError {
         StorageAlreadyExists,
@@ -62,6 +63,9 @@ mod ffi_binding {
         CryptoError(_),
         InvalidCredentialsFormat(_),
         LssError(_),
+        CatlibError(_),
+        StorageTemplateError(_),
+        Generic(_),
     }
     enum LssError {
         Error(_),

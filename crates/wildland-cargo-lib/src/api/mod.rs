@@ -21,7 +21,6 @@ pub mod config;
 pub mod container;
 pub mod foundation_storage;
 pub mod storage;
-pub mod storage_template;
 pub mod user;
 mod utils;
 

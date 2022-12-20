@@ -73,8 +73,10 @@ impl WildlandIdentity {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
-    use crate::WildlandIdentity;
+    use crate::{
+        test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY},
+        WildlandIdentity,
+    };
     use wildland_crypto::identity::SigningKeypair;
 
     #[test]

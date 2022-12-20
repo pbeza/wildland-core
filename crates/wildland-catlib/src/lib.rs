@@ -85,7 +85,8 @@ use storage::{Storage, StorageData};
 use uuid::Uuid;
 use wildland_corex::catlib_service::interface::CatLib as ICatLib;
 use wildland_corex::entities::{
-    Container as IContainer, Forest as IForest, Identity, Signers, Storage as IStorage,
+    ContainerManifest as IContainer, ForestManifest as IForest, Identity, Signers,
+    StorageManifest as IStorage,
 };
 
 mod bridge;
