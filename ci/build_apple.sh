@@ -6,8 +6,7 @@
 set -ex
 
 # Define
-# BUILD_ROOT=$CI_PROJECT_DIR
-BUILD_ROOT="/Users/wildland/src/wildland-core"
+BUILD_ROOT=$CI_PROJECT_DIR
 MODULE="wildlandx"
 PKG_OUT="out_dir"
 
