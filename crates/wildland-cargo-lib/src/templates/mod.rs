@@ -16,4 +16,5 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod foundation_storage;
+#[cfg(feature = "lfs")]
 pub mod lfs;
