@@ -13,7 +13,7 @@ stages:
   - Bridges
   - Bindings
   - Deploy
-  - docs
+  - Docs
 
 ###############
 # STAGE: Build
@@ -178,16 +178,13 @@ apple:
   stage: Bridges
   only:
     - master
+    - tags
     - develop
     - merge_requests
   tags:
     - macos
   script:
-    - CLOUD_CREDENTIALS=`mktemp`
-    - chmod 600 $CLOUD_CREDENTIALS
-    - echo $APPLE_GCS_BUCKET_UPLODAER_ACCT | base64 -d > $CLOUD_CREDENTIALS
-    - CLOUD_CREDENTIALS=$CLOUD_CREDENTIALS ci/build_apple.sh
-    - rm $CLOUD_CREDENTIALS
+    - bash ci/build_apple.sh
   artifacts:
     paths:
       - wildlandx_macos.build/out_dir/wildlandx.xcframework.zip
@@ -334,9 +331,31 @@ publish crates:
     - git checkout -B $CI_COMMIT_BRANCH --track remotes/origin/$CI_COMMIT_BRANCH
     - RUST_LOG=debug cargo $CARGO_FLAGS release -v --registry wl-dev --workspace --no-confirm --execute release
 
+publish apple-sdk:
+  stage: Deploy
+  image: google/cloud-sdk
+  tags:
+    - docker
+    - linux
+    - metal
+  only:
+    - develop
+    - tags
+  dependencies: ['apple']
+  before_script:
+    - git config --global user.name "Wildland Housekeeper"
+    - git config --global user.email "$HOUSEKEEPER_EMAIL"
+  script:
+    - CLOUD_CREDENTIALS=`mktemp`
+    - chmod 600 $CLOUD_CREDENTIALS
+    - echo $APPLE_GCS_BUCKET_UPLODAER_ACCT | base64 -d > $CLOUD_CREDENTIALS
+    - export CLOUD_CREDENTIALS=$CLOUD_CREDENTIALS
+    - bash ci/upload_apple.sh
+    - rm $CLOUD_CREDENTIALS
+
 pages-mld:
   image: registry.gitlab.com/wildland/corex/wildland-core/esv_mdbook:0.3.2
-  stage: docs
+  stage: Docs
   dependencies: [] # Disable conflicting artifacts pulling from Bindinds stage
   except:
     - tags
@@ -355,7 +374,7 @@ pages-mld:
       - develop
 
 pages-lld:
-  stage: docs
+  stage: Docs
   dependencies: [] # Disable conflicting artifacts pulling from Bindinds stage
   except:
     - tags
@@ -373,7 +392,7 @@ pages-lld:
 
 pages-publish-develop:
   image: google/cloud-sdk
-  stage: docs
+  stage: Docs
   except:
     - tags
   needs:
@@ -393,7 +412,7 @@ pages-publish-develop:
 
 pages-publish-master:
   image: google/cloud-sdk
-  stage: docs
+  stage: Docs
   except:
     - tags
   needs:
