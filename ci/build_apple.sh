@@ -1,5 +1,5 @@
 #!/bin/sh
-# Maintainers: 
+# Maintainers:
 #     Piotr Isajew (pisajew@wildland.io)
 #     Ivan Sinitsa (ivan@wildland.io)
 
@@ -15,7 +15,7 @@ MANIFEST_REPOSITORY="git@gitlab.com:wildland/corex/sdk-apple.git"
 # Target branch to which package manifests are to be pushed.
 MANIFEST_BRANCH="master"
 
-# Define 
+# Define
 BUILD_ROOT=$CI_PROJECT_DIR
 MODULE="wildlandx"
 PKG_OUT="out_dir"
@@ -23,17 +23,17 @@ PKG_OUT="out_dir"
 # Build iOS framework
 DESTROOT="$BUILD_ROOT/wildlandx_ios.build"
 FW_IOS_OUT="$DESTROOT/$MODULE.framework"
-./ci/apple/build_apple_ios.sh $DESTROOT
+./ci/apple/build_apple_ios.sh $DESTROOT $BUILD_ROOT
 
 # Build iOS Simulator framework
 DESTROOT="$BUILD_ROOT/wildlandx_ios_simulator.build"
 FW_IOS_SIM_OUT="$DESTROOT/$MODULE.framework"
-./ci/apple/build_apple_ios_simulator.sh $DESTROOT
+./ci/apple/build_apple_ios_simulator.sh $DESTROOT $BUILD_ROOT
 
-# Build macOS framework
+## Build macOS framework
 DESTROOT="$BUILD_ROOT/wildlandx_mac.build"
 FW_MAC_OUT="$DESTROOT/$MODULE.framework"
-./ci/apple/build_apple_mac.sh $DESTROOT
+./ci/apple/build_apple_mac.sh $DESTROOT $BUILD_ROOT
 
 # Create output folder
 FW_UNIVERSAL_OUT="wildlandx_apple_universal.build"
@@ -73,24 +73,24 @@ upload_framework() {
 import PackageDescription
 
 let package = Package(
-  name: "wildlandx",
-  platforms: [
-    .macOS(.v12), .iOS(.v15)
-  ],
-  products: [
-    .library(name: "wildlandx", targets: ["wildlandx"])
-  ],
-  targets: [
-    .binaryTarget(
-      name: "wildlandx",
-      url: "$FETCH_URL/wildlandx.xcframework.zip",
-      checksum: "$(shasum -a 256 $SAVED_WD/wildlandx.xcframework.zip | awk '{print $1}')"
-    ),
-    .testTarget(
-        name: "WildlandXTests",
-        dependencies: ["wildlandx"]
-    )
-  ]
+    name: "wildlandx",
+    platforms: [
+        .macOS(.v12), .iOS(.v15)
+    ],
+    products: [
+        .library(name: "wildlandx", targets: ["wildlandx"])
+    ],
+    targets: [
+        .binaryTarget(
+            name: "wildlandx",
+            url: "$FETCH_URL/wildlandx.xcframework.zip",
+            checksum: "$(shasum -a 256 $SAVED_WD/wildlandx.xcframework.zip | awk '{print $1}')"
+        ),
+        .testTarget(
+            name: "WildlandXTests",
+            dependencies: ["wildlandx"]
+        )
+    ]
 )
 EOF
 
@@ -98,7 +98,7 @@ EOF
     git commit -m "Build script updated package manifest at $(date +%Y-%m-%d)"
     git push
     cd $SAVED_WD
-    
+
     gcloud auth activate-service-account --key-file=$CLOUD_CREDENTIALS
     gsutil cp "$1" $UPLOAD_URL
 }
