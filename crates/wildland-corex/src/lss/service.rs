@@ -18,9 +18,10 @@
 use std::fmt::{Debug, Display};
 
 use super::{api::LocalSecureStorage, result::LssResult};
-use crate::catlib_service::entities::Identity;
-use crate::entities::Forest;
-use crate::{ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY};
+use crate::{
+    catlib_service::entities::Identity, entities::ForestManifest, ForestRetrievalError, LssError,
+    WildlandIdentity, DEFAULT_FOREST_KEY,
+};
 use serde::{de::DeserializeOwned, Serialize};
 use uuid::Uuid;
 use wildland_crypto::identity::SigningKeypair;
@@ -62,7 +63,7 @@ impl LssService {
         })
     }
 
-    pub fn save_forest_uuid(&self, forest: &dyn Forest) -> LssResult<bool> {
+    pub fn save_forest_uuid(&self, forest: &dyn ForestManifest) -> LssResult<bool> {
         tracing::trace!("Saving forest uuid");
         self.serialize_and_save(forest.owner().encode(), &forest.uuid())
     }
@@ -134,13 +135,11 @@ mod tests {
     use std::{cell::RefCell, collections::HashMap};
 
     use crate::{
-        catlib_service::{entities::Identity, error::CatlibResult},
-        entities::{Bridge, Container, ContainerPath, Forest as IForest, Signers},
+        catlib_service::entities::Identity, entities::ForestManifest as IForest,
+        test_utils::MockForest,
     };
-    use mockall::mock;
     use rstest::{fixture, rstest};
     use uuid::Uuid;
-
     use wildland_crypto::identity::SigningKeypair;
 
     use crate::{
@@ -267,40 +266,6 @@ mod tests {
 
         let expecte_forest_identity = WildlandIdentity::Forest(0, SigningKeypair::from(&keypair));
         assert_eq!(default_forest.unwrap(), expecte_forest_identity)
-    }
-
-    mock! {
-        pub Forest {}
-        impl std::fmt::Debug for Forest {
-            fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> std::fmt::Result;
-        }
-        impl Clone for Forest {
-            fn clone(&self) -> Self;
-        }
-        impl IForest for Forest {
-            fn add_signer(&mut self, signer: Identity) -> CatlibResult<bool>;
-            fn del_signer(&mut self, signer: Identity) -> CatlibResult<bool>;
-            fn containers(&self) -> CatlibResult<Vec<Box<dyn Container>>>;
-            fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;
-            fn delete(&mut self) -> CatlibResult<bool>;
-            fn create_container(&self, name: String) -> CatlibResult<Box<dyn Container>>;
-            fn create_bridge(
-                &self,
-                path: ContainerPath,
-                link_data: Vec<u8>,
-            ) -> CatlibResult<Box<dyn Bridge>>;
-            fn find_bridge(&self, path: ContainerPath) -> CatlibResult<Box<dyn Bridge>>;
-            fn find_containers(
-                &self,
-                paths: Vec<ContainerPath>,
-                include_subdirs: bool,
-            ) -> CatlibResult<Vec<Box<dyn Container>>>;
-
-            fn data(&mut self) -> CatlibResult<Vec<u8>>;
-            fn uuid(&self) -> Uuid;
-            fn owner(&self) -> Identity;
-            fn signers(&mut self) -> CatlibResult<Signers>;
-        }
     }
 
     #[rstest]

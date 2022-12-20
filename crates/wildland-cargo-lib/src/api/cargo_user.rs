@@ -21,12 +21,15 @@ use std::{
 };
 
 use crate::{
-    api::{container::*, storage_template::*},
+    api::container::*,
     errors::{storage::GetStorageTemplateError, user::*},
 };
 use derivative::Derivative;
 use uuid::Uuid;
-use wildland_corex::catlib_service::{entities::Forest, error::CatlibError, CatLibService};
+use wildland_corex::{
+    catlib_service::{entities::ForestManifest, error::CatlibError, CatLibService},
+    StorageTemplate,
+};
 
 use super::{
     config::FoundationStorageApiConfig,
@@ -75,7 +78,7 @@ pub struct CargoUser {
     this_device: String,
     all_devices: Vec<String>,
 
-    forest: Box<dyn Forest>,
+    forest: Box<dyn ForestManifest>,
 
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
@@ -89,7 +92,7 @@ impl CargoUser {
     pub fn new(
         this_device: String,
         all_devices: Vec<String>,
-        forest: Box<dyn Forest>,
+        forest: Box<dyn ForestManifest>,
         catlib_service: CatLibService,
         fsa_config: &FoundationStorageApiConfig,
     ) -> Self {
@@ -262,24 +265,24 @@ mod tests {
     use std::str::FromStr;
 
     use mockito::Matcher;
+    use pretty_assertions::assert_eq;
     use rstest::*;
     use serde_json::json;
     use uuid::Uuid;
-    use wildland_corex::catlib_service::entities::Forest;
     use wildland_corex::{
-        CatLibService, DeviceMetadata, ForestMetaData, SigningKeypair, WildlandIdentity,
+        catlib_service::entities::ForestManifest, CatLibService, DeviceMetadata, ForestMetaData,
+        SigningKeypair, WildlandIdentity,
     };
 
-    use crate::api::config::FoundationStorageApiConfig;
-    use crate::api::utils::test::catlib_service;
     use crate::api::{
-        foundation_storage::FoundationStorageTemplate, storage_template::StorageTemplate,
+        config::FoundationStorageApiConfig, foundation_storage::FoundationStorageTemplate,
+        utils::test::catlib_service,
     };
 
     use super::CargoUser;
 
     #[fixture]
-    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Box<dyn Forest>) {
+    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Box<dyn ForestManifest>) {
         let this_dev_name = "My device".to_string();
 
         let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
@@ -315,7 +318,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_requesting_free_tier_storage(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_requesting_free_tier_storage(
+        setup: (CargoUser, CatLibService, Box<dyn ForestManifest>),
+    ) {
         // given setup
         let (mut cargo_user, catlib_service, mut forest) = setup;
 
@@ -364,25 +369,27 @@ mod tests {
         verify_token_mock.assert();
         storage_req_mock_2.assert();
 
-        // and storage template is saved in LSS
+        // and storage template is saved in CatLib
+        let template_data = serde_json::from_str::<serde_json::Value>(
+            &catlib_service.get_storage_templates_data().unwrap()[0],
+        )
+        .unwrap();
         let expected_template_json = json!(
             {
-                "type":"FoundationStorageTemplate",
+                "uuid": template_data["uuid"],
+                "backend_type":"FoundationStorage",
+                "name": null,
                 "template":
                 {
-                    "uuid":"00000000-0000-0000-0000-000000000001",
-                    "credential_id":"cred_id",
-                    "credential_secret":"cred_secret","sc_url":""
+                    "bucket_uuid": "00000000-0000-0000-0000-000000000001",
+                    "credential_id": "cred_id",
+                    "credential_secret": "cred_secret",
+                    "sc_url": "",
+                    "container_prefix": "{{ OWNER }}/{{ CONTAINER_NAME }}"
                 }
             }
         );
-        assert_eq!(
-            serde_json::from_str::<serde_json::Value>(
-                &catlib_service.get_storage_templates_data().unwrap()[0]
-            )
-            .unwrap(),
-            expected_template_json
-        );
+        assert_eq!(template_data, expected_template_json);
 
         // and storage granted flag is set in catlib
         assert!(catlib_service
@@ -391,19 +398,20 @@ mod tests {
     }
 
     #[rstest]
-    fn test_creating_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_creating_container(setup: (CargoUser, CatLibService, Box<dyn ForestManifest>)) {
         // given setup
         let (cargo_user, catlib_service, forest) = setup;
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-        let storage_template =
-            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
-                uuid: Uuid::from_str(container_uuid_str).unwrap(),
-                credential_id: "cred_id".to_owned(),
-                credential_secret: "cred_secret".to_owned(),
-                sc_url: "some url".to_owned(),
-            });
+        let storage_template = FoundationStorageTemplate::new(
+            Uuid::from_str(container_uuid_str).unwrap(),
+            "cred_id".to_owned(),
+            "cred_secret".to_owned(),
+            "some url".to_owned(),
+        )
+        .try_into()
+        .unwrap();
         let container_name = "new container".to_string();
         cargo_user
             .create_container(container_name.clone(), &storage_template)
@@ -418,19 +426,20 @@ mod tests {
     }
 
     #[rstest]
-    fn test_getting_created_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_getting_created_container(setup: (CargoUser, CatLibService, Box<dyn ForestManifest>)) {
         // given setup
         let (cargo_user, _catlib_service, _forest) = setup;
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-        let storage_template =
-            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
-                uuid: Uuid::from_str(container_uuid_str).unwrap(),
-                credential_id: "cred_id".to_owned(),
-                credential_secret: "cred_secret".to_owned(),
-                sc_url: "some url".to_owned(),
-            });
+        let storage_template = FoundationStorageTemplate::new(
+            Uuid::from_str(container_uuid_str).unwrap(),
+            "cred_id".to_owned(),
+            "cred_secret".to_owned(),
+            "some url".to_owned(),
+        )
+        .try_into()
+        .unwrap();
         let container_name = "new container".to_string();
         cargo_user
             .create_container(container_name.clone(), &storage_template)
@@ -446,19 +455,20 @@ mod tests {
     }
 
     #[rstest]
-    fn test_delete_created_container(setup: (CargoUser, CatLibService, Box<dyn Forest>)) {
+    fn test_delete_created_container(setup: (CargoUser, CatLibService, Box<dyn ForestManifest>)) {
         // given setup
         let (cargo_user, _catlib_service, _forest) = setup;
 
         // when a container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-        let storage_template =
-            StorageTemplate::FoundationStorageTemplate(FoundationStorageTemplate {
-                uuid: Uuid::from_str(container_uuid_str).unwrap(),
-                credential_id: "cred_id".to_owned(),
-                credential_secret: "cred_secret".to_owned(),
-                sc_url: "some url".to_owned(),
-            });
+        let storage_template = FoundationStorageTemplate::new(
+            Uuid::from_str(container_uuid_str).unwrap(),
+            "cred_id".to_owned(),
+            "cred_secret".to_owned(),
+            "some url".to_owned(),
+        )
+        .try_into()
+        .unwrap();
         let container_name = "new container".to_string();
         let container = cargo_user
             .create_container(container_name, &storage_template)
