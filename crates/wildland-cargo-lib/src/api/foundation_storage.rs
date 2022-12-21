@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-mod foundation_storage_template;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -28,9 +27,9 @@ use wildland_http_client::{
     evs::{ConfirmTokenReq, EvsClient, GetStorageReq, GetStorageRes},
 };
 
-use super::config::FoundationStorageApiConfig;
+use crate::templates::foundation_storage::FoundationStorageTemplate;
 
-pub use foundation_storage_template::*;
+use super::config::FoundationStorageApiConfig;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StorageCredentials {
