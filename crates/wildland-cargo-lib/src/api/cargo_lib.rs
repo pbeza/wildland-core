@@ -33,7 +33,10 @@ use std::{
 };
 use thiserror::Error;
 use wildland_catlib::CatLib;
-use wildland_corex::{CatLibService, LocalSecureStorage, LssService};
+use wildland_corex::{
+    catlib_service::CatLibService, dfs::service::DfsService, LocalSecureStorage, LssService,
+};
+use wildland_dfs::encrypted::EncryptedDfs as Dfs;
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[repr(C)]
@@ -64,6 +67,7 @@ static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 #[derive(Clone)]
 pub struct CargoLib {
     user_api: UserApi,
+    dfs_service: DfsService,
 }
 
 impl CargoLib {
@@ -78,6 +82,7 @@ impl CargoLib {
                 CatLibService::new(Rc::new(CatLib::default())),
                 fsa_config,
             )),
+            dfs_service: DfsService::new(Rc::new(Dfs::new())),
         }
     }
 

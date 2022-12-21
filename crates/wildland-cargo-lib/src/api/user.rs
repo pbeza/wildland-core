@@ -164,7 +164,7 @@ mod tests {
     use crate::api::utils::test::{catlib_service, lss_stub};
     use crate::{errors::UserRetrievalError, user::UserService};
     use rstest::rstest;
-    use wildland_corex::{CatLibService, LocalSecureStorage, LssService};
+    use wildland_corex::{catlib_service::CatLibService, LocalSecureStorage, LssService};
 
     #[rstest]
     fn create_mnemonic_from_string_with_valid_words_should_succeed(

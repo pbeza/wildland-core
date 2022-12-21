@@ -179,10 +179,13 @@ mod tests {
     use uuid::Uuid;
 
     use crate::{
-        entities::{Identity, MockContainerManifest, MockStorageManifest},
-        interface::MockCatLib,
+        catlib_service::{
+            entities::{Identity, MockContainerManifest, MockStorageManifest},
+            interface::MockCatLib,
+            CatLibService,
+        },
         test_utils::MockForest,
-        CatLibService, StorageTemplate,
+        StorageTemplate,
     };
 
     #[rstest]

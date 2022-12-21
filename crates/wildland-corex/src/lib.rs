@@ -16,6 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod catlib_service;
+pub mod dfs;
 mod error;
 mod identity;
 mod lss;
@@ -23,7 +24,6 @@ mod storage;
 #[cfg(test)]
 mod test_utils;
 
-pub use catlib_service::*;
 pub use error::*;
 pub use identity::{master::*, wildland::*};
 pub use lss::*;

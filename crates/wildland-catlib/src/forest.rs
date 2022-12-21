@@ -21,7 +21,7 @@ use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
-use wildland_corex::entities::{
+use wildland_corex::catlib_service::entities::{
     Bridge as IBridge, ContainerManifest as IContainer, ContainerPath, ForestManifest as IForest,
     Identity, Signers,
 };
@@ -140,8 +140,8 @@ impl IForest for Forest {
     /// ```rust
     /// # use wildland_catlib::CatLib;
     /// # use std::collections::HashSet;
-    /// # use wildland_corex::entities::Identity;
-    /// # use wildland_corex::interface::CatLib as ICatLib;
+    /// # use wildland_corex::catlib_service::entities::Identity;
+    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
@@ -168,8 +168,8 @@ impl IForest for Forest {
     ///
     /// ```rust
     /// # use wildland_catlib::CatLib;
-    /// # use wildland_corex::entities::Identity;
-    /// # use wildland_corex::interface::CatLib as ICatLib;
+    /// # use wildland_corex::catlib_service::entities::Identity;
+    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
     /// # use std::collections::HashSet;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
@@ -233,8 +233,8 @@ impl IForest for Forest {
     /// ## Example
     /// # use wildland_catlib::CatLib;
     /// # use std::collections::HashSet;
-    /// # use wildland_corex::entities::Identity;
-    /// # use wildland_corex::interface::CatLib as ICatLib;
+    /// # use wildland_corex::catlib_service::entities::Identity;
+    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
     ///                  b"owner".to_vec(),

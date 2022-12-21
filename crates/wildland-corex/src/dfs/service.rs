@@ -15,5 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod encrypted;
-pub mod unencrypted;
+use std::rc::Rc;
+
+use super::interfaces::Dfs;
+
+#[derive(Clone)]
+pub struct DfsService {
+    dfs: Rc<dyn Dfs>,
+}
+
+impl DfsService {
+    pub fn new(dfs: Rc<dyn Dfs>) -> Self {
+        Self { dfs }
+    }
+}

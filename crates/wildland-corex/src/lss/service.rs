@@ -19,8 +19,8 @@ use std::fmt::{Debug, Display};
 
 use super::{api::LocalSecureStorage, result::LssResult};
 use crate::{
-    catlib_service::entities::Identity, entities::ForestManifest, ForestRetrievalError, LssError,
-    WildlandIdentity, DEFAULT_FOREST_KEY,
+    catlib_service::entities::{ForestManifest, Identity},
+    ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use uuid::Uuid;
@@ -135,7 +135,7 @@ mod tests {
     use std::{cell::RefCell, collections::HashMap};
 
     use crate::{
-        catlib_service::entities::Identity, entities::ForestManifest as IForest,
+        catlib_service::{entities::ForestManifest as IForest, entities::Identity},
         test_utils::MockForest,
     };
     use rstest::{fixture, rstest};

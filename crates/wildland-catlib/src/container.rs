@@ -20,7 +20,7 @@ use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, rc::Rc};
 
-use wildland_corex::entities::{
+use wildland_corex::catlib_service::entities::{
     ContainerManifest as IContainer, ContainerPath, ContainerPaths, ForestManifest,
     StorageManifest as IStorage,
 };
@@ -80,8 +80,8 @@ impl IContainer for Container {
     /// ```rust
     /// # use wildland_catlib::CatLib;
     /// # use std::collections::HashSet;
-    /// # use wildland_corex::entities::Identity;
-    /// # use wildland_corex::interface::CatLib as ICatLib;
+    /// # use wildland_corex::catlib_service::entities::Identity;
+    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
@@ -106,8 +106,8 @@ impl IContainer for Container {
     /// ```rust
     /// # use wildland_catlib::CatLib;
     /// # use std::collections::HashSet;
-    /// # use wildland_corex::entities::Identity;
-    /// # use wildland_corex::interface::CatLib as ICatLib;
+    /// # use wildland_corex::catlib_service::entities::Identity;
+    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
@@ -139,8 +139,8 @@ impl IContainer for Container {
     /// ```rust
     /// # use wildland_catlib::CatLib;
     /// # use std::collections::HashSet;
-    /// # use wildland_corex::entities::Identity;
-    /// # use wildland_corex::interface::CatLib as ICatLib;
+    /// # use wildland_corex::catlib_service::entities::Identity;
+    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
     /// # use uuid::Uuid;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
@@ -225,7 +225,7 @@ mod tests {
     use super::db::test::catlib;
     use crate::*;
     use rstest::*;
-    use wildland_corex::entities::ContainerManifest;
+    use wildland_corex::catlib_service::entities::ContainerManifest;
 
     #[fixture]
     fn catlib_with_forest(catlib: CatLib) -> CatLib {

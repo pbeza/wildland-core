@@ -15,5 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod encrypted;
-pub mod unencrypted;
+use super::error::DfsError;
+
+/// Interface between CoreX and DFS
+///
+pub trait Dfs {
+    fn get_version(&self) -> &'static str;
+    fn init_storage_driver(&self) -> Result<(), DfsError>;
+}
+
+/// Interface that DFS should expose towards frontends
+pub trait DfsFrontend {
+    fn readdir(&self);
+}
