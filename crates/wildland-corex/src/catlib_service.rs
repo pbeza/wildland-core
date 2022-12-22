@@ -85,7 +85,7 @@ impl CatLibService {
         forest_identity: &WildlandIdentity,
         this_device_identity: &WildlandIdentity,
         data: ForestMetaData,
-    ) -> CatlibResult<Box<dyn ForestManifest>> {
+    ) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
         self.catlib.create_forest(
             forest_identity.get_public_key().into(),
             HashSet::from([this_device_identity.get_public_key().into()]),
@@ -93,19 +93,25 @@ impl CatLibService {
         )
     }
 
-    pub fn mark_free_storage_granted(&self, forest: &mut dyn ForestManifest) -> CatlibResult<()> {
+    pub fn mark_free_storage_granted(
+        &self,
+        forest: &Arc<Mutex<dyn ForestManifest>>,
+    ) -> CatlibResult<()> {
         let mut forest_metadata = self.get_parsed_forest_metadata(forest)?;
         forest_metadata.free_storage_granted = true;
-        forest.update(forest_metadata.try_into()?)?;
+        forest.lock().unwrap().update(forest_metadata.try_into()?)?;
         Ok(())
     }
 
-    pub fn is_free_storage_granted(&self, forest: &mut dyn ForestManifest) -> CatlibResult<bool> {
+    pub fn is_free_storage_granted(
+        &self,
+        forest: &Arc<Mutex<dyn ForestManifest>>,
+    ) -> CatlibResult<bool> {
         let forest_metadata = self.get_parsed_forest_metadata(forest)?;
         Ok(forest_metadata.free_storage_granted)
     }
 
-    pub fn get_forest(&self, forest_uuid: &Uuid) -> CatlibResult<Box<dyn ForestManifest>> {
+    pub fn get_forest(&self, forest_uuid: &Uuid) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
         self.catlib.get_forest(forest_uuid)
     }
 
@@ -113,30 +119,13 @@ impl CatLibService {
     pub fn create_container(
         &self,
         name: String,
-        forest: &dyn ForestManifest,
+        forest: &Arc<Mutex<dyn ForestManifest>>,
         storage_template: &StorageTemplate,
-    ) -> CatlibResult<Box<dyn ContainerManifest>> {
-        let container = forest.create_container(name.clone())?;
-
-        let template_context = TemplateContext {
-            container_name: name,
-            owner: forest.owner().encode(),
-            access_mode: crate::StorageAccessMode::ReadWrite,
-            container_uuid: container.uuid(),
-            paths: container.paths().into_iter().collect(),
-        };
-        // !!! RFC REVIEW TODO should we revert Container when creating Storage fails or maybe return Container in some incomplete state
-        let storage = storage_template
-            .render(template_context)
-            .map_err(|e| CatlibError::Generic(e.to_string()))?;
-
-        let serialized_storage = serde_json::to_vec(&storage).map_err(|e| {
-            CatlibError::Generic(format!("Could not serialize storage template: {e}"))
-        })?;
-
-        let _storage = container.create_storage(Some(storage.uuid()), serialized_storage)?;
-
-        Ok(container)
+    ) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
+        forest
+            .lock()
+            .map_err(|_| CatlibError::Generic("Poisoned Mutex".to_owned()))?
+            .create_container(name, storage_template)
     }
 
     pub fn delete_container(&self, container: &mut dyn ContainerManifest) -> CatlibResult<()> {
@@ -145,9 +134,9 @@ impl CatLibService {
 
     fn get_parsed_forest_metadata(
         &self,
-        forest: &mut dyn ForestManifest,
+        forest: &Arc<Mutex<dyn ForestManifest>>,
     ) -> CatlibResult<ForestMetaData> {
-        serde_json::from_slice(&forest.data()?)
+        serde_json::from_slice(&forest.lock().unwrap().data()?)
             .map_err(|e| CatlibError::Generic(format!("Could not deserialize forest metadata {e}")))
     }
 
@@ -195,40 +184,14 @@ mod tests {
         let storage_template =
             StorageTemplate::try_new("FoundationStorage", hashmap_template).unwrap();
 
-        let mut forest_mock = MockForest::new();
+        let mut forest_mock = MockForestManifest::new();
         forest_mock
             .expect_create_container()
-            .with(predicate::eq(container_name.clone()))
+            .with(predicate::eq(container_name.clone()), predicate::always())
             .times(1)
-            .returning(move |name| {
-                let mut container_mock = MockContainerManifest::new();
-                let expected_storage_json = json!({
-                    "name": null,
-                    "uuid": null, // avoid comparing random value
-                    "backend_type": "FoundationStorage",
-                    "data": {
-                        "field1": "prefix 0101010101010101010101010101010101010101010101010101010101010101 suffix",
-                        "field2": name
-                    }
-                });
-                container_mock
-                    .expect_create_storage()
-                    .withf(move |_uuid, bytes|{
-                        let mut json: serde_json::Value = serde_json::from_slice(bytes).unwrap();
-                        json["uuid"] = serde_json::Value::Null; // avoid comparing random value
-                        json == expected_storage_json
-                    })
-                    .times(1)
-                    .returning(|_, _|Ok(Box::new(MockStorageManifest::new())));
-                container_mock.expect_uuid().times(1).returning(Uuid::new_v4);
-                container_mock.expect_paths().times(1).returning(HashSet::new);
-                Ok(Box::new(container_mock))
-            });
-        forest_mock
-            .expect_owner()
-            .times(1)
-            .returning(|| Identity([1; 32]));
+            .returning(move |_, _| Ok(Arc::new(Mutex::new(MockContainerManifest::new()))));
 
+        let forest_mock: Arc<Mutex<dyn ForestManifest>> = Arc::new(Mutex::new(forest_mock));
         catlib_service
             .create_container(container_name, &forest_mock, &storage_template)
             .unwrap();

@@ -213,11 +213,6 @@ pub trait ContainerManifest {
     /// 
     fn get_storages(&self) -> Result<Vec<&dyn StorageBackend>, GetStoragesError>;
 
-    /// Removes the given storage backend from the container.
-    /// This operation should involve a secure way of erasing data from the storage.
-    /// 
-    fn delete_storage(&mut self, storage: &dyn StorageBackend) -> Result<(), DeleteStorageError>;
-
     /// This operation adds a given Storage Backend to the container.
     /// The procedure involves starting the data sync mechanism between the new storage
     /// and the other present storages.
@@ -316,7 +311,6 @@ mod ffi {
     // ForestManifest
     //
     fn get_storages(self: &Arc<Mutex<ForestManifest>>) -> Result<Vec<&dyn StorageBackend>, GetStoragesError>;
-    fn delete_storage(self: &Arc<Mutex<ForestManifest>>, storage: &dyn StorageBackend) -> Result<(), DeleteStorageError>;
     fn add_storage(self: &Arc<Mutex<ForestManifest>>, storage: &dyn StorageBackend) -> Result<(), AddStorageError>;
     fn is_deleted(self: &Arc<Mutex<ForestManifest>>) -> bool;
     fn stringify(self: &Arc<Mutex<ForestManifest>>) -> String;

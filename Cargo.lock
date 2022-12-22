@@ -2700,6 +2700,7 @@ dependencies = [
  "rstest",
  "rustbreak",
  "serde",
+ "serde_json",
  "serde_yaml 0.9.16",
  "tempfile",
  "thiserror",

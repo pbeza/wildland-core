@@ -272,7 +272,7 @@ mod tests {
 
         let forest_identity = Identity([1; 32]);
         let uuid = Uuid::new_v4();
-        let mut forest = MockForest::new();
+        let mut forest = MockForestManifest::new();
         forest.expect_owner().returning({
             let fi = forest_identity.clone();
             move || fi.clone()

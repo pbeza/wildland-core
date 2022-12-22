@@ -29,6 +29,8 @@ pub enum CreateMnemonicError {
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub enum UserCreationError {
+    #[error("Generic error: {0}")]
+    Generic(String),
     #[error("User already exists")]
     UserAlreadyExists,
     #[error("Mnemonic generation error: {0}")]

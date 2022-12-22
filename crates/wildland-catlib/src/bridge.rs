@@ -60,12 +60,12 @@ impl Bridge {
     }
 }
 
-impl IBridge for Bridge {
+impl BridgeManifest for Bridge {
     /// ## Errors
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
-    fn forest(&self) -> CatlibResult<Box<dyn ForestManifest>> {
+    fn forest(&self) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
         fetch_forest_by_uuid(self.db.clone(), &self.data.forest_uuid)
     }
 
@@ -126,15 +126,24 @@ mod tests {
             .create_forest(Identity([1; 32]), Signers::new(), vec![])
             .unwrap();
 
-        let mut bridge = forest
+        let bridge = forest
+            .lock()
+            .unwrap()
             .create_bridge("/other/forest".to_string(), vec![])
             .unwrap();
 
-        forest.find_bridge("/other/forest".to_string()).unwrap();
+        forest
+            .lock()
+            .unwrap()
+            .find_bridge("/other/forest".to_string())
+            .unwrap();
 
-        bridge.delete().unwrap();
+        bridge.lock().unwrap().delete().unwrap();
 
-        let bridge = forest.find_bridge("/other/forest".to_string());
+        let bridge = forest
+            .lock()
+            .unwrap()
+            .find_bridge("/other/forest".to_string());
 
         assert_eq!(bridge.err(), Some(CatlibError::NoRecordsFound));
     }

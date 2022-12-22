@@ -202,7 +202,7 @@ mod tests {
                 owner: "Quentin Tarantino".to_owned(),
                 access_mode: wildland_corex::StorageAccessMode::ReadWrite,
                 container_uuid: Uuid::new_v4(),
-                paths: Vec::new(),
+                paths: HashSet::new(),
             })
             .unwrap();
         let storage_uuid = storage.uuid();
