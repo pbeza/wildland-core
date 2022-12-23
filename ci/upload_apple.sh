@@ -8,7 +8,7 @@ set -ex
 UPLOAD_URL="gs://wildland-apple-dev-binaries"
 
 # Location of archive built from a previous job
-ARTIFACT_ARCHIVE=$CI_PROJECT_DIR/wildlandx_macos.build/out_dir/wildlandx.xcframework.zip
+ARTIFACT_ARCHIVE=$CI_PROJECT_DIR/wildlandx_apple_universal.build/out_dir/wildlandx.xcframework.zip
 
 # URL from which binary packages can be fetched.
 FETCH_URL="https://xcode-proxy.wildland.dev/wildland-apple-dev-binaries"
