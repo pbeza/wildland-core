@@ -15,17 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::rc::Rc;
+mod path_resolver;
 
-use super::interfaces::Dfs;
+pub use path_resolver::*;
+use std::path::Path;
 
-#[derive(Clone)]
-pub struct DfsService {
-    dfs: Rc<dyn Dfs>,
-}
+pub struct ContainerManager;
 
-impl DfsService {
-    pub fn new(dfs: Rc<dyn Dfs>) -> Self {
-        Self { dfs }
+impl PathResolver for ContainerManager {
+    fn resolve(&self, _path: &Path) -> Vec<PathWithinStorage> {
+        todo!() // TODO make a task for it
     }
 }

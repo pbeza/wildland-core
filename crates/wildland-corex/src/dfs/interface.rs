@@ -15,16 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::error::DfsError;
+use std::path::{Path, PathBuf};
 
-/// Interface between CoreX and DFS
-///
-pub trait Dfs {
-    fn get_version(&self) -> &'static str;
-    fn init_storage_driver(&self) -> Result<(), DfsError>;
+use crate::Storage;
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct NodeDescriptor {
+    pub storage: Storage,
+    pub path: PathBuf,
 }
 
 /// Interface that DFS should expose towards frontends
 pub trait DfsFrontend {
-    fn readdir(&self);
+    fn readdir<P: AsRef<Path>>(&mut self, path: P) -> Vec<NodeDescriptor>;
 }

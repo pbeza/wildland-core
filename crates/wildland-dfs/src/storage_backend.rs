@@ -15,4 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub enum DfsError {}
+use std::path::{Path, PathBuf};
+
+pub trait StorageBackend {
+    /// Returns list of files descriptors, which for now is (Storage, path within Storage) pair.
+    fn readdir(&self, path: &Path) -> Vec<PathBuf>;
+}
