@@ -19,26 +19,19 @@ RUST_ARCH_ARM64=$4
 RUST_ARCH_X86_64=$5
 
 ARCH_EXTENSION="$6"
-if [ $ARCH_EXTENSION = "None" ]; then
-    ARCH_EXTENSION=""
-fi
 
 XCRUN_SDK="$8"
 
 export OS_DEPLOYMENT_TARGET=$7
 export SDKROOT=$(xcrun -sdk $XCRUN_SDK --show-sdk-path)
 
-SUPPORTED_PLATFORM="$9"
+TARGET_PLATFORM="$9"
 FW_OUT="$DESTROOT/$MODULE.framework"
 
-SWIFT_TOOLCHAIN_NAME=iphoneos
-if [ $SUPPORTED_PLATFORM = "MacOSX" ]; then
-    SWIFT_TOOLCHAIN_NAME=macosx
-fi
-
-ADDITIONAL_LIBRARY_PATH=""
-if [ $SUPPORTED_PLATFORM = "MacOSX" ]; then
+if [ $TARGET_PLATFORM = "MacOSX" ]; then
     ADDITIONAL_LIBRARY_PATH="/Versions/A"
+else
+    ADDITIONAL_LIBRARY_PATH=""
 fi
 
 if [ -d "$DESTROOT" ]; then
@@ -116,7 +109,7 @@ INPUT=input.swift
     cat $SWIFT_BRIDGE_OUTDIR/ffi_swift.swift >> $INPUT
 
     ARCH_TARGET=$arch-apple-ios$OS_DEPLOYMENT_TARGET$ARCH_EXTENSION
-    if [ $SUPPORTED_PLATFORM = "MacOSX" ]; then
+    if [ $TARGET_PLATFORM = "MacOSX" ]; then
         ARCH_TARGET=$arch-apple-macos$OS_DEPLOYMENT_TARGET
     fi
 
@@ -159,11 +152,11 @@ INPUT=input.swift
           $OBJ_OUT \
           -install_name @rpath/$MODULE.framework$ADDITIONAL_LIBRARY_PATH/$MODULE \
           -L. \
-          -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos -L/usr/lib/swift \
+          -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$XCRUN_SDK -L/usr/lib/swift \
           -lwildland_cargo_lib \
           -o $DESTDIR/$MODULE
 
-    if [ $SUPPORTED_PLATFORM = "MacOSX" ]; then
+    if [ $TARGET_PLATFORM = "MacOSX" ]; then
         cp -v $MODULE_PATH $MOD_OUT/$arch-apple-macos.swiftmodule
         cp -v $MODULE_INTERFACE_PATH $MOD_OUT/$arch-apple-macos.swiftinterface
         cp -v $DESTDIR/$MODULE-Swift.h $HEADER_OUT
@@ -177,7 +170,7 @@ done
 xcrun lipo -create $DESTROOT/*/$MODULE -output $FW_OUT$ADDITIONAL_LIBRARY_PATH/$MODULE
 
 RES_OUT="$FW_OUT/"
-if [ $SUPPORTED_PLATFORM = "MacOSX" ]; then
+if [ $TARGET_PLATFORM = "MacOSX" ]; then
     RES_OUT="$FW_OUT$ADDITIONAL_LIBRARY_PATH/Resources/"
 fi
 
@@ -202,7 +195,7 @@ cat > "$RES_OUT/Info.plist" <<EOF
         <string>1.0</string>
         <key>CFBundleSupportedPlatforms</key>
         <array>
-           <string>$SUPPORTED_PLATFORM</string>
+           <string>$TARGET_PLATFORM</string>
         </array>
         <key>CFBundleVersion</key>
         <string>1</string>
@@ -214,7 +207,7 @@ cat > "$RES_OUT/Info.plist" <<EOF
 </plist>
 EOF
 
-if [ $SUPPORTED_PLATFORM = "MacOSX" ]; then
+if [ $TARGET_PLATFORM = "MacOSX" ]; then
     cd $FW_OUT/Versions
     ln -s A Current
     cd ..
