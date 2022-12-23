@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::{path::Path, rc::Rc};
+use std::{collections::HashMap, path::Path, rc::Rc};
 
-use crate::unencrypted::UnencryptedDfs;
+use crate::unencrypted::{StorageBackendFactory, UnencryptedDfs};
 use wildland_corex::{
     dfs::interface::{DfsFrontend, NodeDescriptor},
     PathResolver,
@@ -28,9 +28,12 @@ pub struct EncryptedDfs {
 }
 
 impl EncryptedDfs {
-    pub fn new(path_resolver: Rc<dyn PathResolver>) -> Self {
+    pub fn new(
+        path_resolver: Rc<dyn PathResolver>,
+        storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
+    ) -> Self {
         Self {
-            inner: UnencryptedDfs::new(path_resolver),
+            inner: UnencryptedDfs::new(path_resolver, storage_backend_factories),
         }
     }
 }

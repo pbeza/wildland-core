@@ -24,6 +24,7 @@ use crate::{
     user::UserService,
 };
 use std::{
+    collections::HashMap,
     mem::MaybeUninit,
     rc::Rc,
     sync::{
@@ -84,7 +85,7 @@ impl CargoLib {
                 CatLibService::new(Rc::new(CatLib::default())),
                 fsa_config,
             )),
-            dfs: Rc::new(Dfs::new(container_manager)),
+            dfs: Rc::new(Dfs::new(container_manager, HashMap::new())),
         }
     }
 

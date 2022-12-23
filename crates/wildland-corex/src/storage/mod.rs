@@ -49,6 +49,10 @@ impl Storage {
     pub fn backend_type(&self) -> &str {
         self.backend_type.as_str()
     }
+
+    pub fn data(&self) -> &serde_json::Value {
+        &self.data
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
