@@ -16,11 +16,15 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::storage_backend::StorageBackend;
-use std::{collections::HashMap, path::Path, rc::Rc};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    path::Path,
+    rc::Rc,
+};
 use uuid::Uuid;
 use wildland_corex::{
     dfs::interface::{DfsFrontend, NodeDescriptor},
-    PathResolver, PathWithinStorage, Storage,
+    PathResolver, PathWithStorages, Storage,
 };
 
 pub trait StorageBackendFactory {
@@ -45,18 +49,19 @@ impl UnencryptedDfs {
         }
     }
 
-    fn get_backend(&mut self, storage: &Storage) -> Rc<dyn StorageBackend> {
-        // TODO unwrap
-        // TODO casing
-        self.storage_backends
-            .entry(storage.uuid())
-            .or_insert_with(|| {
-                self.storage_backend_factories
-                    .get(&storage.backend_type().to_uppercase())
-                    .unwrap()
-                    .init_backend(storage.clone())
-            })
-            .clone()
+    fn get_backend(&mut self, storage: &Storage) -> Option<Rc<dyn StorageBackend>> {
+        let backend_entry = self.storage_backends.entry(storage.uuid());
+        let result = match backend_entry {
+            Entry::Occupied(occupied_entry) => occupied_entry.get().clone(),
+            Entry::Vacant(vacant_entry) => {
+                let new_backend = self
+                    .storage_backend_factories
+                    .get(storage.backend_type())?
+                    .init_backend(storage.clone());
+                vacant_entry.insert(new_backend).clone()
+            }
+        };
+        Some(result)
     }
 }
 
@@ -65,21 +70,36 @@ impl DfsFrontend for UnencryptedDfs {
         let resolved_paths = self.path_resolver.resolve(path.as_ref());
         let nodes = resolved_paths
             .into_iter()
-            .flat_map(|PathWithinStorage { path, storages }| {
-                let mut backends = storages
-                    .into_iter()
-                    .map(|storage| (self.get_backend(&storage), storage));
+            .filter_map(|PathWithStorages { path, storages }| {
+                let mut backends = storages.iter().flat_map(|storage| {
+                    let backend = self.get_backend(storage);
+                    // TODO for now unsupported backends are ignored
+                    if backend.is_none() {
+                        tracing::error!("Unsupported storage backend: {}", storage.backend_type());
+                    }
+                    backend.map(|backend| (backend, storage))
+                }); // TODO is lack of backend a fatal error ? should we have some independent error channel ?
+
                 // TODO getting first should be a temporary policy, maybe we should ping backends to check if any of them
-                // is responsive and use the one that answered as the first one.
-                let (backend, storage) = backends.next().unwrap(); // TODO return error
-                backend
-                    .readdir(&path)
-                    .into_iter()
-                    .map(move |path| NodeDescriptor {
-                        storage: storage.clone(),
-                        path,
-                    })
-            });
+                // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
+                if let Some((backend, storage)) = backends.next() {
+                    Some(backend.readdir(&path).into_iter().map({
+                        let storage = storage.clone();
+                        move |path| NodeDescriptor {
+                            storage: storage.clone(),
+                            path,
+                        }
+                    }))
+                } else {
+                    tracing::error!(
+                        "None of backend for storages {:?} works",
+                        storages.iter().map(|s| s.backend_type())
+                    );
+                    None
+                }
+            })
+            .flatten();
+
         // TODO check conflicts: more than one container may have nodes claiming the same path
         nodes.collect()
     }
@@ -188,7 +208,7 @@ mod tests {
                 .returning({
                     let storage = mufs_storage.clone();
                     move |_path| {
-                        vec![PathWithinStorage {
+                        vec![PathWithStorages {
                             path: "/".into(),
                             storages: vec![storage.clone()],
                         }]
@@ -227,7 +247,7 @@ mod tests {
                 .returning({
                     let storage = mufs_storage.clone();
                     move |_path| {
-                        vec![PathWithinStorage {
+                        vec![PathWithStorages {
                             path: "/dir".into(),
                             storages: vec![storage.clone()],
                         }]
@@ -273,7 +293,7 @@ mod tests {
                 .returning({
                     let storage = mufs_storage.clone();
                     move |_path| {
-                        vec![PathWithinStorage {
+                        vec![PathWithStorages {
                             path: "/".into(),
                             storages: vec![storage.clone()],
                         }]
@@ -322,11 +342,11 @@ mod tests {
                     let storage2 = storage2.clone();
                     move |_path| {
                         vec![
-                            PathWithinStorage {
+                            PathWithStorages {
                                 path: "/dir".into(), // returned by a container claiming path `/a/b/c/`
                                 storages: vec![storage1.clone()],
                             },
-                            PathWithinStorage {
+                            PathWithStorages {
                                 path: "/c/dir".into(), // returned by a container claiming path `/a/b/`
                                 storages: vec![storage2.clone()],
                             },
@@ -370,6 +390,54 @@ mod tests {
         );
     }
 
-    // TODO test many storages for one container
+    #[rstest]
+    fn test_getting_one_file_descriptor_from_container_with_multiple_storages(
+        dfs_with_path_resolver_and_fs: DfsFixture,
+    ) {
+        let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+        // each container has its own subfolder
+        let storage1 = new_mufs_storage("/storage1/");
+        let storage2 = new_mufs_storage("/storage2/");
+
+        unsafe {
+            (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
+                .as_mut()
+                .unwrap()
+                .expect_resolve()
+                .with(predicate::eq(Path::new("/a")))
+                .times(2)
+                .returning({
+                    let storage1 = storage1.clone();
+                    let storage2 = storage2.clone();
+                    move |_path| {
+                        vec![PathWithStorages {
+                            path: "/a".into(), // returned by a container claiming path `/a/`
+                            storages: vec![storage1.clone(), storage2.clone()],
+                        }]
+                    }
+                })
+        };
+
+        fs.create_dir("/storage1/").unwrap();
+        fs.create_dir("/storage1/a").unwrap();
+        fs.create_dir("/storage2/").unwrap();
+        fs.create_dir("/storage2/a").unwrap();
+
+        let files_descriptors = dfs.readdir("/a");
+        assert_eq!(files_descriptors, vec![]);
+
+        fs.create_file("/storage1/a/b").unwrap();
+        fs.create_file("/storage2/a/b").unwrap();
+
+        let files_descriptors = dfs.readdir("/a");
+        assert_eq!(
+            files_descriptors,
+            vec![NodeDescriptor {
+                storage: storage1.clone(),
+                path: PathBuf::from_str("/a/b").unwrap(),
+            },]
+        );
+    }
+
     // TODO test scenarios when more than one node would claim the same path
 }

@@ -18,9 +18,10 @@
 use crate::Storage;
 use std::path::{Path, PathBuf};
 
-/// Represents result of a possible path within a Storage.
+/// Represents result of a possible path within a Storage. Storages field represents all alternative
+/// locations of the path.
 ///
-pub struct PathWithinStorage {
+pub struct PathWithStorages {
     pub path: PathBuf,
     pub storages: Vec<Storage>,
 }
@@ -32,7 +33,16 @@ pub trait PathResolver {
     ///
     /// **Example**: if a container claims path `/a/b/` and [`PathResolver`] receives request to resolve
     /// path `/a/b/c/d` then [`PathResolver`] should return path `/c/d` with all Storages of that
-    /// container, so DFS could choose which Storage to use.
+    /// container as a single [`PathWithStorages`] instance, so DFS could choose which Storage to use.
     ///
-    fn resolve(&self, path: &Path) -> Vec<PathWithinStorage>;
+    /// Storages from different containers are represented bu different elements in a resulting vector
+    /// because the matching paths inside containers may be different. E.g. if container C1 claims path
+    /// `/a/` and container C2 claims path `/a/b/` then when PathResolver is asked about path `/a/b/c`
+    /// two-element vector is returned:
+    /// [
+    ///     PathWithStorages { path: "/b/c/", storages: [all storages of C1]},
+    ///     PathWithStorages { path: "/c/", storages: [all storages of C2]},
+    /// ]
+    ///
+    fn resolve(&self, path: &Path) -> Vec<PathWithStorages>;
 }

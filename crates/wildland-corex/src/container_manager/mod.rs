@@ -23,7 +23,7 @@ use std::path::Path;
 pub struct ContainerManager;
 
 impl PathResolver for ContainerManager {
-    fn resolve(&self, _path: &Path) -> Vec<PathWithinStorage> {
+    fn resolve(&self, _path: &Path) -> Vec<PathWithStorages> {
         todo!() // TODO make a task for it
     }
 }
