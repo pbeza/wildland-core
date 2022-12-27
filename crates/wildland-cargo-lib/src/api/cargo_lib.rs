@@ -69,7 +69,7 @@ static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 #[derive(Clone)]
 pub struct CargoLib {
     user_api: UserApi,
-    dfs: Rc<Dfs>,
+    _dfs: Rc<Dfs>,
 }
 
 impl CargoLib {
@@ -78,14 +78,14 @@ impl CargoLib {
         fsa_config: FoundationStorageApiConfig,
     ) -> Self {
         let lss_service = LssService::new(lss);
-        let container_manager = Rc::new(ContainerManager {}); // TODO init corex with one function that returns all of this managers/services
+        let container_manager = Rc::new(ContainerManager {});
         Self {
             user_api: UserApi::new(UserService::new(
                 lss_service,
                 CatLibService::new(Rc::new(CatLib::default())),
                 fsa_config,
             )),
-            dfs: Rc::new(Dfs::new(container_manager, HashMap::new())),
+            _dfs: Rc::new(Dfs::new(container_manager, HashMap::new())),
         }
     }
 
