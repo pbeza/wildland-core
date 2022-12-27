@@ -16,8 +16,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::rc::Rc;
+
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
+
+use crate::cross_platform_http_client::HttpError;
 
 #[derive(Error, Debug, Clone)]
 #[repr(C)]
@@ -25,9 +28,9 @@ pub enum WildlandHttpClientError {
     #[error("{0}")]
     HttpError(String),
     #[error("Cannot serialize request - source: {0}")]
-    CannotSerializeRequestError(Rc<serde_json::Error>),
+    CannotSerializeRequestError(#[from] Rc<serde_json::Error>),
     #[error(transparent)]
     CommonLibError(#[from] CryptoError),
     #[error(transparent)]
-    HttpLibError(#[from] Rc<minreq::Error>),
+    HttpLibError(#[from] HttpError),
 }

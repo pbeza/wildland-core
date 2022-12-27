@@ -10,7 +10,7 @@ cp ./tests/ffi/wasm/wasm_test.js $PROJECT_DIR/ffi_build
 
 cd $PROJECT_DIR/ffi_build
 
-export EMCC_CFLAGS="-s ERROR_ON_UNDEFINED_SYMBOLS=0" 
+export EMCC_CFLAGS="-s ERROR_ON_UNDEFINED_SYMBOLS=0 -sFETCH"
 
 em++ ./main.cpp \
         -std=c++20 -g -D WASM \

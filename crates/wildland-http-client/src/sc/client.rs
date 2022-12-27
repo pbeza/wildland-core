@@ -15,20 +15,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use serde::Serialize;
-
+use serde_json::json;
 use wildland_crypto::identity::signing_keypair::SigningKeypair;
 
-use crate::{
-    error::WildlandHttpClientError,
-    response_handler::check_status_code,
-    sc::credentials::{CreateCredentialsReq, CreateCredentialsRes, SCCredentialsClient},
-    sc::metrics::{RequestMetricsReq, RequestMetricsRes, SCMetricsClient},
-    sc::signature::{SCSignatureClient, SignatureRequestReq, SignatureRequestRes},
-    sc::storage::{CreateStorageRes, SCStorageClient},
+use super::constants::WILDLAND_SIGNATURE_HEADER;
+use super::models::{
+    CreateCredentialsReq, CreateCredentialsRes, CreateStorageRes, RequestMetricsReq,
+    RequestMetricsRes, SignatureRequestReq, SignatureRequestRes,
 };
+use crate::cross_platform_http_client::{CurrentPlatformClient, HttpClient};
+use crate::error::WildlandHttpClientError;
+use crate::response_handler::check_status_code;
 
 #[derive(Debug)]
 pub struct Credentials {
@@ -36,84 +37,87 @@ pub struct Credentials {
     pub secret: String,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone)]
 pub struct StorageControllerClient {
     // TODO:WILX-210 credentials are provided here only for test purposes. Remove it and get real id and secret assigned to a lease
     pub credential_id: String,
     pub credential_secret: String,
-    sc_storage_client: SCStorageClient,
-    sc_signature_client: SCSignatureClient,
-    sc_credentials_client: SCCredentialsClient,
-    sc_metrics_client: SCMetricsClient,
+    http_client: Rc<dyn HttpClient>,
 }
 
 impl StorageControllerClient {
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn new(base_url: &str) -> Self {
+        let http_client = Rc::new(CurrentPlatformClient {
+            base_url: base_url.into(),
+        });
+
         Self {
-            sc_storage_client: SCStorageClient {
-                base_url: base_url.into(),
-            },
-            sc_signature_client: SCSignatureClient {
-                base_url: base_url.into(),
-            },
-            sc_credentials_client: SCCredentialsClient {
-                base_url: base_url.into(),
-            },
-            sc_metrics_client: SCMetricsClient {
-                base_url: base_url.into(),
-            },
-            ..Default::default()
+            credential_id: String::default(),
+            credential_secret: String::default(),
+            http_client,
         }
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    pub async fn create_storage(&self) -> Result<CreateStorageRes, WildlandHttpClientError> {
-        let response = self.sc_storage_client.create_storage().map_err(Rc::new)?;
-        let response_json = check_status_code(response)?.json().map_err(Rc::new)?;
-        Ok(response_json)
+    pub fn create_storage(&self) -> Result<CreateStorageRes, WildlandHttpClientError> {
+        let response = self.http_client.post("storage/create", None, None)?;
+        let response = check_status_code(response)?;
+        Ok(response.deserialize()?)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    pub async fn create_credentials(
+    pub fn create_credentials(
         &self,
         request: CreateCredentialsReq,
     ) -> Result<CreateCredentialsRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
-        let response = self
-            .sc_credentials_client
-            .create_credentials(request, &signature)
-            .map_err(Rc::new)?;
-        let response_json = check_status_code(response)?.json().map_err(Rc::new)?;
-        Ok(response_json)
+        let response = self.http_client.post(
+            "credential/create",
+            Some(json!(request)),
+            Some(HashMap::from([(
+                WILDLAND_SIGNATURE_HEADER.into(),
+                signature,
+            )])),
+        )?;
+        let response = check_status_code(response)?;
+        Ok(response.deserialize()?)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    pub async fn request_signature(
+    pub fn request_signature(
         &self,
         request: SignatureRequestReq,
     ) -> Result<SignatureRequestRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
-        let response = self
-            .sc_signature_client
-            .signature_request(request, &signature)
-            .map_err(Rc::new)?;
-        let response_json = check_status_code(response)?.json().map_err(Rc::new)?;
-        Ok(response_json)
+        let response = self.http_client.post(
+            "signature/request",
+            Some(json!(request)),
+            Some(HashMap::from([(
+                WILDLAND_SIGNATURE_HEADER.into(),
+                signature,
+            )])),
+        )?;
+        let response = check_status_code(response)?;
+        Ok(response.deserialize()?)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    pub async fn request_metrics(
+    pub fn request_metrics(
         &self,
         request: RequestMetricsReq,
     ) -> Result<RequestMetricsRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
-        let response = self
-            .sc_metrics_client
-            .request_metrics(request, &signature)
-            .map_err(Rc::new)?;
-        let response_json = check_status_code(response)?.json().map_err(Rc::new)?;
-        Ok(response_json)
+        let response = self.http_client.post(
+            "metrics",
+            Some(json!(request)),
+            Some(HashMap::from([(
+                WILDLAND_SIGNATURE_HEADER.into(),
+                signature,
+            )])),
+        )?;
+        let response = check_status_code(response)?;
+        Ok(response.deserialize()?)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
@@ -131,9 +135,7 @@ impl StorageControllerClient {
     where
         T: Serialize,
     {
-        let message = serde_json::to_vec(request).map_err(|source| {
-            WildlandHttpClientError::CannotSerializeRequestError(Rc::new(source))
-        })?;
+        let message = serde_json::to_vec(request).map_err(Rc::new)?;
         let keypair =
             SigningKeypair::try_from_str(self.get_credential_id(), self.get_credential_secret())?;
         let signature = keypair.sign(&message);
