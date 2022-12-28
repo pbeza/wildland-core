@@ -13,9 +13,3 @@ pub enum CatlibError {
     #[error("Catlib error: {0}")]
     Generic(String),
 }
-
-#[derive(Error, Debug)]
-pub enum DeleteContainerPathError {
-    #[error("Delete Container Path Error")]
-    Error,
-}

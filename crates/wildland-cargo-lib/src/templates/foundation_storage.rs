@@ -101,7 +101,7 @@ mod tests {
         let fst = fst.with_name("name");
         let uuid = fst.uuid();
 
-        let expected = json!(
+        let expected = serde_json::json!(
             {
                 "uuid": uuid,
                 "backend_type": "FoundationStorage",

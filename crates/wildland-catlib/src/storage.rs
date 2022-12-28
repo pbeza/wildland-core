@@ -105,6 +105,10 @@ impl StorageManifest for StorageEntity {
         Model::delete(self)?;
         Ok(true)
     }
+
+    fn uuid(&self) -> Uuid {
+        self.data.uuid
+    }
 }
 
 impl Model for StorageEntity {
@@ -176,8 +180,9 @@ mod tests {
         )
         .unwrap();
         let locked_forest = forest.lock().unwrap();
+        let path = "/some/path".to_owned();
         locked_forest
-            .create_container("name".to_owned(), &storage_template)
+            .create_container("name".to_owned(), &storage_template, path)
             .unwrap()
     }
 
@@ -222,27 +227,12 @@ mod tests {
 
     fn make_storage_with_template(
         container: &Arc<Mutex<dyn ContainerManifest>>,
+        storage_template: &StorageTemplate,
     ) -> Arc<Mutex<dyn StorageManifest>> {
-        let storage_template = StorageTemplate::try_new(
-            "FoundationStorage",
-            HashMap::from([
-                (
-                    "field1".to_owned(),
-                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
-                ),
-                (
-                    "parameter in key: {{ OWNER }}".to_owned(),
-                    "enum: {{ ACCESS_MODE }}".to_owned(),
-                ),
-                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
-                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
-            ]),
-        )
-        .unwrap();
         container
             .lock()
             .unwrap()
-            .add_storage(&storage_template)
+            .add_storage(storage_template)
             .unwrap();
         container
             .lock()
@@ -275,29 +265,11 @@ mod tests {
         assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 2);
     }
 
-    // TODO (tkulik): Align UTs
-    // #[rstest(catlib_with_forest as catlib)]
-    // fn create_storage_with_template_id(catlib: CatLib) {
-    //     let container = _container(&catlib);
-    //     make_storage(&container); // Create storage w/o template id on purpose
-    //     make_storage_with_template(&container);
-    //     make_storage_with_template(&container);
-    //     make_storage_with_template(&container);
-
-    //     let storages = catlib
-    //         .find_storages_with_template(&Uuid::from_u128(1))
-    //         .unwrap();
-    //     assert_eq!(storages.len(), 2);
-
-    //     let storages = catlib
-    //         .find_storages_with_template(&Uuid::from_u128(2))
-    //         .unwrap();
-    //     assert_eq!(storages.len(), 1);
-    // }
-
-    #[rstest]
-    fn create_storage_with_data(container: Arc<Mutex<dyn ContainerManifest>>) {
-        let storage_template = StorageTemplate::try_new(
+    #[rstest(catlib_with_forest as catlib)]
+    fn create_storage_with_template_id(catlib: CatLib) {
+        let container = _container(&catlib);
+        make_storage(&container); // Create storage w/o template id on purpose
+        let storage_template1 = StorageTemplate::try_new(
             "FoundationStorage",
             HashMap::from([
                 (
@@ -313,27 +285,34 @@ mod tests {
             ]),
         )
         .unwrap();
-        container
-            .lock()
-            .unwrap()
-            .add_storage(&storage_template)
-            .unwrap();
+        let storage_template2 = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        make_storage_with_template(&container, &storage_template1);
+        make_storage_with_template(&container, &storage_template1);
+        make_storage_with_template(&container, &storage_template2);
 
-        // TODO (tkulik): Align UTs
-        // assert_eq!(
-        //     std::str::from_utf8(&container
-        //         .lock()
-        //         .unwrap()
-        //         .get_storages()
-        //         .unwrap()
-        //         .last()
-        //         .unwrap()
-        //         .lock()
-        //         .unwrap()
-        //         .data()
-        //         .unwrap()).unwrap()
-        //         ,
-        //         "{\"name\":null,\"uuid\":\"2fde0db4-1ee8-4a4c-8dc9-713def5aa0cb\",\"backend_type\":\"FoundationStorage\",\"data\":{\"field1\":\"Some value with container name: name\",\"parameter in key: 0101010101010101010101010101010101010101010101010101010101010101\":\"enum: ReadWrite\",\"paths\":\"[]\",\"uuid\":\"38183a4f-699d-41b3-8318-a1fcd5040d0f\"}}"
-        // )
+        let storages = catlib
+            .find_storages_with_template(&storage_template1.uuid())
+            .unwrap();
+        assert_eq!(storages.len(), 2);
+
+        let storages = catlib
+            .find_storages_with_template(&storage_template2.uuid())
+            .unwrap();
+        assert_eq!(storages.len(), 1);
     }
 }

@@ -146,7 +146,7 @@ mod tests {
             owner: "John Doe".to_owned(),
             access_mode: crate::StorageAccessMode::ReadOnly,
             container_uuid: Uuid::from_str("00000000-0000-0000-0000-000000001111").unwrap(),
-            paths: HashSet::from_iter(["path1".to_owned(), "path2".to_owned()]),
+            paths: HashSet::from_iter(["path1".to_owned()]),
         };
 
         let rendered_storage = storage_template.render(params).unwrap();
@@ -159,7 +159,7 @@ backend_type = "FoundationStorage"
 [data]
 field1 = "Some value with container name: Books"
 "parameter in key: John Doe" = "enum: ReadOnly"
-paths = "[path1, path2]"
+paths = "[path1]"
 uuid = "00000000-0000-0000-0000-000000001111"
 "#
         );

@@ -170,7 +170,8 @@ impl ForestManifest for Forest {
     ///         ]),
     ///     )
     ///     .unwrap();
-    /// let container = forest.lock().unwrap().create_container("container name1".to_owned(), &storage_template).unwrap();
+    /// let path = "/some/path".to_owned();
+    /// let container = forest.lock().unwrap().create_container("container name1".to_owned(), &storage_template, path).unwrap();
     /// container.lock().unwrap().add_path("/foo/bar1".to_string());
     /// container.lock().unwrap().add_path("/bar/baz1".to_string());
     /// ```
@@ -179,12 +180,14 @@ impl ForestManifest for Forest {
         &self,
         name: String,
         storage_template: &StorageTemplate,
+        path: ContainerPath,
     ) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
         let forest_owner = Arc::new(Mutex::new(self.clone()));
         Ok(Arc::new(Mutex::new(Container::new(
             forest_owner,
             storage_template,
             name,
+            path,
             self.db.clone(),
         )?)))
     }

@@ -96,6 +96,7 @@ pub trait ForestManifest: std::fmt::Debug {
         &self,
         name: String,
         storage_data: &StorageTemplate,
+        path: ContainerPath,
     ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
 
     /// Create a Bridge object with arbitrary link data to another Forest.
@@ -161,12 +162,10 @@ pub trait ContainerManifest: std::fmt::Debug {
     /// Container can have multiple storages. Given container should has exact copies
     /// of the data on every storage.
     ///
-    fn add_storage(&mut self, storage_template: &StorageTemplate) -> Result<(), CatlibError>;
-
-    /// Checks whether the given container handle is deleted.
-    ///
-    #[allow(clippy::wrong_self_convention)]
-    fn is_deleted(&mut self) -> bool;
+    fn add_storage(
+        &mut self,
+        storage_template: &StorageTemplate,
+    ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>;
 
     /// Returns a printable description of the given container.
     ///
@@ -195,7 +194,7 @@ pub trait ContainerManifest: std::fmt::Debug {
     /// Removes the given path. Returns true if the path was actually deleted,
     /// false if the path was not present within the container.
     ///
-    fn delete_path(&mut self, path: String) -> Result<bool, DeleteContainerPathError>;
+    fn delete_path(&mut self, path: String) -> Result<bool, CatlibError>;
 
     /// Lists all the paths from the given container.
     ///
@@ -224,6 +223,9 @@ pub trait StorageManifest: std::fmt::Debug {
 
     /// Retrieve Storage data
     fn data(&mut self) -> CatlibResult<Vec<u8>>;
+
+    /// Retrieve Storage UUID
+    fn uuid(&self) -> Uuid;
 }
 
 pub trait BridgeManifest: std::fmt::Debug {

@@ -24,6 +24,7 @@ mod lss;
 mod storage;
 
 pub use catlib_service::*;
+pub use container_manager::*;
 pub use entities::*;
 pub use error::*;
 pub use identity::master::*;

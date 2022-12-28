@@ -45,7 +45,7 @@
 //! ```
 //! ## Example usage
 //!
-//! ```rust
+//! ```no_run
 //! # use wildland_catlib::CatLib;
 //! # use wildland_corex::entities::Identity;
 //! # use wildland_corex::interface::CatLib as ICatLib;
@@ -77,7 +77,8 @@
 //!         ]),
 //!     )
 //!     .unwrap();
-//! let container = forest.lock().unwrap().create_container("container name".to_owned(), &storage_template).unwrap();
+//! let path = "/some/path".to_owned();
+//! let container = forest.lock().unwrap().create_container("container name".to_owned(), &storage_template, path).unwrap();
 //! container.lock().unwrap().add_path("/foo/bar".to_string());
 //! container.lock().unwrap().add_path("/bar/baz".to_string());
 //!

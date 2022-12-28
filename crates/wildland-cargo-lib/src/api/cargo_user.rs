@@ -104,9 +104,10 @@ All devices:
         &self,
         name: String,
         template: &StorageTemplate,
+        path: ContainerPath,
     ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError> {
         self.catlib_service
-            .create_container(name, &self.forest, template)
+            .create_container(name, &self.forest, template, path)
     }
 
     /// Deleting container is exposed via this method on `CargoUser`
@@ -337,8 +338,9 @@ mod tests {
         .try_into()
         .unwrap();
         let container_name = "new container".to_string();
+        let path = "/some/path".to_owned();
         cargo_user
-            .create_container(container_name.clone(), &storage_template)
+            .create_container(container_name.clone(), &storage_template, path)
             .unwrap();
 
         // then it is stored in catlib
@@ -382,8 +384,9 @@ mod tests {
         .try_into()
         .unwrap();
         let container_name = "new container".to_string();
+        let path = "/some/path".to_owned();
         cargo_user
-            .create_container(container_name.clone(), &storage_template)
+            .create_container(container_name.clone(), &storage_template, path)
             .unwrap();
 
         // then it can be retrieved via CargoUser api
@@ -412,9 +415,10 @@ mod tests {
         )
         .try_into()
         .unwrap();
+        let path = "/some/path".to_owned();
         let container_name = "new container".to_string();
         let container = cargo_user
-            .create_container(container_name, &storage_template)
+            .create_container(container_name, &storage_template, path)
             .unwrap();
 
         // and the container is deleted
@@ -425,6 +429,9 @@ mod tests {
         assert!(matches!(containers, Err(CatlibError::NoRecordsFound)));
 
         // and the container handle received during creation is marked as deleted
-        assert!(container.lock().unwrap().is_deleted());
+        assert!(matches!(
+            container.lock().unwrap().name(),
+            Err(CatlibError::NoRecordsFound)
+        ));
     }
 }

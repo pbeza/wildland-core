@@ -44,9 +44,6 @@ impl From<&str> for ContainerData {
     }
 }
 
-//
-// TODO (tkulik): Delegate syncing to some other instance (periodical poll or by notification)
-//
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub(crate) struct Container {
@@ -62,6 +59,7 @@ impl Container {
         forest_owner: Arc<Mutex<dyn ForestManifest>>,
         storage_template: &StorageTemplate,
         name: String,
+        path: ContainerPath,
         db: Rc<StoreDb>,
     ) -> Result<Self, CatlibError> {
         let container_uuid = Uuid::new_v4();
@@ -73,7 +71,7 @@ impl Container {
             uuid: container_uuid,
             forest_uuid,
             name,
-            paths: ContainerPaths::new(),
+            paths: ContainerPaths::from([path]),
         };
         let mut container = Self {
             container_data,
@@ -146,7 +144,8 @@ impl ContainerManifest for Container {
     ///         ]),
     ///     )
     ///     .unwrap();
-    /// let container = forest.lock().unwrap().create_container("container name2".to_owned(), &storage_template).unwrap();
+    /// let path = "/some/path".to_owned();
+    /// let container = forest.lock().unwrap().create_container("container name2".to_owned(), &storage_template, path).unwrap();
     /// container.lock().unwrap().add_path("/bar/baz2".to_string()).unwrap();
     /// ```
     fn add_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError> {
@@ -190,20 +189,26 @@ impl ContainerManifest for Container {
     ///         ]),
     ///     )
     ///     .unwrap();
-    /// let container = forest.lock().unwrap().create_container("container name2".to_owned(), &storage_template).unwrap();
+    /// let path = "/some/path".to_owned();
+    /// let container = forest.lock().unwrap().create_container("container name2".to_owned(), &storage_template, path).unwrap();
     /// container.lock().unwrap().delete_path("/baz/qux1".to_string()).unwrap();
     /// ```
-    fn delete_path(&mut self, path: ContainerPath) -> Result<bool, DeleteContainerPathError> {
-        // TODO (tkulik): Error handling
-        self.sync().map_err(|_| DeleteContainerPathError::Error)?;
+    fn delete_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError> {
+        self.sync()?;
         let removed = self.container_data.paths.remove(&path);
-        self.save().map_err(|_| DeleteContainerPathError::Error)?;
+        self.save()?;
         Ok(removed)
     }
 
-    /// TODO (tkulik): Add docstring
+    /// ## Errors
     ///
-    fn add_storage(&mut self, storage_template: &StorageTemplate) -> Result<(), CatlibError> {
+    /// - Returns [`CatlibError::Generic`] if there was a problem with rendering storage.
+    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
+    ///
+    fn add_storage(
+        &mut self,
+        storage_template: &StorageTemplate,
+    ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError> {
         let template_context = TemplateContext {
             container_name: self.container_data.name.clone(),
             owner: self
@@ -214,7 +219,7 @@ impl ContainerManifest for Container {
                 .encode(),
             access_mode: wildland_corex::StorageAccessMode::ReadWrite,
             container_uuid: self.container_data.uuid,
-            paths: ContainerPaths::new(), // TODO (tkulik): Add at least one path here.
+            paths: self.container_data.paths.clone(),
         };
         let storage = storage_template
             .render(template_context)
@@ -224,20 +229,15 @@ impl ContainerManifest for Container {
         })?;
         let storage_entity = StorageEntity::new(
             self.container_data.uuid,
-            Some(storage.uuid()),
+            Some(storage_template.uuid()),
             serialized_storage,
             self.db.clone(),
         );
         storage_entity.save()?;
         self.sync()?;
-        self.storages.push(Arc::new(Mutex::new(storage_entity)));
-        Ok(())
-    }
-
-    /// TODO (tkulik): Add docstring
-    ///
-    fn is_deleted(&mut self) -> bool {
-        matches!(self.sync(), Err(CatlibError::NoRecordsFound))
+        let storage = Arc::new(Mutex::new(storage_entity));
+        self.storages.push(storage.clone());
+        Ok(storage)
     }
 
     /// ## Errors
@@ -248,7 +248,7 @@ impl ContainerManifest for Container {
         Ok(self.storages.clone())
     }
 
-    /// TODO (tkulik): Add docstring
+    /// Returns a string representation of the Container object.
     ///
     fn stringify(&self) -> String {
         format!("{self:?}")
@@ -356,8 +356,9 @@ mod tests {
         )
         .unwrap();
         let locked_forest = forest.lock().unwrap();
+        let path = "/some/path".to_owned();
         locked_forest
-            .create_container("name".to_owned(), &storage_template)
+            .create_container("name".to_owned(), &storage_template, path)
             .unwrap()
     }
 
@@ -517,62 +518,80 @@ mod tests {
         );
     }
 
-    // TODO (tkulik): Align UTs
-    // #[rstest(catlib_with_forest as catlib)]
-    // fn create_containers_with_different_storages(catlib: CatLib) {
-    //     let alpha = make_container(&catlib);
-    //     let beta = make_container(&catlib);
+    #[rstest(catlib_with_forest as catlib)]
+    fn create_containers_with_different_storages(catlib: CatLib) {
+        let alpha = make_container(&catlib);
+        let beta = make_container(&catlib);
 
-    //     let storage_template = StorageTemplate::try_new(
-    //         "FoundationStorage",
-    //         HashMap::from([
-    //             (
-    //                 "field1".to_owned(),
-    //                 "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
-    //             ),
-    //             (
-    //                 "parameter in key: {{ OWNER }}".to_owned(),
-    //                 "enum: {{ ACCESS_MODE }}".to_owned(),
-    //             ),
-    //             ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
-    //             ("paths".to_owned(), "{{ PATHS }}".to_owned()),
-    //         ]),
-    //     )
-    //     .unwrap();
+        let storage_template1 = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        let storage_template2 = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
 
-    //     alpha
-    //         .lock()
-    //         .unwrap()
-    //         .add_storage(&storage_template)
-    //         .unwrap();
-    //     alpha
-    //         .lock()
-    //         .unwrap()
-    //         .add_storage(&storage_template)
-    //         .unwrap();
+        alpha
+            .lock()
+            .unwrap()
+            .add_storage(&storage_template1)
+            .unwrap();
+        alpha
+            .lock()
+            .unwrap()
+            .add_storage(&storage_template2)
+            .unwrap();
 
-    //     beta.lock().unwrap().add_storage(&storage_template).unwrap();
+        beta.lock()
+            .unwrap()
+            .add_storage(&storage_template1)
+            .unwrap();
 
-    //     let containers = catlib
-    //         .find_containers_with_template(&Uuid::from_u128(2))
-    //         .unwrap();
+        let containers = catlib
+            .find_containers_with_template(&storage_template2.uuid())
+            .unwrap();
 
-    //     assert_eq!(containers.len(), 1);
-    //     assert_eq!(
-    //         containers[0].lock().unwrap().uuid(),
-    //         alpha.lock().unwrap().uuid()
-    //     );
+        assert_eq!(containers.len(), 1);
+        assert_eq!(
+            containers[0].lock().unwrap().uuid(),
+            alpha.lock().unwrap().uuid()
+        );
 
-    //     let containers = catlib
-    //         .find_containers_with_template(&Uuid::from_u128(1))
-    //         .unwrap();
+        let containers = catlib
+            .find_containers_with_template(&storage_template1.uuid())
+            .unwrap();
 
-    //     assert_eq!(containers.len(), 2);
-    //     assert_ne!(
-    //         containers[0].lock().unwrap().uuid(),
-    //         containers[1].lock().unwrap().uuid()
-    //     );
-    // }
+        assert_eq!(containers.len(), 2);
+        assert_ne!(
+            containers[0].lock().unwrap().uuid(),
+            containers[1].lock().unwrap().uuid()
+        );
+    }
 
     #[rstest(catlib_with_forest as catlib)]
     fn multiple_containers_with_subpaths(catlib: CatLib) {

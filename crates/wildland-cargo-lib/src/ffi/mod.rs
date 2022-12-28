@@ -98,12 +98,6 @@ mod ffi_binding {
         RecordAlreadyExists(_),
         Generic(_),
     }
-    enum GetStoragesError {
-        Error,
-    }
-    enum AddStorageError {
-        Error,
-    }
     enum ContainerMountError {
         Error,
     }
@@ -219,6 +213,7 @@ mod ffi_binding {
             self: &CargoUser,
             name: String,
             storage_templates: &StorageTemplate,
+            path: String,
         ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
         fn delete_container(
             self: &CargoUser,
@@ -244,19 +239,28 @@ mod ffi_binding {
         //
         // ContainerManifest
         //
-        // TODO (tkulik): Restore ContainerManifest methods
-        // fn get_storages(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, GetStoragesError>;
+        // fn get_storages(
+        //     self: &Arc<Mutex<dyn ContainerManifest>>,
+        // ) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, CatlibError>;
         // fn add_storage(
         //     self: &Arc<Mutex<dyn ContainerManifest>>,
         //     templates: &StorageTemplate,
-        // ) -> Result<VoidType, AddStorageError>;
-        // fn add_path(self: &Arc<Mutex<dyn ContainerManifest>>, path: String) -> Result<bool, CatlibError>;
-        // fn delete_path(self: &Arc<Mutex<dyn ContainerManifest>>, path: String) -> Result<bool, CatlibError>;
-        // fn get_paths(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<Vec<String>, CatlibError>;
-        // fn set_name(self: &Arc<Mutex<dyn ContainerManifest>>, new_name: String);
-        // fn get_name(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<String, CatlibError>;
-        // fn stringify(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<String, CatlibError>;
-        // fn duplicate(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
+        // ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>;
+        fn add_path(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            path: String,
+        ) -> Result<bool, CatlibError>;
+        fn delete_path(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            path: String,
+        ) -> Result<bool, CatlibError>;
+        fn get_paths(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<Vec<String>, CatlibError>;
+        fn set_name(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            new_name: String,
+        ) -> Result<VoidType, CatlibError>;
+        fn name(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<String, CatlibError>;
+        fn stringify(self: &Arc<Mutex<dyn ContainerManifest>>) -> String;
 
         //
         // Storage

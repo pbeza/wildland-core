@@ -121,11 +121,12 @@ impl CatLibService {
         name: String,
         forest: &Arc<Mutex<dyn ForestManifest>>,
         storage_template: &StorageTemplate,
+        path: ContainerPath,
     ) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
         forest
             .lock()
             .map_err(|_| CatlibError::Generic("Poisoned Mutex".to_owned()))?
-            .create_container(name, storage_template)
+            .create_container(name, storage_template, path)
     }
 
     pub fn delete_container(&self, container: &mut dyn ContainerManifest) -> CatlibResult<()> {
@@ -160,8 +161,6 @@ mod tests {
 
     use mockall::predicate;
     use rstest::rstest;
-    use serde_json::json;
-    use uuid::Uuid;
 
     use crate::catlib_service::entities::{Identity, MockContainerManifest, MockStorageManifest};
     use crate::catlib_service::interface::MockCatLib;
@@ -187,13 +186,18 @@ mod tests {
         let mut forest_mock = MockForestManifest::new();
         forest_mock
             .expect_create_container()
-            .with(predicate::eq(container_name.clone()), predicate::always())
+            .with(
+                predicate::eq(container_name.clone()),
+                predicate::always(),
+                predicate::eq("/some/path".to_owned()),
+            )
             .times(1)
-            .returning(move |_, _| Ok(Arc::new(Mutex::new(MockContainerManifest::new()))));
+            .returning(move |_, _, _| Ok(Arc::new(Mutex::new(MockContainerManifest::new()))));
 
         let forest_mock: Arc<Mutex<dyn ForestManifest>> = Arc::new(Mutex::new(forest_mock));
+        let path = "/some/path".to_owned();
         catlib_service
-            .create_container(container_name, &forest_mock, &storage_template)
+            .create_container(container_name, &forest_mock, &storage_template, path)
             .unwrap();
     }
 }
