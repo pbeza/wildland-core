@@ -16,10 +16,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use thiserror::Error;
-use wildland_corex::{
-    catlib_service::error::CatlibError, CryptoError, ForestIdentityCreationError,
-    ForestRetrievalError, LssError,
-};
+use wildland_corex::catlib_service::error::CatlibError;
+use wildland_corex::{CryptoError, ForestIdentityCreationError, ForestRetrievalError, LssError};
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[repr(C)]

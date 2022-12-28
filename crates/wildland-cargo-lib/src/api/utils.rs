@@ -1,12 +1,15 @@
 #[cfg(test)]
 pub(crate) mod test {
-    use std::{cell::RefCell, collections::HashMap, rc::Rc};
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    use std::rc::Rc;
 
     use rstest::fixture;
     use tempfile;
     use uuid::Bytes;
     use wildland_catlib::CatLib;
-    use wildland_corex::{catlib_service::CatLibService, LocalSecureStorage, LssResult};
+    use wildland_corex::catlib_service::CatLibService;
+    use wildland_corex::{LocalSecureStorage, LssResult};
 
     #[fixture]
     pub(crate) fn catlib_service() -> CatLibService {

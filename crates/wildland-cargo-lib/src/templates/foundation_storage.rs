@@ -17,10 +17,10 @@
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
 use wildland_corex::{StorageTemplate, StorageTemplateError, CONTAINER_NAME_PARAM, OWNER_PARAM};
 
-use crate::api::{foundation_storage::StorageCredentials, storage::StorageBackendType};
+use crate::api::foundation_storage::StorageCredentials;
+use crate::api::storage::StorageBackendType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FoundationStorageTemplate {
@@ -79,12 +79,14 @@ impl TryFrom<FoundationStorageTemplate> for StorageTemplate {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::str::FromStr;
+
     use pretty_assertions::assert_eq;
     use serde_json::json;
-    use std::str::FromStr;
     use uuid::Uuid;
     use wildland_corex::TemplateContext;
+
+    use super::*;
 
     #[test]
     fn serialize_foundation_storage_template_as_json() {

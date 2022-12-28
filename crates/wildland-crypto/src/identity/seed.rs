@@ -15,12 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::error::CryptoError;
-use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
 use bip39::Language::English;
 use bip39::{Mnemonic, MnemonicType};
 use hkdf::Hkdf;
 use sha2::Sha256;
+
+use crate::error::CryptoError;
+use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
 
 /// Generate a new random mnemonic phrase
 #[tracing::instrument(level = "debug", skip_all)]
@@ -57,9 +58,8 @@ mod tests {
     use bip39::{Mnemonic, Seed};
     use hex_literal::hex;
 
-    use crate::common::test_utilities::MNEMONIC_PHRASE;
-
     use super::*;
+    use crate::common::test_utilities::MNEMONIC_PHRASE;
 
     #[test]
     fn expanding_the_seed_from_vector() {

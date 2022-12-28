@@ -15,9 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::api::config::LoggerConfig;
 use std::io;
-use tracing_subscriber::{fmt, prelude::__tracing_subscriber_SubscriberExt, EnvFilter};
+
+use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
+use tracing_subscriber::{fmt, EnvFilter};
+
+use crate::api::config::LoggerConfig;
 
 pub(crate) fn init_subscriber(cfg: LoggerConfig) -> anyhow::Result<()> {
     if !cfg.use_logger {
