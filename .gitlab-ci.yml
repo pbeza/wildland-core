@@ -187,7 +187,7 @@ apple:
     - bash ci/build_apple.sh
   artifacts:
     paths:
-      - wildlandx_macos.build/out_dir/wildlandx.xcframework.zip
+      - wildlandx_apple_universal.build/out_dir/wildlandx.xcframework.zip
 
 ################
 # STAGE: Bindings
