@@ -38,7 +38,9 @@ use wildland_corex::{
     catlib_service::CatLibService, container_manager::ContainerManager, LocalSecureStorage,
     LssService,
 };
-use wildland_dfs::encrypted::EncryptedDfs as Dfs;
+use wildland_dfs::{encrypted::EncryptedDfs as Dfs, unencrypted::StorageBackendFactory};
+#[cfg(feature = "lfs")]
+use wildland_lfs::LfsBackendFactory;
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[repr(C)]
@@ -79,13 +81,22 @@ impl CargoLib {
     ) -> Self {
         let lss_service = LssService::new(lss);
         let container_manager = Rc::new(ContainerManager {});
+
+        let mut dfs_storage_factories: HashMap<String, Box<dyn StorageBackendFactory>> =
+            HashMap::new();
+        #[cfg(feature = "lfs")]
+        dfs_storage_factories.insert(
+            "LocalFilesystem".to_string(),
+            Box::new(LfsBackendFactory {}),
+        );
+
         Self {
             user_api: UserApi::new(UserService::new(
                 lss_service,
                 CatLibService::new(Rc::new(CatLib::default())),
                 fsa_config,
             )),
-            _dfs: Rc::new(Dfs::new(container_manager, HashMap::new())),
+            _dfs: Rc::new(Dfs::new(container_manager, dfs_storage_factories)),
         }
     }
 

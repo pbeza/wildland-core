@@ -15,19 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::path::PathBuf;
-
 use serde::{Deserialize, Serialize};
-use wildland_corex::{
+use std::path::PathBuf;
+use wildland_dfs::{
     StorageTemplate, StorageTemplateError, CONTAINER_NAME_PARAM, CONTAINER_UUID_PARAM,
 };
 
-use crate::api::storage::StorageBackendType;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocalFilesystemStorageTemplate {
-    local_dir: PathBuf,
-    container_prefix: String,
+    pub local_dir: PathBuf,
+    pub container_prefix: String,
 }
 
 impl LocalFilesystemStorageTemplate {
@@ -44,7 +41,7 @@ impl LocalFilesystemStorageTemplate {
 impl TryFrom<LocalFilesystemStorageTemplate> for StorageTemplate {
     type Error = StorageTemplateError;
     fn try_from(lfst: LocalFilesystemStorageTemplate) -> Result<Self, Self::Error> {
-        StorageTemplate::try_new(StorageBackendType::LocalFilesystem, lfst)
+        StorageTemplate::try_new("LocalFilesystem", lfst)
     }
 }
 
@@ -52,6 +49,7 @@ impl TryFrom<LocalFilesystemStorageTemplate> for StorageTemplate {
 mod tests {
     use pretty_assertions::assert_eq;
     use serde_json::json;
+    use wildland_dfs::StorageTemplate;
 
     use super::*;
 

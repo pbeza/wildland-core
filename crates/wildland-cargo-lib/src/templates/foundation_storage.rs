@@ -20,7 +20,7 @@ use uuid::Uuid;
 
 use wildland_corex::{StorageTemplate, StorageTemplateError, CONTAINER_NAME_PARAM, OWNER_PARAM};
 
-use crate::api::{foundation_storage::StorageCredentials, storage::StorageBackendType};
+use crate::api::foundation_storage::StorageCredentials;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FoundationStorageTemplate {
@@ -73,7 +73,7 @@ impl FoundationStorageTemplate {
 impl TryFrom<FoundationStorageTemplate> for StorageTemplate {
     type Error = StorageTemplateError;
     fn try_from(fst: FoundationStorageTemplate) -> Result<Self, Self::Error> {
-        StorageTemplate::try_new(StorageBackendType::FoundationStorage, fst)
+        StorageTemplate::try_new("FoundationStorage", fst)
     }
 }
 

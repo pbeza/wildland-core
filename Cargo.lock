@@ -2086,6 +2086,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tempdir"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15f2b5fb00ccdf689e0149d1b1b3c03fead81c2b37735d812fa8bddbbf41b6d8"
+dependencies = [
+ "rand 0.4.6",
+ "remove_dir_all",
+]
+
+[[package]]
 name = "tempfile"
 version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2653,6 +2663,7 @@ dependencies = [
  "wildland-corex",
  "wildland-dfs",
  "wildland-http-client",
+ "wildland-lfs",
 ]
 
 [[package]]
@@ -2745,6 +2756,17 @@ dependencies = [
  "thiserror",
  "tracing",
  "wildland-crypto",
+]
+
+[[package]]
+name = "wildland-lfs"
+version = "0.1.0"
+dependencies = [
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tempdir",
+ "wildland-dfs",
 ]
 
 [[package]]
