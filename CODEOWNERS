@@ -2,4 +2,4 @@
 crates/wildland-crypto/src @lukas.kujawski @peregud
 
 # CI/CD
-.gitlab-ci.yml @ringo.wildland
+.gitlab-ci.yml @ringo.wildland @pisajew
