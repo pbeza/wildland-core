@@ -12,6 +12,8 @@ version     = "0.30.1-rc.0"
 
 [features]
 bindings = ["rusty-bind", "rusty-bind-build"]
+default  = ["lfs"]                            # TODO let's turn off lfs by default when we switch to prod env
+lfs      = []
 
 [lib]
 crate-type = ["staticlib", "lib"]
