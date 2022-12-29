@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use wildland_corex::{StorageTemplate, StorageTemplateError, CONTAINER_NAME_PARAM, OWNER_PARAM};
 
-use crate::api::storage::StorageBackendType;
-
-use super::StorageCredentials;
+use crate::api::{foundation_storage::StorageCredentials, storage::StorageBackendType};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FoundationStorageTemplate {
@@ -83,6 +81,7 @@ impl TryFrom<FoundationStorageTemplate> for StorageTemplate {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+    use serde_json::json;
     use std::str::FromStr;
     use uuid::Uuid;
     use wildland_corex::TemplateContext;
@@ -100,26 +99,22 @@ mod tests {
         let fst = fst.with_name("name");
         let uuid = fst.uuid();
 
-        let expected = format!(
-            r#"
-            {{
-                "uuid": "{uuid}",
+        let expected = json!(
+            {
+                "uuid": uuid,
                 "backend_type": "FoundationStorage",
                 "name": "name",
-                "template": {{
+                "template": {
                     "bucket_uuid": "00000000-0000-0000-0000-000000000001",
                     "credential_id": "cred_id",
                     "credential_secret": "cred_secret",
                     "sc_url": "sc_url",
-                    "container_prefix": "{{{{ OWNER }}}}/{{{{ CONTAINER_NAME }}}}"
-                }}
-            }}"#
+                    "container_prefix": "{{ OWNER }}/{{ CONTAINER_NAME }}"
+                }
+            }
         );
 
-        assert_eq!(
-            serde_json::from_str::<serde_json::Value>(&expected).unwrap(),
-            serde_json::to_value(&fst).unwrap()
-        );
+        assert_eq!(expected, serde_json::to_value(&fst).unwrap());
     }
 
     #[test]
