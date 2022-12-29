@@ -135,9 +135,9 @@ impl Container {
 
 #[cfg(test)]
 mod tests {
-    use crate::api::utils::test::catlib_service;
-    use crate::api::{
-        container::tests::utils::compare_unordered, foundation_storage::FoundationStorageTemplate,
+    use crate::{
+        api::{container::tests::utils::compare_unordered, utils::test::catlib_service},
+        templates::foundation_storage::FoundationStorageTemplate,
     };
     use rstest::*;
     use uuid::Uuid;
