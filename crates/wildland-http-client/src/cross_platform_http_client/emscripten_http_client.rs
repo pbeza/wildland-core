@@ -76,7 +76,7 @@ impl Fetch {
         let cheaders = headers
             .into_iter()
             .flat_map(|(key, val)| [CString::new(key), CString::new(val)])
-            .collect::<Result<_, _>>()
+            .collect::<Result<Vec<_>, _>>()
             .map_err(|e| HttpError::Generic(e.to_string()))?;
 
         let headers_ptrs = cheaders
@@ -90,8 +90,8 @@ impl Fetch {
         let mut fetch = Box::new(Fetch {
             fetch_attr,
             json: cjson,
-            headers_ptrs,
             _headers: cheaders,
+            headers_ptrs,
             tx,
             rx,
             fetch_handler: None,
