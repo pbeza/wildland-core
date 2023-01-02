@@ -15,11 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use serde::Serialize;
-use serde_json::json;
 use wildland_crypto::identity::signing_keypair::SigningKeypair;
 
 use super::constants::WILDLAND_SIGNATURE_HEADER;
@@ -27,7 +25,7 @@ use super::models::{
     CreateCredentialsReq, CreateCredentialsRes, CreateStorageRes, RequestMetricsReq,
     RequestMetricsRes, SignatureRequestReq, SignatureRequestRes,
 };
-use crate::cross_platform_http_client::{CurrentPlatformClient, HttpClient};
+use crate::cross_platform_http_client::{CurrentPlatformClient, HttpClient, Request};
 use crate::error::WildlandHttpClientError;
 use crate::response_handler::check_status_code;
 
@@ -61,7 +59,8 @@ impl StorageControllerClient {
 
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_storage(&self) -> Result<CreateStorageRes, WildlandHttpClientError> {
-        let response = self.http_client.post("storage/create", None, None)?;
+        let request = Request::new("/storage/create");
+        let response = self.http_client.post(request)?;
         let response = check_status_code(response)?;
         Ok(response.deserialize()?)
     }
@@ -72,14 +71,10 @@ impl StorageControllerClient {
         request: CreateCredentialsReq,
     ) -> Result<CreateCredentialsRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
-        let response = self.http_client.post(
-            "credential/create",
-            Some(json!(request)),
-            Some(HashMap::from([(
-                WILDLAND_SIGNATURE_HEADER.into(),
-                signature,
-            )])),
-        )?;
+        let http_request = Request::new("/credential/create")
+            .with_json(&request)
+            .with_header(WILDLAND_SIGNATURE_HEADER, signature);
+        let response = self.http_client.post(http_request)?;
         let response = check_status_code(response)?;
         Ok(response.deserialize()?)
     }
@@ -90,14 +85,10 @@ impl StorageControllerClient {
         request: SignatureRequestReq,
     ) -> Result<SignatureRequestRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
-        let response = self.http_client.post(
-            "signature/request",
-            Some(json!(request)),
-            Some(HashMap::from([(
-                WILDLAND_SIGNATURE_HEADER.into(),
-                signature,
-            )])),
-        )?;
+        let http_request = Request::new("/signature/request")
+            .with_json(&request)
+            .with_header(WILDLAND_SIGNATURE_HEADER, signature);
+        let response = self.http_client.post(http_request)?;
         let response = check_status_code(response)?;
         Ok(response.deserialize()?)
     }
@@ -108,14 +99,10 @@ impl StorageControllerClient {
         request: RequestMetricsReq,
     ) -> Result<RequestMetricsRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
-        let response = self.http_client.post(
-            "metrics",
-            Some(json!(request)),
-            Some(HashMap::from([(
-                WILDLAND_SIGNATURE_HEADER.into(),
-                signature,
-            )])),
-        )?;
+        let http_request = Request::new("/metrics")
+            .with_json(&request)
+            .with_header(WILDLAND_SIGNATURE_HEADER, signature);
+        let response = self.http_client.post(http_request)?;
         let response = check_status_code(response)?;
         Ok(response.deserialize()?)
     }

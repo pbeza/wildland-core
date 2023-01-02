@@ -1,30 +1,21 @@
-use std::collections::HashMap;
-
-use super::{HttpClient, HttpError, HttpResult, Response};
+use super::{HttpClient, HttpError, HttpResult, Request, Response};
 
 pub(crate) struct MinreqHttpClient {
     pub(crate) base_url: String,
 }
 
 impl HttpClient for MinreqHttpClient {
-    fn post(
-        &self,
-        url: &str,
-        json: Option<serde_json::Value>,
-        headers: Option<HashMap<String, String>>,
-    ) -> HttpResult {
-        let url = format!("{}/{}", self.base_url, url);
+    fn post(&self, request: Request) -> HttpResult {
+        let url = format!("{}{}", self.base_url, request.url);
         let mut req = minreq::post(url);
-        if let Some(json) = json {
+        if let Some(json) = request.json {
             req = req
                 .with_json(&json)
                 .map_err(|err| HttpError::Generic(err.to_string()))?;
         }
 
-        if let Some(headers) = headers {
-            for (key, val) in headers.into_iter() {
-                req = req.with_header(key, val);
-            }
+        for (key, val) in request.headers.into_iter() {
+            req = req.with_header(key, val);
         }
 
         let resp = req
@@ -36,24 +27,17 @@ impl HttpClient for MinreqHttpClient {
         })
     }
 
-    fn put(
-        &self,
-        url: &str,
-        json: Option<serde_json::Value>,
-        headers: Option<HashMap<String, String>>,
-    ) -> HttpResult {
-        let url = format!("{}/{}", self.base_url, url);
+    fn put(&self, request: Request) -> HttpResult {
+        let url = format!("{}{}", self.base_url, request.url);
         let mut req = minreq::put(url);
-        if let Some(json) = json {
+        if let Some(json) = request.json {
             req = req
                 .with_json(&json)
                 .map_err(|err| HttpError::Generic(err.to_string()))?;
         }
 
-        if let Some(headers) = headers {
-            for (key, val) in headers.into_iter() {
-                req = req.with_header(key, val);
-            }
+        for (key, val) in request.headers.into_iter() {
+            req = req.with_header(key, val);
         }
 
         let resp = req

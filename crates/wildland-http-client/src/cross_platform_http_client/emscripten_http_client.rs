@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::ffi::{c_void, CStr, CString};
 use std::sync::mpsc;
 
-use super::{HttpClient, HttpError, HttpResult, Response};
+use super::{HttpClient, HttpError, HttpResult, Request, Response};
 
 struct Fetch {
     fetch_attr: emscripten::emscripten_fetch_attr_t,
@@ -58,7 +58,7 @@ impl Fetch {
     pub fn new(
         method: &str,
         json: Option<serde_json::Value>,
-        headers: Option<HashMap<String, String>>,
+        headers: HashMap<String, String>,
     ) -> Result<Box<Self>, HttpError> {
         let fetch_attr = unsafe {
             let mut fetch_attr = std::mem::zeroed::<emscripten::emscripten_fetch_attr_t>();
@@ -73,25 +73,24 @@ impl Fetch {
             None => CString::default(),
         };
 
-        let cheaders = match headers {
-            Some(val) => val
-                .into_iter()
-                .flat_map(|(key, val)| [CString::new(key), CString::new(val)])
-                .collect::<Result<_, _>>()
-                .map_err(|e| HttpError::Generic(e.to_string()))?,
-            None => vec![],
-        };
+        let cheaders = headers
+            .into_iter()
+            .flat_map(|(key, val)| [CString::new(key), CString::new(val)])
+            .collect::<Result<_, _>>()
+            .map_err(|e| HttpError::Generic(e.to_string()))?;
+
+        let headers_ptrs = cheaders
+            .iter()
+            .map(|e| e.as_ptr())
+            .chain(std::iter::once(std::ptr::null()))
+            .collect();
 
         let (tx, rx) = mpsc::channel();
 
         let mut fetch = Box::new(Fetch {
             fetch_attr,
             json: cjson,
-            headers_ptrs: cheaders
-                .iter()
-                .map(|e| e.as_ptr())
-                .chain(std::iter::once(std::ptr::null()))
-                .collect(),
+            headers_ptrs,
             _headers: cheaders,
             tx,
             rx,
@@ -102,7 +101,11 @@ impl Fetch {
             fetch.fetch_attr.requestMethod[i] = c as i8;
         }
 
-        fetch.fetch_attr.attributes = emscripten::EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
+        fetch.fetch_attr.attributes = emscripten::EMSCRIPTEN_FETCH_LOAD_TO_MEMORY
+            // Disable interaction with IndexDB to prevent deadlock.
+            | emscripten::EMSCRIPTEN_FETCH_REPLACE
+            // Async downloading also causes deadlock. This flag also makes the SDK usable only as a web worker.
+            | emscripten::EMSCRIPTEN_FETCH_SYNCHRONOUS;
 
         fetch.fetch_attr.requestHeaders = fetch.headers_ptrs.as_ptr();
         fetch.fetch_attr.requestData = fetch.json.as_ptr();
@@ -143,25 +146,15 @@ pub(crate) struct EmscriptenHttpClient {
 }
 
 impl HttpClient for EmscriptenHttpClient {
-    fn post(
-        &self,
-        url: &str,
-        json: Option<serde_json::Value>,
-        headers: Option<HashMap<String, String>>,
-    ) -> HttpResult {
-        let url = format!("{}/{}", self.base_url, url);
-        let fetch = Fetch::new("POST", json, headers)?;
+    fn post(&self, request: Request) -> HttpResult {
+        let url = format!("{}{}", self.base_url, request.url);
+        let fetch = Fetch::new("POST", request.json, request.headers)?;
         fetch.send(&url)
     }
 
-    fn put(
-        &self,
-        url: &str,
-        json: Option<serde_json::Value>,
-        headers: Option<HashMap<String, String>>,
-    ) -> HttpResult {
-        let url = format!("{}/{}", self.base_url, url);
-        let fetch = Fetch::new("PUT", json, headers)?;
+    fn put(&self, request: Request) -> HttpResult {
+        let url = format!("{}{}", self.base_url, request.url);
+        let fetch = Fetch::new("PUT", request.json, request.headers)?;
         fetch.send(&url)
     }
 }

@@ -18,9 +18,8 @@
 use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
-use crate::cross_platform_http_client::{CurrentPlatformClient, HttpClient};
+use crate::cross_platform_http_client::{CurrentPlatformClient, HttpClient, Request};
 use crate::error::WildlandHttpClientError;
 use crate::response_handler::check_status_code;
 
@@ -60,9 +59,8 @@ impl EvsClient {
 
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn confirm_token(&self, request: ConfirmTokenReq) -> Result<(), WildlandHttpClientError> {
-        let response = self
-            .http_client
-            .put("confirm_token", Some(json!(request)), None)?;
+        let request = Request::new("/confirm_token").with_json(&request);
+        let response = self.http_client.put(request)?;
         check_status_code(response)?;
         Ok(())
     }
@@ -72,9 +70,8 @@ impl EvsClient {
         &self,
         request: GetStorageReq,
     ) -> Result<GetStorageRes, WildlandHttpClientError> {
-        let response = self
-            .http_client
-            .put("get_storage", Some(json!(request)), None)?;
+        let request = Request::new("/get_storage").with_json(&request);
+        let response = self.http_client.put(request)?;
         let response = check_status_code(response)?;
         let json = response.deserialize()?;
         Ok(json)
@@ -100,12 +97,14 @@ mod tests {
             session_id: "some uuid".to_string(),
         };
 
+        let http_request = Request::new("/confirm_token").with_json(&request);
+
         http_client
             .as_mut()
             .expect_put()
-            .with(eq("confirm_token"), eq(Some(json!(request))), eq(None))
+            .with(eq(http_request))
             .times(1)
-            .returning(|_, _, _| {
+            .returning(|_| {
                 Ok(Response {
                     status_code: 200,
                     body: vec![],
@@ -129,12 +128,14 @@ mod tests {
             session_id: Some("some uuid".to_string()),
         };
 
+        let http_request = Request::new("/get_storage").with_json(&request);
+
         http_client
             .as_mut()
             .expect_put()
-            .with(eq("get_storage"), eq(Some(json!(request))), eq(None))
+            .with(eq(http_request))
             .times(1)
-            .returning(|_, _, _| {
+            .returning(|_| {
                 Ok(Response {
                     status_code: 200,
                     body: serde_json::to_vec(&json!({ "credentials": CREDENTIALS })).unwrap(),
