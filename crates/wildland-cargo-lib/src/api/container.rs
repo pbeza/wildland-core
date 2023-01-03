@@ -99,7 +99,8 @@ mod tests {
     use rstest::*;
     use uuid::Uuid;
     use wildland_corex::{
-        CatLibService, DeviceMetadata, ForestMetaData, SigningKeypair, WildlandIdentity,
+        catlib_service::{CatLibService, DeviceMetadata, ForestMetaData},
+        SigningKeypair, WildlandIdentity,
     };
 
     use super::Container;

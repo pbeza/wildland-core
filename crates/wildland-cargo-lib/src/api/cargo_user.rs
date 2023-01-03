@@ -261,7 +261,7 @@ mod tests {
     use serde_json::json;
     use uuid::Uuid;
     use wildland_corex::{
-        catlib_service::entities::ForestManifest, CatLibService, DeviceMetadata, ForestMetaData,
+        catlib_service::{entities::ForestManifest, CatLibService, DeviceMetadata, ForestMetaData},
         SigningKeypair, WildlandIdentity,
     };
 

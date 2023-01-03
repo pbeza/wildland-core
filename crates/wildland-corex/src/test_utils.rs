@@ -1,9 +1,9 @@
 use mockall::mock;
 use uuid::Uuid;
 
-use crate::{
-    catlib_service::error::CatlibResult,
+use crate::catlib_service::{
     entities::{Bridge, ContainerManifest, ContainerPath, ForestManifest, Identity, Signers},
+    error::CatlibResult,
 };
 
 mock! {

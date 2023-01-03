@@ -19,7 +19,7 @@ use super::*;
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
-use wildland_corex::entities::{ContainerManifest, StorageManifest as IStorage};
+use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest as IStorage};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub(crate) struct StorageData {

@@ -15,6 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod encrypted;
-pub mod storage_backend;
-pub mod unencrypted;
+use std::path::{Path, PathBuf};
+
+use crate::Storage;
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct NodeDescriptor {
+    pub storage: Storage,
+    pub path: PathBuf,
+}
+
+/// Interface that DFS should expose towards frontends
+pub trait DfsFrontend {
+    fn readdir<P: AsRef<Path>>(&mut self, path: P) -> Vec<NodeDescriptor>;
+}
