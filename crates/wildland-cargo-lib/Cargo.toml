@@ -38,6 +38,7 @@ tracing-subscriber   = { version = "0.3", features = ["json", "env-filter", "fmt
 uuid                 = { version = "1.2", features = ["serde"] }
 wildland-catlib      = { version = "0.30.1-rc.0", path = "../wildland-catlib", registry = "wl-dev" }
 wildland-corex       = { version = "0.30.1-rc.0", path = "../wildland-corex", registry = "wl-dev" }
+wildland-dfs         = { version = "0.30.1-rc.0", path = "../wildland-dfs", registry = "wl-dev" }
 wildland-http-client = { version = "0.30.1-rc.0", path = "../wildland-http-client", registry = "wl-dev" }
 
 [target.'cfg(target_vendor = "apple")'.dependencies]

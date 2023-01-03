@@ -6,7 +6,7 @@ pub(crate) mod test {
     use tempfile;
     use uuid::Bytes;
     use wildland_catlib::CatLib;
-    use wildland_corex::{CatLibService, LocalSecureStorage, LssResult};
+    use wildland_corex::{catlib_service::CatLibService, LocalSecureStorage, LssResult};
 
     #[fixture]
     pub(crate) fn catlib_service() -> CatLibService {

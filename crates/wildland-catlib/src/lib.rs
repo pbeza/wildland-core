@@ -47,8 +47,8 @@
 //!
 //! ```rust
 //! # use wildland_catlib::CatLib;
-//! # use wildland_corex::entities::Identity;
-//! # use wildland_corex::interface::CatLib as ICatLib;
+//! # use wildland_corex::catlib_service::entities::Identity;
+//! # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
 //! # use std::collections::HashSet;
 //! # use uuid::Uuid;
 //! let forest_owner = Identity([1; 32]);
@@ -79,14 +79,15 @@ use directories::ProjectDirs;
 use error::*;
 use forest::{Forest, ForestData};
 use rustbreak::PathDatabase;
-use std::path::PathBuf;
-use std::rc::Rc;
+use std::{path::PathBuf, rc::Rc};
 use storage::{Storage, StorageData};
 use uuid::Uuid;
-use wildland_corex::catlib_service::interface::CatLib as ICatLib;
-use wildland_corex::entities::{
-    ContainerManifest as IContainer, ForestManifest as IForest, Identity, Signers,
-    StorageManifest as IStorage,
+use wildland_corex::catlib_service::{
+    entities::{
+        ContainerManifest as IContainer, ForestManifest as IForest, Identity, Signers,
+        StorageManifest as IStorage,
+    },
+    interface::CatLib as ICatLib,
 };
 
 mod bridge;
@@ -126,8 +127,8 @@ impl ICatLib for CatLib {
     ///
     /// ```rust
     /// # use wildland_catlib::CatLib;
-    /// # use wildland_corex::entities::Identity;
-    /// # use wildland_corex::interface::CatLib as ICatLib;
+    /// # use wildland_corex::catlib_service::entities::Identity;
+    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
     /// # use std::collections::HashSet;
     /// let forest_owner = Identity([1; 32]);
     /// let signer = Identity([2; 32]);

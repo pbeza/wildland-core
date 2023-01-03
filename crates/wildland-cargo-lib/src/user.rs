@@ -21,9 +21,10 @@ use crate::{
 };
 use uuid::Uuid;
 use wildland_corex::{
-    catlib_service::error::CatlibError, CatLibService, CryptoError, DeviceMetadata, ForestMetaData,
-    Identity, LssService, MasterIdentity, MnemonicPhrase,
+    catlib_service::{error::CatlibError, CatLibService, DeviceMetadata, ForestMetaData},
+    CryptoError, Identity, LssService, MasterIdentity, MnemonicPhrase,
 };
+
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     wildland_corex::generate_random_mnemonic()
 }
