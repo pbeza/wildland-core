@@ -15,19 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    api::storage::Storage,
-    errors::{container::*, storage::*},
-};
 use uuid::Uuid;
-use wildland_corex::{
-    catlib_service::{
-        entities::ContainerManifest as InnerContainer, error::CatlibError, CatLibService,
-    },
-    StorageTemplate,
+use wildland_corex::catlib_service::{
+    entities::ContainerManifest as InnerContainer, error::CatlibError, CatLibService,
 };
-
-use super::cargo_user::SharedContainer;
 
 /// Structure representing a container within Cargo application context.
 ///
@@ -51,36 +42,6 @@ impl From<Box<dyn InnerContainer>> for Container {
 }
 
 impl Container {
-    /// TODO
-    pub fn mount(&self) -> Result<(), ContainerMountError> {
-        todo!()
-    }
-
-    /// TODO
-    pub fn unmount(&self) -> Result<(), ContainerUnmountError> {
-        todo!()
-    }
-
-    /// TODO
-    pub fn get_storages(&self) -> Result<Vec<Storage>, GetStoragesError> {
-        todo!()
-    }
-
-    /// TODO
-    pub fn delete_storage(&self, _storage: &Storage) -> Result<(), DeleteStorageError> {
-        todo!()
-    }
-
-    /// TODO
-    pub fn add_storage(&self, _storage: &StorageTemplate) -> Result<(), AddStorageError> {
-        todo!()
-    }
-
-    /// TODO
-    pub fn is_mounted(&self) -> bool {
-        todo!()
-    }
-
     pub fn is_deleted(&self) -> bool {
         self.is_deleted
     }
@@ -92,12 +53,8 @@ impl Container {
         Ok(format!("{deleted_info}Container (name: {name})"))
     }
 
-    /// TODO
-    pub fn duplicate(&self) -> Result<SharedContainer, CatlibError> {
-        todo!()
-    }
-
-    /// TODO
+    /// Deletes Container Manifest related to this Container handle in CatLib and marks `self`
+    /// object as deleted.
     pub fn delete(&mut self, catlib_service: &CatLibService) -> Result<(), CatlibError> {
         catlib_service.delete_container(self.inner.as_mut())?;
         self.is_deleted = true;

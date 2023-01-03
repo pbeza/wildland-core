@@ -20,7 +20,7 @@ use crate::{
         cargo_lib::*, cargo_user::*, config::*, container::*, foundation_storage::*, storage::*,
         user::*,
     },
-    errors::{container::*, storage::*, user::*, ExceptionTrait},
+    errors::{storage::*, user::*, ExceptionTrait},
 };
 use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
@@ -205,7 +205,6 @@ mod ffi_binding {
         // CargoUser
         //
         fn stringify(self: &CargoUser) -> String;
-        fn mount_forest(self: &CargoUser) -> Result<VoidType, ForestMountError>;
         fn get_containers(self: &CargoUser) -> Result<Vec<Arc<Mutex<Container>>>, CatlibError>;
         fn create_container(
             self: &CargoUser,
@@ -237,22 +236,6 @@ mod ffi_binding {
         // Container
         //
 
-        // mounting
-        fn mount(self: &Arc<Mutex<Container>>) -> Result<VoidType, ContainerMountError>;
-        fn unmount(self: &Arc<Mutex<Container>>) -> Result<VoidType, ContainerUnmountError>;
-        fn is_mounted(self: &Arc<Mutex<Container>>) -> bool;
-
-        // storages
-        fn get_storages(self: &Arc<Mutex<Container>>) -> Result<Vec<Storage>, GetStoragesError>;
-        fn delete_storage(
-            self: &Arc<Mutex<Container>>,
-            storage: &Storage,
-        ) -> Result<VoidType, DeleteStorageError>;
-        fn add_storage(
-            self: &Arc<Mutex<Container>>,
-            templates: &StorageTemplate,
-        ) -> Result<VoidType, AddStorageError>;
-
         // paths
         fn add_path(self: &Arc<Mutex<Container>>, path: String) -> Result<bool, CatlibError>;
         fn delete_path(self: &Arc<Mutex<Container>>, path: String) -> Result<bool, CatlibError>;
@@ -261,7 +244,6 @@ mod ffi_binding {
         fn set_name(self: &Arc<Mutex<Container>>, new_name: String);
         fn get_name(self: &Arc<Mutex<Container>>) -> Result<String, CatlibError>;
         fn stringify(self: &Arc<Mutex<Container>>) -> Result<String, CatlibError>;
-        fn duplicate(self: &Arc<Mutex<Container>>) -> Result<Arc<Mutex<Container>>, CatlibError>;
 
         //
         // Storage
