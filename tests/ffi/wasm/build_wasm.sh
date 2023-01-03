@@ -1,4 +1,4 @@
-export EMCC_CFLAGS="-s ERROR_ON_UNDEFINED_SYMBOLS=0" 
+export EMCC_CFLAGS="-s ERROR_ON_UNDEFINED_SYMBOLS=0 -sFETCH"
 cargo build --features "bindings" --target wasm32-unknown-emscripten
 em++ ./main.cpp -std=c++20 -g -D WASM \
     -s NO_DISABLE_EXCEPTION_CATCHING \

@@ -1,21 +1,21 @@
 [book]
-authors = ["Golem Foundation Contributors <contact@golem.foundation>"]
-language = "en"
+authors      = ["Golem Foundation Contributors <contact@golem.foundation>"]
+language     = "en"
 multilingual = false
-src = "docs"
-title = "Wildland documentation"
+src          = "docs"
+title        = "Wildland documentation"
 
 [build]
-build-dir = ".docs/mld"
-create-missing = true
+build-dir                 = ".docs/mld"
+create-missing            = true
 use-default-preprocessors = true
 
 [output.html]
-default-theme = "dark"
+copy-fonts           = true
+curly-quotes         = true
+default-theme        = "dark"
+mathjax-support      = false
 preferred-dark-theme = "ayu"
-curly-quotes = true
-mathjax-support = false
-copy-fonts = true
 #additional-css = ["custom.css", "custom2.css"]
 #additional-js = ["custom.js"]
 no-section-label = false
@@ -27,27 +27,27 @@ no-section-label = false
 #input-404 = "not-found.md"
 
 [output.html.fold]
-enable = true    # whether or not to enable section folding
-level = 0         # the depth to start folding
+enable = true # whether or not to enable section folding
+level  = 0    # the depth to start folding
 
 [output.html.playground]
-editable = false         # allows editing the source code
-copyable = true          # include the copy button for copying code snippets
-copy-js = true           # includes the JavaScript for the code editor
-line-numbers = true     # displays line numbers for editable code
-runnable = true          # displays a run button for rust code
+copy-js      = true  # includes the JavaScript for the code editor
+copyable     = true  # include the copy button for copying code snippets
+editable     = false # allows editing the source code
+line-numbers = true  # displays line numbers for editable code
+runnable     = true  # displays a run button for rust code
 
 [output.html.search]
-enable = true            # enables the search feature
-limit-results = 30       # maximum number of search results
-teaser-word-count = 30   # number of words used for a search result teaser
-use-boolean-and = true   # multiple search terms must all match
-boost-title = 2          # ranking boost factor for matches in headers
-boost-hierarchy = 1      # ranking boost factor for matches in page names
-boost-paragraph = 1      # ranking boost factor for matches in text
-expand = true            # partial words will match longer terms
-heading-split-level = 3  # link results to heading levels
-copy-js = true           # include Javascript code for search
+boost-hierarchy     = 1    # ranking boost factor for matches in page names
+boost-paragraph     = 1    # ranking boost factor for matches in text
+boost-title         = 2    # ranking boost factor for matches in headers
+copy-js             = true # include Javascript code for search
+enable              = true # enables the search feature
+expand              = true # partial words will match longer terms
+heading-split-level = 3    # link results to heading levels
+limit-results       = 30   # maximum number of search results
+teaser-word-count   = 30   # number of words used for a search result teaser
+use-boolean-and     = true # multiple search terms must all match
 
 #[output.html]
 # git-repository-url = "https://docs.wildland.dev"

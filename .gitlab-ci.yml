@@ -3,9 +3,9 @@ image: registry.gitlab.com/wildland/corex/wildland-core/builder:latest
 variables:
   CARGO_FLAGS: ""
   CARGO_HOME: $CI_PROJECT_DIR/cargo
-  CACHE_COMPRESSION_LEVEL: 'fastest'
-  FF_USE_FASTZIP: 'true'
-  GIT_STRATEGY: 'clone'
+  CACHE_COMPRESSION_LEVEL: "fastest"
+  FF_USE_FASTZIP: "true"
+  GIT_STRATEGY: "clone"
 
 stages:
   - Build
@@ -86,7 +86,7 @@ cargo test:
 
 cargo clippy (lint):
   stage: Test
-  needs: ['x86_64 linux build']
+  needs: ["x86_64 linux build"]
   tags:
     - docker
     - linux
@@ -123,7 +123,7 @@ cargo fmt (format):
 
 cargo audit:
   stage: Test
-  needs: ['x86_64 linux build']
+  needs: ["x86_64 linux build"]
   tags:
     - docker
     - linux
@@ -225,14 +225,14 @@ apple:
 
 csharp x86_64 linux:
   stage: Bindings
-  needs: ['x86_64_linux ffi']
+  needs: ["x86_64_linux ffi"]
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
     - bash docker/scripts/bindings_csharp-x64-86-linux.bash
     - mv /out ${CI_PROJECT_DIR}/build
   artifacts:
-    expose_as: 'csharp-x86_64-linux-gnu'
+    expose_as: "csharp-x86_64-linux-gnu"
     name: csharp-x86_64-linux-gnu
     paths:
       - build/
@@ -251,38 +251,37 @@ csharp x86_64 linux:
     - master
     - merge_requests
 
-# minreq (http client) does not compile on target wasm32-unknown-emscripten
-# webassembly emscripten linux:
-#   stage: Bindings
-#   needs: ['cargo test', 'x86_64 linux build']
-#   script:
-#     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
-#     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
-#     - mv /out ${CI_PROJECT_DIR}/build
-#   artifacts:
-#     expose_as: 'wasm'
-#     name: wasm
-#     paths:
-#       - build/
-#     expire_in: 1 week
-#   tags:
-#     - docker
-#     - linux
-#     - metal
-#   only:
-#     - master
-#     - merge_requests
+webassembly emscripten linux:
+  stage: Bindings
+  needs: ["cargo test", "x86_64 linux build"]
+  script:
+    - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
+    - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
+    - mv /out ${CI_PROJECT_DIR}/build
+  artifacts:
+    expose_as: "wasm"
+    name: wasm
+    paths:
+      - build/
+    expire_in: 1 week
+  tags:
+    - docker
+    - linux
+    - metal
+  only:
+    - master
+    - merge_requests
 
 swift x86_64 linux:
   stage: Bindings
-  needs: ['x86_64_linux ffi']
+  needs: ["x86_64_linux ffi"]
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
     - bash docker/scripts/bindings_swift-x64-86-linux.bash
     - mv /out ${CI_PROJECT_DIR}/build
   artifacts:
-    expose_as: 'swift-x86_64-linux-gnu'
+    expose_as: "swift-x86_64-linux-gnu"
     name: swift-x86_64-linux-gnu
     paths:
       - build/
@@ -304,7 +303,7 @@ swift x86_64 linux:
 ###############
 # STAGE: Deploy
 #
-# This stage is the last stage in which the crates are published to the registry. 
+# This stage is the last stage in which the crates are published to the registry.
 
 publish crates:
   stage: Deploy
@@ -341,7 +340,7 @@ publish apple-sdk:
   only:
     - develop
     - tags
-  dependencies: ['apple']
+  dependencies: ["apple"]
   before_script:
     - git config --global user.name "Wildland Housekeeper"
     - git config --global user.email "$HOUSEKEEPER_EMAIL"
@@ -398,7 +397,7 @@ pages-publish-develop:
   needs:
     - job: pages-mld
     - job: pages-lld
-  dependencies: 
+  dependencies:
     - pages-lld
     - pages-mld
   script:
@@ -418,7 +417,7 @@ pages-publish-master:
   needs:
     - job: pages-mld
     - job: pages-lld
-  dependencies: 
+  dependencies:
     - pages-lld
     - pages-mld
   script:

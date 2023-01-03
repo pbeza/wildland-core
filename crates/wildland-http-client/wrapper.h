@@ -1,0 +1,1 @@
+#include <emscripten/fetch.h>

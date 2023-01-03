@@ -15,12 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::rc::Rc;
-
 use http::StatusCode;
-use minreq::Response;
 
-use crate::error::WildlandHttpClientError::{self, HttpError};
+use super::cross_platform_http_client::Response;
+use crate::error::WildlandHttpClientError;
 
 pub(crate) fn check_status_code(response: Response) -> Result<Response, WildlandHttpClientError> {
     match StatusCode::from_u16(response.status_code as u16)
@@ -29,10 +27,10 @@ pub(crate) fn check_status_code(response: Response) -> Result<Response, Wildland
         StatusCode::OK | StatusCode::CREATED | StatusCode::ACCEPTED | StatusCode::NO_CONTENT => {
             Ok(response)
         }
-        _ => Err(HttpError(format!(
+        _ => Err(WildlandHttpClientError::HttpError(format!(
             "HTTP response code: {}; {}",
             response.status_code,
-            response.as_str().map_err(Rc::new)?.to_owned()
+            response.to_string()?,
         ))),
     }
 }
