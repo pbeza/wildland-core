@@ -24,6 +24,6 @@ pub struct ContainerManager;
 
 impl PathResolver for ContainerManager {
     fn resolve(&self, _path: &Path) -> Vec<PathWithStorages> {
-        todo!() // TODO make a task for it
+        todo!() // TODO WILX-353 implement when ContainerManager is filled with information about mounted containers
     }
 }
