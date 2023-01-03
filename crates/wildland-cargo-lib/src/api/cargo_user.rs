@@ -20,10 +20,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::{
-    api::container::*,
-    errors::{storage::GetStorageTemplateError, user::*},
-};
+use crate::{api::container::*, errors::storage::GetStorageTemplateError};
 use derivative::Derivative;
 use uuid::Uuid;
 use wildland_corex::{
@@ -125,12 +122,6 @@ All devices:
 {all_devices_str}
 "
         )
-    }
-
-    /// TODO
-    #[tracing::instrument(level = "debug", skip_all)]
-    pub fn mount_forest(&self) -> Result<(), ForestMountError> {
-        todo!()
     }
 
     /// Returns vector of handles to all containers (mounted or not) found in the user's forest.
