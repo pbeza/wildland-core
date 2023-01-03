@@ -19,7 +19,7 @@ use super::*;
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
-use wildland_corex::entities::{Bridge as IBridge, ContainerPath, ForestManifest};
+use wildland_corex::catlib_service::entities::{Bridge as IBridge, ContainerPath, ForestManifest};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct BridgeData {

@@ -24,6 +24,7 @@ use crate::{
     user::UserService,
 };
 use std::{
+    collections::HashMap,
     mem::MaybeUninit,
     rc::Rc,
     sync::{
@@ -33,7 +34,11 @@ use std::{
 };
 use thiserror::Error;
 use wildland_catlib::CatLib;
-use wildland_corex::{CatLibService, LocalSecureStorage, LssService};
+use wildland_corex::{
+    catlib_service::CatLibService, container_manager::ContainerManager, LocalSecureStorage,
+    LssService,
+};
+use wildland_dfs::encrypted::EncryptedDfs as Dfs;
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[repr(C)]
@@ -64,6 +69,7 @@ static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 #[derive(Clone)]
 pub struct CargoLib {
     user_api: UserApi,
+    _dfs: Rc<Dfs>,
 }
 
 impl CargoLib {
@@ -72,12 +78,14 @@ impl CargoLib {
         fsa_config: FoundationStorageApiConfig,
     ) -> Self {
         let lss_service = LssService::new(lss);
+        let container_manager = Rc::new(ContainerManager {});
         Self {
             user_api: UserApi::new(UserService::new(
                 lss_service,
                 CatLibService::new(Rc::new(CatLib::default())),
                 fsa_config,
             )),
+            _dfs: Rc::new(Dfs::new(container_manager, HashMap::new())),
         }
     }
 
