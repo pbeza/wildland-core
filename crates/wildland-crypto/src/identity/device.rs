@@ -16,8 +16,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::identity::signing_keypair::SigningKeypair;
-use rand_7::prelude::ThreadRng;
-use rand_7::thread_rng;
+use rand::prelude::ThreadRng;
+use rand::thread_rng;
 
 /// Generate a device identity keypair.
 /// Each forest identity will have multiple device identities - one per user's device.
