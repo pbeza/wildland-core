@@ -31,7 +31,10 @@ use wildland_corex::{
 };
 
 pub trait StorageBackendFactory {
-    fn init_backend(&self, storage: Storage) -> Rc<dyn StorageBackend>;
+    fn init_backend(
+        &self,
+        storage: Storage,
+    ) -> Result<Rc<dyn StorageBackend>, Box<dyn std::error::Error>>;
 }
 
 pub struct UnencryptedDfs {
@@ -58,19 +61,29 @@ impl UnencryptedDfs {
         }
     }
 
-    fn get_backend(&mut self, storage: &Storage) -> Option<Rc<dyn StorageBackend>> {
-        let backend_entry = self.storage_backends.entry(storage.uuid());
-        let result = match backend_entry {
+    fn get_backend(
+        &mut self,
+        storage: &Storage,
+    ) -> Result<Rc<dyn StorageBackend>, Box<dyn std::error::Error>> {
+        let backend = match self.storage_backends.entry(storage.uuid()) {
             Entry::Occupied(occupied_entry) => occupied_entry.get().clone(),
             Entry::Vacant(vacant_entry) => {
-                let new_backend = self
-                    .storage_backend_factories
-                    .get(storage.backend_type())?
-                    .init_backend(storage.clone());
-                vacant_entry.insert(new_backend).clone()
+                match self.storage_backend_factories.get(storage.backend_type()) {
+                    Some(factory) => {
+                        let backend = factory.init_backend(storage.clone())?;
+                        vacant_entry.insert(backend).clone()
+                    }
+                    None => {
+                        return Err(Box::<dyn std::error::Error>::from(format!(
+                            "Could not find backend factory for {} storage",
+                            storage.backend_type()
+                        )))
+                    }
+                }
             }
         };
-        Some(result)
+
+        Ok(backend)
     }
 }
 
@@ -97,13 +110,19 @@ impl DfsFrontend for UnencryptedDfs {
         let nodes = resolved_paths
             .into_iter()
             .filter_map(|PathWithStorages { path, storages }| {
-                let mut backends = storages.iter().flat_map(|storage| {
-                    let backend = self.get_backend(storage);
-                    if backend.is_none() {
-                        // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                        tracing::error!("Unsupported storage backend: {}", storage.backend_type());
+                let mut backends = storages.iter().filter_map(|storage| {
+                    match self.get_backend(storage) {
+                        Err(e) => {
+                            // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
+                            tracing::error!(
+                                "Unsupported storage backend: {}; Reason: {}",
+                                storage.backend_type(),
+                                e
+                            );
+                            None
+                        }
+                        Ok(backend) => Some((backend, storage)),
                     }
-                    backend.map(|backend| (backend, storage))
                 });
 
                 // TODO WILX-362 getting first should be a temporary policy, maybe we should ping backends to check if any of them

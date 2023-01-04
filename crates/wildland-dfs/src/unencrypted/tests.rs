@@ -61,11 +61,14 @@ impl MufsFactory {
     }
 }
 impl StorageBackendFactory for MufsFactory {
-    fn init_backend(&self, storage: Storage) -> Rc<dyn StorageBackend> {
-        Rc::new(Mufs::new(
+    fn init_backend(
+        &self,
+        storage: Storage,
+    ) -> Result<Rc<dyn StorageBackend>, Box<dyn std::error::Error>> {
+        Ok(Rc::new(Mufs::new(
             self.fs.clone(),
-            serde_json::from_value::<String>(storage.data().clone()).unwrap(),
-        ))
+            serde_json::from_value::<String>(storage.data().clone())?,
+        )))
     }
 }
 

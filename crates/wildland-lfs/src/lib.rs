@@ -55,12 +55,15 @@ impl StorageBackend for LocalFilesystemStorage {
 
 pub struct LfsBackendFactory {}
 impl StorageBackendFactory for LfsBackendFactory {
-    fn init_backend(&self, storage: Storage) -> std::rc::Rc<dyn StorageBackend> {
+    fn init_backend(
+        &self,
+        storage: Storage,
+    ) -> Result<Rc<dyn StorageBackend>, Box<dyn std::error::Error>> {
         let template: LocalFilesystemStorageTemplate =
-            serde_json::from_value(storage.data().clone()).unwrap(); // TODO unwrap
-        Rc::new(LocalFilesystemStorage {
+            serde_json::from_value(storage.data().clone())?;
+        Ok(Rc::new(LocalFilesystemStorage {
             base_dir: template.local_dir.join(template.container_prefix),
-        })
+        }))
     }
 }
 
@@ -88,7 +91,7 @@ mod tests {
             }),
         );
         let factory = LfsBackendFactory {};
-        let backend = factory.init_backend(storage);
+        let backend = factory.init_backend(storage).unwrap();
 
         create_dir(tmpdir.path().join("books")).unwrap(); // container dir
         let _ = File::create(tmpdir.path().join("books/file1")).unwrap();
@@ -109,7 +112,7 @@ mod tests {
             }),
         );
         let factory = LfsBackendFactory {};
-        let backend = factory.init_backend(storage);
+        let backend = factory.init_backend(storage).unwrap();
 
         create_dir(tmpdir.path().join("books")).unwrap(); // container dir
         create_dir(tmpdir.path().join("books").join("dir")).unwrap(); // container subdir
