@@ -2765,6 +2765,7 @@ dependencies = [
 name = "wildland-dfs"
 version = "0.30.1-rc.0"
 dependencies = [
+ "itertools",
  "mockall",
  "pretty_assertions",
  "rsfs",

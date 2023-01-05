@@ -8,7 +8,7 @@ use pretty_assertions::assert_eq;
 use rsfs::mem::FS;
 use rsfs::{DirEntry, GenFS};
 use rstest::{fixture, rstest};
-use wildland_corex::dfs::interface::{DfsFrontend, NodeDescriptor};
+use wildland_corex::dfs::interface::{DfsFrontend, NodeDescriptor, NodeStorage};
 use wildland_corex::{MockPathResolver, PathWithStorages, Storage};
 
 use crate::storage_backend::StorageBackend;
@@ -109,8 +109,8 @@ fn test_listing_files_from_root_of_one_container(dfs_with_path_resolver_and_fs: 
                 let storage = mufs_storage.clone();
                 move |_path| {
                     vec![PathWithStorages {
-                        path: "/".into(),
-                        storages: vec![storage.clone()],
+                        path_within_storage: "/".into(),
+                        storages: Some(vec![storage.clone()]),
                     }]
                 }
             });
@@ -124,8 +124,11 @@ fn test_listing_files_from_root_of_one_container(dfs_with_path_resolver_and_fs: 
     assert_eq!(
         files_descriptors,
         vec![NodeDescriptor {
-            storage: mufs_storage,
-            path: PathBuf::from_str("/file_in_root").unwrap()
+            storage: Some(NodeStorage::new(
+                mufs_storage,
+                PathBuf::from_str("/file_in_root").unwrap()
+            )),
+            absolute_path: PathBuf::from_str("/a/b/file_in_root").unwrap(),
         }]
     );
 }
@@ -146,8 +149,8 @@ fn test_listing_files_from_nested_dir_of_one_container(dfs_with_path_resolver_an
                 let storage = mufs_storage.clone();
                 move |_path| {
                     vec![PathWithStorages {
-                        path: "/dir".into(),
-                        storages: vec![storage.clone()],
+                        path_within_storage: "/dir".into(),
+                        storages: Some(vec![storage.clone()]),
                     }]
                 }
             })
@@ -165,12 +168,18 @@ fn test_listing_files_from_nested_dir_of_one_container(dfs_with_path_resolver_an
         files_descriptors,
         vec![
             NodeDescriptor {
-                storage: mufs_storage.clone(),
-                path: PathBuf::from_str("/dir/nested_file_1").unwrap()
+                storage: Some(NodeStorage::new(
+                    mufs_storage.clone(),
+                    PathBuf::from_str("/dir/nested_file_1").unwrap()
+                )),
+                absolute_path: PathBuf::from_str("/a/b/dir/nested_file_1").unwrap(),
             },
             NodeDescriptor {
-                storage: mufs_storage,
-                path: PathBuf::from_str("/dir/nested_file_2").unwrap()
+                storage: Some(NodeStorage::new(
+                    mufs_storage,
+                    PathBuf::from_str("/dir/nested_file_2").unwrap()
+                )),
+                absolute_path: PathBuf::from_str("/a/b/dir/nested_file_2").unwrap(),
             }
         ]
     );
@@ -192,8 +201,8 @@ fn test_listing_dirs_from_one_container(dfs_with_path_resolver_and_fs: DfsFixtur
                 let storage = mufs_storage.clone();
                 move |_path| {
                     vec![PathWithStorages {
-                        path: "/".into(),
-                        storages: vec![storage.clone()],
+                        path_within_storage: "/".into(),
+                        storages: Some(vec![storage.clone()]),
                     }]
                 }
             })
@@ -210,12 +219,18 @@ fn test_listing_dirs_from_one_container(dfs_with_path_resolver_and_fs: DfsFixtur
         files_descriptors,
         vec![
             NodeDescriptor {
-                storage: mufs_storage.clone(),
-                path: PathBuf::from_str("/dir_a").unwrap()
+                storage: Some(NodeStorage::new(
+                    mufs_storage.clone(),
+                    PathBuf::from_str("/dir_a").unwrap()
+                )),
+                absolute_path: PathBuf::from_str("/dir_a").unwrap(),
             },
             NodeDescriptor {
-                storage: mufs_storage,
-                path: PathBuf::from_str("/dir_b").unwrap()
+                storage: Some(NodeStorage::new(
+                    mufs_storage,
+                    PathBuf::from_str("/dir_b").unwrap()
+                )),
+                absolute_path: PathBuf::from_str("/dir_b").unwrap(),
             },
         ]
     );
@@ -241,12 +256,12 @@ fn test_listing_files_and_dirs_from_two_containers(dfs_with_path_resolver_and_fs
                 move |_path| {
                     vec![
                         PathWithStorages {
-                            path: "/dir".into(), // returned by a container claiming path `/a/b/c/`
-                            storages: vec![storage1.clone()],
+                            path_within_storage: "/dir".into(), // returned by a container claiming path `/a/b/c/`
+                            storages: Some(vec![storage1.clone()]),
                         },
                         PathWithStorages {
-                            path: "/c/dir".into(), // returned by a container claiming path `/a/b/`
-                            storages: vec![storage2.clone()],
+                            path_within_storage: "/c/dir".into(), // returned by a container claiming path `/a/b/`
+                            storages: Some(vec![storage2.clone()]),
                         },
                     ]
                 }
@@ -273,16 +288,25 @@ fn test_listing_files_and_dirs_from_two_containers(dfs_with_path_resolver_and_fs
         files_descriptors,
         vec![
             NodeDescriptor {
-                storage: storage1,
-                path: PathBuf::from_str("/dir/file_from_container_1").unwrap()
+                storage: Some(NodeStorage::new(
+                    storage1,
+                    PathBuf::from_str("/dir/file_from_container_1").unwrap()
+                )),
+                absolute_path: PathBuf::from_str("/a/b/c/dir/file_from_container_1").unwrap(),
             },
             NodeDescriptor {
-                storage: storage2.clone(),
-                path: PathBuf::from_str("/c/dir/file_from_container_2").unwrap()
+                storage: Some(NodeStorage::new(
+                    storage2.clone(),
+                    PathBuf::from_str("/c/dir/file_from_container_2").unwrap()
+                )),
+                absolute_path: PathBuf::from_str("/a/b/c/dir/file_from_container_2").unwrap(),
             },
             NodeDescriptor {
-                storage: storage2,
-                path: PathBuf::from_str("/c/dir/next_dir").unwrap()
+                storage: Some(NodeStorage::new(
+                    storage2,
+                    PathBuf::from_str("/c/dir/next_dir").unwrap()
+                )),
+                absolute_path: PathBuf::from_str("/a/b/c/dir/next_dir").unwrap(),
             }
         ]
     );
@@ -309,8 +333,8 @@ fn test_getting_one_file_descriptor_from_container_with_multiple_storages(
                 let storage2 = storage2;
                 move |_path| {
                     vec![PathWithStorages {
-                        path: "/a".into(), // returned by a container claiming path `/a/`
-                        storages: vec![storage1.clone(), storage2.clone()],
+                        path_within_storage: "/a".into(), // returned by a container claiming path `/a/`
+                        storages: Some(vec![storage1.clone(), storage2.clone()]),
                     }]
                 }
             })
@@ -331,8 +355,11 @@ fn test_getting_one_file_descriptor_from_container_with_multiple_storages(
     assert_eq!(
         files_descriptors,
         vec![NodeDescriptor {
-            storage: storage1,
-            path: PathBuf::from_str("/a/b").unwrap(),
+            storage: Some(NodeStorage::new(
+                storage1,
+                PathBuf::from_str("/a/b").unwrap()
+            )),
+            absolute_path: PathBuf::from_str("/a/b").unwrap(),
         },]
     );
 }
@@ -360,12 +387,12 @@ fn test_more_than_one_file_descriptor_claim_the_same_full_path(
                 move |_path| {
                     vec![
                         PathWithStorages {
-                            path: "/b/".into(), // returned by the container claiming path `/a/`
-                            storages: vec![storage1.clone()],
+                            path_within_storage: "/b/".into(), // returned by the container claiming path `/a/`
+                            storages: Some(vec![storage1.clone()]),
                         },
                         PathWithStorages {
-                            path: "/".into(), // returned by the container claiming path `/a/b/`
-                            storages: vec![storage2.clone()],
+                            path_within_storage: "/".into(), // returned by the container claiming path `/a/b/`
+                            storages: Some(vec![storage2.clone()]),
                         },
                     ]
                 }
@@ -388,13 +415,16 @@ fn test_more_than_one_file_descriptor_claim_the_same_full_path(
         vec![
             // Storage of the container claiming path `/a/` + `b/c` within the container gives full path `/a/b/c`
             NodeDescriptor {
-                storage: storage1,
-                path: PathBuf::from_str("/b/c").unwrap(),
+                storage: Some(NodeStorage::new(
+                    storage1,
+                    PathBuf::from_str("/b/c").unwrap()
+                )),
+                absolute_path: PathBuf::from_str("/a/b/c").unwrap(),
             },
             // Storage of the container claiming path `/a/b` + `c` within the container also gives full path `/a/b/c`
             NodeDescriptor {
-                storage: storage2,
-                path: PathBuf::from_str("/c").unwrap(),
+                storage: Some(NodeStorage::new(storage2, PathBuf::from_str("/c").unwrap())),
+                absolute_path: PathBuf::from_str("/a/b/c").unwrap(),
             }
         ]
     );
@@ -419,8 +449,8 @@ fn test_first_storage_unavailable(dfs_with_path_resolver_and_fs: DfsFixture) {
                 let storage2 = storage2.clone();
                 move |_path| {
                     vec![PathWithStorages {
-                        path: "/".into(),
-                        storages: vec![storage1.clone(), storage2.clone()],
+                        path_within_storage: "/".into(),
+                        storages: Some(vec![storage1.clone(), storage2.clone()]),
                     }]
                 }
             })
@@ -435,8 +465,72 @@ fn test_first_storage_unavailable(dfs_with_path_resolver_and_fs: DfsFixture) {
     assert_eq!(
         files_descriptors,
         vec![NodeDescriptor {
-            storage: storage2,
-            path: PathBuf::from_str("/a").unwrap(),
+            storage: Some(NodeStorage::new(storage2, PathBuf::from_str("/a").unwrap())),
+            absolute_path: PathBuf::from_str("/a").unwrap(),
         },]
+    );
+}
+
+#[rstest]
+fn test_listing_virtual_node(dfs_with_path_resolver_and_fs: DfsFixture) {
+    let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+    // C1 storage
+    let storage1 = new_mufs_storage("/storage_c1/");
+
+    unsafe {
+        (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
+            .as_mut()
+            .unwrap()
+            .expect_resolve()
+            .with(predicate::eq(Path::new("/a")))
+            .times(1)
+            .returning({
+                let storage1 = storage1.clone();
+                move |_path| {
+                    vec![
+                        PathWithStorages {
+                            path_within_storage: "/".into(),
+                            storages: Some(vec![storage1.clone()]),
+                        },
+                        // virtual storage (represented by a None value) represents containers
+                        // that claim path containing the value of path_within_storage
+                        // in this case container would claim path starting with /a/b/...
+                        PathWithStorages {
+                            path_within_storage: "/b".into(),
+                            storages: None,
+                        },
+                    ]
+                }
+            })
+    };
+
+    fs.create_dir("/storage_c1/").unwrap();
+    fs.create_file("/storage_c1/file_1").unwrap();
+    fs.create_dir("/storage_c1/dir/").unwrap();
+    fs.create_file("storage_c1/dir/file_in_nested_dir").unwrap(); // it should not be present in result
+
+    let files_descriptors = dfs.readdir("/a".to_string());
+    assert_eq!(
+        files_descriptors,
+        vec![
+            NodeDescriptor {
+                storage: Some(NodeStorage::new(
+                    storage1.clone(),
+                    PathBuf::from_str("/dir").unwrap()
+                )),
+                absolute_path: PathBuf::from_str("/a/dir").unwrap(),
+            },
+            NodeDescriptor {
+                storage: Some(NodeStorage::new(
+                    storage1,
+                    PathBuf::from_str("/file_1").unwrap()
+                )),
+                absolute_path: PathBuf::from_str("/a/file_1").unwrap(),
+            },
+            NodeDescriptor {
+                storage: None,
+                absolute_path: PathBuf::from_str("/a/b").unwrap(),
+            },
+        ]
     );
 }

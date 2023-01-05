@@ -21,8 +21,24 @@ use crate::Storage;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct NodeDescriptor {
-    pub storage: Storage,
-    pub path: PathBuf,
+    // None value represents virtual nodes - parts of containers claimed paths
+    pub storage: Option<NodeStorage>,
+    pub absolute_path: PathBuf,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NodeStorage {
+    storage: Storage,
+    path_within_storage: PathBuf,
+}
+
+impl NodeStorage {
+    pub fn new(storage: Storage, path_within_storage: PathBuf) -> Self {
+        Self {
+            storage,
+            path_within_storage,
+        }
+    }
 }
 
 /// Interface that DFS should expose towards frontends

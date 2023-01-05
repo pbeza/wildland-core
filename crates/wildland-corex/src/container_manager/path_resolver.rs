@@ -23,8 +23,12 @@ use crate::Storage;
 /// locations of the path.
 ///
 pub struct PathWithStorages {
-    pub path: PathBuf,
-    pub storages: Vec<Storage>,
+    /// path within storages
+    pub path_within_storage: PathBuf,
+    /// all storages that include the path (all replicas)
+    ///
+    /// None value represents virtual node paths that are not supposed to be looked up for in any backend
+    pub storages: Option<Vec<Storage>>,
 }
 
 #[mockall::automock]
