@@ -15,8 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+
+use serde::{Deserialize, Serialize};
 use tera::{Context, Tera};
 use thiserror::Error;
 use uuid::Uuid;
@@ -113,10 +114,13 @@ impl StorageTemplate {
 
 #[cfg(test)]
 mod tests {
-    use crate::{StorageTemplate, TemplateContext};
+    use std::collections::HashMap;
+    use std::str::FromStr;
+
     use pretty_assertions::assert_eq;
-    use std::{collections::HashMap, str::FromStr};
     use uuid::Uuid;
+
+    use crate::{StorageTemplate, TemplateContext};
 
     #[test]
     fn test_rendering_template() {

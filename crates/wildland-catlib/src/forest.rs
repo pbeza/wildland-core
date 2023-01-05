@@ -15,16 +15,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::*;
-use crate::{bridge::BridgeData, container::ContainerData, db::delete_model, db::save_model};
-use derivative::Derivative;
-use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
+use derivative::Derivative;
+use serde::{Deserialize, Serialize};
 use wildland_corex::catlib_service::entities::{
-    Bridge as IBridge, ContainerManifest as IContainer, ContainerPath, ForestManifest as IForest,
-    Identity, Signers,
+    Bridge as IBridge,
+    ContainerManifest as IContainer,
+    ContainerPath,
+    ForestManifest as IForest,
+    Identity,
+    Signers,
 };
+
+use super::*;
+use crate::bridge::BridgeData;
+use crate::container::ContainerData;
+use crate::db::{delete_model, save_model};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ForestData {
@@ -320,10 +327,11 @@ impl Model for Forest {
 
 #[cfg(test)]
 mod tests {
-    use super::db::test::catlib;
-    use crate::*;
     use rstest::*;
     use wildland_corex::catlib_service::entities::ForestManifest;
+
+    use super::db::test::catlib;
+    use crate::*;
 
     fn make_forest(catlib: &CatLib) -> Box<dyn ForestManifest> {
         let owner = Identity([1; 32]);

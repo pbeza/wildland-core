@@ -15,23 +15,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
-use crate::{api::container::*, errors::storage::GetStorageTemplateError};
 use derivative::Derivative;
 use uuid::Uuid;
-use wildland_corex::{
-    catlib_service::{entities::ForestManifest, error::CatlibError, CatLibService},
-    StorageTemplate,
-};
+use wildland_corex::catlib_service::entities::ForestManifest;
+use wildland_corex::catlib_service::error::CatlibError;
+use wildland_corex::catlib_service::CatLibService;
+use wildland_corex::StorageTemplate;
 
-use super::{
-    config::FoundationStorageApiConfig,
-    foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError},
-};
+use super::config::FoundationStorageApiConfig;
+use super::foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError};
+use crate::api::container::*;
+use crate::errors::storage::GetStorageTemplateError;
 
 pub type SharedContainer = Arc<Mutex<Container>>;
 #[derive(Debug, Clone)]
@@ -260,17 +257,14 @@ mod tests {
     use rstest::*;
     use serde_json::json;
     use uuid::Uuid;
-    use wildland_corex::{
-        catlib_service::{entities::ForestManifest, CatLibService, DeviceMetadata, ForestMetaData},
-        SigningKeypair, WildlandIdentity,
-    };
-
-    use crate::{
-        api::{config::FoundationStorageApiConfig, utils::test::catlib_service},
-        templates::foundation_storage::FoundationStorageTemplate,
-    };
+    use wildland_corex::catlib_service::entities::ForestManifest;
+    use wildland_corex::catlib_service::{CatLibService, DeviceMetadata, ForestMetaData};
+    use wildland_corex::{SigningKeypair, WildlandIdentity};
 
     use super::CargoUser;
+    use crate::api::config::FoundationStorageApiConfig;
+    use crate::api::utils::test::catlib_service;
+    use crate::templates::foundation_storage::FoundationStorageTemplate;
 
     #[fixture]
     fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Box<dyn ForestManifest>) {

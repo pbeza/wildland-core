@@ -17,14 +17,15 @@
 
 use std::fmt::{Debug, Display};
 
-use super::{api::LocalSecureStorage, result::LssResult};
-use crate::{
-    catlib_service::entities::{ForestManifest, Identity},
-    ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY,
-};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use uuid::Uuid;
 use wildland_crypto::identity::SigningKeypair;
+
+use super::api::LocalSecureStorage;
+use super::result::LssResult;
+use crate::catlib_service::entities::{ForestManifest, Identity};
+use crate::{ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY};
 
 #[derive(Clone)]
 pub struct LssService {
@@ -132,20 +133,17 @@ impl LssService {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, collections::HashMap};
+    use std::cell::RefCell;
+    use std::collections::HashMap;
 
-    use crate::{
-        catlib_service::{entities::ForestManifest as IForest, entities::Identity},
-        test_utils::MockForest,
-    };
     use rstest::{fixture, rstest};
     use uuid::Uuid;
     use wildland_crypto::identity::SigningKeypair;
 
-    use crate::{
-        lss::service::{THIS_DEVICE_KEYPAIR_KEY, THIS_DEVICE_NAME_KEY},
-        LocalSecureStorage, LssResult, LssService, WildlandIdentity, DEFAULT_FOREST_KEY,
-    };
+    use crate::catlib_service::entities::{ForestManifest as IForest, Identity};
+    use crate::lss::service::{THIS_DEVICE_KEYPAIR_KEY, THIS_DEVICE_NAME_KEY};
+    use crate::test_utils::MockForest;
+    use crate::{LocalSecureStorage, LssResult, LssService, WildlandIdentity, DEFAULT_FOREST_KEY};
 
     #[fixture]
     fn lss_stub() -> &'static dyn LocalSecureStorage {

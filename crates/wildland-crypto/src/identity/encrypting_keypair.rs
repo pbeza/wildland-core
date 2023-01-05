@@ -15,10 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::bytes_key_from_str;
-use crate::error::CryptoError;
 use crypto_box::{PublicKey, SecretKey};
 use hex::ToHex;
+
+use super::bytes_key_from_str;
+use crate::error::CryptoError;
 
 /// Keypair that can be used for encryption.
 /// See crypto-box crate for details.
