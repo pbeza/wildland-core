@@ -16,8 +16,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{error::CryptoError, signature::Signature};
-use ed25519_dalek::{PublicKey, SecretKey, Signer};
-use rand_7::{CryptoRng, RngCore};
+use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signer};
+use rand::{CryptoRng, RngCore};
 use serde::{Deserialize, Serialize};
 
 use super::bytes_key_from_str;
@@ -82,7 +82,17 @@ impl SigningKeypair {
     where
         R: CryptoRng + RngCore,
     {
-        Self(ed25519_dalek::Keypair::generate(csprng))
+        //TODO: WILX-366 use ed25519_dalek::Keypair::generate(csprng) when ed25519_dalek will support rand 0.8
+
+        let mut bytes = [0u8; 32];
+        csprng.fill_bytes(&mut bytes);
+
+        let sk = SecretKey::from_bytes(bytes.as_ref()).unwrap();
+
+        Self(Keypair {
+            public: (&sk).into(),
+            secret: sk,
+        })
     }
 
     pub fn try_from_bytes_slices(pubkey: PubKey, seckey: SecKey) -> Result<Self, CryptoError> {
