@@ -22,10 +22,10 @@ mod error;
 mod identity;
 mod lss;
 mod storage;
-#[cfg(test)]
-mod test_utils;
 
+pub use catlib_service::*;
 pub use container_manager::*;
+pub use entities::*;
 pub use error::*;
 pub use identity::master::*;
 pub use identity::wildland::*;

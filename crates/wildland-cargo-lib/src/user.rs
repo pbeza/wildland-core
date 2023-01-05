@@ -88,7 +88,8 @@ impl UserService {
         )?;
 
         tracing::trace!("saving identities to lss");
-        self.lss_service.save_forest_uuid(forest.as_ref())?;
+        let forest_locked = forest.lock().expect("Poisoned Mutex");
+        self.lss_service.save_forest_uuid(&*forest_locked)?;
 
         self.lss_service.save_identity(&default_forest_identity)?;
         self.lss_service.save_identity(&device_identity)?;
@@ -96,7 +97,7 @@ impl UserService {
         Ok(CargoUser::new(
             device_name.clone(),
             vec![device_name],
-            forest,
+            forest.clone(),
             self.catlib_service.clone(),
             &self.fsa_config,
         ))
@@ -110,9 +111,13 @@ impl UserService {
         let default_forest_uuid = self.get_default_forest_uuid()?;
 
         match self.catlib_service.get_forest(&default_forest_uuid) {
-            Ok(mut forest) => {
+            Ok(forest) => {
                 let user_metadata: ForestMetaData = serde_json::from_slice(
-                    &forest.data().map_err(UserRetrievalError::CatlibError)?,
+                    &forest
+                        .lock()
+                        .expect("Poisoned Mutex")
+                        .data()
+                        .map_err(UserRetrievalError::CatlibError)?,
                 )
                 .map_err(|e| {
                     CatlibError::Generic(format!(

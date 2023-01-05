@@ -27,13 +27,6 @@ pub enum GetStoragesError {
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[repr(C)]
-pub enum DeleteStorageError {
-    #[error("Delete Storage error")]
-    Error,
-}
-
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
-#[repr(C)]
 pub enum AddStorageError {
     #[error("Add Storage error")]
     Error,

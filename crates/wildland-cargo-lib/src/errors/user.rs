@@ -29,6 +29,8 @@ pub enum CreateMnemonicError {
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub enum UserCreationError {
+    #[error("Generic error: {0}")]
+    Generic(String),
     #[error("User already exists")]
     UserAlreadyExists,
     #[error("Mnemonic generation error: {0}")]
@@ -90,6 +92,8 @@ pub enum UserRetrievalError {
     DeviceMetadataNotFound,
     #[error("User not found")]
     UserNotFound,
+    #[error("Generic: {0}")]
+    Generic(String),
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]

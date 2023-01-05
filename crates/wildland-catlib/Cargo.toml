@@ -12,7 +12,8 @@ version     = "0.30.1-rc.0"
 
 [dependencies]
 derivative     = { version = "2.2" }
-directories    = { version = "4.0" }
+serde_json     = { version = "1.0" }
+directories    = { version = "4.0.1" }
 hex            = { version = "0.4" }
 ron            = { version = "0.8" }
 rustbreak      = { version = "2.0", features = ["serde_yaml", "ron_enc", "yaml_enc", "mmap"] }

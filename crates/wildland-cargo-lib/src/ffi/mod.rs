@@ -19,6 +19,8 @@ use std::sync::{Arc, Mutex};
 
 use rusty_bind::binding_wrapper;
 pub use wildland_corex::catlib_service::error::CatlibError;
+use wildland_corex::entities::Identity;
+use wildland_corex::{BridgeManifest, ContainerManifest, ForestManifest, Signers, StorageManifest};
 pub use wildland_corex::{
     CoreXError,
     CryptoError,
@@ -31,9 +33,7 @@ pub use wildland_corex::{
 use crate::api::cargo_lib::*;
 use crate::api::cargo_user::*;
 use crate::api::config::*;
-use crate::api::container::*;
 use crate::api::foundation_storage::*;
-use crate::api::storage::*;
 use crate::api::user::*;
 use crate::errors::storage::*;
 use crate::errors::user::*;
@@ -97,15 +97,6 @@ mod ffi_binding {
         MalformedDatabaseEntry(_),
         RecordAlreadyExists(_),
         Generic(_),
-    }
-    enum GetStoragesError {
-        Error,
-    }
-    enum DeleteStorageError {
-        Error,
-    }
-    enum AddStorageError {
-        Error,
     }
     enum ContainerMountError {
         Error,
@@ -211,20 +202,22 @@ mod ffi_binding {
         fn stringify(self: &MnemonicPayload) -> String;
         fn get_vec(self: &MnemonicPayload) -> Vec<String>;
 
+        type Identity;
+        type Signers;
+
         //
         // CargoUser
         //
         fn stringify(self: &CargoUser) -> String;
-        fn get_containers(self: &CargoUser) -> Result<Vec<Arc<Mutex<Container>>>, CatlibError>;
+        fn get_containers(
+            self: &CargoUser,
+        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
         fn create_container(
             self: &CargoUser,
             name: String,
             storage_templates: &StorageTemplate,
-        ) -> Result<Arc<Mutex<Container>>, CatlibError>;
-        fn delete_container(
-            self: &CargoUser,
-            container: &Arc<Mutex<Container>>,
-        ) -> Result<VoidType, CatlibError>;
+            path: String,
+        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
         fn get_storage_templates(
             self: &CargoUser,
         ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
@@ -243,23 +236,106 @@ mod ffi_binding {
         fn is_free_storage_granted(self: &CargoUser) -> Result<bool, CatlibError>;
 
         //
-        // Container
+        // ForestManifest
         //
+        fn add_signer(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            signer: Identity,
+        ) -> Result<bool, CatlibError>;
+        fn del_signer(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            signer: Identity,
+        ) -> Result<bool, CatlibError>;
+        fn containers(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
+        fn update(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            data: Vec<u8>,
+        ) -> Result<VoidType, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn ForestManifest>>) -> Result<bool, CatlibError>;
+        fn create_container(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            name: String,
+            storage_data: &StorageTemplate,
+            path: String,
+        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
+        fn create_bridge(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            path: String,
+            link_data: Vec<u8>,
+        ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
+        fn find_bridge(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            path: String,
+        ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
+        fn find_containers(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            paths: Vec<String>,
+            include_subdirs: bool,
+        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
+        fn owner(self: &Arc<Mutex<dyn ForestManifest>>) -> Identity;
+        fn signers(self: &Arc<Mutex<dyn ForestManifest>>) -> Result<Signers, CatlibError>;
 
-        // paths
-        fn add_path(self: &Arc<Mutex<Container>>, path: String) -> Result<bool, CatlibError>;
-        fn delete_path(self: &Arc<Mutex<Container>>, path: String) -> Result<bool, CatlibError>;
-        fn get_paths(self: &Arc<Mutex<Container>>) -> Result<Vec<String>, CatlibError>;
+        //
+        // ContainerManifest
+        //
+        fn get_storages(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+        ) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, CatlibError>;
+        fn add_storage(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            templates: &StorageTemplate,
+        ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>;
+        fn add_path(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            path: String,
+        ) -> Result<bool, CatlibError>;
+        fn delete_path(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            path: String,
+        ) -> Result<bool, CatlibError>;
+        fn get_paths(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<Vec<String>, CatlibError>;
+        fn set_name(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            new_name: String,
+        ) -> Result<VoidType, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<VoidType, CatlibError>;
+        fn forest(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+        ) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError>;
+        fn name(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<String, CatlibError>;
+        fn stringify(self: &Arc<Mutex<dyn ContainerManifest>>) -> String;
 
-        fn set_name(self: &Arc<Mutex<Container>>, new_name: String);
-        fn get_name(self: &Arc<Mutex<Container>>) -> Result<String, CatlibError>;
-        fn stringify(self: &Arc<Mutex<Container>>) -> Result<String, CatlibError>;
+        //
+        // StorageManifest
+        //
+        fn container(
+            self: &Arc<Mutex<dyn StorageManifest>>,
+        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
+        fn update(
+            self: &Arc<Mutex<dyn StorageManifest>>,
+            data: Vec<u8>,
+        ) -> Result<VoidType, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<bool, CatlibError>;
+        fn data(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<Vec<u8>, CatlibError>;
+
+        //
+        // BridgeManifets
+        //
+        fn forest(
+            self: &Arc<Mutex<dyn BridgeManifest>>,
+        ) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError>;
+        fn update(
+            self: &Arc<Mutex<dyn BridgeManifest>>,
+            link: Vec<u8>,
+        ) -> Result<VoidType, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<bool, CatlibError>;
+        fn path(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<String, CatlibError>;
 
         //
         // Storage
         //
-        fn stringify(self: &Storage) -> String;
-
         fn stringify(self: &StorageTemplate) -> String;
     }
 }
