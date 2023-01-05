@@ -17,14 +17,14 @@
 
 mod template;
 
-use std::{
-    fs::read_dir,
-    path::{Path, PathBuf},
-    rc::Rc,
-};
+use std::fs::read_dir;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use template::LocalFilesystemStorageTemplate;
-use wildland_dfs::{storage_backend::StorageBackend, unencrypted::StorageBackendFactory, Storage};
+use wildland_dfs::storage_backend::StorageBackend;
+use wildland_dfs::unencrypted::StorageBackendFactory;
+use wildland_dfs::Storage;
 
 #[derive(Debug)]
 pub struct LocalFilesystemStorage {
@@ -73,15 +73,14 @@ impl StorageBackendFactory for LfsBackendFactory {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs::{create_dir, File},
-        str::FromStr,
-    };
+    use std::fs::{create_dir, File};
+    use std::str::FromStr;
 
-    use super::*;
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use tempdir::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_reading_file_in_root_of_lfs_backend() {

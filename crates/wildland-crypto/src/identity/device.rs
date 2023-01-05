@@ -15,9 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::identity::signing_keypair::SigningKeypair;
 use rand::prelude::ThreadRng;
 use rand::thread_rng;
+
+use crate::identity::signing_keypair::SigningKeypair;
 
 /// Generate a device identity keypair.
 /// Each forest identity will have multiple device identities - one per user's device.

@@ -15,13 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    errors::{CreateMnemonicError, UserCreationError, UserRetrievalError},
-    user::{generate_random_mnemonic, CreateUserInput, UserService},
-};
 use wildland_corex::{utils, MnemonicPhrase};
 
 use super::cargo_user::CargoUser;
+use crate::errors::{CreateMnemonicError, UserCreationError, UserRetrievalError};
+use crate::user::{generate_random_mnemonic, CreateUserInput, UserService};
 
 #[derive(Clone)]
 pub struct MnemonicPayload(MnemonicPhrase);
@@ -159,12 +157,15 @@ impl UserApi {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+    use wildland_corex::catlib_service::CatLibService;
+    use wildland_corex::{LocalSecureStorage, LssService};
+
     use super::UserApi;
     use crate::api::config::FoundationStorageApiConfig;
     use crate::api::utils::test::{catlib_service, lss_stub};
-    use crate::{errors::UserRetrievalError, user::UserService};
-    use rstest::rstest;
-    use wildland_corex::{catlib_service::CatLibService, LocalSecureStorage, LssService};
+    use crate::errors::UserRetrievalError;
+    use crate::user::UserService;
 
     #[rstest]
     fn create_mnemonic_from_string_with_valid_words_should_succeed(

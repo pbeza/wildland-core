@@ -17,9 +17,8 @@
 
 mod template;
 
-pub use template::*;
-
 use serde::{Deserialize, Serialize};
+pub use template::*;
 use uuid::Uuid;
 
 /// Storage is basically the same struct as [`super::StorageTemplate`] but it serializable/deserializable content is filled with values provided by corex for a particular container

@@ -22,8 +22,13 @@ use wildland_crypto::identity::signing_keypair::SigningKeypair;
 
 use super::constants::WILDLAND_SIGNATURE_HEADER;
 use super::models::{
-    CreateCredentialsReq, CreateCredentialsRes, CreateStorageRes, RequestMetricsReq,
-    RequestMetricsRes, SignatureRequestReq, SignatureRequestRes,
+    CreateCredentialsReq,
+    CreateCredentialsRes,
+    CreateStorageRes,
+    RequestMetricsReq,
+    RequestMetricsRes,
+    SignatureRequestReq,
+    SignatureRequestRes,
 };
 use crate::cross_platform_http_client::{CurrentPlatformClient, HttpClient, Request};
 use crate::error::WildlandHttpClientError;

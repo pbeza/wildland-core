@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
+use std::rc::Rc;
+
+use wildland_corex::dfs::interface::{DfsFrontend, NodeDescriptor};
+use wildland_corex::PathResolver;
 
 use crate::unencrypted::{StorageBackendFactory, UnencryptedDfs};
-use wildland_corex::{
-    dfs::interface::{DfsFrontend, NodeDescriptor},
-    PathResolver,
-};
 
 pub struct EncryptedDfs {
     inner: UnencryptedDfs,

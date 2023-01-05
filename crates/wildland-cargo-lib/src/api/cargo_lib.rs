@@ -15,32 +15,27 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    api::{
-        config::{CargoConfig, FoundationStorageApiConfig},
-        user::UserApi,
-    },
-    logging,
-    user::UserService,
-};
-use std::{
-    collections::HashMap,
-    mem::MaybeUninit,
-    rc::Rc,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
-};
+use std::collections::HashMap;
+use std::mem::MaybeUninit;
+use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+
 use thiserror::Error;
 use wildland_catlib::CatLib;
-use wildland_corex::{
-    catlib_service::CatLibService, container_manager::ContainerManager,
-    dfs::interface::DfsFrontend, LocalSecureStorage, LssService,
-};
-use wildland_dfs::{encrypted::EncryptedDfs as Dfs, unencrypted::StorageBackendFactory};
+use wildland_corex::catlib_service::CatLibService;
+use wildland_corex::container_manager::ContainerManager;
+use wildland_corex::dfs::interface::DfsFrontend;
+use wildland_corex::{LocalSecureStorage, LssService};
+use wildland_dfs::encrypted::EncryptedDfs as Dfs;
+use wildland_dfs::unencrypted::StorageBackendFactory;
 #[cfg(feature = "lfs")]
 use wildland_lfs::LfsBackendFactory;
+
+use crate::api::config::{CargoConfig, FoundationStorageApiConfig};
+use crate::api::user::UserApi;
+use crate::logging;
+use crate::user::UserService;
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[repr(C)]

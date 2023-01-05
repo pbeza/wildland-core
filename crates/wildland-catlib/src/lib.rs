@@ -71,6 +71,9 @@
 //! ```
 //!
 
+use std::path::PathBuf;
+use std::rc::Rc;
+
 use bridge::Bridge;
 pub use common::*;
 use container::Container;
@@ -79,16 +82,16 @@ use directories::ProjectDirs;
 use error::*;
 use forest::{Forest, ForestData};
 use rustbreak::PathDatabase;
-use std::{path::PathBuf, rc::Rc};
 use storage::{Storage, StorageData};
 use uuid::Uuid;
-use wildland_corex::catlib_service::{
-    entities::{
-        ContainerManifest as IContainer, ForestManifest as IForest, Identity, Signers,
-        StorageManifest as IStorage,
-    },
-    interface::CatLib as ICatLib,
+use wildland_corex::catlib_service::entities::{
+    ContainerManifest as IContainer,
+    ForestManifest as IForest,
+    Identity,
+    Signers,
+    StorageManifest as IStorage,
 };
+use wildland_corex::catlib_service::interface::CatLib as ICatLib;
 
 mod bridge;
 mod common;

@@ -18,16 +18,15 @@
 #[cfg(test)]
 mod tests;
 
-use crate::storage_backend::StorageBackend;
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    rc::Rc,
-};
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use uuid::Uuid;
-use wildland_corex::{
-    dfs::interface::{DfsFrontend, NodeDescriptor},
-    PathResolver, PathWithStorages, Storage,
-};
+use wildland_corex::dfs::interface::{DfsFrontend, NodeDescriptor};
+use wildland_corex::{PathResolver, PathWithStorages, Storage};
+
+use crate::storage_backend::StorageBackend;
 
 pub trait StorageBackendFactory {
     fn init_backend(

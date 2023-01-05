@@ -15,8 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::Storage;
 use std::path::{Path, PathBuf};
+
+use crate::Storage;
 
 /// Represents result of a possible path within a Storage. Storages field represents all alternative
 /// locations of the path.

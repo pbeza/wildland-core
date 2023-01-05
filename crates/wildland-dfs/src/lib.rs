@@ -20,5 +20,9 @@ pub mod storage_backend;
 pub mod unencrypted;
 
 pub use wildland_corex::{
-    Storage, StorageTemplate, StorageTemplateError, CONTAINER_NAME_PARAM, CONTAINER_UUID_PARAM,
+    Storage,
+    StorageTemplate,
+    StorageTemplateError,
+    CONTAINER_NAME_PARAM,
+    CONTAINER_UUID_PARAM,
 };

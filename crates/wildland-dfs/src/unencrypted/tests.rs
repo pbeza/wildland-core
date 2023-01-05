@@ -1,21 +1,18 @@
-use crate::{
-    storage_backend::StorageBackend,
-    unencrypted::{StorageBackendFactory, UnencryptedDfs},
-};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::str::FromStr;
+
 use mockall::predicate;
 use pretty_assertions::assert_eq;
-use rsfs::{mem::FS, DirEntry, GenFS};
+use rsfs::mem::FS;
+use rsfs::{DirEntry, GenFS};
 use rstest::{fixture, rstest};
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    rc::Rc,
-    str::FromStr,
-};
-use wildland_corex::{
-    dfs::interface::{DfsFrontend, NodeDescriptor},
-    MockPathResolver, PathWithStorages, Storage,
-};
+use wildland_corex::dfs::interface::{DfsFrontend, NodeDescriptor};
+use wildland_corex::{MockPathResolver, PathWithStorages, Storage};
+
+use crate::storage_backend::StorageBackend;
+use crate::unencrypted::{StorageBackendFactory, UnencryptedDfs};
 
 /// Made up Filesystem
 struct Mufs {

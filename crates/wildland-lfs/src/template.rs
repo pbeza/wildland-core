@@ -15,10 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+
+use serde::{Deserialize, Serialize};
 use wildland_dfs::{
-    StorageTemplate, StorageTemplateError, CONTAINER_NAME_PARAM, CONTAINER_UUID_PARAM,
+    StorageTemplate,
+    StorageTemplateError,
+    CONTAINER_NAME_PARAM,
+    CONTAINER_UUID_PARAM,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -36,13 +36,12 @@
 //!
 //! It can be also provided via type implementing [`CargoCfgProvider`].
 
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
+use std::str::FromStr;
 
 use derivative::Derivative;
-use serde::{
-    de::{Error, Unexpected},
-    Deserialize, Deserializer,
-};
+use serde::de::{Error, Unexpected};
+use serde::{Deserialize, Deserializer};
 use thiserror::Error;
 use tracing::Level;
 
@@ -351,9 +350,11 @@ pub fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ParseConfigErro
 
 #[cfg(test)]
 mod tests {
-    use super::{CargoConfig, FoundationStorageApiConfig, LoggerConfig};
     use std::path::PathBuf;
+
     use tracing::Level;
+
+    use super::{CargoConfig, FoundationStorageApiConfig, LoggerConfig};
 
     #[test]
     fn test_parsing_debug_config() {
