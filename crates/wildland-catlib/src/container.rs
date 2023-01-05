@@ -15,15 +15,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::*;
+use std::collections::HashSet;
+use std::rc::Rc;
+
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, rc::Rc};
-
 use wildland_corex::catlib_service::entities::{
-    ContainerManifest as IContainer, ContainerPath, ContainerPaths, ForestManifest,
+    ContainerManifest as IContainer,
+    ContainerPath,
+    ContainerPaths,
+    ForestManifest,
     StorageManifest as IStorage,
 };
+
+use super::*;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ContainerData {
@@ -222,10 +227,11 @@ impl Model for Container {
 mod tests {
     use std::collections::HashSet;
 
-    use super::db::test::catlib;
-    use crate::*;
     use rstest::*;
     use wildland_corex::catlib_service::entities::ContainerManifest;
+
+    use super::db::test::catlib;
+    use crate::*;
 
     #[fixture]
     fn catlib_with_forest(catlib: CatLib) -> CatLib {

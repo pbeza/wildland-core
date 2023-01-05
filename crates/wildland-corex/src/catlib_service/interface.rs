@@ -1,9 +1,7 @@
 use uuid::Uuid;
 
-use super::{
-    entities::{ContainerManifest, ForestManifest, Identity, Signers, StorageManifest},
-    error::CatlibResult,
-};
+use super::entities::{ContainerManifest, ForestManifest, Identity, Signers, StorageManifest};
+use super::error::CatlibResult;
 
 #[cfg_attr(test, mockall::automock)]
 pub trait CatLib {

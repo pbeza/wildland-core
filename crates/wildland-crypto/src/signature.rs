@@ -40,7 +40,10 @@ impl Signature {
 #[cfg(test)]
 mod tests {
     use crate::common::test_utilities::{
-        generate_message, get_expected_message, SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY,
+        generate_message,
+        get_expected_message,
+        SIGNING_PUBLIC_KEY,
+        SIGNING_SECRET_KEY,
     };
     use crate::identity::SigningKeypair;
 

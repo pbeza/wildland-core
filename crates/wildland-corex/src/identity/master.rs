@@ -16,10 +16,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use thiserror::Error;
-use wildland_crypto::{
-    error::KeyDeriveError,
-    identity::{new_device_identity, Identity as CryptoIdentity},
-};
+use wildland_crypto::error::KeyDeriveError;
+use wildland_crypto::identity::{new_device_identity, Identity as CryptoIdentity};
 
 use super::wildland::WildlandIdentity;
 
@@ -68,8 +66,9 @@ impl MasterIdentity {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ForestIdentityCreationError, MasterIdentity, WildlandIdentity};
     use wildland_crypto::identity::{generate_random_mnemonic, Identity};
+
+    use crate::{ForestIdentityCreationError, MasterIdentity, WildlandIdentity};
 
     fn create_crypto_identity() -> Identity {
         generate_random_mnemonic()

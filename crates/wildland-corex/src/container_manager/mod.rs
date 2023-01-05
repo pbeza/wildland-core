@@ -17,8 +17,9 @@
 
 mod path_resolver;
 
-pub use path_resolver::*;
 use std::path::Path;
+
+pub use path_resolver::*;
 
 pub struct ContainerManager;
 

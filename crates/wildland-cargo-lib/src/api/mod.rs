@@ -24,8 +24,6 @@ pub mod storage;
 pub mod user;
 mod utils;
 
-pub use self::{
-    cargo_lib::CargoLib,
-    config::{CargoCfgProvider, CargoConfig},
-    user::UserApi,
-};
+pub use self::cargo_lib::CargoLib;
+pub use self::config::{CargoCfgProvider, CargoConfig};
+pub use self::user::UserApi;

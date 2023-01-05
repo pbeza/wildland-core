@@ -15,11 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::*;
+use std::rc::Rc;
+
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
-use std::rc::Rc;
 use wildland_corex::catlib_service::entities::{Bridge as IBridge, ContainerPath, ForestManifest};
+
+use super::*;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct BridgeData {
@@ -113,10 +115,10 @@ impl Model for Bridge {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
     use rstest::*;
 
     use super::db::test::catlib;
+    use crate::*;
 
     #[rstest]
     fn create_bridge(catlib: CatLib) {

@@ -15,8 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::error::CryptoError;
 use hex::FromHex;
+
+use crate::error::CryptoError;
 
 mod derivation;
 mod device;
@@ -24,10 +25,11 @@ pub mod encrypting_keypair;
 mod seed;
 pub mod signing_keypair;
 
-pub use crate::identity::{
-    derivation::Identity, seed::generate_random_mnemonic, signing_keypair::SigningKeypair,
-};
 pub use device::new_device_identity;
+
+pub use crate::identity::derivation::Identity;
+pub use crate::identity::seed::generate_random_mnemonic;
+pub use crate::identity::signing_keypair::SigningKeypair;
 
 pub const MNEMONIC_LEN: usize = 12;
 pub type MnemonicPhrase = [String; MNEMONIC_LEN];
