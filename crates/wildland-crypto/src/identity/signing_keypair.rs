@@ -15,12 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{error::CryptoError, signature::Signature};
 use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signer};
 use rand::{CryptoRng, RngCore};
 use serde::{Deserialize, Serialize};
 
 use super::bytes_key_from_str;
+use crate::error::CryptoError;
+use crate::signature::Signature;
 
 pub type PubKey = [u8; 32];
 pub type SecKey = [u8; 32];

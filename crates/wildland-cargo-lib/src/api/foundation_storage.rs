@@ -18,18 +18,13 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
-use wildland_corex::{
-    catlib_service::error::CatlibError, CryptoError, LssError, StorageTemplate,
-    StorageTemplateError,
-};
-use wildland_http_client::{
-    error::WildlandHttpClientError,
-    evs::{ConfirmTokenReq, EvsClient, GetStorageReq, GetStorageRes},
-};
-
-use crate::templates::foundation_storage::FoundationStorageTemplate;
+use wildland_corex::catlib_service::error::CatlibError;
+use wildland_corex::{CryptoError, LssError, StorageTemplate, StorageTemplateError};
+use wildland_http_client::error::WildlandHttpClientError;
+use wildland_http_client::evs::{ConfirmTokenReq, EvsClient, GetStorageReq, GetStorageRes};
 
 use super::config::FoundationStorageApiConfig;
+use crate::templates::foundation_storage::FoundationStorageTemplate;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StorageCredentials {

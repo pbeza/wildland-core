@@ -15,15 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    api::{cargo_user::CargoUser, config::FoundationStorageApiConfig},
-    errors::user::{UserCreationError, UserRetrievalError},
-};
 use uuid::Uuid;
-use wildland_corex::{
-    catlib_service::{error::CatlibError, CatLibService, DeviceMetadata, ForestMetaData},
-    CryptoError, Identity, LssService, MasterIdentity, MnemonicPhrase,
-};
+use wildland_corex::catlib_service::error::CatlibError;
+use wildland_corex::catlib_service::{CatLibService, DeviceMetadata, ForestMetaData};
+use wildland_corex::{CryptoError, Identity, LssService, MasterIdentity, MnemonicPhrase};
+
+use crate::api::cargo_user::CargoUser;
+use crate::api::config::FoundationStorageApiConfig;
+use crate::errors::{UserCreationError, UserRetrievalError};
 
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     wildland_corex::generate_random_mnemonic()

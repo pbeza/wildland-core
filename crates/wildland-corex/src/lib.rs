@@ -27,17 +27,19 @@ mod test_utils;
 
 pub use container_manager::*;
 pub use error::*;
-pub use identity::{master::*, wildland::*};
+pub use identity::master::*;
+pub use identity::wildland::*;
 pub use lss::*;
 pub use storage::*;
-pub use wildland_crypto::{
-    error::CryptoError,
-    identity::{
-        encrypting_keypair::EncryptingKeypair, generate_random_mnemonic, Identity, MnemonicPhrase,
-        SigningKeypair,
-    },
-    utils,
+pub use wildland_crypto::error::CryptoError;
+pub use wildland_crypto::identity::encrypting_keypair::EncryptingKeypair;
+pub use wildland_crypto::identity::{
+    generate_random_mnemonic,
+    Identity,
+    MnemonicPhrase,
+    SigningKeypair,
 };
+pub use wildland_crypto::utils;
 
 pub type CorexResult<T> = Result<T, CoreXError>;
 
@@ -45,8 +47,9 @@ pub const DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
 
 #[cfg(test)]
 pub mod test_utilities {
-    use crate::WildlandIdentity;
     use wildland_crypto::identity::SigningKeypair;
+
+    use crate::WildlandIdentity;
 
     pub static SIGNING_PUBLIC_KEY: &str =
         "1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f";

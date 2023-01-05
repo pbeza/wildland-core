@@ -19,7 +19,10 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use wildland_corex::{
-    StorageTemplate, StorageTemplateError, CONTAINER_NAME_PARAM, CONTAINER_UUID_PARAM,
+    StorageTemplate,
+    StorageTemplateError,
+    CONTAINER_NAME_PARAM,
+    CONTAINER_UUID_PARAM,
 };
 
 use crate::api::storage::StorageBackendType;

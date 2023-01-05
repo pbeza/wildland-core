@@ -20,8 +20,9 @@
 // Please mind that udnerlying feature related to choosing the language is not
 // exposed, as we are always using the default one (English).
 
-pub use crate::error::CryptoError;
 use bip39::Mnemonic;
+
+pub use crate::error::CryptoError;
 
 /// Derivate mnemonic from a given phrase.
 /// the phrase must be a valid english phrase.

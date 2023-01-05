@@ -16,9 +16,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use uuid::Uuid;
-use wildland_corex::catlib_service::{
-    entities::ContainerManifest as InnerContainer, error::CatlibError, CatLibService,
-};
+use wildland_corex::catlib_service::entities::ContainerManifest as InnerContainer;
+use wildland_corex::catlib_service::error::CatlibError;
+use wildland_corex::catlib_service::CatLibService;
 
 /// Structure representing a container within Cargo application context.
 ///
@@ -92,18 +92,15 @@ impl Container {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        api::{container::tests::utils::compare_unordered, utils::test::catlib_service},
-        templates::foundation_storage::FoundationStorageTemplate,
-    };
     use rstest::*;
     use uuid::Uuid;
-    use wildland_corex::{
-        catlib_service::{CatLibService, DeviceMetadata, ForestMetaData},
-        SigningKeypair, WildlandIdentity,
-    };
+    use wildland_corex::catlib_service::{CatLibService, DeviceMetadata, ForestMetaData};
+    use wildland_corex::{SigningKeypair, WildlandIdentity};
 
     use super::Container;
+    use crate::api::container::tests::utils::compare_unordered;
+    use crate::api::utils::test::catlib_service;
+    use crate::templates::foundation_storage::FoundationStorageTemplate;
 
     #[fixture]
     fn container(catlib_service: CatLibService) -> Container {
@@ -179,7 +176,8 @@ mod tests {
     }
 
     mod utils {
-        use std::{collections::HashSet, hash::Hash};
+        use std::collections::HashSet;
+        use std::hash::Hash;
 
         pub fn compare_unordered<T: Hash + Eq>(v1: Vec<T>, v2: Vec<T>) -> bool {
             v1.into_iter().collect::<HashSet<T>>() == v2.into_iter().collect::<HashSet<T>>()

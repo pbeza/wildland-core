@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::WildlandIdentity::{Device, Forest};
 use std::fmt::{self, Display, Formatter};
-use wildland_crypto::identity::{
-    signing_keypair::{PubKey, SecKey},
-    SigningKeypair,
-};
+
+use wildland_crypto::identity::signing_keypair::{PubKey, SecKey};
+use wildland_crypto::identity::SigningKeypair;
+
+use crate::WildlandIdentity::{Device, Forest};
 
 #[derive(Debug, PartialEq)]
 #[repr(C)]
@@ -73,11 +73,10 @@ impl WildlandIdentity {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY},
-        WildlandIdentity,
-    };
     use wildland_crypto::identity::SigningKeypair;
+
+    use crate::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
+    use crate::WildlandIdentity;
 
     #[test]
     fn should_get_correct_fingerprint() {

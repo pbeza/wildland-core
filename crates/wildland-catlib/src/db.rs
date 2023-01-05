@@ -16,15 +16,17 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use wildland_corex::catlib_service::entities::{
-    ContainerManifest as IContainer, ForestManifest as IForest, StorageManifest as IStorage,
+    ContainerManifest as IContainer,
+    ForestManifest as IForest,
+    StorageManifest as IStorage,
 };
 
 use super::*;
-use crate::{
-    bridge::BridgeData, container::ContainerData, error::to_catlib_error, forest::ForestData,
-    storage::StorageData,
-};
-use std::rc::Rc;
+use crate::bridge::BridgeData;
+use crate::container::ContainerData;
+use crate::error::to_catlib_error;
+use crate::forest::ForestData;
+use crate::storage::StorageData;
 
 #[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibResult<Box<dyn IForest>> {

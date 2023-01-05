@@ -19,19 +19,17 @@ pub mod entities;
 pub mod error;
 pub mod interface;
 
-use std::{collections::HashSet, rc::Rc};
+use std::collections::HashSet;
+use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use wildland_crypto::identity::signing_keypair::PubKey;
 
+use self::entities::{ContainerManifest, ForestManifest};
+use self::error::{CatlibError, CatlibResult};
+use self::interface::CatLib;
 use crate::{StorageTemplate, TemplateContext, WildlandIdentity};
-
-use self::{
-    entities::{ContainerManifest, ForestManifest},
-    error::{CatlibError, CatlibResult},
-    interface::CatLib,
-};
 
 #[derive(Serialize, Deserialize)]
 pub struct DeviceMetadata {
@@ -168,25 +166,19 @@ impl CatLibService {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::{HashMap, HashSet},
-        rc::Rc,
-    };
+    use std::collections::{HashMap, HashSet};
+    use std::rc::Rc;
 
     use mockall::predicate;
     use rstest::rstest;
     use serde_json::json;
     use uuid::Uuid;
 
-    use crate::{
-        catlib_service::{
-            entities::{Identity, MockContainerManifest, MockStorageManifest},
-            interface::MockCatLib,
-            CatLibService,
-        },
-        test_utils::MockForest,
-        StorageTemplate,
-    };
+    use crate::catlib_service::entities::{Identity, MockContainerManifest, MockStorageManifest};
+    use crate::catlib_service::interface::MockCatLib;
+    use crate::catlib_service::CatLibService;
+    use crate::test_utils::MockForest;
+    use crate::StorageTemplate;
 
     #[rstest]
     fn test_create_container() {

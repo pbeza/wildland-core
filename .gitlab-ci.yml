@@ -118,8 +118,7 @@ cargo fmt (format):
     - master
     - merge_requests
   script:
-    - rustup component add rustfmt
-    - cargo fmt -- --check
+    - cargo make format-check
 
 cargo audit:
   stage: Test

@@ -23,13 +23,11 @@ use ed25519_dalek_bip32::{DerivationPath, ExtendedSecretKey};
 use sha2::{Digest, Sha256};
 
 use super::encrypting_keypair::EncryptingKeypair;
-use crate::error::KeyDeriveError;
+use crate::error::{CryptoError, KeyDeriveError};
+use crate::identity::seed::extend_seed;
+use crate::identity::signing_keypair::SigningKeypair;
 use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
 use crate::utils;
-use crate::{
-    error::CryptoError,
-    identity::{seed::extend_seed, signing_keypair::SigningKeypair},
-};
 
 fn signing_key_path(forest_index: u64) -> String {
     // "master/WLD/purpose/index"
@@ -220,17 +218,14 @@ impl Identity {
 
 #[cfg(test)]
 mod tests {
-    use crypto_box::{
-        aead::{Aead, AeadCore},
-        SalsaBox,
-    };
+    use crypto_box::aead::{Aead, AeadCore};
+    use crypto_box::SalsaBox;
     use hex::encode;
     use hex_literal::hex;
     use salsa20::XNonce;
 
-    use crate::common::test_utilities::MNEMONIC_PHRASE;
-
     use super::*;
+    use crate::common::test_utilities::MNEMONIC_PHRASE;
 
     const MSG: &[u8] = b"Hello World";
 
