@@ -14,7 +14,7 @@ rustup target add ${BUILD_TARGET}
 . /emsdk/emsdk_env.sh
 
 cargo clean \
-    && EMCC_CFLAGS="-s ERROR_ON_UNDEFINED_SYMBOLS=0" cargo build \
+    && EMCC_CFLAGS="-s ERROR_ON_UNDEFINED_SYMBOLS=0 -sFETCH" cargo build \
     --features "bindings" \
     --target ${BUILD_TARGET}
 

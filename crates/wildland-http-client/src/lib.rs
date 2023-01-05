@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+mod cross_platform_http_client;
 pub mod error;
 pub mod evs;
 mod response_handler;
