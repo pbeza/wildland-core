@@ -32,6 +32,5 @@ mock! {
         fn uuid(&self) -> Uuid;
         fn owner(&self) -> Identity;
         fn signers(&mut self) -> CatlibResult<Signers>;
-
     }
 }
