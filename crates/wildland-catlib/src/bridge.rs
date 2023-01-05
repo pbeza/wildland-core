@@ -19,7 +19,8 @@ use std::rc::Rc;
 
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
-use wildland_corex::catlib_service::entities::{Bridge as IBridge, ContainerPath, ForestManifest};
+use wildland_corex::catlib_service::entities::{ContainerPath, ForestManifest};
+use wildland_corex::BridgeManifest;
 
 use super::*;
 

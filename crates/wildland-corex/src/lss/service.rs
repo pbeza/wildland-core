@@ -140,10 +140,17 @@ mod tests {
     use uuid::Uuid;
     use wildland_crypto::identity::SigningKeypair;
 
-    use crate::catlib_service::entities::{ForestManifest as IForest, Identity};
+    use crate::catlib_service::entities::Identity;
     use crate::lss::service::{THIS_DEVICE_KEYPAIR_KEY, THIS_DEVICE_NAME_KEY};
-    use crate::test_utils::MockForest;
-    use crate::{LocalSecureStorage, LssResult, LssService, WildlandIdentity, DEFAULT_FOREST_KEY};
+    use crate::{
+        ForestManifest,
+        LocalSecureStorage,
+        LssResult,
+        LssService,
+        MockForestManifest,
+        WildlandIdentity,
+        DEFAULT_FOREST_KEY,
+    };
 
     #[fixture]
     fn lss_stub() -> &'static dyn LocalSecureStorage {
@@ -285,7 +292,7 @@ mod tests {
             serde_json::from_str(&lss_stub.get(forest_identity.encode()).unwrap().unwrap())
                 .unwrap();
 
-        assert_eq!(retrieved_uuid, forest.uuid());
+        assert_eq!(retrieved_uuid, ForestManifest::uuid(&forest));
     }
 
     #[rstest]

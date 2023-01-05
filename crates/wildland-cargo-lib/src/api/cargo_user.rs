@@ -15,19 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use derivative::Derivative;
-use uuid::Uuid;
 use wildland_corex::catlib_service::entities::ForestManifest;
 use wildland_corex::catlib_service::error::CatlibError;
 use wildland_corex::catlib_service::CatLibService;
-use wildland_corex::StorageTemplate;
+use wildland_corex::{ContainerManifest, ContainerPath, StorageTemplate};
 
 use super::config::FoundationStorageApiConfig;
 use super::foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError};
-use crate::api::container::*;
 use crate::errors::storage::GetStorageTemplateError;
 
 /// Structure representing a User.
@@ -171,10 +168,8 @@ All devices:
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        str::FromStr,
-        sync::{Arc, Mutex},
-    };
+    use std::str::FromStr;
+    use std::sync::{Arc, Mutex};
 
     use mockito::Matcher;
     use pretty_assertions::assert_eq;
@@ -182,6 +177,7 @@ mod tests {
     use serde_json::json;
     use uuid::Uuid;
     use wildland_corex::catlib_service::entities::ForestManifest;
+    use wildland_corex::catlib_service::error::CatlibError;
     use wildland_corex::catlib_service::{CatLibService, DeviceMetadata, ForestMetaData};
     use wildland_corex::{SigningKeypair, WildlandIdentity};
 

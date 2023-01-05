@@ -19,7 +19,7 @@ use std::rc::Rc;
 
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
-use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest as IStorage};
+use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest};
 
 use super::*;
 
@@ -133,16 +133,12 @@ impl Model for StorageEntity {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::{HashMap, HashSet},
-        sync::{Arc, Mutex},
-    };
+    use std::collections::{HashMap, HashSet};
+    use std::sync::{Arc, Mutex};
 
     use rstest::*;
-    use wildland_corex::{
-        catlib_service::entities::{ContainerManifest, StorageManifest},
-        StorageTemplate,
-    };
+    use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest};
+    use wildland_corex::StorageTemplate;
 
     use super::db::test::catlib;
     use crate::*;

@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashSet;
 use std::rc::Rc;
 
 use derivative::Derivative;
@@ -25,10 +24,12 @@ use wildland_corex::catlib_service::entities::{
     ContainerPath,
     ContainerPaths,
     ForestManifest,
-    StorageManifest as IStorage,
+    StorageManifest,
 };
+use wildland_corex::{StorageTemplate, TemplateContext};
 
 use super::*;
+use crate::storage::StorageEntity;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ContainerData {
@@ -314,13 +315,12 @@ impl Model for Container {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::{HashMap, HashSet},
-        sync::{Arc, Mutex},
-    };
+    use std::collections::{HashMap, HashSet};
+    use std::sync::{Arc, Mutex};
 
     use rstest::*;
-    use wildland_corex::{entities::ContainerManifest, StorageTemplate};
+    use wildland_corex::entities::ContainerManifest;
+    use wildland_corex::StorageTemplate;
 
     use super::db::test::catlib;
     use crate::*;

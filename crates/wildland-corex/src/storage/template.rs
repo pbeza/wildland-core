@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::HashSet;
 use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
@@ -114,7 +115,7 @@ impl StorageTemplate {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
     use std::str::FromStr;
 
     use pretty_assertions::assert_eq;

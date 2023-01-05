@@ -79,10 +79,10 @@ impl TryFrom<FoundationStorageTemplate> for StorageTemplate {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::str::FromStr;
 
     use pretty_assertions::assert_eq;
-    use serde_json::json;
     use uuid::Uuid;
     use wildland_corex::TemplateContext;
 

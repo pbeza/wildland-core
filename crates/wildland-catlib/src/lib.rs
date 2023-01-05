@@ -87,6 +87,7 @@
 
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use bridge::Bridge;
 pub use common::*;
@@ -96,14 +97,14 @@ use directories::ProjectDirs;
 use error::*;
 use forest::{Forest, ForestData};
 use rustbreak::PathDatabase;
-use storage::{Storage, StorageData};
+use storage::{StorageData, StorageEntity};
 use uuid::Uuid;
 use wildland_corex::catlib_service::entities::{
-    ContainerManifest as IContainer,
-    ForestManifest as IForest,
+    ContainerManifest,
+    ForestManifest,
     Identity,
     Signers,
-    StorageManifest as IStorage,
+    StorageManifest,
 };
 use wildland_corex::catlib_service::interface::CatLib as ICatLib;
 

@@ -20,13 +20,14 @@ use std::rc::Rc;
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use wildland_corex::catlib_service::entities::{
-    Bridge as IBridge,
-    ContainerManifest as IContainer,
+    BridgeManifest,
+    ContainerManifest,
     ContainerPath,
-    ForestManifest as IForest,
+    ForestManifest,
     Identity,
     Signers,
 };
+use wildland_corex::StorageTemplate;
 
 use super::*;
 use crate::bridge::BridgeData;
@@ -357,7 +358,7 @@ mod tests {
     use super::db::test::catlib;
     use crate::*;
 
-    fn make_forest(catlib: &CatLib) -> Box<dyn ForestManifest> {
+    fn make_forest(catlib: &CatLib) -> Arc<Mutex<dyn ForestManifest>> {
         let owner = Identity([1; 32]);
 
         catlib.create_forest(owner, Signers::new(), vec![]).unwrap()

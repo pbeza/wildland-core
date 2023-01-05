@@ -16,9 +16,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use wildland_corex::catlib_service::entities::{
-    ContainerManifest as IContainer,
-    ForestManifest as IForest,
-    StorageManifest as IStorage,
+    ContainerManifest,
+    ForestManifest,
+    StorageManifest,
 };
 
 use super::*;

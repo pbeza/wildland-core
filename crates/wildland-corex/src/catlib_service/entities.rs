@@ -16,11 +16,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::error::CatlibResult;
+use super::error::{CatlibError, CatlibResult};
+use crate::StorageTemplate;
 
 pub type PubKey = [u8; 32];
 

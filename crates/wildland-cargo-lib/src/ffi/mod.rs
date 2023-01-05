@@ -19,6 +19,8 @@ use std::sync::{Arc, Mutex};
 
 use rusty_bind::binding_wrapper;
 pub use wildland_corex::catlib_service::error::CatlibError;
+use wildland_corex::entities::Identity;
+use wildland_corex::{BridgeManifest, ContainerManifest, ForestManifest, Signers, StorageManifest};
 pub use wildland_corex::{
     CoreXError,
     CryptoError,
@@ -31,9 +33,7 @@ pub use wildland_corex::{
 use crate::api::cargo_lib::*;
 use crate::api::cargo_user::*;
 use crate::api::config::*;
-use crate::api::container::*;
 use crate::api::foundation_storage::*;
-use crate::api::storage::*;
 use crate::api::user::*;
 use crate::errors::storage::*;
 use crate::errors::user::*;
@@ -202,6 +202,9 @@ mod ffi_binding {
         fn stringify(self: &MnemonicPayload) -> String;
         fn get_vec(self: &MnemonicPayload) -> Vec<String>;
 
+        type Identity;
+        type Signers;
+
         //
         // CargoUser
         //
@@ -233,6 +236,48 @@ mod ffi_binding {
         fn is_free_storage_granted(self: &CargoUser) -> Result<bool, CatlibError>;
 
         //
+        // ForestManifest
+        //
+        fn add_signer(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            signer: Identity,
+        ) -> Result<bool, CatlibError>;
+        fn del_signer(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            signer: Identity,
+        ) -> Result<bool, CatlibError>;
+        fn containers(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
+        fn update(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            data: Vec<u8>,
+        ) -> Result<VoidType, CatlibError>;
+        fn delete(self: &Arc<Mutex<dyn ForestManifest>>) -> Result<bool, CatlibError>;
+        fn create_container(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            name: String,
+            storage_data: &StorageTemplate,
+            path: String,
+        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
+        fn create_bridge(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            path: String,
+            link_data: Vec<u8>,
+        ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
+        fn find_bridge(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            path: String,
+        ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
+        fn find_containers(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            paths: Vec<String>,
+            include_subdirs: bool,
+        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
+        fn owner(self: &Arc<Mutex<dyn ForestManifest>>) -> Identity;
+        fn signers(self: &Arc<Mutex<dyn ForestManifest>>) -> Result<Signers, CatlibError>;
+
+        //
         // ContainerManifest
         //
         fn get_storages(
@@ -261,7 +306,6 @@ mod ffi_binding {
         ) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError>;
         fn name(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<String, CatlibError>;
         fn stringify(self: &Arc<Mutex<dyn ContainerManifest>>) -> String;
-        fn uuid(self: &Arc<Mutex<dyn ContainerManifest>>) -> Uuid;
 
         //
         // StorageManifest
@@ -275,7 +319,19 @@ mod ffi_binding {
         ) -> Result<VoidType, CatlibError>;
         fn delete(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<bool, CatlibError>;
         fn data(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<Vec<u8>, CatlibError>;
-        fn uuid(self: &Arc<Mutex<dyn StorageManifest>>) -> Uuid;
+
+        //
+        // BridgeManifets
+        //
+        fn forest(
+            self: &Arc<Mutex<dyn BridgeManifest>>,
+        ) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError>;
+        fn update(
+            self: &Arc<Mutex<dyn BridgeManifest>>,
+            link: Vec<u8>,
+        ) -> Result<VoidType, CatlibError>;
+        fn delete(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<bool, CatlibError>;
+        fn path(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<String, CatlibError>;
 
         //
         // Storage
