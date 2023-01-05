@@ -256,5 +256,7 @@ mod ffi_binding {
 
         // DFS Frontend
         fn readdir(self: &Arc<Mutex<dyn DfsFrontend>>, path: String) -> Vec<NodeDescriptor>;
+
+        type NodeDescriptor;
     }
 }
