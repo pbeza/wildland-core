@@ -235,7 +235,7 @@ impl ICatLib for CatLib {
     fn save_storage_template(&self, template_id: &Uuid, value: String) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
-            format!("template-storage-{}", template_id),
+            format!("template-storage-{template_id}"),
             value,
         )
     }
