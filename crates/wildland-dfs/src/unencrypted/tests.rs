@@ -31,13 +31,14 @@ impl Mufs {
     }
 }
 impl StorageBackend for Mufs {
-    fn readdir(&self, path: &Path) -> Vec<PathBuf> {
+    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
         let relative_path = if path.is_absolute() {
             path.strip_prefix("/").unwrap()
         } else {
             path
         };
-        self.fs
+        Ok(self
+            .fs
             .read_dir(self.base_dir.join(relative_path))
             .map(|readdir| {
                 readdir
@@ -47,8 +48,7 @@ impl StorageBackend for Mufs {
                             .join(entry.unwrap().path().strip_prefix(&self.base_dir).unwrap())
                     })
                     .collect()
-            })
-            .unwrap_or_default()
+            })?)
     }
 }
 
@@ -119,11 +119,11 @@ fn test_listing_files_from_root_of_one_container(dfs_with_path_resolver_and_fs: 
             });
     }
 
-    let files_descriptors = dfs.readdir("/a/b/");
+    let files_descriptors = dfs.readdir("/a/b/".to_string());
     assert_eq!(files_descriptors, vec![]);
 
     fs.create_file("/file_in_root").unwrap();
-    let files_descriptors = dfs.readdir("/a/b/");
+    let files_descriptors = dfs.readdir("/a/b/".to_string());
     assert_eq!(
         files_descriptors,
         vec![NodeDescriptor {
@@ -156,14 +156,14 @@ fn test_listing_files_from_nested_dir_of_one_container(dfs_with_path_resolver_an
             })
     };
 
-    let files_descriptors = dfs.readdir("/a/b/dir");
+    let files_descriptors = dfs.readdir("/a/b/dir".to_string());
     assert_eq!(files_descriptors, vec![]);
 
     fs.create_dir("/dir/").unwrap();
     fs.create_file("/dir/nested_file_1").unwrap();
     fs.create_file("/dir/nested_file_2").unwrap();
 
-    let files_descriptors = dfs.readdir("/a/b/dir");
+    let files_descriptors = dfs.readdir("/a/b/dir".to_string());
     assert_eq!(
         files_descriptors,
         vec![
@@ -202,13 +202,13 @@ fn test_listing_dirs_from_one_container(dfs_with_path_resolver_and_fs: DfsFixtur
             })
     };
 
-    let files_descriptors = dfs.readdir("/");
+    let files_descriptors = dfs.readdir("/".to_string());
     assert_eq!(files_descriptors, vec![]);
 
     fs.create_dir("/dir_a").unwrap();
     fs.create_dir("/dir_b").unwrap();
 
-    let files_descriptors = dfs.readdir("/");
+    let files_descriptors = dfs.readdir("/".to_string());
     assert_eq!(
         files_descriptors,
         vec![
@@ -262,7 +262,7 @@ fn test_listing_files_and_dirs_from_two_containers(dfs_with_path_resolver_and_fs
     fs.create_dir("/storage2/c/").unwrap();
     fs.create_dir("/storage2/c/dir/").unwrap();
 
-    let files_descriptors = dfs.readdir("/a/b/c/dir");
+    let files_descriptors = dfs.readdir("/a/b/c/dir".to_string());
     assert_eq!(files_descriptors, vec![]);
 
     fs.create_file("/storage1/dir/file_from_container_1")
@@ -271,7 +271,7 @@ fn test_listing_files_and_dirs_from_two_containers(dfs_with_path_resolver_and_fs
     fs.create_file("/storage2/c/dir/file_from_container_2")
         .unwrap();
 
-    let files_descriptors = dfs.readdir("/a/b/c/dir");
+    let files_descriptors = dfs.readdir("/a/b/c/dir".to_string());
     assert_eq!(
         files_descriptors,
         vec![
@@ -324,13 +324,13 @@ fn test_getting_one_file_descriptor_from_container_with_multiple_storages(
     fs.create_dir("/storage2/").unwrap();
     fs.create_dir("/storage2/a").unwrap();
 
-    let files_descriptors = dfs.readdir("/a");
+    let files_descriptors = dfs.readdir("/a".to_string());
     assert_eq!(files_descriptors, vec![]);
 
     fs.create_file("/storage1/a/b").unwrap();
     fs.create_file("/storage2/a/b").unwrap();
 
-    let files_descriptors = dfs.readdir("/a");
+    let files_descriptors = dfs.readdir("/a".to_string());
     assert_eq!(
         files_descriptors,
         vec![NodeDescriptor {
@@ -379,13 +379,13 @@ fn test_more_than_one_file_descriptor_claim_the_same_full_path(
     fs.create_dir("/storage1/b").unwrap();
     fs.create_dir("/storage2/").unwrap();
 
-    let files_descriptors = dfs.readdir("/a/b/");
+    let files_descriptors = dfs.readdir("/a/b/".to_string());
     assert_eq!(files_descriptors, vec![]);
 
     fs.create_file("/storage1/b/c").unwrap();
     fs.create_file("/storage2/c").unwrap();
 
-    let files_descriptors = dfs.readdir("/a/b");
+    let files_descriptors = dfs.readdir("/a/b".to_string());
     assert_eq!(
         files_descriptors,
         vec![
@@ -400,5 +400,46 @@ fn test_more_than_one_file_descriptor_claim_the_same_full_path(
                 path: PathBuf::from_str("/c").unwrap(),
             }
         ]
+    );
+}
+
+#[rstest]
+fn test_first_storage_unavailable(dfs_with_path_resolver_and_fs: DfsFixture) {
+    let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+    // each container has its own subfolder
+    let storage1 = new_mufs_storage("/storage1/");
+    let storage2 = new_mufs_storage("/storage2/");
+
+    unsafe {
+        (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
+            .as_mut()
+            .unwrap()
+            .expect_resolve()
+            .with(predicate::eq(Path::new("/")))
+            .times(1)
+            .returning({
+                let storage1 = storage1;
+                let storage2 = storage2.clone();
+                move |_path| {
+                    vec![PathWithStorages {
+                        path: "/".into(),
+                        storages: vec![storage1.clone(), storage2.clone()],
+                    }]
+                }
+            })
+    };
+
+    // don't create storage1 directory so readdir returned "No such file or directory" error
+    // then dfs should choose storage2
+    fs.create_dir("/storage2/").unwrap();
+    fs.create_file("/storage2/a").unwrap();
+
+    let files_descriptors = dfs.readdir("/".to_string());
+    assert_eq!(
+        files_descriptors,
+        vec![NodeDescriptor {
+            storage: storage2,
+            path: PathBuf::from_str("/a").unwrap(),
+        },]
     );
 }

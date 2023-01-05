@@ -26,7 +26,8 @@ use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
 pub use wildland_corex::catlib_service::error::CatlibError;
 pub use wildland_corex::{
-    CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError, StorageTemplate,
+    dfs::interface::*, CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError,
+    StorageTemplate,
 };
 
 type VoidType = ();
@@ -166,6 +167,7 @@ mod ffi_binding {
             config: CargoConfig,
         ) -> Result<Arc<Mutex<CargoLib>>, CargoLibCreationError>;
         fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
+        fn dfs_api(self: &Arc<Mutex<CargoLib>>) -> Arc<Mutex<dyn DfsFrontend>>;
 
         //
         // UserApi
@@ -251,5 +253,8 @@ mod ffi_binding {
         fn stringify(self: &Storage) -> String;
 
         fn stringify(self: &StorageTemplate) -> String;
+
+        // DFS Frontend
+        fn readdir(self: &Arc<Mutex<dyn DfsFrontend>>, path: String) -> Vec<NodeDescriptor>;
     }
 }

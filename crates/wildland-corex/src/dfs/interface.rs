@@ -15,11 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::path::{Path, PathBuf};
-
 use crate::Storage;
+use std::path::PathBuf;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct NodeDescriptor {
     pub storage: Storage,
     pub path: PathBuf,
@@ -27,5 +26,5 @@ pub struct NodeDescriptor {
 
 /// Interface that DFS should expose towards frontends
 pub trait DfsFrontend {
-    fn readdir<P: AsRef<Path>>(&mut self, path: P) -> Vec<NodeDescriptor>;
+    fn readdir(&mut self, path: String) -> Vec<NodeDescriptor>;
 }

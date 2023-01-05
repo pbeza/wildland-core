@@ -19,5 +19,5 @@ use std::path::{Path, PathBuf};
 
 pub trait StorageBackend {
     /// Returns list of files descriptors, which for now is (Storage, path within Storage) pair.
-    fn readdir(&self, path: &Path) -> Vec<PathBuf>;
+    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>>;
 }

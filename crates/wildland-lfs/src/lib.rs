@@ -32,24 +32,28 @@ pub struct LocalFilesystemStorage {
 }
 
 impl StorageBackend for LocalFilesystemStorage {
-    fn readdir(&self, path: &Path) -> Vec<PathBuf> {
+    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
         let relative_path = if path.is_absolute() {
             path.strip_prefix("/").unwrap()
         } else {
             path
         };
-        println!("{:?}", self.base_dir.join(relative_path));
         read_dir(self.base_dir.join(relative_path))
-            .map(|readdir| {
+            .map_err(Box::from)
+            .and_then(|readdir| {
                 readdir
                     .into_iter()
-                    .map(|entry| {
-                        Path::new("/")
-                            .join(entry.unwrap().path().strip_prefix(&self.base_dir).unwrap())
+                    .map(|entry_result| {
+                        Ok(Path::new("/").join(
+                            entry_result
+                                .map_err(Box::<dyn std::error::Error>::from)?
+                                .path()
+                                .strip_prefix(&self.base_dir)
+                                .map_err(Box::<dyn std::error::Error>::from)?,
+                        ))
                     })
-                    .collect()
+                    .collect::<Result<Vec<_>, Box<dyn std::error::Error>>>()
             })
-            .unwrap_or_default()
     }
 }
 
@@ -96,7 +100,7 @@ mod tests {
         create_dir(tmpdir.path().join("books")).unwrap(); // container dir
         let _ = File::create(tmpdir.path().join("books/file1")).unwrap();
 
-        let files = backend.readdir(Path::new("/"));
+        let files = backend.readdir(Path::new("/")).unwrap();
 
         assert_eq!(files, vec![PathBuf::from_str("/file1").unwrap()]);
     }
@@ -118,7 +122,7 @@ mod tests {
         create_dir(tmpdir.path().join("books").join("dir")).unwrap(); // container subdir
         let _ = File::create(tmpdir.path().join("books/dir/file1")).unwrap();
 
-        let files = backend.readdir(Path::new("/dir"));
+        let files = backend.readdir(Path::new("/dir")).unwrap();
 
         assert_eq!(files, vec![PathBuf::from_str("/dir/file1").unwrap()]);
     }

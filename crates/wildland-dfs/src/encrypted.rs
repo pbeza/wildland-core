@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::{collections::HashMap, path::Path, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 use crate::unencrypted::{StorageBackendFactory, UnencryptedDfs};
 use wildland_corex::{
@@ -39,7 +39,7 @@ impl EncryptedDfs {
 }
 
 impl DfsFrontend for EncryptedDfs {
-    fn readdir<P: AsRef<Path>>(&mut self, path: P) -> Vec<NodeDescriptor> {
+    fn readdir(&mut self, path: String) -> Vec<NodeDescriptor> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.readdir(path)
     }

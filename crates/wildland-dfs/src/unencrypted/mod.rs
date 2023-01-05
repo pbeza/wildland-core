@@ -21,7 +21,6 @@ mod tests;
 use crate::storage_backend::StorageBackend;
 use std::{
     collections::{hash_map::Entry, HashMap},
-    path::Path,
     rc::Rc,
 };
 use uuid::Uuid;
@@ -61,6 +60,10 @@ impl UnencryptedDfs {
         }
     }
 
+    /// Returns StorageBackend for a given Storage.
+    ///
+    /// If there is no StorageBackend for a given Storage, StorageBackendFactory, related to its
+    /// type, is used to create one.
     fn get_backend(
         &mut self,
         storage: &Storage,
@@ -85,6 +88,27 @@ impl UnencryptedDfs {
 
         Ok(backend)
     }
+
+    /// Matches every given Storage with its StorageBackend and return iterator over such pairs.
+    fn assign_backends_to_storages<'a>(
+        &'a mut self,
+        storages: &'a [Storage],
+    ) -> impl Iterator<Item = (Rc<dyn StorageBackend>, &Storage)> + '_ {
+        storages.iter().filter_map(|storage| {
+            match self.get_backend(storage) {
+                Err(e) => {
+                    // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
+                    tracing::error!(
+                        "Unsupported storage backend: {}; Reason: {}",
+                        storage.backend_type(),
+                        e
+                    );
+                    None
+                }
+                Ok(backend) => Some((backend, storage)),
+            }
+        })
+    }
 }
 
 impl DfsFrontend for UnencryptedDfs {
@@ -105,47 +129,67 @@ impl DfsFrontend for UnencryptedDfs {
     /// ]
     /// Full path within the user's forest for both nodes is `/a/b/c`. It is up to FS frontend how to
     /// show it to a user (e.g. by prefixing it with some storage-specific tag).
-    fn readdir<P: AsRef<Path>>(&mut self, path: P) -> Vec<NodeDescriptor> {
+    fn readdir(&mut self, path: String) -> Vec<NodeDescriptor> {
         let resolved_paths = self.path_resolver.resolve(path.as_ref());
         let nodes = resolved_paths
             .into_iter()
             .filter_map(|PathWithStorages { path, storages }| {
-                let mut backends = storages.iter().filter_map(|storage| {
-                    match self.get_backend(storage) {
-                        Err(e) => {
-                            // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                            tracing::error!(
-                                "Unsupported storage backend: {}; Reason: {}",
-                                storage.backend_type(),
-                                e
-                            );
-                            None
-                        }
-                        Ok(backend) => Some((backend, storage)),
-                    }
+                let backends_with_storages = self.assign_backends_to_storages(&storages);
+
+                let operations_on_backends = backends_with_storages.map(|(backend, storage)| {
+                    backend.readdir(&path).map(|paths| {
+                        paths.into_iter().map({
+                            let storage = storage.clone();
+                            move |path| NodeDescriptor {
+                                storage: storage.clone(),
+                                path,
+                            }
+                        })
+                    })
                 });
 
-                // TODO WILX-362 getting first should be a temporary policy, maybe we should ping backends to check if any of them
-                // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
-                if let Some((backend, storage)) = backends.next() {
-                    Some(backend.readdir(&path).into_iter().map({
-                        let storage = storage.clone();
-                        move |path| NodeDescriptor {
-                            storage: storage.clone(),
-                            path,
-                        }
-                    }))
-                } else {
+                let node_descriptors = execute_backend_op_with_policy(
+                    operations_on_backends,
+                    // TODO WILX-362 getting first should be a temporary policy, maybe we should ping backends to check if any of them
+                    // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
+                    ExecutionPolicy::SequentiallyToFirstSuccess,
+                );
+
+                if node_descriptors.is_none() {
                     // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
                     tracing::error!(
                         "None of the backends for storages {:?} works",
                         storages.iter().map(|s| s.backend_type())
                     );
-                    None
                 }
+                node_descriptors
             })
             .flatten();
 
         nodes.collect()
+    }
+}
+
+enum ExecutionPolicy {
+    SequentiallyToFirstSuccess,
+}
+fn execute_backend_op_with_policy<T: std::fmt::Debug>(
+    ops: impl Iterator<Item = Result<T, Box<dyn std::error::Error>>>,
+    policy: ExecutionPolicy,
+) -> Option<T> {
+    match policy {
+        ExecutionPolicy::SequentiallyToFirstSuccess => {
+            ops.inspect(|result| {
+                if result.is_err() {
+                    // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
+                    tracing::error!(
+                        "Backend returned error for operation: {}",
+                        result.as_ref().unwrap_err()
+                    );
+                }
+            })
+            .find(Result::is_ok)
+            .map(Result::unwrap)
+        }
     }
 }

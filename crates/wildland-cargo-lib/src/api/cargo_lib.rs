@@ -35,8 +35,8 @@ use std::{
 use thiserror::Error;
 use wildland_catlib::CatLib;
 use wildland_corex::{
-    catlib_service::CatLibService, container_manager::ContainerManager, LocalSecureStorage,
-    LssService,
+    catlib_service::CatLibService, container_manager::ContainerManager,
+    dfs::interface::DfsFrontend, LocalSecureStorage, LssService,
 };
 use wildland_dfs::{encrypted::EncryptedDfs as Dfs, unencrypted::StorageBackendFactory};
 #[cfg(feature = "lfs")]
@@ -71,7 +71,7 @@ static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 #[derive(Clone)]
 pub struct CargoLib {
     user_api: UserApi,
-    _dfs: Rc<Dfs>,
+    dfs_api: Arc<Mutex<dyn DfsFrontend>>,
 }
 
 impl CargoLib {
@@ -96,7 +96,10 @@ impl CargoLib {
                 CatLibService::new(Rc::new(CatLib::default())),
                 fsa_config,
             )),
-            _dfs: Rc::new(Dfs::new(container_manager, dfs_storage_factories)),
+            dfs_api: Arc::new(Mutex::new(Dfs::new(
+                container_manager,
+                dfs_storage_factories,
+            ))),
         }
     }
 
@@ -104,6 +107,11 @@ impl CargoLib {
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn user_api(&self) -> UserApi {
         self.user_api.clone()
+    }
+
+    /// Returns DFS API object that may be used to build Filesystem-like UI.
+    pub fn dfs_api(&self) -> Arc<Mutex<dyn DfsFrontend>> {
+        self.dfs_api.clone()
     }
 }
 
