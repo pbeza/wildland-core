@@ -253,7 +253,7 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn ForestManifest>>,
             data: Vec<u8>,
         ) -> Result<VoidType, CatlibError>;
-        fn delete(self: &Arc<Mutex<dyn ForestManifest>>) -> Result<bool, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn ForestManifest>>) -> Result<bool, CatlibError>;
         fn create_container(
             self: &Arc<Mutex<dyn ForestManifest>>,
             name: String,
@@ -300,7 +300,7 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn ContainerManifest>>,
             new_name: String,
         ) -> Result<VoidType, CatlibError>;
-        fn delete(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<VoidType, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<VoidType, CatlibError>;
         fn forest(
             self: &Arc<Mutex<dyn ContainerManifest>>,
         ) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError>;
@@ -317,7 +317,7 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn StorageManifest>>,
             data: Vec<u8>,
         ) -> Result<VoidType, CatlibError>;
-        fn delete(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<bool, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<bool, CatlibError>;
         fn data(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<Vec<u8>, CatlibError>;
 
         //
@@ -330,7 +330,7 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn BridgeManifest>>,
             link: Vec<u8>,
         ) -> Result<VoidType, CatlibError>;
-        fn delete(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<bool, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<bool, CatlibError>;
         fn path(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<String, CatlibError>;
 
         //

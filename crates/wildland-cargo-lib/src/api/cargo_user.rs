@@ -400,7 +400,7 @@ mod tests {
             .unwrap();
 
         // and the container is deleted
-        container.lock().unwrap().delete().unwrap();
+        container.lock().unwrap().remove().unwrap();
 
         // then it cannot be retrieved via CargoUser api
         let containers = cargo_user.get_containers();

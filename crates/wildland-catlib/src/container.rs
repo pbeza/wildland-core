@@ -81,7 +81,7 @@ impl Container {
         match container.add_storage(storage_template) {
             Ok(_) => Ok(container),
             Err(err) => {
-                ContainerManifest::delete(&mut container)?;
+                ContainerManifest::remove(&mut container)?;
                 Err(err)
             }
         }
@@ -272,7 +272,7 @@ impl ContainerManifest for Container {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn delete(&mut self) -> Result<(), CatlibError> {
+    fn remove(&mut self) -> Result<(), CatlibError> {
         Model::delete(self)?;
         Ok(())
     }

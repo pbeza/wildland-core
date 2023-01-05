@@ -82,7 +82,7 @@ impl BridgeManifest for Bridge {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn delete(&mut self) -> CatlibResult<bool> {
+    fn remove(&mut self) -> CatlibResult<bool> {
         Model::delete(self)?;
         Ok(true)
     }
@@ -139,7 +139,7 @@ mod tests {
             .find_bridge("/other/forest".to_string())
             .unwrap();
 
-        bridge.lock().unwrap().delete().unwrap();
+        bridge.lock().unwrap().remove().unwrap();
 
         let bridge = forest
             .lock()

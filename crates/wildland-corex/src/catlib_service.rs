@@ -131,7 +131,7 @@ impl CatLibService {
     }
 
     pub fn delete_container(&self, container: &mut dyn ContainerManifest) -> CatlibResult<()> {
-        container.delete().map(|_| ())
+        container.remove().map(|_| ())
     }
 
     fn get_parsed_forest_metadata(

@@ -101,7 +101,7 @@ impl StorageManifest for StorageEntity {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn delete(&mut self) -> CatlibResult<bool> {
+    fn remove(&mut self) -> CatlibResult<bool> {
         Model::delete(self)?;
         Ok(true)
     }
@@ -256,7 +256,7 @@ mod tests {
         make_storage(&container);
         let storage = make_storage(&container);
 
-        storage.lock().unwrap().delete().unwrap();
+        storage.lock().unwrap().remove().unwrap();
 
         assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 2);
     }

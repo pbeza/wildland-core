@@ -132,7 +132,7 @@ impl ForestManifest for Forest {
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
-    fn delete(&mut self) -> CatlibResult<bool> {
+    fn remove(&mut self) -> CatlibResult<bool> {
         Model::delete(self)?;
         Ok(true)
     }
@@ -444,7 +444,7 @@ mod tests {
     fn delete_empty_forest(catlib: CatLib) {
         let f = make_forest(&catlib);
 
-        f.lock().unwrap().delete().unwrap();
+        f.lock().unwrap().remove().unwrap();
 
         assert!(matches!(
             catlib.find_forest(&f.lock().unwrap().owner()),
@@ -456,7 +456,7 @@ mod tests {
     fn delete_forest_with_data(catlib: CatLib) {
         let f = make_forest_with_signer(&catlib);
 
-        f.lock().unwrap().delete().unwrap();
+        f.lock().unwrap().remove().unwrap();
 
         assert!(matches!(
             catlib.find_forest(&f.lock().unwrap().owner()),

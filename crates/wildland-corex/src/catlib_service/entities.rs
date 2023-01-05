@@ -88,7 +88,7 @@ pub trait ForestManifest: std::fmt::Debug {
     ///
     /// **WARN: The underlying objects are not removed recursively**
     ///
-    fn delete(&mut self) -> Result<bool, CatlibError>;
+    fn remove(&mut self) -> Result<bool, CatlibError>;
 
     /// Create an empty container, bound to the Forest.
     ///
@@ -176,7 +176,7 @@ pub trait ContainerManifest: std::fmt::Debug {
     /// Deletes all records regarding the container from the
     /// database.
     ///
-    fn delete(&mut self) -> Result<(), CatlibError>;
+    fn remove(&mut self) -> Result<(), CatlibError>;
 
     /// Return [`Forest`] that contains the [`Container`].
     ///
@@ -218,7 +218,7 @@ pub trait StorageManifest: std::fmt::Debug {
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;
 
     /// Delete Storage
-    fn delete(&mut self) -> CatlibResult<bool>;
+    fn remove(&mut self) -> CatlibResult<bool>;
 
     /// Retrieve Storage data
     fn data(&mut self) -> CatlibResult<Vec<u8>>;
@@ -235,7 +235,7 @@ pub trait BridgeManifest: std::fmt::Debug {
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<()>;
 
     /// Delete Bridge
-    fn delete(&mut self) -> CatlibResult<bool>;
+    fn remove(&mut self) -> CatlibResult<bool>;
 
     /// Retrieve Bridge path
     fn path(&mut self) -> CatlibResult<ContainerPath>;
