@@ -63,10 +63,7 @@ impl Container {
         db: Rc<StoreDb>,
     ) -> Result<Self, CatlibError> {
         let container_uuid = Uuid::new_v4();
-        let forest_uuid = forest_owner
-            .lock()
-            .map_err(|_| CatlibError::Generic("Poisoned Mutex".to_owned()))?
-            .uuid();
+        let forest_uuid = forest_owner.lock().expect("Poisoned Mutex").uuid();
         let container_data = ContainerData {
             uuid: container_uuid,
             forest_uuid,
@@ -80,8 +77,13 @@ impl Container {
             db,
         };
         container.save()?;
-        container.add_storage(storage_template)?;
-        Ok(container)
+        match container.add_storage(storage_template) {
+            Ok(_) => Ok(container),
+            Err(err) => {
+                ContainerManifest::delete(&mut container)?;
+                Err(err)
+            }
+        }
     }
 
     pub fn from_container_data(
@@ -214,7 +216,7 @@ impl ContainerManifest for Container {
             owner: self
                 .forest_owner
                 .lock()
-                .map_err(|_| CatlibError::Generic("Poisoned Mutex".to_owned()))?
+                .expect("Poisoned Mutex")
                 .owner()
                 .encode(),
             access_mode: wildland_corex::StorageAccessMode::ReadWrite,

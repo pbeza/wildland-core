@@ -215,10 +215,6 @@ mod ffi_binding {
             storage_templates: &StorageTemplate,
             path: String,
         ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
-        fn delete_container(
-            self: &CargoUser,
-            container: &Arc<Mutex<dyn ContainerManifest>>,
-        ) -> Result<VoidType, CatlibError>;
         fn get_storage_templates(
             self: &CargoUser,
         ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
@@ -239,13 +235,13 @@ mod ffi_binding {
         //
         // ContainerManifest
         //
-        // fn get_storages(
-        //     self: &Arc<Mutex<dyn ContainerManifest>>,
-        // ) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, CatlibError>;
-        // fn add_storage(
-        //     self: &Arc<Mutex<dyn ContainerManifest>>,
-        //     templates: &StorageTemplate,
-        // ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>;
+        fn get_storages(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+        ) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, CatlibError>;
+        fn add_storage(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            templates: &StorageTemplate,
+        ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>;
         fn add_path(
             self: &Arc<Mutex<dyn ContainerManifest>>,
             path: String,
@@ -259,14 +255,31 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn ContainerManifest>>,
             new_name: String,
         ) -> Result<VoidType, CatlibError>;
+        fn delete(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<VoidType, CatlibError>;
+        fn forest(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+        ) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError>;
         fn name(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<String, CatlibError>;
         fn stringify(self: &Arc<Mutex<dyn ContainerManifest>>) -> String;
+        fn uuid(self: &Arc<Mutex<dyn ContainerManifest>>) -> Uuid;
+
+        //
+        // StorageManifest
+        //
+        fn container(
+            self: &Arc<Mutex<dyn StorageManifest>>,
+        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
+        fn update(
+            self: &Arc<Mutex<dyn StorageManifest>>,
+            data: Vec<u8>,
+        ) -> Result<VoidType, CatlibError>;
+        fn delete(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<bool, CatlibError>;
+        fn data(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<Vec<u8>, CatlibError>;
+        fn uuid(self: &Arc<Mutex<dyn StorageManifest>>) -> Uuid;
 
         //
         // Storage
         //
-        fn stringify(self: &Storage) -> String;
-
         fn stringify(self: &StorageTemplate) -> String;
     }
 }

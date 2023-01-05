@@ -88,9 +88,7 @@ impl UserService {
         )?;
 
         tracing::trace!("saving identities to lss");
-        let forest_locked = forest
-            .lock()
-            .map_err(|_| UserCreationError::Generic("Poisoned Mutex".to_owned()))?;
+        let forest_locked = forest.lock().expect("Poisoned Mutex");
         self.lss_service.save_forest_uuid(&*forest_locked)?;
 
         self.lss_service.save_identity(&default_forest_identity)?;
@@ -117,9 +115,7 @@ impl UserService {
                 let user_metadata: ForestMetaData = serde_json::from_slice(
                     &forest
                         .lock()
-                        .map_err(|_| {
-                            UserRetrievalError::ForestNotFound("Poisoned Mutex".to_owned())
-                        })?
+                        .expect("Poisoned Mutex")
                         .data()
                         .map_err(UserRetrievalError::CatlibError)?,
                 )

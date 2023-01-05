@@ -248,12 +248,7 @@ impl ICatLib for CatLib {
         let storages = self.find_storages_with_template(template_id)?;
         storages
             .iter()
-            .map(|storage| {
-                storage
-                    .lock()
-                    .map_err(|_| CatlibError::Generic("Poisoned Mutex".to_owned()))?
-                    .container()
-            })
+            .map(|storage| storage.lock().expect("Poisoned Mutex").container())
             .collect()
     }
 

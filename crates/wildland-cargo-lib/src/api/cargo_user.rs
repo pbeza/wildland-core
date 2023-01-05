@@ -92,10 +92,7 @@ All devices:
     /// Returns vector of handles to all containers (mounted or not) found in the user's forest.
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn get_containers(&self) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError> {
-        self.forest
-            .lock()
-            .map_err(|_| CatlibError::Generic("Poisoned Mutex".to_owned()))?
-            .containers()
+        self.forest.lock().expect("Poisoned Mutex").containers()
     }
 
     /// Creates a new container within user's forest and return its handle
@@ -108,21 +105,6 @@ All devices:
     ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError> {
         self.catlib_service
             .create_container(name, &self.forest, template, path)
-    }
-
-    /// Deleting container is exposed via this method on `CargoUser`
-    /// because in future it may require some additional changes in user's context
-    /// (which `Container` structure has no access to).
-    ///
-    #[tracing::instrument(level = "debug", skip_all)]
-    pub fn delete_container(
-        &self,
-        container: &Arc<Mutex<dyn ContainerManifest>>,
-    ) -> Result<(), CatlibError> {
-        container
-            .lock()
-            .expect("Could not lock shared container while deleting")
-            .delete()
     }
 
     pub fn this_device(&self) -> &str {
@@ -422,7 +404,7 @@ mod tests {
             .unwrap();
 
         // and the container is deleted
-        cargo_user.delete_container(&container).unwrap();
+        container.lock().unwrap().delete().unwrap();
 
         // then it cannot be retrieved via CargoUser api
         let containers = cargo_user.get_containers();

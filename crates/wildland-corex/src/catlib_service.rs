@@ -125,7 +125,7 @@ impl CatLibService {
     ) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
         forest
             .lock()
-            .map_err(|_| CatlibError::Generic("Poisoned Mutex".to_owned()))?
+            .expect("Poisoned Mutex")
             .create_container(name, storage_template, path)
     }
 

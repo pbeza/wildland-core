@@ -171,11 +171,8 @@ pub trait ContainerManifest: std::fmt::Debug {
     ///
     fn stringify(&self) -> String;
 
-    /// Deletes all paths that the given container contains.
-    /// In result the container is considered deleted afterwards.
-    /// Container should be treated as a "shared pointer" - once the
-    /// last path is deleted the container should be moved to
-    /// some sort of a "trash bin".
+    /// Deletes all records regarding the container from the
+    /// database.
     ///
     fn delete(&mut self) -> Result<(), CatlibError>;
 

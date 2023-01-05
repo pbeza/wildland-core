@@ -118,11 +118,12 @@ pub(crate) fn fetch_storages_by_container_uuid(
         .filter(|(id, _)| id.starts_with("storage-"))
         .map(|(_, storage_str)| StorageData::from(storage_str.as_str()))
         .filter(|storage_data| storage_data.container_uuid == *uuid)
-        .map(|storage_data| StorageEntity {
-            data: storage_data,
-            db: db.clone(),
+        .map(|storage_data| {
+            Arc::new(Mutex::new(StorageEntity {
+                data: storage_data,
+                db: db.clone(),
+            })) as Arc<Mutex<dyn StorageManifest>>
         })
-        .map(|storage| Arc::new(Mutex::new(storage)) as Arc<Mutex<dyn StorageManifest>>)
         .collect();
 
     match storages.len() {

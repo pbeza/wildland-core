@@ -92,6 +92,8 @@ pub enum UserRetrievalError {
     DeviceMetadataNotFound,
     #[error("User not found")]
     UserNotFound,
+    #[error("Generic: {0}")]
+    Generic(String),
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
