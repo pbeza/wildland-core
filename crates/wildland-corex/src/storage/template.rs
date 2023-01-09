@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::HashSet;
 use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
@@ -42,7 +43,7 @@ pub struct TemplateContext {
     #[serde(rename = "CONTAINER_UUID")]
     pub container_uuid: Uuid,
     #[serde(rename = "PATHS")]
-    pub paths: Vec<String>,
+    pub paths: HashSet<String>,
 }
 
 #[derive(Debug, Error, Clone)]
@@ -114,7 +115,7 @@ impl StorageTemplate {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
     use std::str::FromStr;
 
     use pretty_assertions::assert_eq;
@@ -146,7 +147,7 @@ mod tests {
             owner: "John Doe".to_owned(),
             access_mode: crate::StorageAccessMode::ReadOnly,
             container_uuid: Uuid::from_str("00000000-0000-0000-0000-000000001111").unwrap(),
-            paths: vec!["path1".to_owned(), "path2".to_owned()],
+            paths: HashSet::from_iter(["path1".to_owned()]),
         };
 
         let rendered_storage = storage_template.render(params).unwrap();
@@ -159,7 +160,7 @@ backend_type = "FoundationStorage"
 [data]
 field1 = "Some value with container name: Books"
 "parameter in key: John Doe" = "enum: ReadOnly"
-paths = "[path1, path2]"
+paths = "[path1]"
 uuid = "00000000-0000-0000-0000-000000001111"
 "#
         );

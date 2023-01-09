@@ -20,13 +20,14 @@ use std::rc::Rc;
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use wildland_corex::catlib_service::entities::{
-    Bridge as IBridge,
-    ContainerManifest as IContainer,
+    BridgeManifest,
+    ContainerManifest,
     ContainerPath,
-    ForestManifest as IForest,
+    ForestManifest,
     Identity,
     Signers,
 };
+use wildland_corex::StorageTemplate;
 
 use super::*;
 use crate::bridge::BridgeData;
@@ -70,7 +71,7 @@ impl Forest {
     }
 }
 
-impl IForest for Forest {
+impl ForestManifest for Forest {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
@@ -95,23 +96,21 @@ impl IForest for Forest {
     /// - Returns [`CatlibError::NoRecordsFound`] if Forest has no [`Container`].
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
-    fn containers(&self) -> CatlibResult<Vec<Box<dyn IContainer>>> {
+    fn containers(&self) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
         self.db.load().map_err(to_catlib_error)?;
         let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-
-        let containers: Vec<_> = data
+        let containers: Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError> = data
             .iter()
             .filter(|(id, _)| id.starts_with("container-"))
-            .map(|(_, container_str)| Container {
-                data: ContainerData::from(container_str.as_str()),
-                db: self.db.clone(),
+            .map(|(_, container_str)| ContainerData::from(container_str.as_str()))
+            .filter(|container_data| container_data.forest_uuid == self.data.uuid)
+            .map(|container_data| {
+                Container::from_container_data(container_data, self.db.clone()).map(|container| {
+                    Arc::new(Mutex::new(container)) as Arc<Mutex<dyn ContainerManifest>>
+                })
             })
-            .filter(|container| {
-                container.forest().is_ok()
-                    && (*container.forest().unwrap()).uuid() == self.data.uuid
-            })
-            .map(|container| Box::new(container) as Box<dyn IContainer>)
             .collect();
+        let containers = containers?;
 
         match containers.len() {
             0 => Err(CatlibError::NoRecordsFound),
@@ -133,7 +132,7 @@ impl IForest for Forest {
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
-    fn delete(&mut self) -> CatlibResult<bool> {
+    fn remove(&mut self) -> CatlibResult<bool> {
         Model::delete(self)?;
         Ok(true)
     }
@@ -144,27 +143,54 @@ impl IForest for Forest {
     ///
     /// ## Example
     ///
-    /// ```rust
+    /// ```no_run
     /// # use wildland_catlib::CatLib;
-    /// # use std::collections::HashSet;
-    /// # use wildland_corex::catlib_service::entities::Identity;
-    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
+    /// # use std::collections::{HashSet, HashMap};
+    /// # use wildland_corex::entities::Identity;
+    /// # use wildland_corex::StorageTemplate;
+    /// # use wildland_corex::interface::CatLib as ICatLib;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
-    /// container.add_path("/foo/bar".to_string());
-    /// container.add_path("/bar/baz".to_string());
+    /// let storage_template = StorageTemplate::try_new(
+    ///     "FoundationStorage",
+    ///     HashMap::from([
+    ///             (
+    ///                 "field1".to_owned(),
+    ///                 "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+    ///             ),
+    ///             (
+    ///                 "parameter in key: {{ OWNER }}".to_owned(),
+    ///                 "enum: {{ ACCESS_MODE }}".to_owned(),
+    ///             ),
+    ///             ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+    ///             ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+    ///         ]),
+    ///     )
+    ///     .unwrap();
+    /// let path = "/some/path".to_owned();
+    /// let container = forest.lock().unwrap().create_container("container name1".to_owned(), &storage_template, path).unwrap();
+    /// container.lock().unwrap().add_path("/foo/bar1".to_string());
+    /// container.lock().unwrap().add_path("/bar/baz1".to_string());
     /// ```
     #[tracing::instrument(level = "debug", skip_all)]
-    fn create_container(&self, name: String) -> CatlibResult<Box<dyn IContainer>> {
-        let container = Box::new(Container::new(self.data.uuid, name, self.db.clone()));
-        container.save()?;
-
-        Ok(container)
+    fn create_container(
+        &self,
+        name: String,
+        storage_template: &StorageTemplate,
+        path: ContainerPath,
+    ) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
+        let forest_owner = Arc::new(Mutex::new(self.clone()));
+        Ok(Arc::new(Mutex::new(Container::new(
+            forest_owner,
+            storage_template,
+            name,
+            path,
+            self.db.clone(),
+        )?)))
     }
 
     /// ## Errors
@@ -184,23 +210,18 @@ impl IForest for Forest {
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// forest.create_bridge("/other/forest".to_string(), vec![]);
+    /// forest.lock().unwrap().create_bridge("/other/forest".to_string(), vec![]);
     /// ```
     #[tracing::instrument(level = "debug", skip_all)]
     fn create_bridge(
         &self,
         path: ContainerPath,
         link_data: Vec<u8>,
-    ) -> CatlibResult<Box<dyn IBridge>> {
-        let bridge = Box::new(Bridge::new(
-            self.data.uuid,
-            path,
-            link_data,
-            self.db.clone(),
-        ));
+    ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError> {
+        let bridge = Bridge::new(self.data.uuid, path, link_data, self.db.clone());
         bridge.save()?;
 
-        Ok(bridge)
+        Ok(Arc::new(Mutex::new(bridge)))
     }
 
     /// ## Errors
@@ -209,7 +230,10 @@ impl IForest for Forest {
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Bridge`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
-    fn find_bridge(&self, path: ContainerPath) -> CatlibResult<Box<dyn IBridge>> {
+    fn find_bridge(
+        &self,
+        path: ContainerPath,
+    ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError> {
         self.db.load().map_err(to_catlib_error)?;
         let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
@@ -220,14 +244,13 @@ impl IForest for Forest {
                 data: BridgeData::from(bridge_str.as_str()),
                 db: self.db.clone(),
             })
-            .filter(|bridge| {
-                (*bridge.forest().unwrap()).uuid() == self.data.uuid && bridge.data.path == path
-            })
+            .filter(|bridge| bridge.data.forest_uuid == self.data.uuid && bridge.data.path == path)
+            .map(|bridge| Arc::new(Mutex::new(bridge)))
             .collect();
 
         match bridges.len() {
             0 => Err(CatlibError::NoRecordsFound),
-            1 => Ok(Box::new(bridges[0].clone())),
+            1 => Ok(bridges[0].clone()),
             _ => Err(CatlibError::MalformedDatabaseRecord),
         }
     }
@@ -248,8 +271,8 @@ impl IForest for Forest {
     ///                  HashSet::from([b"signer".to_vec()]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
-    /// container.add_path("/foo/bar".to_string());
+    /// let container = forest.lock().unwrap().create_container("container name".to_owned()).unwrap();
+    /// container.lock().unwrap().add_path("/foo/bar".to_string());
     ///
     /// let containers = forest.find_containers(vec!["/foo/bar".to_string()], false).unwrap();
     #[tracing::instrument(level = "debug", skip_all)]
@@ -257,28 +280,30 @@ impl IForest for Forest {
         &self,
         paths: Vec<String>,
         include_subdirs: bool,
-    ) -> CatlibResult<Vec<Box<dyn IContainer>>> {
+    ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
         self.db.load().map_err(to_catlib_error)?;
         let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
-        let containers: Vec<_> = data
+        let containers: Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError> = data
             .iter()
             .filter(|(id, _)| id.starts_with("container-"))
-            .map(|(_, container_str)| Container {
-                data: ContainerData::from(container_str.as_str()),
-                db: self.db.clone(),
-            })
-            .filter(|container| {
-                (*container.forest().unwrap()).uuid() == self.data.uuid
-                    && container.paths().iter().any(|container_path| {
-                        paths.iter().any(|path| {
-                            (include_subdirs && container_path.starts_with(path))
-                                || container_path.eq(path)
-                        })
+            .map(|(_, container_str)| ContainerData::from(container_str.as_str()))
+            .filter(|container_data| container_data.forest_uuid == self.data.uuid)
+            .filter(|container_data| {
+                container_data.paths.iter().any(|container_path| {
+                    paths.iter().any(|path| {
+                        (include_subdirs && container_path.starts_with(path))
+                            || container_path.eq(path)
                     })
+                })
             })
-            .map(|container| Box::new(container) as Box<dyn IContainer>)
+            .map(|container_data| {
+                Container::from_container_data(container_data, self.db.clone()).map(|container| {
+                    Arc::new(Mutex::new(container)) as Arc<Mutex<dyn ContainerManifest>>
+                })
+            })
             .collect();
+        let containers = containers?;
 
         match containers.len() {
             0 => Err(CatlibError::NoRecordsFound),
@@ -333,13 +358,13 @@ mod tests {
     use super::db::test::catlib;
     use crate::*;
 
-    fn make_forest(catlib: &CatLib) -> Box<dyn ForestManifest> {
+    fn make_forest(catlib: &CatLib) -> Arc<Mutex<dyn ForestManifest>> {
         let owner = Identity([1; 32]);
 
         catlib.create_forest(owner, Signers::new(), vec![]).unwrap()
     }
 
-    fn make_forest_with_signer(catlib: &CatLib) -> Box<dyn ForestManifest> {
+    fn make_forest_with_signer(catlib: &CatLib) -> Arc<Mutex<dyn ForestManifest>> {
         let owner = Identity([1; 32]);
         let signer = Identity([2; 32]);
 
@@ -353,20 +378,20 @@ mod tests {
     fn read_new_forest(catlib: CatLib) {
         make_forest_with_signer(&catlib);
 
-        let mut forest = catlib.find_forest(&Identity([1; 32])).unwrap();
+        let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
-        assert_eq!(forest.owner(), Identity([1; 32]));
-        assert_eq!(forest.signers().unwrap().len(), 1);
+        assert_eq!(forest.lock().unwrap().owner(), Identity([1; 32]));
+        assert_eq!(forest.lock().unwrap().signers().unwrap().len(), 1);
     }
 
     #[rstest]
     fn read_new_forest_by_uuid(catlib: CatLib) {
         let f = make_forest_with_signer(&catlib);
 
-        let mut forest = catlib.get_forest(&f.uuid()).unwrap();
+        let forest = catlib.get_forest(&f.lock().unwrap().uuid()).unwrap();
 
-        assert_eq!(forest.owner(), Identity([1; 32]));
-        assert_eq!(forest.signers().unwrap().len(), 1);
+        assert_eq!(forest.lock().unwrap().owner(), Identity([1; 32]));
+        assert_eq!(forest.lock().unwrap().signers().unwrap().len(), 1);
     }
 
     #[rstest]
@@ -378,11 +403,11 @@ mod tests {
 
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
-        assert_eq!((*forest).owner(), Identity([1; 32]));
+        assert_eq!((*forest).lock().unwrap().owner(), Identity([1; 32]));
 
         let forest = catlib.find_forest(&Identity([2; 32])).unwrap();
 
-        assert_eq!((*forest).owner(), Identity([2; 32]));
+        assert_eq!((*forest).lock().unwrap().owner(), Identity([2; 32]));
     }
 
     #[rstest]
@@ -403,54 +428,67 @@ mod tests {
 
     #[rstest]
     fn add_forest_data(catlib: CatLib) {
-        let mut f = make_forest(&catlib);
+        let f = make_forest(&catlib);
 
-        f.update(b"some data".to_vec()).unwrap();
+        f.lock().unwrap().update(b"some data".to_vec()).unwrap();
 
-        let mut forest = catlib.find_forest(&f.owner()).unwrap();
+        let forest = catlib.find_forest(&f.lock().unwrap().owner()).unwrap();
 
-        assert_eq!(forest.data().unwrap(), b"some data".to_vec());
+        assert_eq!(
+            forest.lock().unwrap().data().unwrap(),
+            b"some data".to_vec()
+        );
     }
 
     #[rstest]
     fn delete_empty_forest(catlib: CatLib) {
-        let mut f = make_forest(&catlib);
+        let f = make_forest(&catlib);
 
-        f.delete().unwrap();
+        f.lock().unwrap().remove().unwrap();
 
         assert!(matches!(
-            catlib.find_forest(&f.owner()),
+            catlib.find_forest(&f.lock().unwrap().owner()),
             Err(CatlibError::NoRecordsFound)
         ));
     }
 
     #[rstest]
     fn delete_forest_with_data(catlib: CatLib) {
-        let mut f = make_forest_with_signer(&catlib);
+        let f = make_forest_with_signer(&catlib);
 
-        f.delete().unwrap();
+        f.lock().unwrap().remove().unwrap();
 
         assert!(matches!(
-            catlib.find_forest(&f.owner()),
+            catlib.find_forest(&f.lock().unwrap().owner()),
             Err(CatlibError::NoRecordsFound)
         ));
     }
 
     #[rstest]
     fn add_forest_data_and_fetch_twice(catlib: CatLib) {
-        let mut f = make_forest(&catlib);
+        let f = make_forest(&catlib);
 
-        f.update(b"some data".to_vec()).unwrap();
+        f.lock().unwrap().update(b"some data".to_vec()).unwrap();
 
-        let mut forest = catlib.find_forest(&f.owner()).unwrap();
+        let forest = catlib.find_forest(&f.lock().unwrap().owner()).unwrap();
 
-        assert_eq!(forest.data().unwrap(), b"some data".to_vec());
+        assert_eq!(
+            forest.lock().unwrap().data().unwrap(),
+            b"some data".to_vec()
+        );
 
-        forest.update(b"updated data".to_vec()).unwrap();
+        forest
+            .lock()
+            .unwrap()
+            .update(b"updated data".to_vec())
+            .unwrap();
 
-        let mut forest = catlib.find_forest(&f.owner()).unwrap();
+        let forest = catlib.find_forest(&f.lock().unwrap().owner()).unwrap();
 
-        assert_eq!(forest.data().unwrap(), b"updated data".to_vec());
+        assert_eq!(
+            forest.lock().unwrap().data().unwrap(),
+            b"updated data".to_vec()
+        );
     }
 
     #[rstest]
@@ -459,24 +497,24 @@ mod tests {
         let bob = Identity([4; 32]);
         let charlie = Identity([5; 32]);
 
-        let mut forest = make_forest_with_signer(&catlib);
+        let forest = make_forest_with_signer(&catlib);
 
-        assert_eq!(forest.owner(), Identity([1; 32]));
+        assert_eq!(forest.lock().unwrap().owner(), Identity([1; 32]));
 
-        assert_eq!(forest.signers().unwrap().len(), 1);
+        assert_eq!(forest.lock().unwrap().signers().unwrap().len(), 1);
 
-        forest.add_signer(alice).unwrap();
+        forest.lock().unwrap().add_signer(alice).unwrap();
 
         // Find the same forest by it's owner and add one more signer
-        let mut forest = catlib.find_forest(&Identity([1; 32])).unwrap();
-        forest.add_signer(bob).unwrap();
-        assert_eq!(forest.signers().unwrap().len(), 3);
+        let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
+        forest.lock().unwrap().add_signer(bob).unwrap();
+        assert_eq!(forest.lock().unwrap().signers().unwrap().len(), 3);
 
         // Add one more...
-        forest.add_signer(charlie).unwrap();
+        forest.lock().unwrap().add_signer(charlie).unwrap();
 
         // ...but this trime fetch with uuid
-        let mut forest = catlib.get_forest(&forest.uuid()).unwrap();
-        assert_eq!(forest.signers().unwrap().len(), 4);
+        let forest = catlib.get_forest(&forest.lock().unwrap().uuid()).unwrap();
+        assert_eq!(forest.lock().unwrap().signers().unwrap().len(), 4);
     }
 }

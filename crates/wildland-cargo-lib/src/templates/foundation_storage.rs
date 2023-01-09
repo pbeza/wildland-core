@@ -79,10 +79,10 @@ impl TryFrom<FoundationStorageTemplate> for StorageTemplate {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::str::FromStr;
 
     use pretty_assertions::assert_eq;
-    use serde_json::json;
     use uuid::Uuid;
     use wildland_corex::TemplateContext;
 
@@ -101,7 +101,7 @@ mod tests {
         let fst = fst.with_name("name");
         let uuid = fst.uuid();
 
-        let expected = json!(
+        let expected = serde_json::json!(
             {
                 "uuid": uuid,
                 "backend_type": "FoundationStorage",
@@ -202,7 +202,7 @@ mod tests {
                 owner: "Quentin Tarantino".to_owned(),
                 access_mode: wildland_corex::StorageAccessMode::ReadWrite,
                 container_uuid: Uuid::new_v4(),
-                paths: Vec::new(),
+                paths: HashSet::new(),
             })
             .unwrap();
         let storage_uuid = storage.uuid();

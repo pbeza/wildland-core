@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashSet;
 use std::rc::Rc;
 
 use derivative::Derivative;
@@ -25,10 +24,12 @@ use wildland_corex::catlib_service::entities::{
     ContainerPath,
     ContainerPaths,
     ForestManifest,
-    StorageManifest as IStorage,
+    StorageManifest,
 };
+use wildland_corex::{StorageTemplate, TemplateContext};
 
 use super::*;
+use crate::storage::StorageEntity;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ContainerData {
@@ -47,33 +48,69 @@ impl From<&str> for ContainerData {
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub(crate) struct Container {
-    pub(crate) data: ContainerData,
-
+    pub(crate) container_data: ContainerData,
+    pub(crate) forest_owner: Arc<Mutex<dyn ForestManifest>>,
+    pub(crate) storages: Vec<Arc<Mutex<dyn StorageManifest>>>,
     #[derivative(Debug = "ignore")]
     pub(crate) db: Rc<StoreDb>,
 }
 
 impl Container {
-    pub fn new(forest_uuid: Uuid, name: String, db: Rc<StoreDb>) -> Self {
-        Self {
-            data: ContainerData {
-                uuid: Uuid::new_v4(),
-                forest_uuid,
-                name,
-                paths: ContainerPaths::new(),
-            },
+    pub fn new(
+        forest_owner: Arc<Mutex<dyn ForestManifest>>,
+        storage_template: &StorageTemplate,
+        name: String,
+        path: ContainerPath,
+        db: Rc<StoreDb>,
+    ) -> Result<Self, CatlibError> {
+        let container_uuid = Uuid::new_v4();
+        let forest_uuid = forest_owner.lock().expect("Poisoned Mutex").uuid();
+        let container_data = ContainerData {
+            uuid: container_uuid,
+            forest_uuid,
+            name,
+            paths: ContainerPaths::from([path]),
+        };
+        let mut container = Self {
+            container_data,
+            forest_owner,
+            storages: vec![],
             db,
+        };
+        container.save()?;
+        match container.add_storage(storage_template) {
+            Ok(_) => Ok(container),
+            Err(err) => {
+                ContainerManifest::remove(&mut container)?;
+                Err(err)
+            }
         }
+    }
+
+    pub fn from_container_data(
+        container_data: ContainerData,
+        db: Rc<StoreDb>,
+    ) -> Result<Self, CatlibError> {
+        let container_uuid = container_data.uuid;
+        let forest_uuid = container_data.forest_uuid;
+        let forest_owner = fetch_forest_by_uuid(db.clone(), &forest_uuid)?;
+        let storages = fetch_storages_by_container_uuid(db.clone(), &container_uuid)?;
+        Ok(Self {
+            container_data,
+            forest_owner,
+            storages,
+            db,
+        })
     }
 }
 
-impl IContainer for Container {
+impl ContainerManifest for Container {
     /// ## Errors
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
-    fn forest(&self) -> CatlibResult<Box<dyn ForestManifest>> {
-        fetch_forest_by_uuid(self.db.clone(), &self.data.forest_uuid)
+    fn forest(&self) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError> {
+        Ok(self.forest_owner.clone())
     }
 
     /// ## Errors
@@ -82,22 +119,41 @@ impl IContainer for Container {
     ///
     /// ## Example
     ///
-    /// ```rust
+    /// ```no_run
     /// # use wildland_catlib::CatLib;
-    /// # use std::collections::HashSet;
-    /// # use wildland_corex::catlib_service::entities::Identity;
-    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
+    /// # use std::collections::{HashSet, HashMap};
+    /// # use wildland_corex::entities::Identity;
+    /// # use wildland_corex::interface::CatLib as ICatLib;
+    /// # use wildland_corex::StorageTemplate;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
-    /// container.add_path("/bar/baz2".to_string()).unwrap();
+    /// let storage_template = StorageTemplate::try_new(
+    ///     "FoundationStorage",
+    ///     HashMap::from([
+    ///             (
+    ///                 "field1".to_owned(),
+    ///                 "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+    ///             ),
+    ///             (
+    ///                 "parameter in key: {{ OWNER }}".to_owned(),
+    ///                 "enum: {{ ACCESS_MODE }}".to_owned(),
+    ///             ),
+    ///             ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+    ///             ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+    ///         ]),
+    ///     )
+    ///     .unwrap();
+    /// let path = "/some/path".to_owned();
+    /// let container = forest.lock().unwrap().create_container("container name2".to_owned(), &storage_template, path).unwrap();
+    /// container.lock().unwrap().add_path("/bar/baz2".to_string()).unwrap();
     /// ```
-    fn add_path(&mut self, path: ContainerPath) -> CatlibResult<bool> {
-        let inserted = self.data.paths.insert(path);
+    fn add_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError> {
+        self.sync()?;
+        let inserted = self.container_data.paths.insert(path);
         self.save()?;
         Ok(inserted)
     }
@@ -108,98 +164,127 @@ impl IContainer for Container {
     ///
     /// ## Example
     ///
-    /// ```rust
+    /// ```no_run
     /// # use wildland_catlib::CatLib;
-    /// # use std::collections::HashSet;
-    /// # use wildland_corex::catlib_service::entities::Identity;
-    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
+    /// # use std::collections::{HashSet, HashMap};
+    /// # use wildland_corex::entities::Identity;
+    /// # use wildland_corex::interface::CatLib as ICatLib;
+    /// # use wildland_corex::StorageTemplate;
     /// let catlib = CatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
     ///                  HashSet::from([Identity([2; 32])]),
     ///                  vec![],
     ///              ).unwrap();
-    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
-    /// container.del_path("/baz/qux1".to_string()).unwrap();
+    /// let storage_template = StorageTemplate::try_new(
+    ///     "FoundationStorage",
+    ///     HashMap::from([
+    ///             (
+    ///                 "field1".to_owned(),
+    ///                 "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+    ///             ),
+    ///             (
+    ///                 "parameter in key: {{ OWNER }}".to_owned(),
+    ///                 "enum: {{ ACCESS_MODE }}".to_owned(),
+    ///             ),
+    ///             ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+    ///             ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+    ///         ]),
+    ///     )
+    ///     .unwrap();
+    /// let path = "/some/path".to_owned();
+    /// let container = forest.lock().unwrap().create_container("container name2".to_owned(), &storage_template, path).unwrap();
+    /// container.lock().unwrap().delete_path("/baz/qux1".to_string()).unwrap();
     /// ```
-    fn del_path(&mut self, path: ContainerPath) -> CatlibResult<bool> {
-        let removed = self.data.paths.remove(&path);
+    fn delete_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError> {
+        self.sync()?;
+        let removed = self.container_data.paths.remove(&path);
         self.save()?;
         Ok(removed)
     }
 
     /// ## Errors
     ///
-    /// Returns [`CatlibError::NoRecordsFound`] if Forest has no [`Storage`].
-    fn storages(&self) -> CatlibResult<Vec<Box<dyn IStorage>>> {
-        fetch_storages_by_container_uuid(self.db.clone(), &self.data.uuid)
+    /// - Returns [`CatlibError::Generic`] if there was a problem with rendering storage.
+    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
+    ///
+    fn add_storage(
+        &mut self,
+        storage_template: &StorageTemplate,
+    ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError> {
+        let template_context = TemplateContext {
+            container_name: self.container_data.name.clone(),
+            owner: self
+                .forest_owner
+                .lock()
+                .expect("Poisoned Mutex")
+                .owner()
+                .encode(),
+            access_mode: wildland_corex::StorageAccessMode::ReadWrite,
+            container_uuid: self.container_data.uuid,
+            paths: self.container_data.paths.clone(),
+        };
+        let storage = storage_template
+            .render(template_context)
+            .map_err(|e| CatlibError::Generic(e.to_string()))?;
+        let serialized_storage = serde_json::to_vec(&storage).map_err(|e| {
+            CatlibError::Generic(format!("Could not serialize storage template: {e}"))
+        })?;
+        let storage_entity = StorageEntity::new(
+            self.container_data.uuid,
+            Some(storage_template.uuid()),
+            serialized_storage,
+            self.db.clone(),
+        );
+        storage_entity.save()?;
+        self.sync()?;
+        let storage = Arc::new(Mutex::new(storage_entity));
+        self.storages.push(storage.clone());
+        Ok(storage)
     }
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    ///
-    /// ## Example
-    ///
-    /// ```rust
-    /// # use wildland_catlib::CatLib;
-    /// # use std::collections::HashSet;
-    /// # use wildland_corex::catlib_service::entities::Identity;
-    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
-    /// # use uuid::Uuid;
-    /// let catlib = CatLib::default();
-    /// let forest = catlib.create_forest(
-    ///                  Identity([1; 32]),
-    ///                  HashSet::from([Identity([2; 32])]),
-    ///                  vec![],
-    ///              ).unwrap();
-    /// let mut container = forest.create_container("container name".to_owned()).unwrap();
-    /// container.add_path("/foo/bar".to_string());
-    /// container.create_storage(Some(Uuid::from_u128(1)), vec![]).unwrap();
-    /// ```
-    #[tracing::instrument(level = "debug", skip_all)]
-    fn create_storage(
-        &self,
-        template_uuid: Option<Uuid>,
-        data: Vec<u8>,
-    ) -> CatlibResult<Box<dyn IStorage>> {
-        let storage = Box::new(Storage::new(
-            self.data.uuid,
-            template_uuid,
-            data,
-            self.db.clone(),
-        ));
-        storage.save()?;
+    /// Returns [`CatlibError::NoRecordsFound`] if Forest has no [`Storage`].
+    fn get_storages(&mut self) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, CatlibError> {
+        self.sync()?;
+        Ok(self.storages.clone())
+    }
 
-        Ok(storage)
+    /// Returns a string representation of the Container object.
+    ///
+    fn stringify(&self) -> String {
+        format!("{self:?}")
     }
 
     fn set_name(&mut self, new_name: String) -> CatlibResult<()> {
-        self.data.name = new_name;
+        self.sync()?;
+        self.container_data.name = new_name;
         self.save()
     }
 
     /// Get the container's name
-    fn name(&mut self) -> CatlibResult<String> {
+    fn name(&mut self) -> Result<String, CatlibError> {
         self.sync()?;
-        Ok(self.data.name.clone())
+        Ok(self.container_data.name.clone())
     }
 
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn delete(&mut self) -> CatlibResult<bool> {
+    fn remove(&mut self) -> Result<(), CatlibError> {
         Model::delete(self)?;
-        Ok(true)
+        Ok(())
     }
 
     // Retrieve Container's uuid
     fn uuid(&self) -> Uuid {
-        self.data.uuid
+        self.container_data.uuid
     }
 
-    fn paths(&self) -> HashSet<ContainerPath> {
-        self.data.paths.clone()
+    fn get_paths(&mut self) -> Result<Vec<ContainerPath>, CatlibError> {
+        self.sync()?;
+        Ok(self.container_data.paths.iter().cloned().collect())
     }
 }
 
@@ -207,28 +292,35 @@ impl Model for Container {
     fn save(&self) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
-            format!("container-{}", self.data.uuid),
-            ron::to_string(&self.data).unwrap(),
+            format!("container-{}", self.container_data.uuid),
+            ron::to_string(&self.container_data).unwrap(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("container-{}", self.data.uuid))
+        delete_model(
+            self.db.clone(),
+            format!("container-{}", self.container_data.uuid),
+        )
     }
 
     fn sync(&mut self) -> CatlibResult<()> {
-        let data = fetch_container_data_by_uuid(self.db.clone(), &self.data.uuid)?;
-        self.data = data;
+        self.container_data =
+            fetch_container_data_by_uuid(self.db.clone(), &self.container_data.uuid)?;
+        self.storages =
+            fetch_storages_by_container_uuid(self.db.clone(), &self.container_data.uuid)?;
         Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
+    use std::sync::{Arc, Mutex};
 
     use rstest::*;
-    use wildland_corex::catlib_service::entities::ContainerManifest;
+    use wildland_corex::entities::ContainerManifest;
+    use wildland_corex::StorageTemplate;
 
     use super::db::test::catlib;
     use crate::*;
@@ -247,52 +339,127 @@ mod tests {
         catlib
     }
 
-    fn make_container(catlib: &CatLib) -> Box<dyn ContainerManifest> {
+    fn make_container(catlib: &CatLib) -> Arc<Mutex<dyn ContainerManifest>> {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
-
-        forest.create_container("name".to_owned()).unwrap()
+        let storage_template = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        let locked_forest = forest.lock().unwrap();
+        let path = "/some/path".to_owned();
+        locked_forest
+            .create_container("name".to_owned(), &storage_template, path)
+            .unwrap()
     }
 
     #[rstest(catlib_with_forest as catlib)]
     fn fetch_created_container(catlib: CatLib) {
         let container = make_container(&catlib);
-        let container = catlib.get_container(&container.uuid()).unwrap();
+        let container = catlib
+            .get_container(&container.lock().unwrap().uuid())
+            .unwrap();
 
-        assert_eq!((*container.forest().unwrap()).owner(), Identity([1; 32]));
+        assert_eq!(
+            container
+                .lock()
+                .unwrap()
+                .forest()
+                .unwrap()
+                .lock()
+                .unwrap()
+                .owner(),
+            Identity([1; 32])
+        );
     }
 
     #[rstest(catlib_with_forest as catlib)]
     fn fetch_created_container_from_forest_obj(catlib: CatLib) {
         let container = make_container(&catlib);
-        let container = catlib.get_container(&container.uuid()).unwrap();
+        let container = catlib
+            .get_container(&container.lock().unwrap().uuid())
+            .unwrap();
 
-        assert_eq!((*container.forest().unwrap()).owner(), Identity([1; 32]));
+        assert_eq!(
+            container
+                .lock()
+                .unwrap()
+                .forest()
+                .unwrap()
+                .lock()
+                .unwrap()
+                .owner(),
+            Identity([1; 32])
+        );
     }
 
     #[rstest(catlib_with_forest as catlib)]
     fn container_with_paths(catlib: CatLib) {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
-        let mut container = make_container(&catlib);
-        container.add_path("/foo/bar".to_string()).unwrap();
-        container.add_path("/bar/baz".to_string()).unwrap();
+        let container = make_container(&catlib);
+        container
+            .lock()
+            .unwrap()
+            .add_path("/foo/bar".to_string())
+            .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .add_path("/bar/baz".to_string())
+            .unwrap();
 
-        assert!(container.paths().contains(&"/foo/bar".to_string()));
-        assert!(container.paths().contains(&"/bar/baz".to_string()));
+        assert!(container
+            .lock()
+            .unwrap()
+            .get_paths()
+            .unwrap()
+            .contains(&"/foo/bar".to_string()));
+        assert!(container
+            .lock()
+            .unwrap()
+            .get_paths()
+            .unwrap()
+            .contains(&"/bar/baz".to_string()));
 
         // Try to find that container in the database
         let containers = forest
+            .lock()
+            .unwrap()
             .find_containers(vec!["/foo/bar".to_string()], false)
             .unwrap();
         assert_eq!(containers.len(), 1);
 
         // Ensure again that it still has the paths
-        assert!(container.paths().contains(&"/foo/bar".to_string()));
-        assert!(container.paths().contains(&"/bar/baz".to_string()));
+        assert!(container
+            .lock()
+            .unwrap()
+            .get_paths()
+            .unwrap()
+            .contains(&"/foo/bar".to_string()));
+        assert!(container
+            .lock()
+            .unwrap()
+            .get_paths()
+            .unwrap()
+            .contains(&"/bar/baz".to_string()));
 
         // Try to fetch the same (one) container, using two different paths. The result
         // should be only one (not two) containers.
         let containers = forest
+            .lock()
+            .unwrap()
             .find_containers(vec!["/foo/bar".to_string(), "/bar/baz".to_string()], false)
             .unwrap();
         assert_eq!(containers.len(), 1);
@@ -302,32 +469,55 @@ mod tests {
     fn multiple_containers_with_paths(catlib: CatLib) {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
-        let mut container = make_container(&catlib);
-        container.add_path("/foo/bar".to_string()).unwrap();
-        container.add_path("/bar/baz".to_string()).unwrap();
+        let container = make_container(&catlib);
+        container
+            .lock()
+            .unwrap()
+            .add_path("/foo/bar".to_string())
+            .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .add_path("/bar/baz".to_string())
+            .unwrap();
 
         // Create another container, that shares a path with the former
-        let mut container = make_container(&catlib);
-        container.add_path("/bar/baz".to_string()).unwrap();
+        let container = make_container(&catlib);
+        container
+            .lock()
+            .unwrap()
+            .add_path("/bar/baz".to_string())
+            .unwrap();
 
         // And yet another container that doesn't
-        let mut container = make_container(&catlib);
-        container.add_path("/what/ever".to_string()).unwrap();
+        let container = make_container(&catlib);
+        container
+            .lock()
+            .unwrap()
+            .add_path("/what/ever".to_string())
+            .unwrap();
 
         // try to find the first container
         let containers = forest
+            .lock()
+            .unwrap()
             .find_containers(vec!["/foo/bar".to_string()], false)
             .unwrap();
         assert_eq!(containers.len(), 1);
 
         // try to find the first and the second containers, using shared path
         let containers = forest
+            .lock()
+            .unwrap()
             .find_containers(vec!["/bar/baz".to_string()], false)
             .unwrap();
         assert_eq!(containers.len(), 2);
 
         // Make sure that they are in fact two different containers
-        assert_ne!(containers[0].uuid(), containers[1].uuid());
+        assert_ne!(
+            containers[0].lock().unwrap().uuid(),
+            containers[1].lock().unwrap().uuid()
+        );
     }
 
     #[rstest(catlib_with_forest as catlib)]
@@ -335,65 +525,155 @@ mod tests {
         let alpha = make_container(&catlib);
         let beta = make_container(&catlib);
 
+        let storage_template1 = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        let storage_template2 = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+
         alpha
-            .create_storage(Some(Uuid::from_u128(1)), vec![])
+            .lock()
+            .unwrap()
+            .add_storage(&storage_template1)
             .unwrap();
         alpha
-            .create_storage(Some(Uuid::from_u128(2)), vec![])
+            .lock()
+            .unwrap()
+            .add_storage(&storage_template2)
             .unwrap();
 
-        beta.create_storage(Some(Uuid::from_u128(1)), vec![])
+        beta.lock()
+            .unwrap()
+            .add_storage(&storage_template1)
             .unwrap();
 
         let containers = catlib
-            .find_containers_with_template(&Uuid::from_u128(2))
+            .find_containers_with_template(&storage_template2.uuid())
             .unwrap();
 
         assert_eq!(containers.len(), 1);
-        assert_eq!(containers[0].uuid(), alpha.uuid());
+        assert_eq!(
+            containers[0].lock().unwrap().uuid(),
+            alpha.lock().unwrap().uuid()
+        );
 
         let containers = catlib
-            .find_containers_with_template(&Uuid::from_u128(1))
+            .find_containers_with_template(&storage_template1.uuid())
             .unwrap();
 
         assert_eq!(containers.len(), 2);
-        assert_ne!(containers[0].uuid(), containers[1].uuid());
+        assert_ne!(
+            containers[0].lock().unwrap().uuid(),
+            containers[1].lock().unwrap().uuid()
+        );
     }
 
     #[rstest(catlib_with_forest as catlib)]
     fn multiple_containers_with_subpaths(catlib: CatLib) {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
-        let mut container = make_container(&catlib);
-        container.add_path("/foo/bar1".to_string()).unwrap();
+        let container = make_container(&catlib);
+        container
+            .lock()
+            .unwrap()
+            .add_path("/foo/bar1".to_string())
+            .unwrap();
 
-        let mut container = make_container(&catlib);
-        container.add_path("/foo/bar2".to_string()).unwrap();
-        container.add_path("/bar/baz1".to_string()).unwrap();
+        let container = make_container(&catlib);
+        container
+            .lock()
+            .unwrap()
+            .add_path("/foo/bar2".to_string())
+            .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .add_path("/bar/baz1".to_string())
+            .unwrap();
 
-        let mut container = make_container(&catlib);
-        container.add_path("/bar/baz2".to_string()).unwrap();
-        container.add_path("/baz/qux1".to_string()).unwrap();
-        container.add_path("/baz/qux2".to_string()).unwrap();
+        let container = make_container(&catlib);
+        container
+            .lock()
+            .unwrap()
+            .add_path("/bar/baz2".to_string())
+            .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .add_path("/baz/qux1".to_string())
+            .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .add_path("/baz/qux2".to_string())
+            .unwrap();
 
-        let containers = forest.find_containers(vec!["/foo".into()], false);
+        let containers = forest
+            .lock()
+            .unwrap()
+            .find_containers(vec!["/foo".into()], false);
         assert_eq!(containers.err(), Some(CatlibError::NoRecordsFound));
 
         let containers = forest
+            .lock()
+            .unwrap()
             .find_containers(vec!["/foo/bar1".into()], true)
             .unwrap();
         assert_eq!(containers.len(), 1);
 
-        let containers = forest.find_containers(vec!["/foo".into()], true).unwrap();
+        let containers = forest
+            .lock()
+            .unwrap()
+            .find_containers(vec!["/foo".into()], true)
+            .unwrap();
         assert_eq!(containers.len(), 2);
 
-        let containers = forest.find_containers(vec!["/bar".into()], true).unwrap();
+        let containers = forest
+            .lock()
+            .unwrap()
+            .find_containers(vec!["/bar".into()], true)
+            .unwrap();
         assert_eq!(containers.len(), 2);
 
-        let containers = forest.find_containers(vec!["/baz".into()], true).unwrap();
+        let containers = forest
+            .lock()
+            .unwrap()
+            .find_containers(vec!["/baz".into()], true)
+            .unwrap();
         assert_eq!(containers.len(), 1);
 
-        let containers = forest.find_containers(vec!["/".into()], true).unwrap();
+        let containers = forest
+            .lock()
+            .unwrap()
+            .find_containers(vec!["/".into()], true)
+            .unwrap();
         assert_eq!(containers.len(), 3);
     }
 }
