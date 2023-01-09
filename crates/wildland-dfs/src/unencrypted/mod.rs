@@ -27,7 +27,7 @@ use std::str::FromStr;
 use itertools::Either;
 use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, NodeDescriptor, NodeStorage};
-use wildland_corex::{PathResolver, PathWithStorages, Storage};
+use wildland_corex::{PathResolver, ResolvedPath, Storage};
 
 use crate::storage_backend::StorageBackend;
 
@@ -133,60 +133,59 @@ impl DfsFrontend for UnencryptedDfs {
         let resolved_paths = self.path_resolver.resolve(path.as_ref());
         let nodes = resolved_paths
             .into_iter()
-            .filter_map(
-                |PathWithStorages {
-                     path_within_storage,
-                     storages,
-                 }| {
-                    match storages {
-                        // None means virtual node, for example node /a/ when some container claims a path like /a/b/
-                        None => Some(Either::Left(std::iter::once(NodeDescriptor {
+            .filter_map(|resolved_path| {
+                match resolved_path {
+                    // None means virtual node, for example node /a/ when some container claims a path like /a/b/
+                    ResolvedPath::VirtualPath(virtual_path) => {
+                        Some(Either::Left(std::iter::once(NodeDescriptor {
                             storage: None,
-                            absolute_path: path.join(path_within_storage.file_name().unwrap()),
-                        }))),
-                        Some(storages) => {
-                            let backends_with_storages =
-                                self.assign_backends_to_storages(&storages);
-
-                            let operations_on_backends =
-                                backends_with_storages.map(|(backend, storage)| {
-                                    backend
-                                        .readdir(&path_within_storage)
-                                        .map(|resulting_paths| {
-                                            resulting_paths.into_iter().map({
-                                                let storage = storage.clone();
-                                                let path = path.clone();
-                                                move |entry_path| NodeDescriptor {
-                                                    storage: Some(NodeStorage::new(
-                                                        storage.clone(),
-                                                        entry_path.clone(),
-                                                    )),
-                                                    absolute_path: path
-                                                        .join(entry_path.file_name().unwrap()),
-                                                }
-                                            })
-                                        })
-                                });
-
-                            let node_descriptors = execute_backend_op_with_policy(
-                                operations_on_backends,
-                                // TODO WILX-362 getting first should be a temporary policy, maybe we should ping backends to check if any of them
-                                // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
-                                ExecutionPolicy::SequentiallyToFirstSuccess,
-                            );
-
-                            if node_descriptors.is_none() {
-                                // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                                tracing::error!(
-                                    "None of the backends for storages {:?} works",
-                                    storages.iter().map(|s| s.backend_type())
-                                );
-                            }
-                            node_descriptors.map(Either::Right)
-                        }
+                            absolute_path: path.join(virtual_path.file_name().unwrap()),
+                        })))
                     }
-                },
-            )
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage,
+                        storages,
+                    } => {
+                        let backends_with_storages = self.assign_backends_to_storages(&storages);
+
+                        let operations_on_backends =
+                            backends_with_storages.map(|(backend, storage)| {
+                                backend
+                                    .readdir(&path_within_storage)
+                                    .map(|resulting_paths| {
+                                        resulting_paths.into_iter().map({
+                                            let storage = storage.clone();
+                                            let path = path.clone();
+                                            move |entry_path| NodeDescriptor {
+                                                storage: Some(NodeStorage::new(
+                                                    storage.clone(),
+                                                    entry_path.clone(),
+                                                )),
+                                                absolute_path: path
+                                                    .join(entry_path.file_name().unwrap()),
+                                            }
+                                        })
+                                    })
+                            });
+
+                        let node_descriptors = execute_backend_op_with_policy(
+                            operations_on_backends,
+                            // TODO WILX-362 getting first should be a temporary policy, maybe we should ping backends to check if any of them
+                            // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
+                            ExecutionPolicy::SequentiallyToFirstSuccess,
+                        );
+
+                        if node_descriptors.is_none() {
+                            // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
+                            tracing::error!(
+                                "None of the backends for storages {:?} works",
+                                storages.iter().map(|s| s.backend_type())
+                            );
+                        }
+                        node_descriptors.map(Either::Right)
+                    }
+                }
+            })
             .flatten();
 
         nodes.collect()

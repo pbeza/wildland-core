@@ -9,7 +9,7 @@ use rsfs::mem::FS;
 use rsfs::{DirEntry, GenFS};
 use rstest::rstest;
 use wildland_corex::dfs::interface::{DfsFrontend, NodeDescriptor, NodeStorage};
-use wildland_corex::{MockPathResolver, PathWithStorages, Storage};
+use wildland_corex::{MockPathResolver, ResolvedPath, Storage};
 
 use crate::storage_backend::StorageBackend;
 use crate::unencrypted::{StorageBackendFactory, UnencryptedDfs};
@@ -98,9 +98,9 @@ fn test_listing_files_from_root_of_one_container() {
         .returning({
             let storage = mufs_storage.clone();
             move |_path| {
-                vec![PathWithStorages {
+                vec![ResolvedPath::PathWithStorages {
                     path_within_storage: "/".into(),
-                    storages: Some(vec![storage.clone()]),
+                    storages: vec![storage.clone()],
                 }]
             }
         });
@@ -138,9 +138,9 @@ fn test_listing_files_from_nested_dir_of_one_container() {
         .returning({
             let storage = mufs_storage.clone();
             move |_path| {
-                vec![PathWithStorages {
+                vec![ResolvedPath::PathWithStorages {
                     path_within_storage: "/dir".into(),
-                    storages: Some(vec![storage.clone()]),
+                    storages: vec![storage.clone()],
                 }]
             }
         });
@@ -190,9 +190,9 @@ fn test_listing_dirs_from_one_container() {
         .returning({
             let storage = mufs_storage.clone();
             move |_path| {
-                vec![PathWithStorages {
+                vec![ResolvedPath::PathWithStorages {
                     path_within_storage: "/".into(),
-                    storages: Some(vec![storage.clone()]),
+                    storages: vec![storage.clone()],
                 }]
             }
         });
@@ -245,13 +245,13 @@ fn test_listing_files_and_dirs_from_two_containers() {
             let storage2 = storage2.clone();
             move |_path| {
                 vec![
-                    PathWithStorages {
+                    ResolvedPath::PathWithStorages {
                         path_within_storage: "/dir".into(), // returned by a container claiming path `/a/b/c/`
-                        storages: Some(vec![storage1.clone()]),
+                        storages: vec![storage1.clone()],
                     },
-                    PathWithStorages {
+                    ResolvedPath::PathWithStorages {
                         path_within_storage: "/c/dir".into(), // returned by a container claiming path `/a/b/`
-                        storages: Some(vec![storage2.clone()]),
+                        storages: vec![storage2.clone()],
                     },
                 ]
             }
@@ -320,9 +320,9 @@ fn test_getting_one_file_descriptor_from_container_with_multiple_storages() {
             let storage1 = storage1.clone();
             let storage2 = storage2;
             move |_path| {
-                vec![PathWithStorages {
+                vec![ResolvedPath::PathWithStorages {
                     path_within_storage: "/a".into(), // returned by a container claiming path `/a/`
-                    storages: Some(vec![storage1.clone(), storage2.clone()]),
+                    storages: vec![storage1.clone(), storage2.clone()],
                 }]
             }
         });
@@ -372,13 +372,13 @@ fn test_more_than_one_file_descriptor_claim_the_same_full_path() {
             let storage2 = storage2.clone();
             move |_path| {
                 vec![
-                    PathWithStorages {
+                    ResolvedPath::PathWithStorages {
                         path_within_storage: "/b/".into(), // returned by the container claiming path `/a/`
-                        storages: Some(vec![storage1.clone()]),
+                        storages: vec![storage1.clone()],
                     },
-                    PathWithStorages {
+                    ResolvedPath::PathWithStorages {
                         path_within_storage: "/".into(), // returned by the container claiming path `/a/b/`
-                        storages: Some(vec![storage2.clone()]),
+                        storages: vec![storage2.clone()],
                     },
                 ]
             }
@@ -434,9 +434,9 @@ fn test_first_storage_unavailable() {
             let storage1 = storage1;
             let storage2 = storage2.clone();
             move |_path| {
-                vec![PathWithStorages {
+                vec![ResolvedPath::PathWithStorages {
                     path_within_storage: "/".into(),
-                    storages: Some(vec![storage1.clone(), storage2.clone()]),
+                    storages: vec![storage1.clone(), storage2.clone()],
                 }]
             }
         });
@@ -474,17 +474,14 @@ fn test_listing_virtual_node() {
             let storage1 = storage1.clone();
             move |_path| {
                 vec![
-                    PathWithStorages {
+                    ResolvedPath::PathWithStorages {
                         path_within_storage: "/".into(),
-                        storages: Some(vec![storage1.clone()]),
+                        storages: vec![storage1.clone()],
                     },
                     // virtual storage (represented by a None value) represents containers
                     // that claim path containing the value of path_within_storage
                     // in this case container would claim path starting with /a/b/...
-                    PathWithStorages {
-                        path_within_storage: "/b".into(),
-                        storages: None,
-                    },
+                    ResolvedPath::VirtualPath("/b".into()),
                 ]
             }
         });
