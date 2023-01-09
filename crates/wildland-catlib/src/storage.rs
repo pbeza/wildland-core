@@ -19,7 +19,7 @@ use std::rc::Rc;
 
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
-use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest as IStorage};
+use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest};
 
 use super::*;
 
@@ -39,14 +39,14 @@ impl From<&str> for StorageData {
 
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
-pub(crate) struct Storage {
+pub(crate) struct StorageEntity {
     pub(crate) data: StorageData,
 
     #[derivative(Debug = "ignore")]
     pub(crate) db: Rc<StoreDb>,
 }
 
-impl Storage {
+impl StorageEntity {
     pub fn new(
         container_uuid: Uuid,
         template_uuid: Option<Uuid>,
@@ -65,19 +65,19 @@ impl Storage {
     }
 }
 
-impl AsRef<StorageData> for Storage {
+impl AsRef<StorageData> for StorageEntity {
     fn as_ref(&self) -> &StorageData {
         &self.data
     }
 }
 
-impl IStorage for Storage {
+impl StorageManifest for StorageEntity {
     /// ## Errors
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Container`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn container(&self) -> CatlibResult<Box<dyn ContainerManifest>> {
+    fn container(&self) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
         fetch_container_by_uuid(self.db.clone(), &self.data.container_uuid)
     }
 
@@ -101,13 +101,17 @@ impl IStorage for Storage {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn delete(&mut self) -> CatlibResult<bool> {
+    fn remove(&mut self) -> CatlibResult<bool> {
         Model::delete(self)?;
         Ok(true)
     }
+
+    fn uuid(&self) -> Uuid {
+        self.data.uuid
+    }
 }
 
-impl Model for Storage {
+impl Model for StorageEntity {
     fn save(&self) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
@@ -129,10 +133,12 @@ impl Model for Storage {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
+    use std::sync::{Arc, Mutex};
 
     use rstest::*;
     use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest};
+    use wildland_corex::StorageTemplate;
 
     use super::db::test::catlib;
     use crate::*;
@@ -151,76 +157,158 @@ mod tests {
         catlib
     }
 
-    fn _container(catlib: &CatLib) -> Box<dyn ContainerManifest> {
+    fn _container(catlib: &CatLib) -> Arc<Mutex<dyn ContainerManifest>> {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
-        forest.create_container("name".to_owned()).unwrap()
+        let storage_template = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        let locked_forest = forest.lock().unwrap();
+        let path = "/some/path".to_owned();
+        locked_forest
+            .create_container("name".to_owned(), &storage_template, path)
+            .unwrap()
     }
 
     #[fixture]
-    fn container(catlib_with_forest: CatLib) -> Box<dyn ContainerManifest> {
+    fn container(catlib_with_forest: CatLib) -> Arc<Mutex<dyn ContainerManifest>> {
         _container(&catlib_with_forest)
     }
 
-    fn make_storage(container: &dyn ContainerManifest) -> Box<dyn StorageManifest> {
-        container.create_storage(None, vec![]).unwrap()
+    fn make_storage(
+        container: &Arc<Mutex<dyn ContainerManifest>>,
+    ) -> Arc<Mutex<dyn StorageManifest>> {
+        let storage_template = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .add_storage(&storage_template)
+            .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .get_storages()
+            .unwrap()
+            .last()
+            .unwrap()
+            .clone()
     }
 
     fn make_storage_with_template(
-        container: &dyn ContainerManifest,
-        template_id: Uuid,
-    ) -> Box<dyn StorageManifest> {
-        container.create_storage(Some(template_id), vec![]).unwrap()
+        container: &Arc<Mutex<dyn ContainerManifest>>,
+        storage_template: &StorageTemplate,
+    ) -> Arc<Mutex<dyn StorageManifest>> {
+        container
+            .lock()
+            .unwrap()
+            .add_storage(storage_template)
+            .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .get_storages()
+            .unwrap()
+            .last()
+            .unwrap()
+            .clone()
     }
 
     #[rstest]
-    fn create_empty_storage(container: Box<dyn ContainerManifest>) {
-        make_storage(container.as_ref());
+    fn create_empty_storage(container: Arc<Mutex<dyn ContainerManifest>>) {
+        make_storage(&container);
 
-        assert_eq!(container.storages().unwrap().len(), 1);
+        assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 2);
 
-        make_storage(container.as_ref());
+        make_storage(&container);
 
-        assert_eq!(container.storages().unwrap().len(), 2);
+        assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 3);
     }
 
     #[rstest]
-    fn delete_a_storage(container: Box<dyn ContainerManifest>) {
-        make_storage(container.as_ref());
-        let mut storage = make_storage(container.as_ref());
+    fn delete_a_storage(container: Arc<Mutex<dyn ContainerManifest>>) {
+        make_storage(&container);
+        let storage = make_storage(&container);
 
-        storage.delete().unwrap();
+        storage.lock().unwrap().remove().unwrap();
 
-        assert_eq!(container.storages().unwrap().len(), 1);
+        assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 2);
     }
 
     #[rstest(catlib_with_forest as catlib)]
     fn create_storage_with_template_id(catlib: CatLib) {
         let container = _container(&catlib);
-        make_storage(container.as_ref()); // Create storage w/o template id on purpose
-        make_storage_with_template(container.as_ref(), Uuid::from_u128(1));
-        make_storage_with_template(container.as_ref(), Uuid::from_u128(1));
-        make_storage_with_template(container.as_ref(), Uuid::from_u128(2));
+        make_storage(&container); // Create storage w/o template id on purpose
+        let storage_template1 = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        let storage_template2 = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        make_storage_with_template(&container, &storage_template1);
+        make_storage_with_template(&container, &storage_template1);
+        make_storage_with_template(&container, &storage_template2);
 
         let storages = catlib
-            .find_storages_with_template(&Uuid::from_u128(1))
+            .find_storages_with_template(&storage_template1.uuid())
             .unwrap();
         assert_eq!(storages.len(), 2);
 
         let storages = catlib
-            .find_storages_with_template(&Uuid::from_u128(2))
+            .find_storages_with_template(&storage_template2.uuid())
             .unwrap();
         assert_eq!(storages.len(), 1);
-    }
-
-    #[rstest]
-    fn create_storage_with_data(container: Box<dyn ContainerManifest>) {
-        container
-            .create_storage(None, b"storage data".to_vec())
-            .unwrap();
-
-        assert_eq!(
-            container.storages().unwrap()[0].data().unwrap(),
-            b"storage data"
-        )
     }
 }

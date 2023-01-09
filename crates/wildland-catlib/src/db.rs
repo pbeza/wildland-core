@@ -16,9 +16,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use wildland_corex::catlib_service::entities::{
-    ContainerManifest as IContainer,
-    ForestManifest as IForest,
-    StorageManifest as IStorage,
+    ContainerManifest,
+    ForestManifest,
+    StorageManifest,
 };
 
 use super::*;
@@ -29,10 +29,13 @@ use crate::forest::ForestData;
 use crate::storage::StorageData;
 
 #[tracing::instrument(level = "debug", skip_all)]
-pub(crate) fn fetch_forest_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibResult<Box<dyn IForest>> {
+pub(crate) fn fetch_forest_by_uuid(
+    db: Rc<StoreDb>,
+    uuid: &Uuid,
+) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
     let data = fetch_forest_data_by_uuid(db.clone(), uuid)?;
     let forest = Forest { data, db };
-    Ok(Box::new(forest))
+    Ok(Arc::new(Mutex::new(forest)))
 }
 
 pub(crate) fn fetch_forest_data_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibResult<ForestData> {
@@ -56,10 +59,10 @@ pub(crate) fn fetch_forest_data_by_uuid(db: Rc<StoreDb>, uuid: &Uuid) -> CatlibR
 pub(crate) fn fetch_container_by_uuid(
     db: Rc<StoreDb>,
     uuid: &Uuid,
-) -> CatlibResult<Box<dyn IContainer>> {
-    let data = fetch_container_data_by_uuid(db.clone(), uuid)?;
-    let container = Container { data, db };
-    Ok(Box::new(container))
+) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
+    let container_data = fetch_container_data_by_uuid(db.clone(), uuid)?;
+    Container::from_container_data(container_data, db)
+        .map(|c| Arc::new(Mutex::new(c)) as Arc<Mutex<dyn ContainerManifest>>)
 }
 
 pub(crate) fn fetch_container_data_by_uuid(
@@ -106,19 +109,21 @@ pub(crate) fn fetch_storage_data_by_uuid(
 pub(crate) fn fetch_storages_by_container_uuid(
     db: Rc<StoreDb>,
     uuid: &Uuid,
-) -> CatlibResult<Vec<Box<dyn IStorage>>> {
+) -> CatlibResult<Vec<Arc<Mutex<dyn StorageManifest>>>> {
     db.load().map_err(to_catlib_error)?;
     let data = db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
     let storages: Vec<_> = data
         .iter()
         .filter(|(id, _)| id.starts_with("storage-"))
-        .map(|(_, storage_str)| Storage {
-            data: StorageData::from(storage_str.as_str()),
-            db: db.clone(),
+        .map(|(_, storage_str)| StorageData::from(storage_str.as_str()))
+        .filter(|storage_data| storage_data.container_uuid == *uuid)
+        .map(|storage_data| {
+            Arc::new(Mutex::new(StorageEntity {
+                data: storage_data,
+                db: db.clone(),
+            })) as Arc<Mutex<dyn StorageManifest>>
         })
-        .filter(|storage| storage.container().unwrap().uuid() == *uuid)
-        .map(|storage| Box::new(storage) as Box<dyn IStorage>)
         .collect();
 
     match storages.len() {

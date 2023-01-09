@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use uuid::Uuid;
 
 use super::entities::{ContainerManifest, ForestManifest, Identity, Signers, StorageManifest};
@@ -17,28 +19,28 @@ pub trait CatLib {
         owner: Identity,
         signers: Signers,
         data: Vec<u8>,
-    ) -> CatlibResult<Box<dyn ForestManifest>>;
+    ) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>>;
 
     /// Return [`Forest`] object by Forest UUID.
-    fn get_forest(&self, uuid: &Uuid) -> CatlibResult<Box<dyn ForestManifest>>;
+    fn get_forest(&self, uuid: &Uuid) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>>;
 
     /// Return [`Forest`] owned by specified `owner`.
-    fn find_forest(&self, owner: &Identity) -> CatlibResult<Box<dyn ForestManifest>>;
+    fn find_forest(&self, owner: &Identity) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>>;
 
     /// Return [`Container`] object by Container UUID.
-    fn get_container(&self, uuid: &Uuid) -> CatlibResult<Box<dyn ContainerManifest>>;
+    fn get_container(&self, uuid: &Uuid) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>>;
 
     /// Return [`Storage`]s that were created using given `template_id` UUID.
     fn find_storages_with_template(
         &self,
         template_id: &Uuid,
-    ) -> CatlibResult<Vec<Box<dyn StorageManifest>>>;
+    ) -> CatlibResult<Vec<Arc<Mutex<dyn StorageManifest>>>>;
 
     /// Return [`Container`]s that were created using given `template_id` UUID.
     fn find_containers_with_template(
         &self,
         template_id: &Uuid,
-    ) -> CatlibResult<Vec<Box<dyn ContainerManifest>>>;
+    ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>>;
 
     /// Save StorageTemplate data in CatLib.
     fn save_storage_template(&self, template_id: &Uuid, value: String) -> CatlibResult<()>;

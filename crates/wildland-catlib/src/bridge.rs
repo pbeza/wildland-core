@@ -19,7 +19,8 @@ use std::rc::Rc;
 
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
-use wildland_corex::catlib_service::entities::{Bridge as IBridge, ContainerPath, ForestManifest};
+use wildland_corex::catlib_service::entities::{ContainerPath, ForestManifest};
+use wildland_corex::BridgeManifest;
 
 use super::*;
 
@@ -60,12 +61,12 @@ impl Bridge {
     }
 }
 
-impl IBridge for Bridge {
+impl BridgeManifest for Bridge {
     /// ## Errors
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
-    fn forest(&self) -> CatlibResult<Box<dyn ForestManifest>> {
+    fn forest(&self) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
         fetch_forest_by_uuid(self.db.clone(), &self.data.forest_uuid)
     }
 
@@ -81,7 +82,7 @@ impl IBridge for Bridge {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
-    fn delete(&mut self) -> CatlibResult<bool> {
+    fn remove(&mut self) -> CatlibResult<bool> {
         Model::delete(self)?;
         Ok(true)
     }
@@ -126,15 +127,24 @@ mod tests {
             .create_forest(Identity([1; 32]), Signers::new(), vec![])
             .unwrap();
 
-        let mut bridge = forest
+        let bridge = forest
+            .lock()
+            .unwrap()
             .create_bridge("/other/forest".to_string(), vec![])
             .unwrap();
 
-        forest.find_bridge("/other/forest".to_string()).unwrap();
+        forest
+            .lock()
+            .unwrap()
+            .find_bridge("/other/forest".to_string())
+            .unwrap();
 
-        bridge.delete().unwrap();
+        bridge.lock().unwrap().remove().unwrap();
 
-        let bridge = forest.find_bridge("/other/forest".to_string());
+        let bridge = forest
+            .lock()
+            .unwrap()
+            .find_bridge("/other/forest".to_string());
 
         assert_eq!(bridge.err(), Some(CatlibError::NoRecordsFound));
     }
