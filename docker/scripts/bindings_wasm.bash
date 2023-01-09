@@ -24,7 +24,7 @@ em++ ./main.cpp \
         -sMODULARIZE -sEXPORTED_RUNTIME_METHODS=ccall \
         -o wildland.js \
         --debug
-# node wasm_test.js
+./run_tests.sh
 mkdir -p /out
 mv wildland.js /out/
 mv wildland.wasm /out/
