@@ -135,7 +135,6 @@ impl DfsFrontend for UnencryptedDfs {
             .into_iter()
             .filter_map(|resolved_path| {
                 match resolved_path {
-                    // None means virtual node, for example node /a/ when some container claims a path like /a/b/
                     ResolvedPath::VirtualPath(virtual_path) => {
                         Some(Either::Left(std::iter::once(NodeDescriptor {
                             storage: None,

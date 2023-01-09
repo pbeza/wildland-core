@@ -478,9 +478,6 @@ fn test_listing_virtual_node() {
                         path_within_storage: "/".into(),
                         storages: vec![storage1.clone()],
                     },
-                    // virtual storage (represented by a None value) represents containers
-                    // that claim path containing the value of path_within_storage
-                    // in this case container would claim path starting with /a/b/...
                     ResolvedPath::VirtualPath("/b".into()),
                 ]
             }

@@ -21,8 +21,7 @@ use crate::Storage;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct NodeDescriptor {
-    // None value represents virtual nodes - parts of containers claimed paths
-    pub storage: Option<NodeStorage>,
+    pub storage: Option<NodeStorage>, // nodes may not have storage - so called virtual nodes
     pub absolute_path: PathBuf,
 }
 
