@@ -21,6 +21,7 @@ use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use anyhow::anyhow;
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::storage_backend::StorageBackend;
 use wildland_dfs::unencrypted::StorageBackendFactory;
@@ -32,37 +33,28 @@ pub struct LocalFilesystemStorage {
 }
 
 impl StorageBackend for LocalFilesystemStorage {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
+    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, anyhow::Error> {
         let relative_path = if path.is_absolute() {
             path.strip_prefix("/").unwrap()
         } else {
             path
         };
         read_dir(self.base_dir.join(relative_path))
-            .map_err(Box::from)
+            .map_err(|e| anyhow!(e))
             .and_then(|readdir| {
                 readdir
                     .into_iter()
                     .map(|entry_result| {
-                        Ok(Path::new("/").join(
-                            entry_result
-                                .map_err(Box::<dyn std::error::Error>::from)?
-                                .path()
-                                .strip_prefix(&self.base_dir)
-                                .map_err(Box::<dyn std::error::Error>::from)?,
-                        ))
+                        Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
                     })
-                    .collect::<Result<Vec<_>, Box<dyn std::error::Error>>>()
+                    .collect::<Result<Vec<_>, anyhow::Error>>()
             })
     }
 }
 
 pub struct LfsBackendFactory {}
 impl StorageBackendFactory for LfsBackendFactory {
-    fn init_backend(
-        &self,
-        storage: Storage,
-    ) -> Result<Rc<dyn StorageBackend>, Box<dyn std::error::Error>> {
+    fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error> {
         let template: LocalFilesystemStorageTemplate =
             serde_json::from_value(storage.data().clone())?;
         Ok(Rc::new(LocalFilesystemStorage {

@@ -28,7 +28,7 @@ impl Mufs {
     }
 }
 impl StorageBackend for Mufs {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
+    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, anyhow::Error> {
         let relative_path = if path.is_absolute() {
             path.strip_prefix("/").unwrap()
         } else {
@@ -58,10 +58,7 @@ impl MufsFactory {
     }
 }
 impl StorageBackendFactory for MufsFactory {
-    fn init_backend(
-        &self,
-        storage: Storage,
-    ) -> Result<Rc<dyn StorageBackend>, Box<dyn std::error::Error>> {
+    fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error> {
         Ok(Rc::new(Mufs::new(
             self.fs.clone(),
             serde_json::from_value::<String>(storage.data().clone())?,

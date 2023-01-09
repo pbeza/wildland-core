@@ -32,10 +32,7 @@ use wildland_corex::{PathResolver, PathWithStorages, Storage};
 use crate::storage_backend::StorageBackend;
 
 pub trait StorageBackendFactory {
-    fn init_backend(
-        &self,
-        storage: Storage,
-    ) -> Result<Rc<dyn StorageBackend>, Box<dyn std::error::Error>>;
+    fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error>;
 }
 
 pub struct UnencryptedDfs {
@@ -200,7 +197,7 @@ enum ExecutionPolicy {
     SequentiallyToFirstSuccess,
 }
 fn execute_backend_op_with_policy<T: std::fmt::Debug>(
-    ops: impl Iterator<Item = Result<T, Box<dyn std::error::Error>>>,
+    ops: impl Iterator<Item = Result<T, anyhow::Error>>,
     policy: ExecutionPolicy,
 ) -> Option<T> {
     match policy {
