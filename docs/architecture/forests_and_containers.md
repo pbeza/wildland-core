@@ -128,148 +128,12 @@ CatLib : Data model.
 ## CoreX Forest API.
 It is recommended that `ForestManifest` trait implementation should synchronize with the database on every method call in order to keep the state up-to-date.
 
-```rust
-/// `ForestManifest` trait is an API providing methods needed to operate on the forest's
-/// state. It should be implemented by Cat-Lib instance and should be
-/// treated as a kind of a proxy layer between Wildland Core and the external
-/// persistent data storage instance (for e.g. database).
-/// 
-pub trait ForestManifest {
-    /// Add manifest Signer
-    ///
-    /// Returns whether the value was newly inserted. That is:
-    ///
-    /// - If the signer did not previously exist, `true` is returned.
-    /// - If the signer already exists, `false` is returned.
-    /// 
-    fn add_signer(&mut self, signer: Identity) -> Result<bool, CatlibError>;
-
-    /// Delete manifest Signer
-    ///
-    /// Returns whether the value was already present. That is:
-    ///
-    /// - If the signer did not previously exist, `false` is returned.
-    /// - If the signer existed in the set, `true` is returned.
-    /// 
-    fn del_signer(&mut self, signer: Identity) -> Result<bool, CatlibError>;
-
-    /// Return list of Forest Containers
-    fn containers(&self) -> Result<Vec<Box<dyn Container>>, CatlibError>;
-
-    /// Set Forest arbitrary data
-    /// 
-    fn update(&mut self, data: Vec<u8>) -> Result<&mut dyn Forest, CatlibError>;
-
-    /// Delete Forest
-    ///
-    /// **WARN: The underlying objects are not removed recursively**
-    /// 
-    fn delete(&mut self) -> Result<bool, CatlibError>;
-
-    /// Create an empty container, bound to the Forest.
-    ///
-    /// To set container paths, use [`Container::add_path`]
-    /// 
-    fn create_container(&self, name: String) -> Result<Box<dyn Container>, CatlibError>;
-
-    /// Create a Bridge object with arbitrary link data to another Forest.
-    ///
-    /// The aforementioned link data will be defined by the D/FS module.
-    /// 
-    fn create_bridge(
-        &self,
-        path: ContainerPath,
-        link_data: Vec<u8>,
-    ) -> Result<Box<dyn Bridge>, CatlibError>;
-
-    /// Return bridge that matches the given [`ContainerPath`].
-    fn find_bridge(&self, path: ContainerPath) -> Result<Box<dyn Bridge>, CatlibError>;
-
-    /// Retrieve Containers that match given [`ContainerPath`]s.
-    ///
-    /// If `include_subdirs` is `true`, then the [`ContainerPath`]s are treated as Path prefixes
-    /// and not absolute paths.
-    /// 
-    fn find_containers(
-        &self,
-        paths: Vec<ContainerPath>,
-        include_subdirs: bool,
-    ) -> Result<Vec<Box<dyn Container>>, CatlibError>;
-}
-```
-
+** TODO (tkulik) WILX-352: Add description instead of raw rust traits. **
 
 ## CoreX Container API for Cat-Lib implementation.
 It is recommended that `ContainerManifest` trait implementation should synchronize with the database on every method call in order to keep the state up-to-date.
 
-```rust
-/// `ContainerManifest` trait is an API providing methods needed to manipulate container's
-/// configuration state. It should be implemented by Cat-Lib instance and should be
-/// treated as a kind of a proxy layer between Wildland Core and the external
-/// persistent data storage instance (for e.g. database).
-/// 
-pub trait ContainerManifest {
-    /// Lists the storages that the given container use in order to keep the data.
-    /// 
-    fn get_storages(&self) -> Result<Vec<&dyn StorageBackend>, GetStoragesError>;
-
-    /// Removes the given storage backend from the container.
-    /// This operation should involve a secure way of erasing data from the storage.
-    /// 
-    fn delete_storage(&mut self, storage: &dyn StorageBackend) -> Result<(), DeleteStorageError>;
-
-    /// This operation adds a given Storage Backend to the container.
-    /// The procedure involves starting the data sync mechanism between the new storage
-    /// and the other present storages.
-    /// 
-    /// Container can have multiple storages. Given container should has exact copies
-    /// of the data on every storage.
-    /// 
-    fn add_storage(&mut self, storage: &dyn StorageBackend) -> Result<(), AddStorageError>;
-
-    /// Checks whether the given container handle is deleted.
-    /// 
-    fn is_deleted(&self) -> bool;
-
-    /// Returns a printable description of the given container.
-    /// 
-    fn stringify(&self) -> String;
-
-    /// Deletes all paths that the given container contains.
-    /// In result the container is considered deleted afterwards.
-    /// Container should be treated as a "shared pointer" - once the
-    /// last path is deleted the container should be moved to 
-    /// some sort of a "trash bin".
-    /// 
-    fn delete(&mut self, catlib_service: &CatLibService) -> Result<(), CatlibError>;
-
-    /// Returns the unique ID of the container.
-    /// 
-    fn uuid(&self) -> Uuid;
-
-    /// Returns true if path was actually added, false otherwise.
-    /// 
-    fn add_path(&mut self, path: String) -> Result<bool, CatlibError>;
-
-    /// Removes the given path. Returns true if the path was actually deleted,
-    /// false if the path was not present within the container.
-    /// 
-    fn delete_path(&mut self, path: String) -> Result<bool, CatlibError>;
-
-    /// Lists all the paths from the given container.
-    /// 
-    fn get_paths(&self) -> Result<Vec<String>, CatlibError>;
-
-    /// User provided name of the container.
-    /// 
-    fn get_name(&self) -> String;
-
-    /// Sets the user provided name for the container.
-    /// This operation involves updating at least the local storage.
-    /// 
-    fn set_name(&mut self, new_name: String) -> Result<(), ContainerError>;
-}
-```
+** TODO (tkulik) WILX-352: Add description instead of raw rust traits. **
 
 
 ## CoreX Container API for mount procedure.
@@ -316,7 +180,6 @@ mod ffi {
     // ForestManifest
     //
     fn get_storages(self: &Arc<Mutex<ForestManifest>>) -> Result<Vec<&dyn StorageBackend>, GetStoragesError>;
-    fn delete_storage(self: &Arc<Mutex<ForestManifest>>, storage: &dyn StorageBackend) -> Result<(), DeleteStorageError>;
     fn add_storage(self: &Arc<Mutex<ForestManifest>>, storage: &dyn StorageBackend) -> Result<(), AddStorageError>;
     fn is_deleted(self: &Arc<Mutex<ForestManifest>>) -> bool;
     fn stringify(self: &Arc<Mutex<ForestManifest>>) -> String;

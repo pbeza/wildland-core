@@ -15,49 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use derivative::Derivative;
-use uuid::Uuid;
 use wildland_corex::catlib_service::entities::ForestManifest;
 use wildland_corex::catlib_service::error::CatlibError;
 use wildland_corex::catlib_service::CatLibService;
-use wildland_corex::StorageTemplate;
+use wildland_corex::{ContainerManifest, ContainerPath, StorageTemplate};
 
 use super::config::FoundationStorageApiConfig;
 use super::foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError};
-use crate::api::container::*;
 use crate::errors::storage::GetStorageTemplateError;
-
-pub type SharedContainer = Arc<Mutex<Container>>;
-#[derive(Debug, Clone)]
-struct UserContext {
-    loaded_containers: Arc<Mutex<HashMap<Uuid, SharedContainer>>>,
-}
-
-impl UserContext {
-    fn new() -> Self {
-        Self {
-            loaded_containers: Arc::new(Mutex::new(HashMap::new())),
-        }
-    }
-
-    fn add_container(&self, uuid: Uuid, container: SharedContainer) {
-        self.loaded_containers
-            .lock()
-            .expect("Could not lock loaded containers in user context")
-            .insert(uuid, container);
-    }
-
-    fn get_loaded_container(&self, uuid: Uuid) -> Option<SharedContainer> {
-        self.loaded_containers
-            .lock()
-            .expect("Could not lock loaded containers in user context")
-            .get(&uuid)
-            .cloned()
-    }
-}
 
 /// Structure representing a User.
 ///
@@ -72,12 +40,10 @@ pub struct CargoUser {
     this_device: String,
     all_devices: Vec<String>,
 
-    forest: Box<dyn ForestManifest>,
+    forest: Arc<Mutex<dyn ForestManifest>>,
 
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
-    #[derivative(Debug = "ignore")]
-    user_context: UserContext,
     #[derivative(Debug = "ignore")]
     fsa_api: FoundationStorageApi,
 }
@@ -86,7 +52,7 @@ impl CargoUser {
     pub fn new(
         this_device: String,
         all_devices: Vec<String>,
-        forest: Box<dyn ForestManifest>,
+        forest: Arc<Mutex<dyn ForestManifest>>,
         catlib_service: CatLibService,
         fsa_config: &FoundationStorageApiConfig,
     ) -> Self {
@@ -95,7 +61,6 @@ impl CargoUser {
             all_devices,
             forest,
             catlib_service,
-            user_context: UserContext::new(),
             fsa_api: FoundationStorageApi::new(fsa_config),
         }
     }
@@ -123,36 +88,8 @@ All devices:
 
     /// Returns vector of handles to all containers (mounted or not) found in the user's forest.
     #[tracing::instrument(level = "debug", skip_all)]
-    pub fn get_containers(&self) -> Result<Vec<Arc<Mutex<Container>>>, CatlibError> {
-        match self.forest.containers() {
-            Ok(inner_containers) => {
-                Ok(inner_containers
-                    .into_iter()
-                    .map(|c| {
-                        let container = Container::from(c);
-                        let uuid = container.uuid();
-                        if let Some(cached_container) = self.user_context.get_loaded_container(uuid)
-                        {
-                            // update container in user's context with the content fetched from CatLib
-                            let mut locked_cached_container = cached_container
-                                .lock()
-                                .expect("Could not lock loaded container in user context");
-                            *locked_cached_container = container;
-                            cached_container.clone()
-                        } else {
-                            // create container in context if it was not already there
-                            let shared = Arc::new(Mutex::new(container));
-                            self.user_context.add_container(uuid, shared.clone());
-                            shared
-                        }
-                    })
-                    .collect::<Vec<SharedContainer>>())
-            }
-            Err(err) => match err {
-                CatlibError::NoRecordsFound => Ok(vec![]),
-                _ => Err(err),
-            },
-        }
+    pub fn get_containers(&self) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError> {
+        self.forest.lock().expect("Poisoned Mutex").containers()
     }
 
     /// Creates a new container within user's forest and return its handle
@@ -161,28 +98,10 @@ All devices:
         &self,
         name: String,
         template: &StorageTemplate,
-    ) -> Result<SharedContainer, CatlibError> {
-        let container: Container = self
-            .catlib_service
-            .create_container(name, self.forest.as_ref(), template)
-            .map(|c| c.into())?;
-        let container_uuid = container.uuid();
-        let shared_container = Arc::new(Mutex::new(container));
-        self.user_context
-            .add_container(container_uuid, shared_container.clone());
-        Ok(shared_container)
-    }
-
-    /// Deleting container is exposed via this method on `CargoUser`
-    /// because in future it may require some additional changes in user's context
-    /// (which `Container` structure has no access to).
-    ///
-    #[tracing::instrument(level = "debug", skip_all)]
-    pub fn delete_container(&self, container: &SharedContainer) -> Result<(), CatlibError> {
-        container
-            .lock()
-            .expect("Could not lock shared container while deleting")
-            .delete(&self.catlib_service)
+        path: ContainerPath,
+    ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError> {
+        self.catlib_service
+            .create_container(name, &self.forest, template, path)
     }
 
     pub fn this_device(&self) -> &str {
@@ -238,19 +157,19 @@ All devices:
         self.catlib_service
             .save_storage_template(&storage_template)?;
         self.catlib_service
-            .mark_free_storage_granted(self.forest.as_mut())?;
+            .mark_free_storage_granted(&self.forest)?;
         Ok(storage_template)
     }
 
     pub fn is_free_storage_granted(&mut self) -> Result<bool, CatlibError> {
-        self.catlib_service
-            .is_free_storage_granted(self.forest.as_mut())
+        self.catlib_service.is_free_storage_granted(&self.forest)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
+    use std::sync::{Arc, Mutex};
 
     use mockito::Matcher;
     use pretty_assertions::assert_eq;
@@ -258,6 +177,7 @@ mod tests {
     use serde_json::json;
     use uuid::Uuid;
     use wildland_corex::catlib_service::entities::ForestManifest;
+    use wildland_corex::catlib_service::error::CatlibError;
     use wildland_corex::catlib_service::{CatLibService, DeviceMetadata, ForestMetaData};
     use wildland_corex::{SigningKeypair, WildlandIdentity};
 
@@ -267,7 +187,9 @@ mod tests {
     use crate::templates::foundation_storage::FoundationStorageTemplate;
 
     #[fixture]
-    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Box<dyn ForestManifest>) {
+    fn setup(
+        catlib_service: CatLibService,
+    ) -> (CargoUser, CatLibService, Arc<Mutex<dyn ForestManifest>>) {
         let this_dev_name = "My device".to_string();
 
         let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
@@ -286,12 +208,10 @@ mod tests {
             )
             .unwrap();
 
-        let forest_copy = catlib_service.get_forest(&forest.uuid()).unwrap();
-
         let cargo_user = CargoUser::new(
             this_dev_name.clone(),
             vec![this_dev_name],
-            forest,
+            forest.clone(),
             catlib_service.clone(),
             &FoundationStorageApiConfig {
                 evs_url: mockito::server_url(),
@@ -299,15 +219,15 @@ mod tests {
             },
         );
 
-        (cargo_user, catlib_service, forest_copy)
+        (cargo_user, catlib_service, forest)
     }
 
     #[rstest]
     fn test_requesting_free_tier_storage(
-        setup: (CargoUser, CatLibService, Box<dyn ForestManifest>),
+        setup: (CargoUser, CatLibService, Arc<Mutex<dyn ForestManifest>>),
     ) {
         // given setup
-        let (mut cargo_user, catlib_service, mut forest) = setup;
+        let (mut cargo_user, catlib_service, forest) = setup;
 
         // when storage request is sent
         let session_uuid = "00000000-0000-0000-0000-000000000001";
@@ -377,13 +297,11 @@ mod tests {
         assert_eq!(template_data, expected_template_json);
 
         // and storage granted flag is set in catlib
-        assert!(catlib_service
-            .is_free_storage_granted(forest.as_mut())
-            .unwrap())
+        assert!(catlib_service.is_free_storage_granted(&forest).unwrap())
     }
 
     #[rstest]
-    fn test_creating_container(setup: (CargoUser, CatLibService, Box<dyn ForestManifest>)) {
+    fn test_creating_container(setup: (CargoUser, CatLibService, Arc<Mutex<dyn ForestManifest>>)) {
         // given setup
         let (cargo_user, catlib_service, forest) = setup;
 
@@ -398,20 +316,38 @@ mod tests {
         .try_into()
         .unwrap();
         let container_name = "new container".to_string();
+        let path = "/some/path".to_owned();
         cargo_user
-            .create_container(container_name.clone(), &storage_template)
+            .create_container(container_name.clone(), &storage_template, path)
             .unwrap();
 
         // then it is stored in catlib
-        let retrieved_forest = catlib_service.get_forest(&forest.uuid()).unwrap();
-        let mut containers = retrieved_forest.containers().unwrap();
+        let retrieved_forest = catlib_service
+            .get_forest(&forest.lock().unwrap().uuid())
+            .unwrap();
+        let containers = retrieved_forest.lock().unwrap().containers().unwrap();
         assert_eq!(containers.len(), 1);
-        assert_eq!(containers[0].name().unwrap(), container_name);
-        assert_eq!((*containers[0].forest().unwrap()).uuid(), (*forest).uuid());
+        assert_eq!(
+            containers[0].lock().unwrap().name().unwrap(),
+            container_name
+        );
+        assert_eq!(
+            containers[0]
+                .lock()
+                .unwrap()
+                .forest()
+                .unwrap()
+                .lock()
+                .unwrap()
+                .uuid(),
+            forest.lock().unwrap().uuid()
+        );
     }
 
     #[rstest]
-    fn test_getting_created_container(setup: (CargoUser, CatLibService, Box<dyn ForestManifest>)) {
+    fn test_getting_created_container(
+        setup: (CargoUser, CatLibService, Arc<Mutex<dyn ForestManifest>>),
+    ) {
         // given setup
         let (cargo_user, _catlib_service, _forest) = setup;
 
@@ -426,21 +362,24 @@ mod tests {
         .try_into()
         .unwrap();
         let container_name = "new container".to_string();
+        let path = "/some/path".to_owned();
         cargo_user
-            .create_container(container_name.clone(), &storage_template)
+            .create_container(container_name.clone(), &storage_template, path)
             .unwrap();
 
         // then it can be retrieved via CargoUser api
         let containers = cargo_user.get_containers().unwrap();
         assert_eq!(containers.len(), 1);
         assert_eq!(
-            containers[0].lock().unwrap().get_name().unwrap(),
+            containers[0].lock().unwrap().name().unwrap(),
             container_name
         );
     }
 
     #[rstest]
-    fn test_delete_created_container(setup: (CargoUser, CatLibService, Box<dyn ForestManifest>)) {
+    fn test_delete_created_container(
+        setup: (CargoUser, CatLibService, Arc<Mutex<dyn ForestManifest>>),
+    ) {
         // given setup
         let (cargo_user, _catlib_service, _forest) = setup;
 
@@ -454,19 +393,23 @@ mod tests {
         )
         .try_into()
         .unwrap();
+        let path = "/some/path".to_owned();
         let container_name = "new container".to_string();
         let container = cargo_user
-            .create_container(container_name, &storage_template)
+            .create_container(container_name, &storage_template, path)
             .unwrap();
 
         // and the container is deleted
-        cargo_user.delete_container(&container).unwrap();
+        container.lock().unwrap().remove().unwrap();
 
         // then it cannot be retrieved via CargoUser api
-        let containers = cargo_user.get_containers().unwrap();
-        assert_eq!(containers.len(), 0);
+        let containers = cargo_user.get_containers();
+        assert!(matches!(containers, Err(CatlibError::NoRecordsFound)));
 
         // and the container handle received during creation is marked as deleted
-        assert!(container.lock().unwrap().is_deleted());
+        assert!(matches!(
+            container.lock().unwrap().name(),
+            Err(CatlibError::NoRecordsFound)
+        ));
     }
 }
