@@ -7,7 +7,7 @@ use mockall::predicate;
 use pretty_assertions::assert_eq;
 use rsfs::mem::FS;
 use rsfs::{DirEntry, GenFS};
-use rstest::{fixture, rstest};
+use rstest::rstest;
 use wildland_corex::dfs::interface::{DfsFrontend, NodeDescriptor, NodeStorage};
 use wildland_corex::{MockPathResolver, PathWithStorages, Storage};
 
@@ -69,20 +69,16 @@ impl StorageBackendFactory for MufsFactory {
     }
 }
 
-type DfsFixture = (UnencryptedDfs, Rc<MockPathResolver>, Rc<FS>);
-#[fixture]
-fn dfs_with_path_resolver_and_fs() -> DfsFixture {
-    let path_resolver = MockPathResolver::new();
-    let path_resolver = Rc::new(path_resolver);
-
+type DfsFixture = (UnencryptedDfs, Rc<FS>);
+fn dfs_with_fs(path_resolver: Rc<MockPathResolver>) -> DfsFixture {
     let fs = Rc::new(FS::new());
     let factory = MufsFactory::new(fs.clone());
     let mut backend_factories: HashMap<String, Box<dyn StorageBackendFactory>> = HashMap::new();
     backend_factories.insert("MUFS".to_string(), Box::new(factory));
 
-    let dfs = UnencryptedDfs::new(path_resolver.clone(), backend_factories);
+    let dfs = UnencryptedDfs::new(path_resolver, backend_factories);
 
-    (dfs, path_resolver, fs)
+    (dfs, fs)
 }
 
 fn new_mufs_storage(base_dir: impl Into<String>) -> Storage {
@@ -94,27 +90,26 @@ fn new_mufs_storage(base_dir: impl Into<String>) -> Storage {
 }
 
 #[rstest]
-fn test_listing_files_from_root_of_one_container(dfs_with_path_resolver_and_fs: DfsFixture) {
-    let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+fn test_listing_files_from_root_of_one_container() {
+    let mut path_resolver = MockPathResolver::new();
     let mufs_storage = new_mufs_storage("/");
 
-    unsafe {
-        (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
-            .as_mut()
-            .unwrap()
-            .expect_resolve()
-            .with(predicate::eq(Path::new("/a/b/")))
-            .times(2)
-            .returning({
-                let storage = mufs_storage.clone();
-                move |_path| {
-                    vec![PathWithStorages {
-                        path_within_storage: "/".into(),
-                        storages: Some(vec![storage.clone()]),
-                    }]
-                }
-            });
-    }
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b/")))
+        .times(2)
+        .returning({
+            let storage = mufs_storage.clone();
+            move |_path| {
+                vec![PathWithStorages {
+                    path_within_storage: "/".into(),
+                    storages: Some(vec![storage.clone()]),
+                }]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     let files_descriptors = dfs.readdir("/a/b/".to_string());
     assert_eq!(files_descriptors, vec![]);
@@ -134,27 +129,27 @@ fn test_listing_files_from_root_of_one_container(dfs_with_path_resolver_and_fs: 
 }
 
 #[rstest]
-fn test_listing_files_from_nested_dir_of_one_container(dfs_with_path_resolver_and_fs: DfsFixture) {
-    let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+fn test_listing_files_from_nested_dir_of_one_container() {
+    let mut path_resolver = MockPathResolver::new();
+
     let mufs_storage = new_mufs_storage("/");
 
-    unsafe {
-        (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
-            .as_mut()
-            .unwrap()
-            .expect_resolve()
-            .with(predicate::eq(Path::new("/a/b/dir")))
-            .times(2)
-            .returning({
-                let storage = mufs_storage.clone();
-                move |_path| {
-                    vec![PathWithStorages {
-                        path_within_storage: "/dir".into(),
-                        storages: Some(vec![storage.clone()]),
-                    }]
-                }
-            })
-    };
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b/dir")))
+        .times(2)
+        .returning({
+            let storage = mufs_storage.clone();
+            move |_path| {
+                vec![PathWithStorages {
+                    path_within_storage: "/dir".into(),
+                    storages: Some(vec![storage.clone()]),
+                }]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     let files_descriptors = dfs.readdir("/a/b/dir".to_string());
     assert_eq!(files_descriptors, vec![]);
@@ -186,27 +181,27 @@ fn test_listing_files_from_nested_dir_of_one_container(dfs_with_path_resolver_an
 }
 
 #[rstest]
-fn test_listing_dirs_from_one_container(dfs_with_path_resolver_and_fs: DfsFixture) {
-    let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+fn test_listing_dirs_from_one_container() {
+    let mut path_resolver = MockPathResolver::new();
+
     let mufs_storage = new_mufs_storage("/");
 
-    unsafe {
-        (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
-            .as_mut()
-            .unwrap()
-            .expect_resolve()
-            .with(predicate::eq(Path::new("/")))
-            .times(2)
-            .returning({
-                let storage = mufs_storage.clone();
-                move |_path| {
-                    vec![PathWithStorages {
-                        path_within_storage: "/".into(),
-                        storages: Some(vec![storage.clone()]),
-                    }]
-                }
-            })
-    };
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/")))
+        .times(2)
+        .returning({
+            let storage = mufs_storage.clone();
+            move |_path| {
+                vec![PathWithStorages {
+                    path_within_storage: "/".into(),
+                    storages: Some(vec![storage.clone()]),
+                }]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     let files_descriptors = dfs.readdir("/".to_string());
     assert_eq!(files_descriptors, vec![]);
@@ -237,36 +232,36 @@ fn test_listing_dirs_from_one_container(dfs_with_path_resolver_and_fs: DfsFixtur
 }
 
 #[rstest]
-fn test_listing_files_and_dirs_from_two_containers(dfs_with_path_resolver_and_fs: DfsFixture) {
-    let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+fn test_listing_files_and_dirs_from_two_containers() {
+    let mut path_resolver = MockPathResolver::new();
+
     // each container has its own subfolder
     let storage1 = new_mufs_storage("/storage1/");
     let storage2 = new_mufs_storage("/storage2/");
 
-    unsafe {
-        (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
-            .as_mut()
-            .unwrap()
-            .expect_resolve()
-            .with(predicate::eq(Path::new("/a/b/c/dir")))
-            .times(2)
-            .returning({
-                let storage1 = storage1.clone();
-                let storage2 = storage2.clone();
-                move |_path| {
-                    vec![
-                        PathWithStorages {
-                            path_within_storage: "/dir".into(), // returned by a container claiming path `/a/b/c/`
-                            storages: Some(vec![storage1.clone()]),
-                        },
-                        PathWithStorages {
-                            path_within_storage: "/c/dir".into(), // returned by a container claiming path `/a/b/`
-                            storages: Some(vec![storage2.clone()]),
-                        },
-                    ]
-                }
-            })
-    };
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b/c/dir")))
+        .times(2)
+        .returning({
+            let storage1 = storage1.clone();
+            let storage2 = storage2.clone();
+            move |_path| {
+                vec![
+                    PathWithStorages {
+                        path_within_storage: "/dir".into(), // returned by a container claiming path `/a/b/c/`
+                        storages: Some(vec![storage1.clone()]),
+                    },
+                    PathWithStorages {
+                        path_within_storage: "/c/dir".into(), // returned by a container claiming path `/a/b/`
+                        storages: Some(vec![storage2.clone()]),
+                    },
+                ]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_dir("/storage1/dir/").unwrap();
@@ -313,32 +308,30 @@ fn test_listing_files_and_dirs_from_two_containers(dfs_with_path_resolver_and_fs
 }
 
 #[rstest]
-fn test_getting_one_file_descriptor_from_container_with_multiple_storages(
-    dfs_with_path_resolver_and_fs: DfsFixture,
-) {
-    let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+fn test_getting_one_file_descriptor_from_container_with_multiple_storages() {
+    let mut path_resolver = MockPathResolver::new();
+
     // each container has its own subfolder
     let storage1 = new_mufs_storage("/storage1/");
     let storage2 = new_mufs_storage("/storage2/");
 
-    unsafe {
-        (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
-            .as_mut()
-            .unwrap()
-            .expect_resolve()
-            .with(predicate::eq(Path::new("/a")))
-            .times(2)
-            .returning({
-                let storage1 = storage1.clone();
-                let storage2 = storage2;
-                move |_path| {
-                    vec![PathWithStorages {
-                        path_within_storage: "/a".into(), // returned by a container claiming path `/a/`
-                        storages: Some(vec![storage1.clone(), storage2.clone()]),
-                    }]
-                }
-            })
-    };
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a")))
+        .times(2)
+        .returning({
+            let storage1 = storage1.clone();
+            let storage2 = storage2;
+            move |_path| {
+                vec![PathWithStorages {
+                    path_within_storage: "/a".into(), // returned by a container claiming path `/a/`
+                    storages: Some(vec![storage1.clone(), storage2.clone()]),
+                }]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_dir("/storage1/a").unwrap();
@@ -366,38 +359,36 @@ fn test_getting_one_file_descriptor_from_container_with_multiple_storages(
 
 /// Full Path is a concatenation of a path claimed by a container with a path of the file inside the container.
 #[rstest]
-fn test_more_than_one_file_descriptor_claim_the_same_full_path(
-    dfs_with_path_resolver_and_fs: DfsFixture,
-) {
-    let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+fn test_more_than_one_file_descriptor_claim_the_same_full_path() {
+    let mut path_resolver = MockPathResolver::new();
+
     // each container has its own subfolder
     let storage1 = new_mufs_storage("/storage1/");
     let storage2 = new_mufs_storage("/storage2/");
 
-    unsafe {
-        (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
-            .as_mut()
-            .unwrap()
-            .expect_resolve()
-            .with(predicate::eq(Path::new("/a/b/")))
-            .times(2)
-            .returning({
-                let storage1 = storage1.clone();
-                let storage2 = storage2.clone();
-                move |_path| {
-                    vec![
-                        PathWithStorages {
-                            path_within_storage: "/b/".into(), // returned by the container claiming path `/a/`
-                            storages: Some(vec![storage1.clone()]),
-                        },
-                        PathWithStorages {
-                            path_within_storage: "/".into(), // returned by the container claiming path `/a/b/`
-                            storages: Some(vec![storage2.clone()]),
-                        },
-                    ]
-                }
-            })
-    };
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b/")))
+        .times(2)
+        .returning({
+            let storage1 = storage1.clone();
+            let storage2 = storage2.clone();
+            move |_path| {
+                vec![
+                    PathWithStorages {
+                        path_within_storage: "/b/".into(), // returned by the container claiming path `/a/`
+                        storages: Some(vec![storage1.clone()]),
+                    },
+                    PathWithStorages {
+                        path_within_storage: "/".into(), // returned by the container claiming path `/a/b/`
+                        storages: Some(vec![storage2.clone()]),
+                    },
+                ]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_dir("/storage1/b").unwrap();
@@ -431,30 +422,30 @@ fn test_more_than_one_file_descriptor_claim_the_same_full_path(
 }
 
 #[rstest]
-fn test_first_storage_unavailable(dfs_with_path_resolver_and_fs: DfsFixture) {
-    let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+fn test_first_storage_unavailable() {
+    let mut path_resolver = MockPathResolver::new();
+
     // each container has its own subfolder
     let storage1 = new_mufs_storage("/storage1/");
     let storage2 = new_mufs_storage("/storage2/");
 
-    unsafe {
-        (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
-            .as_mut()
-            .unwrap()
-            .expect_resolve()
-            .with(predicate::eq(Path::new("/")))
-            .times(1)
-            .returning({
-                let storage1 = storage1;
-                let storage2 = storage2.clone();
-                move |_path| {
-                    vec![PathWithStorages {
-                        path_within_storage: "/".into(),
-                        storages: Some(vec![storage1.clone(), storage2.clone()]),
-                    }]
-                }
-            })
-    };
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/")))
+        .times(1)
+        .returning({
+            let storage1 = storage1;
+            let storage2 = storage2.clone();
+            move |_path| {
+                vec![PathWithStorages {
+                    path_within_storage: "/".into(),
+                    storages: Some(vec![storage1.clone(), storage2.clone()]),
+                }]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     // don't create storage1 directory so readdir returned "No such file or directory" error
     // then dfs should choose storage2
@@ -472,37 +463,37 @@ fn test_first_storage_unavailable(dfs_with_path_resolver_and_fs: DfsFixture) {
 }
 
 #[rstest]
-fn test_listing_virtual_node(dfs_with_path_resolver_and_fs: DfsFixture) {
-    let (mut dfs, path_resolver, fs) = dfs_with_path_resolver_and_fs;
+fn test_listing_virtual_node() {
+    let mut path_resolver = MockPathResolver::new();
+
     // C1 storage
     let storage1 = new_mufs_storage("/storage_c1/");
 
-    unsafe {
-        (Rc::as_ptr(&path_resolver) as *mut MockPathResolver)
-            .as_mut()
-            .unwrap()
-            .expect_resolve()
-            .with(predicate::eq(Path::new("/a")))
-            .times(1)
-            .returning({
-                let storage1 = storage1.clone();
-                move |_path| {
-                    vec![
-                        PathWithStorages {
-                            path_within_storage: "/".into(),
-                            storages: Some(vec![storage1.clone()]),
-                        },
-                        // virtual storage (represented by a None value) represents containers
-                        // that claim path containing the value of path_within_storage
-                        // in this case container would claim path starting with /a/b/...
-                        PathWithStorages {
-                            path_within_storage: "/b".into(),
-                            storages: None,
-                        },
-                    ]
-                }
-            })
-    };
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a")))
+        .times(1)
+        .returning({
+            let storage1 = storage1.clone();
+            move |_path| {
+                vec![
+                    PathWithStorages {
+                        path_within_storage: "/".into(),
+                        storages: Some(vec![storage1.clone()]),
+                    },
+                    // virtual storage (represented by a None value) represents containers
+                    // that claim path containing the value of path_within_storage
+                    // in this case container would claim path starting with /a/b/...
+                    PathWithStorages {
+                        path_within_storage: "/b".into(),
+                        storages: None,
+                    },
+                ]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage_c1/").unwrap();
     fs.create_file("/storage_c1/file_1").unwrap();
