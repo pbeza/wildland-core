@@ -22,9 +22,15 @@ use crate::Storage;
 /// Represents result of a possible path within a Storage. Storages field represents all alternative
 /// locations of the path.
 ///
-pub struct PathWithStorages {
-    pub path: PathBuf,
-    pub storages: Vec<Storage>,
+pub enum ResolvedPath {
+    PathWithStorages {
+        /// path within storages
+        path_within_storage: PathBuf,
+        /// all storages that include the path (all replicas)
+        storages: Vec<Storage>,
+    },
+    /// represents virtual node paths that are not supposed to be looked up for in any backend
+    VirtualPath(PathBuf),
 }
 
 #[mockall::automock]
@@ -45,5 +51,5 @@ pub trait PathResolver {
     ///     PathWithStorages { path: "/c/", storages: [all storages of C2]},
     /// ]
     ///
-    fn resolve(&self, path: &Path) -> Vec<PathWithStorages>;
+    fn resolve(&self, path: &Path) -> Vec<ResolvedPath>;
 }
