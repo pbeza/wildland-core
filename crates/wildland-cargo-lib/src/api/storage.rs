@@ -15,24 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::fmt::Display;
-
-pub enum StorageBackendType {
-    FoundationStorage,
-    LocalFilesystem,
-    Custom(String),
-}
-
-impl Display for StorageBackendType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StorageBackendType::FoundationStorage => write!(f, "FoundationStorage"),
-            StorageBackendType::LocalFilesystem => write!(f, "LocalFilesystem"),
-            StorageBackendType::Custom(t) => write!(f, "{t}"),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Storage {}
 

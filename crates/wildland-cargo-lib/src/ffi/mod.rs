@@ -19,6 +19,7 @@ use std::sync::{Arc, Mutex};
 
 use rusty_bind::binding_wrapper;
 pub use wildland_corex::catlib_service::error::CatlibError;
+pub use wildland_corex::dfs::interface::*;
 use wildland_corex::entities::Identity;
 use wildland_corex::{BridgeManifest, ContainerManifest, ForestManifest, Signers, StorageManifest};
 pub use wildland_corex::{
@@ -167,6 +168,7 @@ mod ffi_binding {
             config: CargoConfig,
         ) -> Result<Arc<Mutex<CargoLib>>, CargoLibCreationError>;
         fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
+        fn dfs_api(self: &Arc<Mutex<CargoLib>>) -> Arc<Mutex<dyn DfsFrontend>>;
 
         //
         // UserApi
@@ -337,5 +339,10 @@ mod ffi_binding {
         // Storage
         //
         fn stringify(self: &StorageTemplate) -> String;
+
+        // DFS Frontend
+        fn readdir(self: &Arc<Mutex<dyn DfsFrontend>>, path: String) -> Vec<NodeDescriptor>;
+
+        type NodeDescriptor;
     }
 }

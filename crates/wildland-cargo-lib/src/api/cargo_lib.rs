@@ -25,8 +25,12 @@ use thiserror::Error;
 use wildland_catlib::CatLib;
 use wildland_corex::catlib_service::CatLibService;
 use wildland_corex::container_manager::ContainerManager;
+use wildland_corex::dfs::interface::DfsFrontend;
 use wildland_corex::{LocalSecureStorage, LssService};
 use wildland_dfs::encrypted::EncryptedDfs as Dfs;
+use wildland_dfs::unencrypted::StorageBackendFactory;
+#[cfg(feature = "lfs")]
+use wildland_lfs::LfsBackendFactory;
 
 use crate::api::config::{CargoConfig, FoundationStorageApiConfig};
 use crate::api::user::UserApi;
@@ -62,7 +66,7 @@ static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 #[derive(Clone)]
 pub struct CargoLib {
     user_api: UserApi,
-    _dfs: Rc<Dfs>,
+    dfs_api: Arc<Mutex<dyn DfsFrontend>>,
 }
 
 impl CargoLib {
@@ -72,13 +76,25 @@ impl CargoLib {
     ) -> Self {
         let lss_service = LssService::new(lss);
         let container_manager = Rc::new(ContainerManager {});
+
+        let mut dfs_storage_factories: HashMap<String, Box<dyn StorageBackendFactory>> =
+            HashMap::new();
+        #[cfg(feature = "lfs")]
+        dfs_storage_factories.insert(
+            "LocalFilesystem".to_string(),
+            Box::new(LfsBackendFactory {}),
+        );
+
         Self {
             user_api: UserApi::new(UserService::new(
                 lss_service,
                 CatLibService::new(Rc::new(CatLib::default())),
                 fsa_config,
             )),
-            _dfs: Rc::new(Dfs::new(container_manager, HashMap::new())),
+            dfs_api: Arc::new(Mutex::new(Dfs::new(
+                container_manager,
+                dfs_storage_factories,
+            ))),
         }
     }
 
@@ -86,6 +102,11 @@ impl CargoLib {
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn user_api(&self) -> UserApi {
         self.user_api.clone()
+    }
+
+    /// Returns DFS API object that may be used to build Filesystem-like UI.
+    pub fn dfs_api(&self) -> Arc<Mutex<dyn DfsFrontend>> {
+        self.dfs_api.clone()
     }
 }
 

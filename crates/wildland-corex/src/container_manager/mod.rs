@@ -24,7 +24,7 @@ pub use path_resolver::*;
 pub struct ContainerManager;
 
 impl PathResolver for ContainerManager {
-    fn resolve(&self, _path: &Path) -> Vec<PathWithStorages> {
+    fn resolve(&self, _path: &Path) -> Vec<ResolvedPath> {
         todo!() // TODO WILX-353 implement when ContainerManager is filled with information about mounted containers
     }
 }
