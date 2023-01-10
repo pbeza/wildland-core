@@ -24,12 +24,12 @@ LLD link: <https://docs.wildland.dev/docs/wildland/lld/doc/wildland_cargo_lib/in
 
 to build the documentation locally, cargo tool and some dependencies are required.
 
-* install dependencies:
-`cargo install mdbook mdbook-mermaid mdbook-plantuml mdbook-toc mdbook-linkcheck mdbook-graphviz mdbook-katex`
-* setup dependency config
-`mdbook-mermaid install .`
-* generate and open the documentation
-`mdbook build --open`
+- install dependencies:
+  `cargo install mdbook mdbook-mermaid mdbook-plantuml mdbook-toc mdbook-linkcheck mdbook-graphviz mdbook-katex`
+- setup dependency config
+  `mdbook-mermaid install .`
+- generate and open the documentation
+  `mdbook build --open`
 
 ## Logging
 
@@ -40,3 +40,7 @@ Environment variables will not work.
 ### WASM
 
 WASM example project can be found in [this [directory](./tests/ffi/wasm/) and its readme file is located [here](./tests/ffi/wasm/README.md).
+
+## Contributor Agreement
+
+In order to be able to contribute to any Wildland repository, you will need to agree to the terms of the [Wildland Contributor Agreement](https://docs.wildland.io/contributor-agreement.html). By contributing to any such repository, you agree that your contributions will be licensed under the [GPLv3 License](https://gitlab.com/wildland/corex/wildland-core/-/blob/master/COPYING).
