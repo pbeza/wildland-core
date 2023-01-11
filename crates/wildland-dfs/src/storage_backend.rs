@@ -22,8 +22,8 @@ use wildland_corex::dfs::interface::Stat;
 type StorageBackendError = anyhow::Error;
 
 pub trait StorageBackend {
-    // TODO
+    // TODO docs
     fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError>;
-    // TODO
+    // TODO docs
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError>;
 }

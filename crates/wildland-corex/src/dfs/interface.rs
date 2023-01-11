@@ -18,6 +18,7 @@
 #[derive(Debug, PartialEq, Eq)]
 pub struct Stat {
     pub node_type: NodeType,
+    // TODO fields?
 }
 
 #[derive(Debug, PartialEq, Eq)]

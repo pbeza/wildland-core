@@ -166,14 +166,7 @@ impl UnencryptedDfs {
     /// abs paths may collide
     /// exposed should be generated deterministically
     fn exposed_to_absolute_path(&self, path: &Path) -> PathBuf {
-        match path.file_name() {
-            Some(file_name) if Uuid::parse_str(&file_name.to_string_lossy()).is_ok() => {
-                let mut path = PathBuf::from(path);
-                path.pop();
-                path
-            }
-            _ => path.into(),
-        }
+        pop_uuid_from_path(path)
     }
 }
 
@@ -260,7 +253,8 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn getattr(&mut self, requested_path: String) -> Option<Stat> {
-        let requested_abs_path = self.exposed_to_absolute_path(Path::new(&requested_path));
+        let requested_path = Path::new(&requested_path);
+        let requested_abs_path = self.exposed_to_absolute_path(requested_path);
 
         let resolved_paths = self.path_resolver.resolve(&requested_abs_path);
         let nodes = resolved_paths
@@ -281,7 +275,7 @@ impl DfsFrontend for UnencryptedDfs {
                 ResolvedPath::VirtualPath(_) => NodeDescriptor {
                     storages: None,
                     absolute_path: requested_abs_path.clone(),
-                }, // TODO
+                },
             })
             .collect_vec();
         let node = self
@@ -291,7 +285,7 @@ impl DfsFrontend for UnencryptedDfs {
                 opt_exposed_path.map(|exposed_path| (node, exposed_path))
             })
             .find_map(|(node, exposed_path)| {
-                if exposed_path == requested_abs_path {
+                if exposed_path == requested_path {
                     Some(node)
                 } else {
                     None
@@ -316,6 +310,17 @@ impl DfsFrontend for UnencryptedDfs {
                 node_type: NodeType::Dir,
             }),
         }
+    }
+}
+
+fn pop_uuid_from_path(path: &Path) -> PathBuf {
+    match path.file_name() {
+        Some(file_name) if Uuid::parse_str(&file_name.to_string_lossy()).is_ok() => {
+            let mut path = PathBuf::from(path);
+            path.pop();
+            path
+        }
+        _ => path.into(),
     }
 }
 
@@ -348,5 +353,19 @@ fn execute_backend_op_with_policy<T: std::fmt::Debug>(
                 None
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod unit_tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_pop_uuid_from_path() {
+        let expected = PathBuf::from_str("/a/b/file").unwrap();
+        let result =
+            pop_uuid_from_path(Path::new("/a/b/file/00000000-0000-0000-0000-000000000002"));
+        assert_eq!(expected, result);
     }
 }

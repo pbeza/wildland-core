@@ -99,3 +99,50 @@ fn test_getattr_of_virtual_dir() {
         })
     )
 }
+
+#[rstest]
+fn test_getattr_of_conflicting_path_using_container_uuid() {
+    let mut path_resolver = MockPathResolver::new();
+
+    // each container has its own subfolder
+    let storage1 = new_mufs_storage("/storage1/");
+    let storage2 = new_mufs_storage("/storage2/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b/file_or_dir")))
+        .times(1)
+        .returning({
+            move |_path| {
+                vec![
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/b/file_or_dir".into(), // returned by the container claiming path `/a/`
+                        storages_id: Uuid::from_u128(1),
+                        storages: vec![storage1.clone()],
+                    },
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/file_or_dir".into(), // returned by the container claiming path `/a/b/`
+                        storages_id: Uuid::from_u128(2),
+                        storages: vec![storage2.clone()],
+                    },
+                ]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_dir("/storage1/").unwrap();
+    fs.create_dir("/storage1/b").unwrap();
+    fs.create_file("/storage1/b/file_or_dir").unwrap();
+    fs.create_dir("/storage2/").unwrap();
+    fs.create_dir("/storage2/file_or_dir").unwrap();
+
+    let stat = dfs.getattr("/a/b/file_or_dir/00000000-0000-0000-0000-000000000002".to_string());
+    assert_eq!(
+        stat,
+        Some(Stat {
+            node_type: NodeType::Dir
+        })
+    )
+}
