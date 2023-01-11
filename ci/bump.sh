@@ -44,11 +44,18 @@ case $1 in
     ;;
 esac
 
+if !(git branch --show-current | grep -Eq '(hotfix|release)/.+'); then
+  echo "[!] Branch name doesn't match the (hotfix|release)/.+ pattern"
+  exit 1
+fi
+
 cargo workspaces version \
   --no-git-tag \
   --no-git-push \
-  --allow-branch 'release/*' \
+  --allow-branch "**" \
   --pre-id 'rc' \
   "pre$1"
+  # --allow-branch '?(release)?(hotfix)/**'
+  # https://github.com/pksunkara/cargo-workspaces/issues/85
 
 git log HEAD -1 | ruby ci/commit_helper.rb | xargs -I@ git commit --amend --message "(bump) pre-release crates version to @"
