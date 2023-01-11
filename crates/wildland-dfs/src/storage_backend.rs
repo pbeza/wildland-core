@@ -17,7 +17,13 @@
 
 use std::path::{Path, PathBuf};
 
+use wildland_corex::dfs::interface::Stat;
+
+type StorageBackendError = anyhow::Error;
+
 pub trait StorageBackend {
-    /// Returns list of files descriptors, which for now is (Storage, path within Storage) pair.
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, anyhow::Error>;
+    // TODO
+    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError>;
+    // TODO
+    fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError>;
 }

@@ -20,16 +20,43 @@ mod tests;
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
 
-use itertools::Either;
+use itertools::{Either, Itertools};
 use uuid::Uuid;
-use wildland_corex::dfs::interface::{DfsFrontend, NodeDescriptor, NodeStorage};
+use wildland_corex::dfs::interface::{DfsFrontend, NodeType, Stat};
 use wildland_corex::{PathResolver, ResolvedPath, Storage};
 
 use crate::storage_backend::StorageBackend;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NodeDescriptor {
+    pub storages: Option<NodeStorages>, // nodes may not have storage - so called virtual nodes
+    pub absolute_path: PathBuf,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NodeStorages {
+    storages: Vec<Storage>,
+    path_within_storage: PathBuf,
+    uuid: Uuid,
+}
+
+impl NodeStorages {
+    pub fn new(storages: Vec<Storage>, path_within_storage: PathBuf, uuid: Uuid) -> Self {
+        Self {
+            storages,
+            path_within_storage,
+            uuid,
+        }
+    }
+
+    pub fn path_within_storage(&self) -> &Path {
+        &self.path_within_storage
+    }
+}
 
 pub trait StorageBackendFactory {
     fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error>;
@@ -89,10 +116,10 @@ impl UnencryptedDfs {
     }
 
     /// Matches every given Storage with its StorageBackend and return iterator over such pairs.
-    fn assign_backends_to_storages<'a>(
+    fn get_backends<'a>(
         &'a mut self,
         storages: &'a [Storage],
-    ) -> impl Iterator<Item = (Rc<dyn StorageBackend>, &Storage)> + '_ {
+    ) -> impl Iterator<Item = Rc<dyn StorageBackend>> + '_ {
         storages.iter().filter_map(|storage| {
             match self.get_backend(storage) {
                 Err(e) => {
@@ -104,9 +131,49 @@ impl UnencryptedDfs {
                     );
                     None
                 }
-                Ok(backend) => Some((backend, storage)),
+                Ok(backend) => Some(backend),
             }
         })
+    }
+
+    // Extract as a trait
+    // TODO docs
+    // make sure that exposed paths are unique
+    fn assign_exposed_paths(
+        &self,
+        nodes: Vec<NodeDescriptor>,
+    ) -> Vec<(NodeDescriptor, Option<PathBuf>)> {
+        let counted_abs_paths = nodes.iter().counts_by(|node| node.absolute_path.clone());
+
+        nodes
+            .into_iter()
+            .map(|node| {
+                let abs_path = node.absolute_path.clone();
+                if counted_abs_paths.get(&abs_path).unwrap() > &1 {
+                    let exposed_path =
+                        abs_path.join(node.storages.as_ref().map_or(PathBuf::new(), |s| {
+                            PathBuf::from_str(s.uuid.to_string().as_str()).unwrap()
+                        }));
+                    (node, Some(exposed_path))
+                } else {
+                    (node, Some(abs_path))
+                }
+            })
+            .collect()
+    }
+
+    /// TODO description
+    /// abs paths may collide
+    /// exposed should be generated deterministically
+    fn exposed_to_absolute_path(&self, path: &Path) -> PathBuf {
+        match path.file_name() {
+            Some(file_name) if Uuid::parse_str(&file_name.to_string_lossy()).is_ok() => {
+                let mut path = PathBuf::from(path);
+                path.pop();
+                path
+            }
+            _ => path.into(),
+        }
     }
 }
 
@@ -128,7 +195,7 @@ impl DfsFrontend for UnencryptedDfs {
     /// ]
     /// Full path within the user's forest for both nodes is `/a/b/c`. It is up to FS frontend how to
     /// show it to a user (e.g. by prefixing it with some storage-specific tag).
-    fn readdir(&mut self, path: String) -> Vec<NodeDescriptor> {
+    fn readdir(&mut self, path: String) -> Vec<String> {
         let path = PathBuf::from_str(&path).unwrap();
         let resolved_paths = self.path_resolver.resolve(path.as_ref());
         let nodes = resolved_paths
@@ -137,35 +204,38 @@ impl DfsFrontend for UnencryptedDfs {
                 match resolved_path {
                     ResolvedPath::VirtualPath(virtual_path) => {
                         Some(Either::Left(std::iter::once(NodeDescriptor {
-                            storage: None,
+                            storages: None,
                             absolute_path: path.join(virtual_path.file_name().unwrap()),
                         })))
                     }
                     ResolvedPath::PathWithStorages {
                         path_within_storage,
+                        storages_id,
                         storages,
                     } => {
-                        let backends_with_storages = self.assign_backends_to_storages(&storages);
+                        let backends = self.get_backends(&storages);
 
-                        let operations_on_backends =
-                            backends_with_storages.map(|(backend, storage)| {
+                        let operations_on_backends = backends.map(|backend| {
+                            let storages = storages.clone();
+                            {
                                 backend
                                     .readdir(&path_within_storage)
                                     .map(|resulting_paths| {
                                         resulting_paths.into_iter().map({
-                                            let storage = storage.clone();
                                             let path = path.clone();
                                             move |entry_path| NodeDescriptor {
-                                                storage: Some(NodeStorage::new(
-                                                    storage.clone(),
+                                                storages: Some(NodeStorages::new(
+                                                    storages.clone(),
                                                     entry_path.clone(),
+                                                    storages_id,
                                                 )),
                                                 absolute_path: path
                                                     .join(entry_path.file_name().unwrap()),
                                             }
                                         })
                                     })
-                            });
+                            }
+                        });
 
                         let node_descriptors = execute_backend_op_with_policy(
                             operations_on_backends,
@@ -174,20 +244,78 @@ impl DfsFrontend for UnencryptedDfs {
                             ExecutionPolicy::SequentiallyToFirstSuccess,
                         );
 
-                        if node_descriptors.is_none() {
-                            // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                            tracing::error!(
-                                "None of the backends for storages {:?} works",
-                                storages.iter().map(|s| s.backend_type())
-                            );
-                        }
                         node_descriptors.map(Either::Right)
                     }
                 }
             })
-            .flatten();
+            .flatten()
+            .collect_vec();
 
-        nodes.collect()
+        self.assign_exposed_paths(nodes)
+            .into_iter()
+            .filter_map(|(_node, exposed_path)| {
+                exposed_path.map(|p| p.to_string_lossy().to_string())
+            })
+            .collect()
+    }
+
+    fn getattr(&mut self, requested_path: String) -> Option<Stat> {
+        let requested_abs_path = self.exposed_to_absolute_path(Path::new(&requested_path));
+
+        let resolved_paths = self.path_resolver.resolve(&requested_abs_path);
+        let nodes = resolved_paths
+            .into_iter()
+            .map(|resolved_path| match resolved_path {
+                ResolvedPath::PathWithStorages {
+                    path_within_storage,
+                    storages_id,
+                    storages,
+                } => NodeDescriptor {
+                    storages: Some(NodeStorages::new(
+                        storages,
+                        path_within_storage,
+                        storages_id,
+                    )),
+                    absolute_path: requested_abs_path.clone(),
+                },
+                ResolvedPath::VirtualPath(_) => NodeDescriptor {
+                    storages: None,
+                    absolute_path: requested_abs_path.clone(),
+                }, // TODO
+            })
+            .collect_vec();
+        let node = self
+            .assign_exposed_paths(nodes)
+            .into_iter()
+            .filter_map(|(node, opt_exposed_path)| {
+                opt_exposed_path.map(|exposed_path| (node, exposed_path))
+            })
+            .find_map(|(node, exposed_path)| {
+                if exposed_path == requested_abs_path {
+                    Some(node)
+                } else {
+                    None
+                }
+            })?;
+
+        match node.storages {
+            Some(node_storages) => {
+                let backends = self.get_backends(&node_storages.storages);
+
+                let backend_ops =
+                    backends.map(|backend| backend.getattr(&node_storages.path_within_storage));
+
+                // TODO WILX-362
+                execute_backend_op_with_policy(
+                    backend_ops,
+                    ExecutionPolicy::SequentiallyToFirstSuccess,
+                )
+                .flatten()
+            }
+            None => Some(Stat {
+                node_type: NodeType::Dir,
+            }),
+        }
     }
 }
 
@@ -211,6 +339,14 @@ fn execute_backend_op_with_policy<T: std::fmt::Debug>(
             })
             .find(Result::is_ok)
             .map(Result::unwrap)
+            .or_else(|| {
+                // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
+                tracing::error!(
+                    "ERROR TODO" // "None of the backends for storages {:?} works", // TODO
+                                 // storages.iter().map(|s| s.backend_type())
+                );
+                None
+            })
         }
     }
 }

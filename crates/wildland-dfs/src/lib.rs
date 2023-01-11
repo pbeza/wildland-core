@@ -19,6 +19,7 @@ pub mod encrypted;
 pub mod storage_backend;
 pub mod unencrypted;
 
+pub use wildland_corex::dfs::interface::*;
 pub use wildland_corex::{
     Storage,
     StorageTemplate,

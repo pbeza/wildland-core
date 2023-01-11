@@ -17,6 +17,8 @@
 
 use std::path::{Path, PathBuf};
 
+use uuid::Uuid;
+
 use crate::Storage;
 
 /// Represents result of a possible path within a Storage. Storages field represents all alternative
@@ -26,6 +28,8 @@ pub enum ResolvedPath {
     PathWithStorages {
         /// path within storages
         path_within_storage: PathBuf,
+        /// Container uuid may be used but DFS itself does not recognize Container notion so it is called StoragesId
+        storages_id: Uuid,
         /// all storages that include the path (all replicas)
         storages: Vec<Storage>,
     },

@@ -17,7 +17,7 @@
 
 mod template;
 
-use std::fs::read_dir;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -25,7 +25,7 @@ use anyhow::anyhow;
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::storage_backend::StorageBackend;
 use wildland_dfs::unencrypted::StorageBackendFactory;
-use wildland_dfs::Storage;
+use wildland_dfs::{NodeType, Stat, Storage};
 
 #[derive(Debug)]
 pub struct LocalFilesystemStorage {
@@ -39,7 +39,7 @@ impl StorageBackend for LocalFilesystemStorage {
         } else {
             path
         };
-        read_dir(self.base_dir.join(relative_path))
+        fs::read_dir(self.base_dir.join(relative_path))
             .map_err(|e| anyhow!(e))
             .and_then(|readdir| {
                 readdir
@@ -49,6 +49,31 @@ impl StorageBackend for LocalFilesystemStorage {
                     })
                     .collect::<Result<Vec<_>, anyhow::Error>>()
             })
+    }
+
+    fn getattr(&self, path: &Path) -> Result<Option<Stat>, anyhow::Error> {
+        let relative_path = if path.is_absolute() {
+            path.strip_prefix("/").unwrap()
+        } else {
+            path
+        };
+
+        Ok(
+            fs::metadata(self.base_dir.join(relative_path)).map(|metadata| {
+                let file_type = metadata.file_type();
+                Some(Stat {
+                    node_type: if file_type.is_file() {
+                        NodeType::File
+                    } else if file_type.is_dir() {
+                        NodeType::Dir
+                    } else if file_type.is_symlink() {
+                        NodeType::Symlink
+                    } else {
+                        return None;
+                    },
+                })
+            })?,
+        )
     }
 }
 

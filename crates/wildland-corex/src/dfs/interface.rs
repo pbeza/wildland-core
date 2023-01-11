@@ -15,32 +15,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::path::PathBuf;
-
-use crate::Storage;
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct NodeDescriptor {
-    pub storage: Option<NodeStorage>, // nodes may not have storage - so called virtual nodes
-    pub absolute_path: PathBuf,
+#[derive(Debug, PartialEq, Eq)]
+pub struct Stat {
+    pub node_type: NodeType,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct NodeStorage {
-    storage: Storage,
-    path_within_storage: PathBuf,
-}
-
-impl NodeStorage {
-    pub fn new(storage: Storage, path_within_storage: PathBuf) -> Self {
-        Self {
-            storage,
-            path_within_storage,
-        }
-    }
+#[derive(Debug, PartialEq, Eq)]
+pub enum NodeType {
+    File,
+    Dir,
+    Symlink,
 }
 
 /// Interface that DFS should expose towards frontends
 pub trait DfsFrontend {
-    fn readdir(&mut self, path: String) -> Vec<NodeDescriptor>;
+    fn readdir(&mut self, path: String) -> Vec<String>;
+    fn getattr(&mut self, path: String) -> Option<Stat>;
 }
