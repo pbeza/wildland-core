@@ -29,7 +29,7 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, NodeType, Stat};
 use wildland_corex::{PathResolver, ResolvedPath, Storage};
 
-use crate::storage_backend::StorageBackend;
+use crate::storage_backend::{StorageBackend, StorageBackendError};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct NodeDescriptor {
@@ -142,24 +142,27 @@ impl UnencryptedDfs {
     fn assign_exposed_paths(
         &self,
         nodes: Vec<NodeDescriptor>,
-    ) -> Vec<(NodeDescriptor, Option<PathBuf>)> {
+    ) -> impl Iterator<Item = (NodeDescriptor, Option<PathBuf>)> + '_ {
         let counted_abs_paths = nodes.iter().counts_by(|node| node.absolute_path.clone());
+        nodes.into_iter().map(move |node| {
+            let abs_path = node.absolute_path.clone();
 
-        nodes
-            .into_iter()
-            .map(|node| {
-                let abs_path = node.absolute_path.clone();
-                if counted_abs_paths.get(&abs_path).unwrap() > &1 {
-                    let exposed_path =
-                        abs_path.join(node.storages.as_ref().map_or(PathBuf::new(), |s| {
-                            PathBuf::from_str(s.uuid.to_string().as_str()).unwrap()
-                        }));
-                    (node, Some(exposed_path))
-                } else {
-                    (node, Some(abs_path))
-                }
-            })
-            .collect()
+            // If another file tries to claim the same path
+            if counted_abs_paths.get(&abs_path).unwrap() > &1
+                // or any physical node has the same path as some virtual node
+                || self.path_resolver.is_virtual_nodes(&abs_path)
+            {
+                // then append uuid to avoid conflict
+                let exposed_path =
+                    abs_path.join(node.storages.as_ref().map_or(PathBuf::new(), |s| {
+                        PathBuf::from_str(s.uuid.to_string().as_str()).unwrap()
+                    }));
+                (node, Some(exposed_path))
+            } else {
+                // otherwise, in case there is no conflicts, expose as the same path
+                (node, Some(abs_path))
+            }
+        })
     }
 
     /// TODO description
@@ -188,18 +191,23 @@ impl DfsFrontend for UnencryptedDfs {
     /// ]
     /// Full path within the user's forest for both nodes is `/a/b/c`. It is up to FS frontend how to
     /// show it to a user (e.g. by prefixing it with some storage-specific tag).
-    fn readdir(&mut self, path: String) -> Vec<String> {
-        let path = PathBuf::from_str(&path).unwrap();
-        let resolved_paths = self.path_resolver.resolve(path.as_ref());
+    fn readdir(&mut self, requested_path: String) -> Vec<String> {
+        let requested_path = PathBuf::from_str(&requested_path).unwrap();
+        let resolved_paths = self.path_resolver.resolve(requested_path.as_ref());
         let nodes = resolved_paths
             .into_iter()
             .filter_map(|resolved_path| {
                 match resolved_path {
                     ResolvedPath::VirtualPath(virtual_path) => {
-                        Some(Either::Left(std::iter::once(NodeDescriptor {
-                            storages: None,
-                            absolute_path: path.join(virtual_path.file_name().unwrap()),
-                        })))
+                        let virtual_nodes = self
+                            .path_resolver
+                            .list_virtual_nodes_in(&virtual_path)
+                            .into_iter()
+                            .map(|node_name| NodeDescriptor {
+                                storages: None,
+                                absolute_path: requested_path.join(node_name),
+                            });
+                        Some(Either::Left(virtual_nodes))
                     }
                     ResolvedPath::PathWithStorages {
                         path_within_storage,
@@ -214,8 +222,9 @@ impl DfsFrontend for UnencryptedDfs {
                                 backend
                                     .readdir(&path_within_storage)
                                     .map(|resulting_paths| {
-                                        resulting_paths.into_iter().map({
-                                            let path = path.clone();
+                                        Either::Left(resulting_paths.into_iter().map({
+                                            let path = requested_path.clone();
+                                            let storages = storages.clone();
                                             move |entry_path| NodeDescriptor {
                                                 storages: Some(NodeStorages::new(
                                                     storages.clone(),
@@ -225,7 +234,20 @@ impl DfsFrontend for UnencryptedDfs {
                                                 absolute_path: path
                                                     .join(entry_path.file_name().unwrap()),
                                             }
-                                        })
+                                        }))
+                                    })
+                                    .or_else(|err| match err {
+                                        StorageBackendError::NotADirectory => {
+                                            Ok(Either::Right(std::iter::once(NodeDescriptor {
+                                                storages: Some(NodeStorages::new(
+                                                    storages.clone(),
+                                                    path_within_storage.clone(),
+                                                    storages_id,
+                                                )),
+                                                absolute_path: requested_path.clone(),
+                                            })))
+                                        }
+                                        _ => Err(err),
                                     })
                             }
                         });
@@ -245,16 +267,25 @@ impl DfsFrontend for UnencryptedDfs {
             .collect_vec();
 
         self.assign_exposed_paths(nodes)
-            .into_iter()
-            .filter_map(|(_node, exposed_path)| {
-                exposed_path.map(|p| p.to_string_lossy().to_string())
+            .filter_map(|(_node, exposed_path)| match exposed_path {
+                Some(exposed_path) => {
+                    if exposed_path.components().count() > requested_path.components().count() + 1 {
+                        let mut parent = PathBuf::from(&exposed_path);
+                        parent.pop();
+                        Some(parent.to_string_lossy().to_string() + "/")
+                    } else {
+                        Some(exposed_path.to_string_lossy().to_string())
+                    }
+                }
+                None => None,
             })
+            .unique()
             .collect()
     }
 
-    fn getattr(&mut self, requested_path: String) -> Option<Stat> {
-        let requested_path = Path::new(&requested_path);
-        let requested_abs_path = self.exposed_to_absolute_path(requested_path);
+    fn getattr(&mut self, input_exposed_path: String) -> Option<Stat> {
+        let input_exposed_path = Path::new(&input_exposed_path);
+        let requested_abs_path = self.exposed_to_absolute_path(input_exposed_path);
 
         let resolved_paths = self.path_resolver.resolve(&requested_abs_path);
         let nodes = resolved_paths
@@ -280,12 +311,11 @@ impl DfsFrontend for UnencryptedDfs {
             .collect_vec();
         let node = self
             .assign_exposed_paths(nodes)
-            .into_iter()
             .filter_map(|(node, opt_exposed_path)| {
                 opt_exposed_path.map(|exposed_path| (node, exposed_path))
             })
             .find_map(|(node, exposed_path)| {
-                if exposed_path == requested_path {
+                if exposed_path == input_exposed_path {
                     Some(node)
                 } else {
                     None
@@ -306,6 +336,7 @@ impl DfsFrontend for UnencryptedDfs {
                 )
                 .flatten()
             }
+            // Virtual node
             None => Some(Stat {
                 node_type: NodeType::Dir,
             }),
@@ -328,7 +359,7 @@ enum ExecutionPolicy {
     SequentiallyToFirstSuccess,
 }
 fn execute_backend_op_with_policy<T: std::fmt::Debug>(
-    ops: impl Iterator<Item = Result<T, anyhow::Error>>,
+    ops: impl Iterator<Item = Result<T, StorageBackendError>>,
     policy: ExecutionPolicy,
 ) -> Option<T> {
     match policy {
@@ -358,8 +389,9 @@ fn execute_backend_op_with_policy<T: std::fmt::Debug>(
 
 #[cfg(test)]
 mod unit_tests {
-    use super::*;
     use pretty_assertions::assert_eq;
+
+    use super::*;
 
     #[test]
     fn test_pop_uuid_from_path() {

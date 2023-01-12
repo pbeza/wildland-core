@@ -33,7 +33,8 @@ pub enum ResolvedPath {
         /// all storages that include the path (all replicas)
         storages: Vec<Storage>,
     },
-    /// represents virtual node paths that are not supposed to be looked up for in any backend
+    /// Represents virtual node path that are not supposed to be looked up for in any backend.
+    /// Contains absolute path in forest namespace.
     VirtualPath(PathBuf),
 }
 
@@ -56,4 +57,12 @@ pub trait PathResolver {
     /// ]
     ///
     fn resolve(&self, path: &Path) -> Vec<ResolvedPath>;
+
+    /// Lists all virtual nodes' names contained by provided path.
+    /// Example: C1 claims /a/b, C2 claims /a/c
+    ///     when called with arg `/a` returns ["b", "c"]
+    fn list_virtual_nodes_in(&self, path: &Path) -> Vec<String>;
+
+    /// Checks if provided path is a virtual node
+    fn is_virtual_nodes(&self, path: &Path) -> bool;
 }

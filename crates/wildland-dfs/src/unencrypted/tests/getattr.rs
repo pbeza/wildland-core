@@ -30,6 +30,12 @@ fn test_getattr_of_file_in_container_root() {
             }
         });
 
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::always())
+        .times(1)
+        .returning(move |_path| false);
+
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
@@ -64,6 +70,12 @@ fn test_getattr_of_dir_in_container_root() {
             }
         });
 
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::always())
+        .times(1)
+        .returning(move |_path| false);
+
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
@@ -87,6 +99,12 @@ fn test_getattr_of_virtual_dir() {
         .with(predicate::eq(Path::new("/virtual_dir")))
         .times(1)
         .returning(move |_path| vec![ResolvedPath::VirtualPath(PathBuf::from("/"))]);
+
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::always())
+        .times(1)
+        .returning(move |_path| true);
 
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
@@ -139,6 +157,104 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
     fs.create_dir("/storage2/file_or_dir").unwrap();
 
     let stat = dfs.getattr("/a/b/file_or_dir/00000000-0000-0000-0000-000000000002".to_string());
+    assert_eq!(
+        stat,
+        Some(Stat {
+            node_type: NodeType::Dir
+        })
+    )
+}
+
+#[rstest]
+fn test_virtual_path_colliding_with_file() {
+    let mut path_resolver = MockPathResolver::new();
+
+    // each container has its own subfolder
+    let storage1 = new_mufs_storage("/storage1/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b")))
+        .times(2)
+        .returning({
+            move |_path| {
+                vec![
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/b".into(), // returned by the container claiming path `/a/`
+                        storages_id: Uuid::from_u128(1),
+                        storages: vec![storage1.clone()],
+                    },
+                    ResolvedPath::VirtualPath(PathBuf::from("")), // returned by containers claiming path `/a/b/*`
+                ]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_dir("/storage1/").unwrap();
+    fs.create_file("/storage1/b").unwrap();
+
+    // /a/b should be a dir
+    let stat = dfs.getattr("/a/b/".to_string());
+    assert_eq!(
+        stat,
+        Some(Stat {
+            node_type: NodeType::Dir
+        })
+    );
+
+    // file /b from container claiming /a should be represented with appended container uuid to avoid collision
+    let stat = dfs.getattr("/a/b/00000000-0000-0000-0000-000000000001".to_string());
+    assert_eq!(
+        stat,
+        Some(Stat {
+            node_type: NodeType::File
+        })
+    )
+}
+
+#[rstest]
+fn test_virtual_path_colliding_with_dir() {
+    let mut path_resolver = MockPathResolver::new();
+
+    // each container has its own subfolder
+    let storage1 = new_mufs_storage("/storage1/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b")))
+        .times(2)
+        .returning({
+            move |_path| {
+                vec![
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/b".into(), // returned by the container claiming path `/a/`
+                        storages_id: Uuid::from_u128(1),
+                        storages: vec![storage1.clone()],
+                    },
+                    ResolvedPath::VirtualPath(PathBuf::from("")), // returned by containers claiming path `/a/b/*`
+                ]
+            }
+        });
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_dir("/storage1/").unwrap();
+    fs.create_dir("/storage1/b").unwrap();
+
+    // /a/b should be a dir
+    let stat = dfs.getattr("/a/b/".to_string());
+    assert_eq!(
+        stat,
+        Some(Stat {
+            node_type: NodeType::Dir
+        })
+    );
+
+    // file /b from container claiming /a should be represented with appended container uuid to avoid collision
+    let stat = dfs.getattr("/a/b/00000000-0000-0000-0000-000000000001".to_string());
     assert_eq!(
         stat,
         Some(Stat {

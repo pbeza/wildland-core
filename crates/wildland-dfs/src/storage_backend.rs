@@ -19,7 +19,24 @@ use std::path::{Path, PathBuf};
 
 use wildland_corex::dfs::interface::Stat;
 
-type StorageBackendError = anyhow::Error;
+#[derive(thiserror::Error, Debug)]
+pub enum StorageBackendError {
+    #[error("Not a directory")]
+    NotADirectory,
+    #[error(transparent)]
+    Generic(anyhow::Error),
+}
+
+impl From<std::io::Error> for StorageBackendError {
+    fn from(e: std::io::Error) -> Self {
+        StorageBackendError::Generic(e.into())
+    }
+}
+impl From<std::path::StripPrefixError> for StorageBackendError {
+    fn from(e: std::path::StripPrefixError) -> Self {
+        StorageBackendError::Generic(e.into())
+    }
+}
 
 pub trait StorageBackend {
     // TODO docs

@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use mockall::predicate;
@@ -30,15 +30,21 @@ fn test_listing_files_from_root_of_one_container() {
             }
         });
 
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::always())
+        .times(1)
+        .returning(move |_path| false);
+
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
-    let files_descriptors = dfs.readdir("/a/b/".to_string());
-    assert_eq!(files_descriptors, Vec::<String>::new());
+    let files = dfs.readdir("/a/b/".to_string());
+    assert_eq!(files, Vec::<String>::new());
 
     fs.create_file("/file_in_root").unwrap();
-    let files_descriptors = dfs.readdir("/a/b/".to_string());
-    assert_eq!(files_descriptors, vec!["/a/b/file_in_root".to_string(),]);
+    let files = dfs.readdir("/a/b/".to_string());
+    assert_eq!(files, vec!["/a/b/file_in_root".to_string(),]);
 }
 
 #[rstest]
@@ -51,29 +57,33 @@ fn test_listing_files_from_nested_dir_of_one_container() {
         .expect_resolve()
         .with(predicate::eq(Path::new("/a/b/dir")))
         .times(2)
-        .returning({
-            move |_path| {
-                vec![ResolvedPath::PathWithStorages {
-                    path_within_storage: "/dir".into(),
-                    storages_id: Uuid::from_u128(1),
-                    storages: vec![mufs_storage.clone()],
-                }]
-            }
+        .returning(move |_path| {
+            vec![ResolvedPath::PathWithStorages {
+                path_within_storage: "/dir".into(), // claim /a/b
+                storages_id: Uuid::from_u128(1),
+                storages: vec![mufs_storage.clone()],
+            }]
         });
+
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::always())
+        .times(2)
+        .returning(move |_path| false);
 
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
-    let files_descriptors = dfs.readdir("/a/b/dir".to_string());
-    assert_eq!(files_descriptors, Vec::<String>::new());
+    let files = dfs.readdir("/a/b/dir".to_string());
+    assert_eq!(files, Vec::<String>::new());
 
     fs.create_dir("/dir/").unwrap();
     fs.create_file("/dir/nested_file_1").unwrap();
     fs.create_file("/dir/nested_file_2").unwrap();
 
-    let files_descriptors = dfs.readdir("/a/b/dir".to_string());
+    let files = dfs.readdir("/a/b/dir".to_string());
     assert_eq!(
-        files_descriptors,
+        files,
         vec![
             "/a/b/dir/nested_file_1".to_string(),
             "/a/b/dir/nested_file_2".to_string(),
@@ -91,30 +101,31 @@ fn test_listing_dirs_from_one_container() {
         .expect_resolve()
         .with(predicate::eq(Path::new("/")))
         .times(2)
-        .returning({
-            move |_path| {
-                vec![ResolvedPath::PathWithStorages {
-                    path_within_storage: "/".into(),
-                    storages_id: Uuid::from_u128(1),
-                    storages: vec![mufs_storage.clone()],
-                }]
-            }
+        .returning(move |_path| {
+            vec![ResolvedPath::PathWithStorages {
+                path_within_storage: "/".into(), // claim /
+                storages_id: Uuid::from_u128(1),
+                storages: vec![mufs_storage.clone()],
+            }]
         });
+
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::always())
+        .times(2)
+        .returning(move |_path| false);
 
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
-    let files_descriptors = dfs.readdir("/".to_string());
-    assert_eq!(files_descriptors, Vec::<String>::new());
+    let files = dfs.readdir("/".to_string());
+    assert_eq!(files, Vec::<String>::new());
 
     fs.create_dir("/dir_a").unwrap();
     fs.create_dir("/dir_b").unwrap();
 
-    let files_descriptors = dfs.readdir("/".to_string());
-    assert_eq!(
-        files_descriptors,
-        vec!["/dir_a".to_string(), "/dir_b".to_string(),]
-    );
+    let files = dfs.readdir("/".to_string());
+    assert_eq!(files, vec!["/dir_a".to_string(), "/dir_b".to_string(),]);
 }
 
 #[rstest]
@@ -126,24 +137,28 @@ fn test_listing_files_and_dirs_from_two_containers() {
     let storage2 = new_mufs_storage("/storage2/");
 
     path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::always())
+        .times(3)
+        .returning(move |_path| false);
+
+    path_resolver
         .expect_resolve()
         .with(predicate::eq(Path::new("/a/b/c/dir")))
         .times(2)
-        .returning({
-            move |_path| {
-                vec![
-                    ResolvedPath::PathWithStorages {
-                        path_within_storage: "/dir".into(), // returned by a container claiming path `/a/b/c/`
-                        storages_id: Uuid::from_u128(1),
-                        storages: vec![storage1.clone()],
-                    },
-                    ResolvedPath::PathWithStorages {
-                        path_within_storage: "/c/dir".into(), // returned by a container claiming path `/a/b/`
-                        storages_id: Uuid::from_u128(1),
-                        storages: vec![storage2.clone()],
-                    },
-                ]
-            }
+        .returning(move |_path| {
+            vec![
+                ResolvedPath::PathWithStorages {
+                    path_within_storage: "/dir".into(), // returned by a container claiming path `/a/b/c/`
+                    storages_id: Uuid::from_u128(1),
+                    storages: vec![storage1.clone()],
+                },
+                ResolvedPath::PathWithStorages {
+                    path_within_storage: "/c/dir".into(), // returned by a container claiming path `/a/b/`
+                    storages_id: Uuid::from_u128(1),
+                    storages: vec![storage2.clone()],
+                },
+            ]
         });
 
     let path_resolver = Rc::new(path_resolver);
@@ -155,8 +170,8 @@ fn test_listing_files_and_dirs_from_two_containers() {
     fs.create_dir("/storage2/c/").unwrap();
     fs.create_dir("/storage2/c/dir/").unwrap();
 
-    let files_descriptors = dfs.readdir("/a/b/c/dir".to_string());
-    assert_eq!(files_descriptors, Vec::<String>::new());
+    let files = dfs.readdir("/a/b/c/dir".to_string());
+    assert_eq!(files, Vec::<String>::new());
 
     fs.create_file("/storage1/dir/file_from_container_1")
         .unwrap();
@@ -164,9 +179,9 @@ fn test_listing_files_and_dirs_from_two_containers() {
     fs.create_file("/storage2/c/dir/file_from_container_2")
         .unwrap();
 
-    let files_descriptors = dfs.readdir("/a/b/c/dir".to_string());
+    let files = dfs.readdir("/a/b/c/dir".to_string());
     assert_eq!(
-        files_descriptors,
+        files,
         vec![
             "/a/b/c/dir/file_from_container_1".to_string(),
             "/a/b/c/dir/file_from_container_2".to_string(),
@@ -176,7 +191,7 @@ fn test_listing_files_and_dirs_from_two_containers() {
 }
 
 #[rstest]
-fn test_getting_one_file_descriptor_from_container_with_multiple_storages() {
+fn test_getting_one_file_from_container_with_multiple_storages() {
     let mut path_resolver = MockPathResolver::new();
 
     // each container has its own subfolder
@@ -187,15 +202,19 @@ fn test_getting_one_file_descriptor_from_container_with_multiple_storages() {
         .expect_resolve()
         .with(predicate::eq(Path::new("/a")))
         .times(2)
-        .returning({
-            move |_path| {
-                vec![ResolvedPath::PathWithStorages {
-                    path_within_storage: "/a".into(), // returned by a container claiming path `/a/`
-                    storages_id: Uuid::from_u128(1),
-                    storages: vec![storage1.clone(), storage2.clone()],
-                }]
-            }
+        .returning(move |_path| {
+            vec![ResolvedPath::PathWithStorages {
+                path_within_storage: "/a".into(), // returned by a container claiming path `/`
+                storages_id: Uuid::from_u128(1),
+                storages: vec![storage1.clone(), storage2.clone()],
+            }]
         });
+
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::always())
+        .times(1)
+        .returning(move |_path| false);
 
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
@@ -205,19 +224,19 @@ fn test_getting_one_file_descriptor_from_container_with_multiple_storages() {
     fs.create_dir("/storage2/").unwrap();
     fs.create_dir("/storage2/a").unwrap();
 
-    let files_descriptors = dfs.readdir("/a".to_string());
-    assert_eq!(files_descriptors, Vec::<String>::new());
+    let files = dfs.readdir("/a".to_string());
+    assert_eq!(files, Vec::<String>::new());
 
     fs.create_file("/storage1/a/b").unwrap();
     fs.create_file("/storage2/a/b").unwrap();
 
-    let files_descriptors = dfs.readdir("/a".to_string());
-    assert_eq!(files_descriptors, vec!["/a/b".to_string(),]);
+    let files = dfs.readdir("/a".to_string());
+    assert_eq!(files, vec!["/a/b".to_string(),]);
 }
 
 /// Full Path is a concatenation of a path claimed by a container with a path of the file inside the container.
 #[rstest]
-fn test_more_than_one_file_descriptor_claim_the_same_full_path() {
+fn test_more_than_one_file_claim_the_same_full_path() {
     let mut path_resolver = MockPathResolver::new();
 
     // each container has its own subfolder
@@ -228,21 +247,19 @@ fn test_more_than_one_file_descriptor_claim_the_same_full_path() {
         .expect_resolve()
         .with(predicate::eq(Path::new("/a/b/")))
         .times(2)
-        .returning({
-            move |_path| {
-                vec![
-                    ResolvedPath::PathWithStorages {
-                        path_within_storage: "/b/".into(), // returned by the container claiming path `/a/`
-                        storages_id: Uuid::from_u128(1),
-                        storages: vec![storage1.clone()],
-                    },
-                    ResolvedPath::PathWithStorages {
-                        path_within_storage: "/".into(), // returned by the container claiming path `/a/b/`
-                        storages_id: Uuid::from_u128(2),
-                        storages: vec![storage2.clone()],
-                    },
-                ]
-            }
+        .returning(move |_path| {
+            vec![
+                ResolvedPath::PathWithStorages {
+                    path_within_storage: "/b/".into(), // returned by the container claiming path `/a/`
+                    storages_id: Uuid::from_u128(1),
+                    storages: vec![storage1.clone()],
+                },
+                ResolvedPath::PathWithStorages {
+                    path_within_storage: "/".into(), // returned by the container claiming path `/a/b/`
+                    storages_id: Uuid::from_u128(2),
+                    storages: vec![storage2.clone()],
+                },
+            ]
         });
 
     let path_resolver = Rc::new(path_resolver);
@@ -252,20 +269,20 @@ fn test_more_than_one_file_descriptor_claim_the_same_full_path() {
     fs.create_dir("/storage1/b").unwrap();
     fs.create_dir("/storage2/").unwrap();
 
-    let files_descriptors = dfs.readdir("/a/b/".to_string());
-    assert_eq!(files_descriptors, Vec::<String>::new());
+    let files = dfs.readdir("/a/b/".to_string());
+    assert_eq!(files, Vec::<String>::new());
 
     fs.create_file("/storage1/b/c").unwrap();
     fs.create_file("/storage2/c").unwrap();
 
-    let files_descriptors = dfs.readdir("/a/b".to_string());
+    let files = dfs.readdir("/a/b".to_string());
     assert_eq!(
-        files_descriptors,
+        files,
         vec![
             // Storage of the container claiming path `/a/` + `b/c` within the container gives full path `/a/b/c`
-            "/a/b/c/00000000-0000-0000-0000-000000000001".to_string(),
             // Storage of the container claiming path `/a/b` + `c` within the container also gives full path `/a/b/c`
-            "/a/b/c/00000000-0000-0000-0000-000000000002".to_string(),
+            // The following dir contains both files with container uuids as names
+            "/a/b/c/".to_string(),
         ]
     );
 }
@@ -282,15 +299,19 @@ fn test_first_storage_unavailable() {
         .expect_resolve()
         .with(predicate::eq(Path::new("/")))
         .times(1)
-        .returning({
-            move |_path| {
-                vec![ResolvedPath::PathWithStorages {
-                    path_within_storage: "/".into(),
-                    storages_id: Uuid::from_u128(1),
-                    storages: vec![storage1.clone(), storage2.clone()],
-                }]
-            }
+        .returning(move |_path| {
+            vec![ResolvedPath::PathWithStorages {
+                path_within_storage: "/".into(), // claim /
+                storages_id: Uuid::from_u128(1),
+                storages: vec![storage1.clone(), storage2.clone()],
+            }]
         });
+
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::always())
+        .times(1)
+        .returning(move |_path| false);
 
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
@@ -300,8 +321,8 @@ fn test_first_storage_unavailable() {
     fs.create_dir("/storage2/").unwrap();
     fs.create_file("/storage2/a").unwrap();
 
-    let files_descriptors = dfs.readdir("/".to_string());
-    assert_eq!(files_descriptors, vec!["/a".to_string(),]);
+    let files = dfs.readdir("/".to_string());
+    assert_eq!(files, vec!["/a".to_string(),]);
 }
 
 #[rstest]
@@ -315,18 +336,38 @@ fn test_listing_virtual_node() {
         .expect_resolve()
         .with(predicate::eq(Path::new("/a")))
         .times(1)
-        .returning({
-            move |_path| {
-                vec![
-                    ResolvedPath::PathWithStorages {
-                        path_within_storage: "/".into(),
-                        storages_id: Uuid::from_u128(1),
-                        storages: vec![storage1.clone()],
-                    },
-                    ResolvedPath::VirtualPath("/b".into()),
-                ]
-            }
+        .returning(move |_path| {
+            vec![
+                ResolvedPath::PathWithStorages {
+                    path_within_storage: "/".into(), // claim /a
+                    storages_id: Uuid::from_u128(1),
+                    storages: vec![storage1.clone()],
+                },
+                ResolvedPath::VirtualPath("/a".into()),
+            ]
         });
+
+    path_resolver
+        .expect_list_virtual_nodes_in()
+        .with(predicate::eq(Path::new("/a")))
+        .times(1)
+        .returning(move |_path| vec!["b".to_string()]); // returned by containers claiming path /a/b/*
+
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::eq(Path::new("/a/dir")))
+        .times(1)
+        .returning(move |_path| false);
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::eq(Path::new("/a/file_1")))
+        .times(1)
+        .returning(move |_path| false);
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::eq(Path::new("/a/b")))
+        .times(1)
+        .returning(move |_path| true);
 
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
@@ -336,13 +377,154 @@ fn test_listing_virtual_node() {
     fs.create_dir("/storage_c1/dir/").unwrap();
     fs.create_file("storage_c1/dir/file_in_nested_dir").unwrap(); // it should not be present in result
 
-    let files_descriptors = dfs.readdir("/a".to_string());
+    let files = dfs.readdir("/a".to_string());
     assert_eq!(
-        files_descriptors,
+        files,
         vec![
             "/a/dir".to_string(),
             "/a/file_1".to_string(),
-            "/a/b".to_string(),
+            "/a/b/".to_string(),
         ]
     );
+}
+
+#[rstest]
+fn test_file_colliding_with_virtual_node() {
+    let mut path_resolver = MockPathResolver::new();
+
+    // each container has its own subfolder
+    let storage1 = new_mufs_storage("/storage1/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/")))
+        .times(1)
+        .returning({
+            let storage1 = storage1.clone();
+            move |_path| {
+                vec![
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/".into(), // returned by the container claiming path `/a/`
+                        storages_id: Uuid::from_u128(1),
+                        storages: vec![storage1.clone()],
+                    },
+                    ResolvedPath::VirtualPath(PathBuf::from("/a")),
+                ]
+            }
+        });
+
+    path_resolver
+        .expect_list_virtual_nodes_in()
+        .with(predicate::eq(Path::new("/a")))
+        .times(1)
+        .returning(move |_path| vec!["b".to_string()]); // returned by containers claiming path /a/b/*
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b")))
+        .times(1)
+        .returning(move |_path| {
+            vec![
+                ResolvedPath::PathWithStorages {
+                    path_within_storage: "/b".into(), // returned by the container claiming path `/a/`
+                    storages_id: Uuid::from_u128(1),
+                    storages: vec![storage1.clone()],
+                },
+                ResolvedPath::VirtualPath(PathBuf::from("/a/b/")),
+            ]
+        });
+
+    path_resolver
+        .expect_list_virtual_nodes_in()
+        .with(predicate::eq(Path::new("/a/b/")))
+        .times(1)
+        .returning(move |_path| vec![]);
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::eq(Path::new("/a/b/")))
+        .times(1)
+        .returning(move |_path| true);
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_dir("/storage1/").unwrap();
+    fs.create_file("/storage1/b").unwrap();
+
+    let files = dfs.readdir("/a/".to_string());
+    // We expect only /a/b/ path represented by a directory.
+    // File /b in container claiming path /a collides with virtual node /a/b so it should be exposed as
+    // /a/b/00000000-0000-0000-0000-000000000001
+    assert_eq!(files, vec!["/a/b/".to_string(),]);
+
+    let files = dfs.readdir("/a/b/".to_string());
+    assert_eq!(
+        files,
+        vec!["/a/b/00000000-0000-0000-0000-000000000001".to_string(),]
+    );
+}
+
+#[rstest]
+fn test_dir_colliding_with_virtual_node() {
+    let mut path_resolver = MockPathResolver::new();
+
+    // each container has its own subfolder
+    let storage1 = new_mufs_storage("/storage1/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/")))
+        .times(1)
+        .returning({
+            let storage1 = storage1.clone();
+            move |_path| {
+                vec![
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/".into(), // returned by the container claiming path `/a/`
+                        storages_id: Uuid::from_u128(1),
+                        storages: vec![storage1.clone()],
+                    },
+                    ResolvedPath::VirtualPath(PathBuf::from("/a")),
+                ]
+            }
+        });
+
+    path_resolver
+        .expect_list_virtual_nodes_in()
+        .with(predicate::eq(Path::new("/a")))
+        .times(1)
+        .returning(move |_path| vec!["b".to_string()]); // returned by containers claiming path /a/b/*
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b")))
+        .times(1)
+        .returning(move |_path| {
+            vec![ResolvedPath::PathWithStorages {
+                path_within_storage: "/b/".into(), // returned by the container claiming path `/a/`
+                storages_id: Uuid::from_u128(1),
+                storages: vec![storage1.clone()],
+            }]
+        });
+
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::eq(Path::new("/a/b/c")))
+        .times(1)
+        .returning(|_path| false); // returned by containers claiming path /a/b/*
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_dir("/storage1/").unwrap();
+    fs.create_dir("/storage1/b").unwrap();
+    fs.create_file("/storage1/b/c").unwrap();
+
+    let files = dfs.readdir("/a/".to_string());
+    // We expect only /a/b/ path represented by a directory.
+    // Directory /b in container claiming path /a collides with virtual node /a/b so they are merged
+    assert_eq!(files, vec!["/a/b/".to_string(),]);
+
+    let files = dfs.readdir("/a/b/".to_string());
+    assert_eq!(files, vec!["/a/b/c".to_string(),]);
 }

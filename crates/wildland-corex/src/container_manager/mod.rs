@@ -27,4 +27,12 @@ impl PathResolver for ContainerManager {
     fn resolve(&self, _path: &Path) -> Vec<ResolvedPath> {
         todo!() // TODO WILX-353 implement when ContainerManager is filled with information about mounted containers
     }
+
+    fn list_virtual_nodes_in(&self, _path: &Path) -> Vec<String> {
+        todo!() // TODO WILX-353 implement when ContainerManager is filled with information about mounted containers
+    }
+
+    fn is_virtual_nodes(&self, _path: &Path) -> bool {
+        todo!() // TODO WILX-353 implement when ContainerManager is filled with information about mounted containers
+    }
 }

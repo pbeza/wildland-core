@@ -2,6 +2,7 @@ mod getattr;
 mod readdir;
 
 use std::collections::HashMap;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -10,6 +11,7 @@ use rsfs::{DirEntry, FileType, GenFS, Metadata};
 use wildland_corex::dfs::interface::{NodeType, Stat};
 use wildland_corex::{MockPathResolver, Storage};
 
+use crate::storage_backend::StorageBackendError;
 use crate::unencrypted::{StorageBackend, StorageBackendFactory, UnencryptedDfs};
 
 /// Made up Filesystem
@@ -26,15 +28,22 @@ impl Mufs {
     }
 }
 impl StorageBackend for Mufs {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, anyhow::Error> {
+    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
+        // todo extract
         let relative_path = if path.is_absolute() {
             path.strip_prefix("/").unwrap()
         } else {
             path
         };
-        Ok(self
-            .fs
+        self.fs
             .read_dir(self.base_dir.join(relative_path))
+            .map_err(|err| {
+                if err.kind() == ErrorKind::NotADirectory {
+                    StorageBackendError::NotADirectory
+                } else {
+                    StorageBackendError::Generic(err.into())
+                }
+            })
             .map(|readdir| {
                 readdir
                     .into_iter()
@@ -43,10 +52,10 @@ impl StorageBackend for Mufs {
                             .join(entry.unwrap().path().strip_prefix(&self.base_dir).unwrap())
                     })
                     .collect()
-            })?)
+            })
     }
 
-    fn getattr(&self, path: &Path) -> Result<Option<Stat>, anyhow::Error> {
+    fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
         let relative_path = if path.is_absolute() {
             path.strip_prefix("/").unwrap()
         } else {

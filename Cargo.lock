@@ -2773,6 +2773,7 @@ dependencies = [
  "rsfs",
  "rstest",
  "serde_json",
+ "thiserror",
  "tracing",
  "uuid",
  "wildland-corex",

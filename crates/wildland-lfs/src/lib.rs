@@ -15,15 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#![feature(io_error_more)]
+
 mod template;
 
 use std::fs;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use anyhow::anyhow;
 use template::LocalFilesystemStorageTemplate;
-use wildland_dfs::storage_backend::StorageBackend;
+use wildland_dfs::storage_backend::{StorageBackend, StorageBackendError};
 use wildland_dfs::unencrypted::StorageBackendFactory;
 use wildland_dfs::{NodeType, Stat, Storage};
 
@@ -33,25 +35,31 @@ pub struct LocalFilesystemStorage {
 }
 
 impl StorageBackend for LocalFilesystemStorage {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, anyhow::Error> {
+    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
         let relative_path = if path.is_absolute() {
             path.strip_prefix("/").unwrap()
         } else {
             path
         };
         fs::read_dir(self.base_dir.join(relative_path))
-            .map_err(|e| anyhow!(e))
+            .map_err(|err| {
+                if err.kind() == ErrorKind::NotADirectory {
+                    StorageBackendError::NotADirectory
+                } else {
+                    StorageBackendError::Generic(err.into())
+                }
+            })
             .and_then(|readdir| {
                 readdir
                     .into_iter()
                     .map(|entry_result| {
                         Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
                     })
-                    .collect::<Result<Vec<_>, anyhow::Error>>()
+                    .collect::<Result<Vec<_>, StorageBackendError>>()
             })
     }
 
-    fn getattr(&self, path: &Path) -> Result<Option<Stat>, anyhow::Error> {
+    fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
         let relative_path = if path.is_absolute() {
             path.strip_prefix("/").unwrap()
         } else {
