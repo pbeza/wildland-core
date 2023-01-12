@@ -75,7 +75,7 @@ impl CargoLib {
         fsa_config: FoundationStorageApiConfig,
     ) -> Self {
         let lss_service = LssService::new(lss);
-        let container_manager = Rc::new(ContainerManager {});
+        let container_manager = Rc::new(ContainerManager::default());
 
         let mut dfs_storage_factories: HashMap<String, Box<dyn StorageBackendFactory>> =
             HashMap::new();
