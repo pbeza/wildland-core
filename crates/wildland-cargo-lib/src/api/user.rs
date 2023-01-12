@@ -15,31 +15,36 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    errors::{retrieval_error::*, single_variant::*, user::*},
-    user::{generate_random_mnemonic, CreateUserInput, UserService},
-};
-use wildland_corex::{CryptoError, MnemonicPhrase};
+use wildland_corex::{utils, MnemonicPhrase};
 
 use super::cargo_user::CargoUser;
+use crate::errors::{CreateMnemonicError, UserCreationError, UserRetrievalError};
+use crate::user::{generate_random_mnemonic, CreateUserInput, UserService};
 
 #[derive(Clone)]
 pub struct MnemonicPayload(MnemonicPhrase);
 
+/// Wrapper to check the mnemonic.
+/// Accepts string. Returns Ok if the mnemonic is valid or Err otherwise
+/// throws [`CryptoError`] if the mnemonic is invalid
+pub fn check_phrase_mnemonic(phrase: &str) -> Result<(), CreateMnemonicError> {
+    match utils::new_mnemonic_from_phrase(phrase) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(CreateMnemonicError::InvalidMnemonicWords),
+    }
+}
+
 impl MnemonicPayload {
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn stringify(&self) -> String {
         self.0.join(" ")
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_vec(&self) -> Vec<String> {
         self.0.clone().into()
     }
 }
 
 impl From<MnemonicPhrase> for MnemonicPayload {
-    #[tracing::instrument(level = "debug")]
     fn from(mnemonic: MnemonicPhrase) -> Self {
         Self(mnemonic)
     }
@@ -69,139 +74,196 @@ impl UserApi {
         Self { user_service }
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
-    pub fn generate_mnemonic(&self) -> SingleErrVariantResult<MnemonicPayload, CryptoError> {
+    #[tracing::instrument(level = "debug", skip_all)]
+    pub fn generate_mnemonic(&self) -> Result<MnemonicPayload, CreateMnemonicError> {
         tracing::trace!("generating mnemonic");
         generate_random_mnemonic()
-            .map_err(SingleVariantError::Failure)
+            .map_err(|_| CreateMnemonicError::InvalidMnemonicWords)
             .map(MnemonicPayload::from)
     }
 
     /// Creates [`MnemonicPayload`] basing on a vector of words. The result may be used for creation
     /// User with [`UserApi::create_user_from_mnemonic`].
     ///
-    #[tracing::instrument(level = "debug", skip(self))]
+    /// It validates provided words
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_mnemonic_from_vec(
         &self,
         words: Vec<String>,
-    ) -> SingleErrVariantResult<MnemonicPayload, String> {
+    ) -> Result<MnemonicPayload, CreateMnemonicError> {
         tracing::trace!("creating mnemonic from vec");
-        Ok(MnemonicPayload(MnemonicPhrase::try_from(words).map_err(
-            |_| SingleVariantError::Failure("Invalid mnemonic words".to_owned()),
-        )?))
+        check_phrase_mnemonic(words.join(" ").as_str())?;
+        Ok(MnemonicPayload(
+            MnemonicPhrase::try_from(words)
+                .map_err(|_| CreateMnemonicError::InvalidMnemonicWords)?,
+        ))
     }
 
-    #[tracing::instrument(level = "debug", skip(self, entropy))]
+    /// Creates [`MnemonicPayload`] basing on a space separated 12-word string. The result may be used for creation
+    /// User with [`UserApi::create_user_from_mnemonic`].
+    ///
+    /// It validates provided words
+    #[tracing::instrument(level = "debug", skip_all)]
+    pub fn create_mnemonic_from_string(
+        &self,
+        words: String,
+    ) -> Result<MnemonicPayload, CreateMnemonicError> {
+        tracing::trace!("creating mnemonic from vec");
+        check_phrase_mnemonic(words.as_str())?;
+        Ok(MnemonicPayload(
+            MnemonicPhrase::try_from(words.split(' ').map(|w| w.to_owned()).collect::<Vec<_>>())
+                .map_err(|_| CreateMnemonicError::InvalidMnemonicWords)?,
+        ))
+    }
+
+    /// Creates user from entropy.
+    ///
+    /// Assumes high quality entropy of arbitrary length (>= 32 bytes) what is validated.
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_user_from_entropy(
         &self,
         entropy: Vec<u8>,
         device_name: String,
-    ) -> SingleErrVariantResult<CargoUser, UserCreationError> {
+    ) -> Result<CargoUser, UserCreationError> {
         tracing::debug!("creating new user");
         self.user_service
             .create_user(CreateUserInput::Entropy(entropy), device_name)
-            .map_err(SingleVariantError::Failure)
     }
 
-    #[tracing::instrument(level = "debug", skip(self, mnemonic))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_user_from_mnemonic(
         &self,
         mnemonic: &MnemonicPayload,
         device_name: String,
-    ) -> SingleErrVariantResult<CargoUser, UserCreationError> {
+    ) -> Result<CargoUser, UserCreationError> {
         tracing::debug!("creating new user");
-        self.user_service
-            .create_user(
-                CreateUserInput::Mnemonic(Box::new(mnemonic.0.clone())),
-                device_name,
-            )
-            .map_err(SingleVariantError::Failure)
+        self.user_service.create_user(
+            CreateUserInput::Mnemonic(Box::new(mnemonic.0.clone())),
+            device_name,
+        )
     }
 
     /// Gets user if it exists
     ///
-    pub fn get_user(&self) -> RetrievalResult<CargoUser, UserRetrievalError> {
+    pub fn get_user(&self) -> Result<CargoUser, UserRetrievalError> {
         tracing::debug!("getting user");
-        let user = self.user_service.get_user().map_err(|e| match e {
-            UserRetrievalError::ForestRetrievalError(_)
-            | UserRetrievalError::LssError(_)
-            | UserRetrievalError::CatlibError(_)
-            | UserRetrievalError::DeviceMetadataNotFound => RetrievalError::Unexpected(e),
-            UserRetrievalError::ForestNotFound(e) => RetrievalError::NotFound(e),
-        })?;
+        let user = self.user_service.get_user()?;
         match user {
             Some(user) => Ok(user),
-            None => Err(RetrievalError::NotFound("User not found.".to_string())),
+            None => Err(UserRetrievalError::UserNotFound),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, collections::HashMap};
-
-    use wildland_corex::{LocalSecureStorage, LssResult, LssService};
-
-    use crate::{errors::retrieval_error::RetrievalError, user::UserService};
+    use rstest::rstest;
+    use wildland_corex::catlib_service::CatLibService;
+    use wildland_corex::{LocalSecureStorage, LssService};
 
     use super::UserApi;
+    use crate::api::config::FoundationStorageApiConfig;
+    use crate::api::utils::test::{catlib_service, lss_stub};
+    use crate::errors::UserRetrievalError;
+    use crate::user::UserService;
 
-    #[derive(Default)]
-    struct LssStub {
-        storage: RefCell<HashMap<String, Vec<u8>>>,
+    #[rstest]
+    fn create_mnemonic_from_string_with_valid_words_should_succeed(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let api = UserApi::new(UserService::new(
+            LssService::new(lss_stub),
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        ));
+        let words = "wise exile kingdom cabbage improve also ridge fortune when joke market argue";
+
+        assert!(api.create_mnemonic_from_string(words.to_owned()).is_ok());
     }
 
-    impl LocalSecureStorage for LssStub {
-        fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>> {
-            Ok(self.storage.borrow_mut().insert(key, value))
-        }
+    #[rstest]
+    fn create_mnemonic_from_string_with_invalid_words_should_return_err(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let api = UserApi::new(UserService::new(
+            LssService::new(lss_stub),
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        ));
+        let words =
+            "wise exile kingdom cabbage improve also ridge fortune when joke market invalid_word";
 
-        fn get(&self, key: String) -> LssResult<Option<Vec<u8>>> {
-            Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
-        }
-
-        fn contains_key(&self, key: String) -> LssResult<bool> {
-            Ok(self.storage.borrow().contains_key(&key))
-        }
-
-        fn keys(&self) -> LssResult<Vec<String>> {
-            Ok(self.storage.borrow().keys().cloned().collect())
-        }
-
-        fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>> {
-            Ok(self.storage.borrow_mut().remove(&key))
-        }
-
-        fn len(&self) -> LssResult<usize> {
-            Ok(self.storage.borrow().len())
-        }
-
-        fn is_empty(&self) -> LssResult<bool> {
-            Ok(self.storage.borrow().is_empty())
-        }
+        assert!(api.create_mnemonic_from_string(words.to_owned()).is_err());
     }
 
-    #[test]
-    fn get_user_should_return_none_if_it_does_not_exist() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let lss_service = LssService::new(lss_ref);
-        let user_service = UserService::new(lss_service);
+    #[rstest]
+    fn create_mnemonic_from_vec_with_valid_words_should_succeed(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let api = UserApi::new(UserService::new(
+            LssService::new(lss_stub),
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        ));
+        let words = "wise exile kingdom cabbage improve also ridge fortune when joke market argue";
+
+        assert!(api
+            .create_mnemonic_from_vec(words.split(' ').map(ToOwned::to_owned).collect::<Vec<_>>())
+            .is_ok());
+    }
+
+    #[rstest]
+    fn create_mnemonic_from_vec_with_invalid_words_should_return_err(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let api = UserApi::new(UserService::new(
+            LssService::new(lss_stub),
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        ));
+        let words =
+            "wise exile kingdom cabbage improve also ridge fortune when joke market invalid_word";
+
+        assert!(api
+            .create_mnemonic_from_vec(words.split(' ').map(ToOwned::to_owned).collect::<Vec<_>>())
+            .is_err());
+    }
+
+    #[rstest]
+    fn get_user_should_return_none_if_it_does_not_exist(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let lss_service = LssService::new(lss_stub);
+        let user_service = UserService::new(
+            lss_service,
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        );
         let user_api = UserApi::new(user_service);
 
         let user_result = user_api.get_user();
         assert_eq!(
             user_result.unwrap_err(),
-            RetrievalError::NotFound("Forest identity keypair not found".to_owned())
+            UserRetrievalError::ForestNotFound("Forest identity keypair not found".to_owned())
         )
     }
 
-    #[test]
-    fn create_user_should_return_user_structure() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let lss_service = LssService::new(lss_ref);
-        let user_service = UserService::new(lss_service);
+    #[rstest]
+    fn create_user_should_return_user_structure(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let lss_service = LssService::new(lss_stub);
+        let user_service = UserService::new(
+            lss_service,
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        );
         let user_api = UserApi::new(user_service);
 
         let mnemonic = user_api.generate_mnemonic().unwrap();
@@ -214,12 +276,17 @@ mod tests {
         assert_eq!(user.all_devices(), [device_name]);
     }
 
-    #[test]
-    fn get_user_should_return_some_if_it_was_created() {
-        let lss = LssStub::default(); // LSS must live through the whole test
-        let lss_ref: &'static LssStub = unsafe { std::mem::transmute(&lss) };
-        let lss_service = LssService::new(lss_ref);
-        let user_service = UserService::new(lss_service);
+    #[rstest]
+    fn get_user_should_return_some_if_it_was_created(
+        catlib_service: CatLibService,
+        lss_stub: &'static dyn LocalSecureStorage,
+    ) {
+        let lss_service = LssService::new(lss_stub);
+        let user_service = UserService::new(
+            lss_service,
+            catlib_service,
+            FoundationStorageApiConfig::default(),
+        );
         let user_api = UserApi::new(user_service);
 
         let mnemonic = user_api.generate_mnemonic().unwrap();

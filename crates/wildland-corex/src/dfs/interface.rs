@@ -15,22 +15,32 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::ExceptionTrait;
-use std::fmt::Display;
+use std::path::PathBuf;
 
-pub type RetrievalResult<T, E> = Result<T, RetrievalError<E>>;
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[repr(C)]
-pub enum RetrievalError<E: Clone> {
-    NotFound(String),
-    Unexpected(E),
+use crate::Storage;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NodeDescriptor {
+    pub storage: Option<NodeStorage>, // nodes may not have storage - so called virtual nodes
+    pub absolute_path: PathBuf,
 }
 
-impl<E: Display + Clone> ExceptionTrait for RetrievalError<E> {
-    fn reason(&self) -> String {
-        match self {
-            RetrievalError::NotFound(s) => s.to_string(),
-            RetrievalError::Unexpected(e) => e.to_string(),
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NodeStorage {
+    storage: Storage,
+    path_within_storage: PathBuf,
+}
+
+impl NodeStorage {
+    pub fn new(storage: Storage, path_within_storage: PathBuf) -> Self {
+        Self {
+            storage,
+            path_within_storage,
         }
     }
+}
+
+/// Interface that DFS should expose towards frontends
+pub trait DfsFrontend {
+    fn readdir(&mut self, path: String) -> Vec<NodeDescriptor>;
 }

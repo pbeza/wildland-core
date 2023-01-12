@@ -21,10 +21,10 @@ pub trait LocalSecureStorage {
     /// Inserts a key-value pair into the LSS.
     /// If the map did not have this key present, None is returned.
     /// If the map did have this key present, the value is updated, and the old value is returned.
-    fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>>;
+    fn insert(&self, key: String, value: String) -> LssResult<Option<String>>;
 
     /// Returns a copy of the value corresponding to the key.
-    fn get(&self, key: String) -> LssResult<Option<Vec<u8>>>;
+    fn get(&self, key: String) -> LssResult<Option<String>>;
 
     /// Returns true if the map contains a value for the specified key.
     fn contains_key(&self, key: String) -> LssResult<bool>;
@@ -32,8 +32,11 @@ pub trait LocalSecureStorage {
     /// Returns all keys in arbitrary order.
     fn keys(&self) -> LssResult<Vec<String>>;
 
+    /// Returns all keys starting with the given prefix.
+    fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>>;
+
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
-    fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>>;
+    fn remove(&self, key: String) -> LssResult<Option<String>>;
 
     /// Returns the number of elements in the map.
     fn len(&self) -> LssResult<usize>;

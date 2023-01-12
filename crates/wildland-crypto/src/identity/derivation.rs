@@ -17,38 +17,32 @@
 
 use std::convert::TryFrom;
 
-use bip39::{Language::English, Mnemonic, Seed};
+use bip39::{Mnemonic, Seed};
 use crypto_box::SecretKey as EncryptionSecretKey;
 use ed25519_dalek_bip32::{DerivationPath, ExtendedSecretKey};
 use sha2::{Digest, Sha256};
 
-use crate::error::KeyDeriveError;
-use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
-use crate::{
-    error::CryptoError,
-    identity::{seed::extend_seed, signing_keypair::SigningKeypair},
-};
-
 use super::encrypting_keypair::EncryptingKeypair;
+use crate::error::{CryptoError, KeyDeriveError};
+use crate::identity::seed::extend_seed;
+use crate::identity::signing_keypair::SigningKeypair;
+use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
+use crate::utils;
 
-#[tracing::instrument(level = "debug", ret)]
 fn signing_key_path(forest_index: u64) -> String {
     // "master/WLD/purpose/index"
     // "5721156" == b'WLD'.hex() converted to decimal
     format!("m/5721156'/0'/{forest_index}'")
 }
 
-#[tracing::instrument(level = "debug", ret)]
 fn encryption_key_path(forest_index: u64, index: u64) -> String {
     format!("m/5721156'/1'/{forest_index}'/{index}'")
 }
 
-#[tracing::instrument(level = "debug", ret)]
 fn single_use_encryption_key_path(index: u64) -> String {
     format!("m/5721156'/2'/{index}'")
 }
 
-#[tracing::instrument(level = "debug", ret)]
 fn backup_key_path() -> String {
     "m/5721156'/3'".to_string()
 }
@@ -73,12 +67,8 @@ impl TryFrom<&MnemonicPhrase> for Identity {
     /// Derived identity is bound to Wildland project - same 12 words will
     /// produce different seed (number) in other project.
     /// Only English language is accepted.
-    #[tracing::instrument(level = "debug")]
     fn try_from(mnemonic_phrase: &MnemonicPhrase) -> Result<Self, Self::Error> {
-        let mnemonic = Mnemonic::from_phrase(&mnemonic_phrase.join(" "), English)
-            .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?;
-
-        Self::from_mnemonic(mnemonic)
+        Self::from_mnemonic(utils::new_mnemonic_from_phrase(&mnemonic_phrase.join(" "))?)
     }
 }
 
@@ -88,7 +78,6 @@ impl TryFrom<&[u8]> for Identity {
     /// Deterministically derive Wildland identity from Ethereum
     /// signature (or any random bits). Assumes high quality entropy
     /// and does not perform any checks.
-    #[tracing::instrument(level = "debug", skip(entropy))]
     fn try_from(entropy: &[u8]) -> Result<Self, CryptoError> {
         // assume high quality entropy of arbitrary length (>= 32 bytes)
         if (entropy.len() * 8) < 128 {
@@ -97,16 +86,13 @@ impl TryFrom<&[u8]> for Identity {
         let mut hasher = Sha256::new();
         hasher.update(entropy);
         let hashed_entropy = hasher.finalize();
-        let mnemonic = Mnemonic::from_entropy(&hashed_entropy[0..16], English)
-            .map_err(|e| CryptoError::MnemonicGenerationError(e.to_string()))?;
-        Self::from_mnemonic(mnemonic)
+        Self::from_mnemonic(utils::new_mnemonic_from_entropy(&hashed_entropy[0..16])?)
     }
 }
 
 impl Identity {
     /// Derive the key that represents a forest.
     /// Pubkey represents forest to the world.
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn forest_keypair(&self, forest_index: u64) -> Result<SigningKeypair, KeyDeriveError> {
         tracing::debug!("deriving forest keypair");
         self.derive_forest_keypair(&signing_key_path(forest_index))
@@ -117,7 +103,6 @@ impl Identity {
     /// is compromised / stolen / lost.
     /// Current encryption pubkey should be accessible to anyone
     /// willing to communicate with the user.
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn encryption_keypair(
         &self,
         forest_index: u64,
@@ -135,7 +120,7 @@ impl Identity {
     /// harder.
     /// Please note that this keys are not scoped to particular forest,
     /// since they are supposed to be used only once anyway.
-    #[tracing::instrument(level = "debug", skip(self))]
+
     pub fn single_use_encryption_keypair(
         &self,
         index: u64,
@@ -146,17 +131,15 @@ impl Identity {
     /// Deterministically derive encryption keypair that can be used
     /// to backup secrets with intent of using them later, during recovery process.
     /// This keypair is not scoped to the forest. It should be used only internally.
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn backup_keypair(&self) -> Result<EncryptingKeypair, KeyDeriveError> {
         self.derive_encryption_keypair(&backup_key_path())
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn get_mnemonic(&self) -> MnemonicPhrase {
         self.words.clone()
     }
 
-    #[tracing::instrument(level = "debug")]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn from_mnemonic(mnemonic: Mnemonic) -> Result<Self, CryptoError> {
         tracing::debug!("Deriving Identity from mnemonic");
         // Passphrases are great for plausible deniability in case of a cryptocurrency wallet.
@@ -196,7 +179,7 @@ impl Identity {
         })
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn derive_forest_keypair(&self, path: &str) -> Result<SigningKeypair, KeyDeriveError> {
         let derived_extended_seckey = self.derive_private_key_from_path(path)?;
 
@@ -205,7 +188,7 @@ impl Identity {
         SigningKeypair::try_from_secret_bytes(&sec_key).map_err(|e| KeyDeriveError(e.to_string()))
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn derive_encryption_keypair(&self, path: &str) -> Result<EncryptingKeypair, KeyDeriveError> {
         let derived_extended_seckey = self.derive_private_key_from_path(path)?;
 
@@ -221,7 +204,7 @@ impl Identity {
         })
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn derive_private_key_from_path(
         &self,
         path: &str,
@@ -235,22 +218,19 @@ impl Identity {
 
 #[cfg(test)]
 mod tests {
-    use crypto_box::{
-        aead::{Aead, AeadCore},
-        SalsaBox,
-    };
+    use crypto_box::aead::{Aead, AeadCore};
+    use crypto_box::SalsaBox;
     use hex::encode;
     use hex_literal::hex;
     use salsa20::XNonce;
 
-    use crate::common::test_utilities::MNEMONIC_PHRASE;
-
     use super::*;
+    use crate::common::test_utilities::MNEMONIC_PHRASE;
 
     const MSG: &[u8] = b"Hello World";
 
     fn user() -> Identity {
-        let mnemonic = Mnemonic::from_phrase(MNEMONIC_PHRASE, English).unwrap();
+        let mnemonic = utils::new_mnemonic_from_phrase(MNEMONIC_PHRASE).unwrap();
         Identity::from_mnemonic(mnemonic).unwrap()
     }
 
@@ -396,6 +376,8 @@ mod tests {
     }
 
     #[test]
+    // this is still valid test, we are supporting only english, but do not
+    // expose the language to the user
     fn should_fail_on_not_english_mnemonic() {
         let mnemonic_array: MnemonicPhrase = TEST_MNEMONIC_ITALIAN
             .split(' ')

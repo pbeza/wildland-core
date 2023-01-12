@@ -15,24 +15,31 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-mod catlib_service;
+pub mod catlib_service;
+pub mod container_manager;
+pub mod dfs;
 mod error;
 mod identity;
 mod lss;
-pub mod storage;
+mod storage;
 
 pub use catlib_service::*;
+pub use container_manager::*;
+pub use entities::*;
 pub use error::*;
-pub use identity::{master::*, wildland::*};
+pub use identity::master::*;
+pub use identity::wildland::*;
 pub use lss::*;
-pub use wildland_catlib::{contracts::*, CatlibError, Container, Forest, PubKey};
-pub use wildland_crypto::{
-    error::CryptoError,
-    identity::{
-        encrypting_keypair::EncryptingKeypair, generate_random_mnemonic, Identity, MnemonicPhrase,
-        SigningKeypair,
-    },
+pub use storage::*;
+pub use wildland_crypto::error::CryptoError;
+pub use wildland_crypto::identity::encrypting_keypair::EncryptingKeypair;
+pub use wildland_crypto::identity::{
+    generate_random_mnemonic,
+    Identity,
+    MnemonicPhrase,
+    SigningKeypair,
 };
+pub use wildland_crypto::utils;
 
 pub type CorexResult<T> = Result<T, CoreXError>;
 
@@ -40,8 +47,9 @@ pub const DEFAULT_FOREST_KEY: &str = "wildland.forest.0";
 
 #[cfg(test)]
 pub mod test_utilities {
-    use crate::WildlandIdentity;
     use wildland_crypto::identity::SigningKeypair;
+
+    use crate::WildlandIdentity;
 
     pub static SIGNING_PUBLIC_KEY: &str =
         "1f8ce714b6e52d7efa5d5763fe7412c345f133c9676db33949b8d4f30dc0912f";

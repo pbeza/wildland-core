@@ -15,9 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use rand::prelude::ThreadRng;
+use rand::thread_rng;
+
 use crate::identity::signing_keypair::SigningKeypair;
-use rand_7::prelude::ThreadRng;
-use rand_7::thread_rng;
 
 /// Generate a device identity keypair.
 /// Each forest identity will have multiple device identities - one per user's device.
@@ -27,7 +28,7 @@ use rand_7::thread_rng;
 /// This establishes a trust chain, where by knowing forest identity pubkey,
 /// one can tell if particular container is legitimate or not.
 /// All without requiring that forest keypair secret is present on any of the devices.
-#[tracing::instrument(level = "debug")]
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn new_device_identity() -> SigningKeypair {
     let mut csprng: ThreadRng = thread_rng();
     let pair = SigningKeypair::generate(&mut csprng);

@@ -3,9 +3,9 @@ image: registry.gitlab.com/wildland/corex/wildland-core/builder:latest
 variables:
   CARGO_FLAGS: ""
   CARGO_HOME: $CI_PROJECT_DIR/cargo
-  CACHE_COMPRESSION_LEVEL: 'fastest'
-  FF_USE_FASTZIP: 'true'
-  GIT_STRATEGY: 'clone'
+  CACHE_COMPRESSION_LEVEL: "fastest"
+  FF_USE_FASTZIP: "true"
+  GIT_STRATEGY: "clone"
 
 stages:
   - Build
@@ -13,7 +13,7 @@ stages:
   - Bridges
   - Bindings
   - Deploy
-  - docs
+  - Docs
 
 ###############
 # STAGE: Build
@@ -86,7 +86,7 @@ cargo test:
 
 cargo clippy (lint):
   stage: Test
-  needs: ['x86_64 linux build']
+  needs: ["x86_64 linux build"]
   tags:
     - docker
     - linux
@@ -118,12 +118,11 @@ cargo fmt (format):
     - master
     - merge_requests
   script:
-    - rustup component add rustfmt
-    - cargo fmt -- --check
+    - cargo make format-check
 
 cargo audit:
   stage: Test
-  needs: ['x86_64 linux build']
+  needs: ["x86_64 linux build"]
   tags:
     - docker
     - linux
@@ -178,18 +177,16 @@ apple:
   stage: Bridges
   only:
     - master
+    - tags
+    - develop
     - merge_requests
   tags:
     - macos
   script:
-    - CLOUD_CREDENTIALS=`mktemp`
-    - chmod 600 $CLOUD_CREDENTIALS
-    - echo $APPLE_GCS_BUCKET_UPLODAER_ACCT | base64 -d > $CLOUD_CREDENTIALS
-    - CLOUD_CREDENTIALS=$CLOUD_CREDENTIALS ci/build_apple.sh
-    - rm $CLOUD_CREDENTIALS
+    - bash ci/build_apple.sh
   artifacts:
     paths:
-      - wildlandx_macos.build/out_dir/wildlandx.xcframework.zip
+      - wildlandx_apple_universal.build/out_dir/wildlandx.xcframework.zip
 
 ################
 # STAGE: Bindings
@@ -219,22 +216,22 @@ apple:
 #    - windows
 #    - x64
 #  rules:
-#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-#    - if: $CI_COMMIT_BRANCH == "main"
+#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"
+#    - if: $CI_COMMIT_BRANCH == "master"
 #    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
 #      when: manual
 #      allow_failure: true
 
 csharp x86_64 linux:
   stage: Bindings
-  needs: ['x86_64_linux ffi']
+  needs: ["x86_64_linux ffi"]
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
     - bash docker/scripts/bindings_csharp-x64-86-linux.bash
     - mv /out ${CI_PROJECT_DIR}/build
   artifacts:
-    expose_as: 'csharp-x86_64-linux-gnu'
+    expose_as: "csharp-x86_64-linux-gnu"
     name: csharp-x86_64-linux-gnu
     paths:
       - build/
@@ -255,13 +252,13 @@ csharp x86_64 linux:
 
 webassembly emscripten linux:
   stage: Bindings
-  needs: ['cargo test', 'x86_64 linux build']
+  needs: ["cargo test", "x86_64 linux build"]
   script:
     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
     - mv /out ${CI_PROJECT_DIR}/build
   artifacts:
-    expose_as: 'wasm'
+    expose_as: "wasm"
     name: wasm
     paths:
       - build/
@@ -276,14 +273,14 @@ webassembly emscripten linux:
 
 swift x86_64 linux:
   stage: Bindings
-  needs: ['x86_64_linux ffi']
+  needs: ["x86_64_linux ffi"]
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
     - bash docker/scripts/bindings_swift-x64-86-linux.bash
     - mv /out ${CI_PROJECT_DIR}/build
   artifacts:
-    expose_as: 'swift-x86_64-linux-gnu'
+    expose_as: "swift-x86_64-linux-gnu"
     name: swift-x86_64-linux-gnu
     paths:
       - build/
@@ -305,7 +302,7 @@ swift x86_64 linux:
 ###############
 # STAGE: Deploy
 #
-# This stage is the last stage in which the crates are published to the registry. 
+# This stage is the last stage in which the crates are published to the registry.
 
 publish crates:
   stage: Deploy
@@ -332,14 +329,37 @@ publish crates:
     - git checkout -B $CI_COMMIT_BRANCH --track remotes/origin/$CI_COMMIT_BRANCH
     - RUST_LOG=debug cargo $CARGO_FLAGS release -v --registry wl-dev --workspace --no-confirm --execute release
 
+publish apple-sdk:
+  stage: Deploy
+  image: google/cloud-sdk
+  tags:
+    - docker
+    - linux
+    - metal
+  only:
+    - develop
+    - tags
+  dependencies: ["apple"]
+  before_script:
+    - git config --global user.name "Wildland Housekeeper"
+    - git config --global user.email "$HOUSEKEEPER_EMAIL"
+  script:
+    - CLOUD_CREDENTIALS=`mktemp`
+    - chmod 600 $CLOUD_CREDENTIALS
+    - echo $APPLE_GCS_BUCKET_UPLODAER_ACCT | base64 -d > $CLOUD_CREDENTIALS
+    - export CLOUD_CREDENTIALS=$CLOUD_CREDENTIALS
+    - bash ci/upload_apple.sh
+    - rm $CLOUD_CREDENTIALS
+
 pages-mld:
   image: registry.gitlab.com/wildland/corex/wildland-core/esv_mdbook:0.3.2
-  stage: docs
+  stage: Docs
   dependencies: [] # Disable conflicting artifacts pulling from Bindinds stage
   except:
     - tags
   script:
     - mkdir -p .docs/mld
+    - mdbook-mermaid install .
     - mdbook build
   artifacts:
     paths:
@@ -349,9 +369,10 @@ pages-mld:
   only:
     refs:
       - master
+      - develop
 
 pages-lld:
-  stage: docs
+  stage: Docs
   dependencies: [] # Disable conflicting artifacts pulling from Bindinds stage
   except:
     - tags
@@ -365,16 +386,17 @@ pages-lld:
   only:
     refs:
       - master
+      - develop
 
-pages-publish:
+pages-publish-develop:
   image: google/cloud-sdk
-  stage: docs
+  stage: Docs
   except:
     - tags
   needs:
     - job: pages-mld
     - job: pages-lld
-  dependencies: 
+  dependencies:
     - pages-lld
     - pages-mld
   script:
@@ -382,6 +404,26 @@ pages-publish:
     - gcloud auth activate-service-account --key-file=/credentials.json
     - gsutil -m rsync -d -r .docs/mld gs://docs.wildland.dev/docs/wildland/mld
     - gsutil -m rsync -d -r .docs/lld gs://docs.wildland.dev/docs/wildland/lld
+  only:
+    refs:
+      - develop
+
+pages-publish-master:
+  image: google/cloud-sdk
+  stage: Docs
+  except:
+    - tags
+  needs:
+    - job: pages-mld
+    - job: pages-lld
+  dependencies:
+    - pages-lld
+    - pages-mld
+  script:
+    - echo -n $DOCS_WILDLAND_GCS_UPLOADER_KEY | base64 -d > /credentials.json
+    - gcloud auth activate-service-account --key-file=/credentials.json
+    - gsutil -m rsync -d -r .docs/mld gs://docs.wildland.io/docs/wildland/mld
+    - gsutil -m rsync -d -r .docs/lld gs://docs.wildland.io/docs/wildland/lld
   only:
     refs:
       - master

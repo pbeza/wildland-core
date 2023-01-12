@@ -15,36 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use rustbreak::{deser::Ron, PathDatabase};
-use serde::{Deserialize, Serialize};
-
-use super::CatlibResult;
-
-pub type PubKey = [u8; 32];
-#[derive(Debug, Clone, PartialEq, Hash, Eq, Serialize, Deserialize)]
-pub struct Identity(pub PubKey);
-impl Identity {
-    pub fn encode(&self) -> String {
-        hex::encode(self.0)
-    }
-}
-impl From<PubKey> for Identity {
-    fn from(pubkey: [u8; 32]) -> Self {
-        Self(pubkey)
-    }
-}
-impl From<Identity> for PubKey {
-    fn from(identity: Identity) -> Self {
-        identity.0
-    }
-}
+use rustbreak::deser::Ron;
+use rustbreak::PathDatabase;
+use wildland_corex::catlib_service::error::CatlibResult;
 
 pub(crate) type CatLibData = std::collections::HashMap<String, String>;
 pub(crate) type StoreDb = PathDatabase<CatLibData, Ron>;
 
 pub trait Model {
     fn delete(&mut self) -> CatlibResult<()>;
-    fn save(&mut self) -> CatlibResult<()>;
+    fn save(&self) -> CatlibResult<()>;
+    fn sync(&mut self) -> CatlibResult<()>;
 }
 
 pub fn get_version() -> &'static str {

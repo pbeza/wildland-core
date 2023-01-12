@@ -15,11 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::LssError;
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
 
+use crate::LssError;
+
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
 pub enum ForestRetrievalError {
     #[error(transparent)]
     LssError(#[from] LssError),
@@ -28,6 +30,7 @@ pub enum ForestRetrievalError {
 }
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
+#[repr(C)]
 pub enum CoreXError {
     #[error("Cannot create forest identity: {0}")]
     CannotCreateForestIdentityError(String),

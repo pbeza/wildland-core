@@ -17,127 +17,136 @@
 
 use std::rc::Rc;
 
-use crate::{error::WildlandHttpClientError, response_handler::check_status_code};
 use serde::{Deserialize, Serialize};
+
+use crate::cross_platform_http_client::{CurrentPlatformClient, HttpClient, Request};
+use crate::error::WildlandHttpClientError;
+use crate::response_handler::check_status_code;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConfirmTokenReq {
+    pub session_id: String,
     pub email: String,
     pub verification_token: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetStorageReq {
+    pub session_id: Option<String>,
     pub email: String,
-    pub pubkey: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetStorageRes {
-    pub encrypted_credentials: Option<String>,
+    pub credentials: Option<String>,
+    pub session_id: Option<String>,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone)]
 pub struct EvsClient {
-    base_url: String,
+    pub(crate) http_client: Rc<dyn HttpClient>,
 }
 
 impl EvsClient {
-    #[tracing::instrument(level = "debug", ret)]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn new(base_url: &str) -> Self {
-        Self {
-            base_url: base_url.to_string(),
-        }
+        let http_client = Rc::new(CurrentPlatformClient {
+            base_url: base_url.into(),
+        });
+
+        Self { http_client }
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn confirm_token(&self, request: ConfirmTokenReq) -> Result<(), WildlandHttpClientError> {
-        let url = format!("{}/confirm_token", self.base_url);
-        let response = minreq::put(url)
-            .with_json(&request)
-            .map_err(|e| WildlandHttpClientError::HttpLibError(Rc::new(e)))?
-            .send()
-            .map_err(Rc::new)?;
+        let request = Request::new("/confirm_token").with_json(&request);
+        let response = self.http_client.put(request)?;
         check_status_code(response)?;
         Ok(())
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn get_storage(
         &self,
         request: GetStorageReq,
     ) -> Result<GetStorageRes, WildlandHttpClientError> {
-        let url = format!("{}/get_storage", self.base_url);
-        let response = minreq::put(url)
-            .with_json(&request)
-            .map_err(|e| WildlandHttpClientError::HttpLibError(Rc::new(e)))?
-            .send()
-            .map_err(Rc::new)?;
+        let request = Request::new("/get_storage").with_json(&request);
+        let response = self.http_client.put(request)?;
         let response = check_status_code(response)?;
-        match response.status_code {
-            200 => Ok(response.json().map_err(Rc::new)?),
-            // Status 2xx without body
-            _ => Ok(GetStorageRes {
-                encrypted_credentials: None,
-            }),
-        }
+        let json = response.deserialize()?;
+        Ok(json)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::evs::constants::test_utilities::{
-        EMAIL, ENCRYPTED_CREDENTIALS, PUBKEY, VERIFICATION_TOKEN,
-    };
-    use mockito::{mock, server_url};
+    use mockall::predicate::eq;
     use serde_json::json;
 
     use super::*;
-
-    fn client() -> EvsClient {
-        EvsClient {
-            base_url: server_url(),
-        }
-    }
+    use crate::cross_platform_http_client::{MockHttpClient, Response};
+    use crate::evs::constants::test_utilities::{CREDENTIALS, EMAIL, VERIFICATION_TOKEN};
 
     #[test]
     fn should_confirm_token() {
-        // given
+        let mut http_client = Box::new(MockHttpClient::new());
+
         let request = ConfirmTokenReq {
             email: EMAIL.into(),
             verification_token: VERIFICATION_TOKEN.into(),
+            session_id: "some uuid".to_string(),
         };
 
-        let m = mock("PUT", "/confirm_token").create();
+        let http_request = Request::new("/confirm_token").with_json(&request);
 
-        // when
-        let response = client().confirm_token(request);
+        http_client
+            .as_mut()
+            .expect_put()
+            .with(eq(http_request))
+            .times(1)
+            .returning(|_| {
+                Ok(Response {
+                    status_code: 200,
+                    body: vec![],
+                })
+            });
 
-        // then
-        m.assert();
-        response.unwrap();
+        let response = EvsClient {
+            http_client: Rc::from(http_client as Box<dyn HttpClient>),
+        }
+        .confirm_token(request);
+
+        assert!(response.is_ok());
     }
 
     #[test]
     fn should_get_storage() {
-        // given
+        let mut http_client = Box::new(MockHttpClient::new());
+
         let request = GetStorageReq {
             email: EMAIL.into(),
-            pubkey: PUBKEY.into(),
+            session_id: Some("some uuid".to_string()),
         };
 
-        let m = mock("PUT", "/get_storage")
-            .with_body(json!({ "encrypted_credentials": ENCRYPTED_CREDENTIALS }).to_string())
-            .create();
+        let http_request = Request::new("/get_storage").with_json(&request);
 
-        // when
-        let response = client().get_storage(request).unwrap();
+        http_client
+            .as_mut()
+            .expect_put()
+            .with(eq(http_request))
+            .times(1)
+            .returning(|_| {
+                Ok(Response {
+                    status_code: 200,
+                    body: serde_json::to_vec(&json!({ "credentials": CREDENTIALS })).unwrap(),
+                })
+            });
 
-        // then
-        m.assert();
-        assert_eq!(
-            response.encrypted_credentials.unwrap(),
-            ENCRYPTED_CREDENTIALS
-        );
+        let response = EvsClient {
+            http_client: Rc::from(http_client as Box<dyn HttpClient>),
+        }
+        .get_storage(request)
+        .unwrap();
+        assert_eq!(response.credentials.unwrap(), CREDENTIALS);
     }
 }

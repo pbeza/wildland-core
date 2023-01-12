@@ -27,7 +27,6 @@
 //!     "log_file_enabled": true,
 //!     "log_file_path": "cargo_lib_log",
 //!     "log_file_rotate_directory": ".",
-//!     "evs_runtime_mode": "DEBUG",
 //!     "evs_url": "some_url",
 //!     "sc_url": "some_url"
 //! }"#;
@@ -37,16 +36,33 @@
 //!
 //! It can be also provided via type implementing [`CargoCfgProvider`].
 
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
+use std::str::FromStr;
 
-use serde::{
-    de::{Error, Unexpected},
-    Deserialize, Deserializer,
-};
+use derivative::Derivative;
+use serde::de::{Error, Unexpected};
+use serde::{Deserialize, Deserializer};
 use thiserror::Error;
-use tracing::{instrument, Level};
+use tracing::Level;
 
-use crate::errors::single_variant::*;
+const DEV_DEFAULT_EVS_URL: &str = "https://evs.cargo.wildland.dev/";
+const DEV_DEFAULT_SC_URL: &str = "https://storage-controller.cargo.wildland.dev/";
+
+#[repr(C)]
+pub enum FoundationCloudMode {
+    Dev,
+}
+
+impl From<FoundationCloudMode> for FoundationStorageApiConfig {
+    fn from(mode: FoundationCloudMode) -> Self {
+        match mode {
+            FoundationCloudMode::Dev => FoundationStorageApiConfig {
+                evs_url: DEV_DEFAULT_EVS_URL.to_string(),
+                sc_url: DEV_DEFAULT_SC_URL.to_string(),
+            },
+        }
+    }
+}
 
 pub trait CargoCfgProvider {
     fn get_use_logger(&self) -> bool;
@@ -67,21 +83,43 @@ pub trait CargoCfgProvider {
     fn get_log_file_enabled(&self) -> bool;
     fn get_log_file_path(&self) -> Option<String>;
     fn get_log_file_rotate_directory(&self) -> Option<String>;
+
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     fn get_oslog_category(&self) -> Option<String>;
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     fn get_oslog_subsystem(&self) -> Option<String>;
 
-    fn get_evs_url(&self) -> String;
-    fn get_sc_url(&self) -> String;
+    fn get_foundation_cloud_env_mode(&self) -> FoundationCloudMode;
 }
 
 #[derive(PartialEq, Eq, Error, Debug, Clone)]
-#[error("Config parse error: {0}")]
-pub struct ParseConfigError(pub String);
+#[repr(C)]
+pub enum ParseConfigError {
+    #[error("Config parse error: {0}")]
+    Error(String),
+}
 
-#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
+#[derivative(Default(new = "true"))]
 pub struct FoundationStorageApiConfig {
+    #[serde(default = "default_evs_url")]
+    #[derivative(Default(value = "default_evs_url()"))]
     pub evs_url: String,
+    #[serde(default = "default_sc_url")]
+    #[derivative(Default(value = "default_sc_url()"))]
     pub sc_url: String,
+}
+
+fn default_evs_url() -> String {
+    // TODO for now default is DEV
+    // in the future we might distinguish debug and release builds in order to choose environment
+    DEV_DEFAULT_EVS_URL.to_owned()
+}
+
+fn default_sc_url() -> String {
+    // TODO for now default is DEV
+    // in the future we might distinguish debug and release builds in order to choose environment
+    DEV_DEFAULT_SC_URL.to_owned()
 }
 
 fn bool_default_as_true() -> bool {
@@ -119,7 +157,7 @@ fn serde_logger_default_rot_dir() -> PathBuf {
 /// let parsed_cfg = parse_config(config_json.as_bytes().to_vec()).unwrap();
 ///
 ///
-#[derive(Debug, Deserialize, Clone, PartialEq, Eq, derivative::Derivative)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(new = "true"))]
 pub struct LoggerConfig {
     /// switch to disable the logger facility.
@@ -169,12 +207,15 @@ pub struct LoggerConfig {
     /// Name of the system.log category. If Some() provided together with
     /// oslog_subsystem category, enables the oslog facility. If OsLog is enabled,
     /// then all other facilities are not initialized.
-    #[derivative(Default(value = "None"))] // todo change to something else?
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[derivative(Default(value = "None"))]
     pub oslog_category: Option<String>,
 
     /// Name of the system.log subsystem. If Some() provided together with
     /// oslog_category, enables the oslog facility. If OsLog is enabled,
     /// then all other facilities are not initialized.
+
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     #[derivative(Default(value = "None"))]
     pub oslog_subsystem: Option<String>,
 }
@@ -185,9 +226,9 @@ impl LoggerConfig {
     /// returns `true`. However if the configuration does not contain all the data
     /// necessary to start the logger or the platform does not support logging
     /// to the OsLog (i.e. linux,windows) then `false` is returned.
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     pub fn is_oslog_eligible(&self) -> bool {
-        let correct_platform = cfg!(target_os = "macos") || cfg!(target_os = "ios");
-        if self.oslog_category.is_some() && self.oslog_subsystem.is_some() && correct_platform {
+        if self.oslog_category.is_some() && self.oslog_subsystem.is_some() {
             return true;
         }
         false
@@ -197,7 +238,6 @@ impl LoggerConfig {
     /// Whenever the file log facilities are available and properly configured,
     /// returns `true`. However if the configuration uses paths that do not exist
     /// we will fail to initialize the logger and return `false`.
-    #[instrument(skip(self))]
     pub fn is_file_eligible(&self) -> bool {
         if !self.log_file_enabled {
             return false;
@@ -250,17 +290,28 @@ pub struct CargoConfig {
     pub logger_config: LoggerConfig,
 }
 
+impl CargoConfig {
+    pub fn override_evs_url(&mut self, new_evs_url: String) {
+        self.fsa_config.evs_url = new_evs_url;
+    }
+
+    pub fn override_sc_url(&mut self, new_sc_url: String) {
+        self.fsa_config.sc_url = new_sc_url;
+    }
+}
+
 /// Uses an implementation of [`CargoCfgProvider`] to collect a configuration storing structure ([`CargoConfig`])
 /// which then can be passed to [`super::cargo_lib::create_cargo_lib`] in order to instantiate main API object ([`super::CargoLib`])
 ///
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn collect_config(
     config_provider: &'static dyn CargoCfgProvider,
-) -> SingleErrVariantResult<CargoConfig, ParseConfigError> {
+) -> Result<CargoConfig, ParseConfigError> {
     Ok(CargoConfig {
         logger_config: LoggerConfig {
             use_logger: config_provider.get_use_logger(),
             log_level: Level::from_str(config_provider.get_log_level().as_str())
-                .map_err(|e| SingleVariantError::Failure(ParseConfigError(e.to_string())))?,
+                .map_err(|e| ParseConfigError::Error(e.to_string()))?,
             log_use_ansi: config_provider.get_log_use_ansi(),
             log_file_path: PathBuf::from(
                 config_provider
@@ -275,13 +326,13 @@ pub fn collect_config(
                         serde_logger_default_rot_dir().to_string_lossy().to_string()
                     }),
             ),
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
             oslog_category: config_provider.get_oslog_category(),
+
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
             oslog_subsystem: config_provider.get_oslog_subsystem(),
         },
-        fsa_config: FoundationStorageApiConfig {
-            evs_url: config_provider.get_evs_url(),
-            sc_url: config_provider.get_sc_url(),
-        },
+        fsa_config: config_provider.get_foundation_cloud_env_mode().into(),
     })
 }
 
@@ -289,18 +340,21 @@ pub fn collect_config(
 /// into an instance of [`CargoConfig`]
 /// The `settings` must be a string with JSON formatted configuration.
 ///
-pub fn parse_config(raw_content: Vec<u8>) -> SingleErrVariantResult<CargoConfig, ParseConfigError> {
-    let parsed: CargoConfig = serde_json::from_slice(&raw_content)
-        .map_err(|e| SingleVariantError::Failure(ParseConfigError(e.to_string())))?;
+#[tracing::instrument(level = "debug", skip_all)]
+pub fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ParseConfigError> {
+    let parsed: CargoConfig =
+        serde_json::from_slice(&raw_content).map_err(|e| ParseConfigError::Error(e.to_string()))?;
     println!("Parsed config: {parsed:?}");
     Ok(parsed)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{CargoConfig, FoundationStorageApiConfig, LoggerConfig};
     use std::path::PathBuf;
+
     use tracing::Level;
+
+    use super::{CargoConfig, FoundationStorageApiConfig, LoggerConfig};
 
     #[test]
     fn test_parsing_debug_config() {
@@ -310,7 +364,6 @@ mod tests {
             "log_file_enabled": true,
             "log_file_path": "cargo_lib_log",
             "log_file_rotate_directory": ".",
-            "evs_runtime_mode": "DEBUG",
             "evs_url": "some_url",
             "sc_url": "some_url"
         }"#;
@@ -331,8 +384,6 @@ mod tests {
                     log_file_path: PathBuf::from("cargo_lib_log"),
                     log_file_rotate_directory: PathBuf::from("."),
                     log_file_enabled: true,
-                    oslog_category: None,
-                    oslog_subsystem: None,
                 }
             }
         )
@@ -343,10 +394,7 @@ mod tests {
         let config_str = r#"{
             "log_level": "trace",
             "log_use_ansi": true,
-            "log_file_enabled": false,
-            "evs_runtime_mode": "DEBUG",
-            "evs_url": "some_url",
-            "sc_url": "some_url"
+            "log_file_enabled": false
         }"#;
 
         let config: CargoConfig = serde_json::from_str(config_str).unwrap();
@@ -355,8 +403,8 @@ mod tests {
             config,
             CargoConfig {
                 fsa_config: FoundationStorageApiConfig {
-                    evs_url: "some_url".to_owned(),
-                    sc_url: "some_url".to_owned(),
+                    evs_url: "https://evs.cargo.wildland.dev/".to_owned(),
+                    sc_url: "https://storage-controller.cargo.wildland.dev/".to_owned(),
                 },
                 logger_config: LoggerConfig {
                     use_logger: true,
@@ -365,8 +413,6 @@ mod tests {
                     log_file_path: LoggerConfig::default().log_file_path,
                     log_file_rotate_directory: LoggerConfig::default().log_file_rotate_directory,
                     log_file_enabled: false,
-                    oslog_category: None,
-                    oslog_subsystem: None,
                 }
             }
         )
