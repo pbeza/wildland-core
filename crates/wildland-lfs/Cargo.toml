@@ -1,7 +1,13 @@
 [package]
-edition = "2021"
-name    = "wildland-lfs"
-version = "0.31.0-rc.1"
+authors     = ["Golem Foundation Contributors <contact@golem.foundation>"]
+description = "Wildland Local Filesystem Backend"
+edition     = "2021"
+homepage    = "https://wildland.io/"
+license     = "GPL-3.0-only"
+name        = "wildland-lfs"
+publish     = ["wl-dev"]
+repository  = "https://gitlab.com/wildland/corex/wildland-core"
+version     = "0.31.0-rc.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
