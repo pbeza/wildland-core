@@ -7,7 +7,7 @@ license     = "GPL-3.0-only"
 name        = "wildland-lfs"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.31.0"
+version     = "0.31.1-rc.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,7 +15,7 @@ version     = "0.31.0"
 anyhow       = { version = "1.0" }
 serde        = { version = "1.0" }
 serde_json   = { version = "1.0" }
-wildland-dfs = { version = "0.31.0", path = "../wildland-dfs", registry = "wl-dev" }
+wildland-dfs = { version = "0.31.1-rc.0", path = "../wildland-dfs", registry = "wl-dev" }
 
 [dev-dependencies]
 pretty_assertions = { version = "1.3" }
