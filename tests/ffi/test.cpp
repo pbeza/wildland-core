@@ -21,29 +21,17 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     {
         return true;
     }
-    OptionalString get_log_file_path() override
+    Optional<String> get_log_file_path() override
     {
-        return new_none_string();
+        return Optional<String>();
     }
-    OptionalString get_log_file_rotate_directory() override
+    Optional<String> get_log_file_rotate_directory() override
     {
-        return new_none_string();
+        return Optional<String>();
     }
-    OptionalString get_oslog_category() override
+    FoundationCloudMode get_foundation_cloud_env_mode() override
     {
-        return new_none_string();
-    }
-    OptionalString get_oslog_subsystem() override
-    {
-        return new_none_string();
-    }
-    String get_evs_url() override
-    {
-        return RustString("http://localhost:5000/");
-    }
-    String get_sc_url() override
-    {
-        return RustString("http://TODO:5555/");
+        return FoundationCloudMode::Dev;
     }
 };
 
@@ -52,18 +40,18 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     /// Inserts a key-value pair into the LSS.
     /// If the map did not have this key present, None is returned.
     /// If the map did have this key present, the value is updated, and the old value is returned.
-    LssOptionalBytesResult insert(RustString key, RustVec<u8> value) override
+    OptionalRustStringResultWithLssError insert(String key, RustString value) override
     {
         std::cout << "LSS insert C++ impl\n";
         auto std_key = key.to_string();
-        LssOptionalBytesResult result;
+        OptionalRustStringResultWithLssError result;
         if (store.contains(std_key))
         {
-            result = new_ok_lss_optional_bytes(new_some_bytes(store[std_key]));
+            result = OptionalRustStringResultWithLssError::from_ok(Optional<RustString>(store[std_key]));
         }
         else
         {
-            result = new_ok_lss_optional_bytes(new_none_bytes());
+            result = OptionalRustStringResultWithLssError::from_ok(Optional<RustString>());
         }
         store[std_key] = value;
         return result;
@@ -71,74 +59,88 @@ class LocalSecureStorageImpl : public LocalSecureStorage
     }
 
     /// Returns a copy of the value corresponding to the key.
-    LssOptionalBytesResult get(RustString key) override
+    OptionalRustStringResultWithLssError get(String key) override
     {
         std::cout << "LSS get C++ impl\n";
         auto std_key = key.to_string();
         if (store.contains(std_key))
         {
-            return new_ok_lss_optional_bytes(new_some_bytes(store[std_key]));
+            return OptionalRustStringResultWithLssError::from_ok(Optional<RustString>(store[std_key]));
         }
         else
         {
-            return new_ok_lss_optional_bytes(new_none_bytes());
+            return OptionalRustStringResultWithLssError::from_ok(Optional<RustString>());
         }
     }
 
     /// Returns true if the map contains a value for the specified key.
-    LssBoolResult contains_key(RustString key) override
+    boolResultWithLssError contains_key(String key) override
     {
         std::cout << "LSS contains_key C++ impl\n";
         auto std_key = key.to_string();
-        return new_ok_lss_bool(store.contains(std_key));
+        return boolResultWithLssError::from_ok(store.contains(std_key));
     }
 
     /// Returns all keys in arbitrary order.
-    LssVecOfStringsResult keys() override
+    VecRustStringResultWithLssError keys() override
+    {
+        std::cout << "LSS keys C++ impl\n";
+        RustVec<String> keys;
+        for (const auto &[k, v] : store)
+        {
+            keys.push(String{k});
+        }
+        return VecRustStringResultWithLssError::from_ok(keys);
+    }
+
+    /// Returns all keys in arbitrary order.
+    VecRustStringResultWithLssError keys_starting_with(RustString prefix) override
     {
         std::cout << "LSS keys C++ impl\n";
         RustVec<RustString> keys;
+        auto prefix_str = prefix.to_string();
         for (const auto &[k, v] : store)
         {
-            keys.push(RustString{k});
+            if (k.starts_with(prefix_str))
+                keys.push(RustString{k});
         }
-        return new_ok_lss_vec_of_strings(keys);
+        return VecRustStringResultWithLssError::from_ok(keys);
     }
 
     /// Removes a key from the map, returning the value at the key if the key was previously in the map.
-    LssOptionalBytesResult remove(RustString key) override
+    OptionalRustStringResultWithLssError remove(String key) override
     {
         std::cout << "LSS remove C++ impl\n";
         auto std_key = key.to_string();
-        LssOptionalBytesResult result;
+        OptionalRustStringResultWithLssError result;
         if (store.contains(std_key))
         {
-            result = new_ok_lss_optional_bytes(new_some_bytes(store[std_key]));
+            result = OptionalRustStringResultWithLssError::from_ok(Optional<RustString>(store[std_key]));
             store.erase(std_key);
         }
         else
         {
-            result = new_ok_lss_optional_bytes(new_none_bytes());
+            result = OptionalRustStringResultWithLssError::from_ok(Optional<RustString>());
         }
         return result;
     }
 
     /// Returns the number of elements in the map.
-    LssUsizeResult len() override
+    usizeResultWithLssError len() override
     {
         std::cout << "LSS len C++ impl\n";
-        return new_ok_lss_usize(store.size());
+        return usizeResultWithLssError::from_ok(store.size());
     }
 
     /// Returns true if the map contains no elements, false otherwise.
-    LssBoolResult is_empty() override
+    boolResultWithLssError is_empty() override
     {
         std::cout << "LSS is_empty C++ impl\n";
-        return new_ok_lss_bool(store.empty());
+        return boolResultWithLssError::from_ok(store.empty());
     }
 
 private:
-    std::unordered_map<std::string, RustVec<u8>> store = {};
+    std::unordered_map<std::string, RustString> store = {};
 };
 
 void config_parser_test() // test
@@ -161,16 +163,21 @@ void config_parser_test() // test
     }
 }
 
-auto foundation_storage_test(SharedMutexCargoLib &cargo_lib)
+auto foundation_storage_test(CargoUser &cargo_user)
 {
-    FoundationStorageApi fsa_api = cargo_lib.foundation_storage_api();
-    auto process_handle = fsa_api.request_free_tier_storage("test@email.com");
+    std::cout << "is user onboard? " << std::boolalpha << cargo_user.is_free_storage_granted() << std::endl;
+
+    auto process_handle = cargo_user.request_free_tier_storage("test@wildland.io");
+
     std::cout << "Provide a verification token:\n";
     std::string verification_token;
     std::cin >> verification_token;
     // may be used for creating container
-    StorageTemplate storage_template = fsa_api.verify_email(process_handle, RustString{verification_token});
+    StorageTemplate storage_template = cargo_user.verify_email(process_handle, RustString{verification_token});
     std::cout << storage_template.stringify().to_string() << std::endl;
+
+    std::cout << "is user onboard? " << std::boolalpha << cargo_user.is_free_storage_granted() << std::endl;
+
     return storage_template;
 }
 
@@ -196,13 +203,14 @@ int main()
 {
     CargoCfgProviderImpl cfg_provider{};
     CargoConfig cfg = collect_config(cfg_provider);
+    // cfg.override_evs_url(RustString{"new url"});
     LocalSecureStorageImpl lss{};
     SharedMutexCargoLib cargo_lib;
     try
     {
         cargo_lib = create_cargo_lib(lss, cfg);
     }
-    catch (const CargoLibCreationExc_FailureException &e)
+    catch (const CargoLibCreationError_ErrorException &e)
     {
         std::cerr << e.reason().to_string() << std::endl;
         assert(false);
@@ -231,7 +239,12 @@ int main()
 
             try
             {
-                auto storage_template = foundation_storage_test(cargo_lib);
+                auto storage_template = foundation_storage_test(new_user);
+
+                RustVec<StorageTemplate> storage_templates = new_user.get_storage_templates();
+                StorageTemplate first_st = storage_templates.at(0).unwrap();
+                std::cout << first_st.stringify().to_string() << std::endl;
+
                 container_test(new_user, storage_template);
             }
             catch (const RustExceptionBase &e)
@@ -244,18 +257,13 @@ int main()
                 CargoUser user = user_api.get_user();
                 std::cout << "User: " << user.stringify().to_string() << std::endl;
             }
-            catch (const UserRetrievalExc_NotFoundException &e)
-            {
-                std::cerr << e.reason().to_string() << std::endl;
-                assert(false);
-            }
-            catch (const UserRetrievalExc_UnexpectedException &e)
+            catch (const RustExceptionBase &e)
             {
                 std::cerr << e.reason().to_string() << std::endl;
                 assert(false);
             }
         }
-        catch (const UserCreationExc_FailureException &e)
+        catch (const RustExceptionBase &e)
         {
             std::cerr << e.reason().to_string() << std::endl;
             assert(false);
@@ -267,12 +275,12 @@ int main()
             user_api.create_user_from_entropy(entropy, device_name); // Expected to fail
             assert(false);
         }
-        catch (const UserCreationExc_FailureException &e)
+        catch (const RustExceptionBase &e)
         {
             std::cerr << e.reason().to_string() << std::endl;
         }
     }
-    catch (const MnemonicCreationExc_FailureException &e)
+    catch (const RustExceptionBase &e)
     {
         std::cerr << e.reason().to_string() << std::endl;
         assert(false);

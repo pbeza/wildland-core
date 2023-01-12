@@ -18,14 +18,11 @@
 pub mod cargo_lib;
 pub mod cargo_user;
 pub mod config;
-pub mod container;
 pub mod foundation_storage;
 pub mod storage;
-pub mod storage_template;
 pub mod user;
+mod utils;
 
-pub use self::{
-    cargo_lib::CargoLib,
-    config::{CargoCfgProvider, CargoConfig},
-    user::UserApi,
-};
+pub use self::cargo_lib::CargoLib;
+pub use self::config::{CargoCfgProvider, CargoConfig};
+pub use self::user::UserApi;

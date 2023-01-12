@@ -15,15 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::error::CryptoError;
-use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
 use bip39::Language::English;
 use bip39::{Mnemonic, MnemonicType};
 use hkdf::Hkdf;
 use sha2::Sha256;
 
+use crate::error::CryptoError;
+use crate::identity::{MnemonicPhrase, MNEMONIC_LEN};
+
 /// Generate a new random mnemonic phrase
-#[tracing::instrument(level = "debug", ret)]
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     Mnemonic::new(
         MnemonicType::for_word_count(MNEMONIC_LEN)
@@ -44,7 +45,6 @@ pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     })
 }
 
-#[tracing::instrument(level = "debug", skip(seed, target))]
 pub(crate) fn extend_seed(seed: &[u8], target: &mut [u8; 96]) {
     let info = [87, 105, 108, 100, 108, 97, 110, 100]; // list(b'Wildland')
     let hk = Hkdf::<Sha256>::new(None, seed);
@@ -58,9 +58,8 @@ mod tests {
     use bip39::{Mnemonic, Seed};
     use hex_literal::hex;
 
-    use crate::common::test_utilities::MNEMONIC_PHRASE;
-
     use super::*;
+    use crate::common::test_utilities::MNEMONIC_PHRASE;
 
     #[test]
     fn expanding_the_seed_from_vector() {

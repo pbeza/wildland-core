@@ -15,29 +15,34 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    api::{
-        config::{CargoConfig, FoundationStorageApiConfig},
-        foundation_storage::FoundationStorageApi,
-        user::UserApi,
-    },
-    errors::single_variant::*,
-    logging,
-    user::UserService,
-};
-use std::{
-    mem::MaybeUninit,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
-};
+use std::collections::HashMap;
+use std::mem::MaybeUninit;
+use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+
 use thiserror::Error;
+use wildland_catlib::CatLib;
+use wildland_corex::catlib_service::CatLibService;
+use wildland_corex::container_manager::ContainerManager;
+use wildland_corex::dfs::interface::DfsFrontend;
 use wildland_corex::{LocalSecureStorage, LssService};
+use wildland_dfs::encrypted::EncryptedDfs as Dfs;
+use wildland_dfs::unencrypted::StorageBackendFactory;
+#[cfg(feature = "lfs")]
+use wildland_lfs::LfsBackendFactory;
+
+use crate::api::config::{CargoConfig, FoundationStorageApiConfig};
+use crate::api::user::UserApi;
+use crate::logging;
+use crate::user::UserService;
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
-#[error("CargoLib creation error: {0}")]
-pub struct CargoLibCreationError(pub String);
+#[repr(C)]
+pub enum CargoLibCreationError {
+    #[error("CargoLib creation error: {0}")]
+    Error(String),
+}
 
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -45,14 +50,23 @@ type SharedCargoLib = Arc<Mutex<CargoLib>>;
 static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 
 /// Structure aggregating and exposing public API of CargoLib library.
-/// All functionalities are exposed to application side through this structure.
+/// All functionalities are exposed to application side through this structure (not all directly).
 ///
 /// It can be created with [`create_cargo_lib`] function.
+///
+/// As mentioned above, CargoLib does not try to expose all functionalities directly by its methods,
+/// but it can be treated as a starting point for using wildland core in a native app.
+/// To avoid programming invalid logic on the native app side, some functionalities are
+/// hidden in subsequent objects that can be obtained from CargoLib.
+///
+/// Usage of **Foundation Storage API** makes sense only within a user's context, so in order to avoid
+/// calling its methods before a user is created/retrieved access to **Foundation Storage API** is
+/// enclosed within [`crate::api::cargo_user::CargoUser`] object.
 ///
 #[derive(Clone)]
 pub struct CargoLib {
     user_api: UserApi,
-    foundation_storage_api: FoundationStorageApi,
+    dfs_api: Arc<Mutex<dyn DfsFrontend>>,
 }
 
 impl CargoLib {
@@ -61,22 +75,38 @@ impl CargoLib {
         fsa_config: FoundationStorageApiConfig,
     ) -> Self {
         let lss_service = LssService::new(lss);
+        let container_manager = Rc::new(ContainerManager {});
+
+        let mut dfs_storage_factories: HashMap<String, Box<dyn StorageBackendFactory>> =
+            HashMap::new();
+        #[cfg(feature = "lfs")]
+        dfs_storage_factories.insert(
+            "LocalFilesystem".to_string(),
+            Box::new(LfsBackendFactory {}),
+        );
+
         Self {
-            user_api: UserApi::new(UserService::new(lss_service.clone())),
-            foundation_storage_api: FoundationStorageApi::new(fsa_config, lss_service),
+            user_api: UserApi::new(UserService::new(
+                lss_service,
+                CatLibService::new(Rc::new(CatLib::default())),
+                fsa_config,
+            )),
+            dfs_api: Arc::new(Mutex::new(Dfs::new(
+                container_manager,
+                dfs_storage_factories,
+            ))),
         }
     }
 
     /// Returns structure aggregating API for user management
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn user_api(&self) -> UserApi {
         self.user_api.clone()
     }
 
-    /// Returns structure aggregating API for Foundation Storage management
-    #[tracing::instrument(skip(self))]
-    pub fn foundation_storage_api(&self) -> FoundationStorageApi {
-        self.foundation_storage_api.clone()
+    /// Returns DFS API object that may be used to build Filesystem-like UI.
+    pub fn dfs_api(&self) -> Arc<Mutex<dyn DfsFrontend>> {
+        self.dfs_api.clone()
     }
 }
 
@@ -103,11 +133,12 @@ impl CargoLib {
 ///
 /// impl LocalSecureStorage for TestLss {
 /// // ...implementation here
-/// #    fn insert(&self, key: String, value: Vec<u8>) -> LssResult<Option<Vec<u8>>>{todo!()}
-/// #    fn get(&self, key: String) -> LssResult<Option<Vec<u8>>>{todo!()}
+/// #    fn insert(&self, key: String, value: String) -> LssResult<Option<String>>{todo!()}
+/// #    fn get(&self, key: String) -> LssResult<Option<String>>{todo!()}
 /// #    fn contains_key(&self, key: String) -> LssResult<bool>{todo!()}
 /// #    fn keys(&self) -> LssResult<Vec<String>>{todo!()}
-/// #    fn remove(&self, key: String) -> LssResult<Option<Vec<u8>>>{todo!()}
+/// #    fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>>{todo!()}
+/// #    fn remove(&self, key: String) -> LssResult<Option<String>>{todo!()}
 /// #    fn len(&self) -> LssResult<usize>{todo!()}
 /// #    fn is_empty(&self) -> LssResult<bool>{todo!()}
 /// }
@@ -115,7 +146,7 @@ impl CargoLib {
 /// let lss = TestLss{};
 ///
 /// # use std::path::PathBuf;
-/// let cfg = CargoConfig{     
+/// let cfg = CargoConfig{
 ///     logger_config: LoggerConfig {
 ///         use_logger: true,
 ///         log_level: Level::TRACE,
@@ -123,8 +154,6 @@ impl CargoLib {
 ///         log_file_path: PathBuf::from("cargo_lib_log"),
 ///         log_file_rotate_directory: PathBuf::from(".".to_owned()),
 ///         log_file_enabled: true,
-///         oslog_category: None,
-///         oslog_subsystem: None,
 ///     },
 ///     fsa_config: FoundationStorageApiConfig {
 ///         evs_url: "some_url".to_owned(),
@@ -138,12 +167,12 @@ impl CargoLib {
 pub fn create_cargo_lib(
     lss: &'static dyn LocalSecureStorage,
     cfg: CargoConfig,
-) -> SingleErrVariantResult<SharedCargoLib, CargoLibCreationError> {
+) -> Result<SharedCargoLib, CargoLibCreationError> {
     if !INITIALIZED.load(Ordering::Relaxed) {
         INITIALIZED.store(true, Ordering::Relaxed);
 
         logging::init_subscriber(cfg.logger_config)
-            .map_err(|e| SingleVariantError::Failure(CargoLibCreationError(e.to_string())))?;
+            .map_err(|e| CargoLibCreationError::Error(e.to_string()))?;
 
         let cargo_lib = Arc::new(Mutex::new(CargoLib::new(lss, cfg.fsa_config)));
 

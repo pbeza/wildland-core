@@ -16,12 +16,27 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use thiserror::Error;
+use wildland_corex::catlib_service::error::CatlibError;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum GetStoragesError {}
+#[repr(C)]
+pub enum GetStoragesError {
+    #[error("Get Storage error")]
+    Error,
+}
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum DeleteStorageError {}
+#[repr(C)]
+pub enum AddStorageError {
+    #[error("Add Storage error")]
+    Error,
+}
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum AddStorageError {}
+#[repr(C)]
+pub enum GetStorageTemplateError {
+    #[error(transparent)]
+    CatlibError(#[from] CatlibError),
+    #[error("Error while deserializing data retrieved from LSS: {0}")]
+    DeserializationError(String),
+}

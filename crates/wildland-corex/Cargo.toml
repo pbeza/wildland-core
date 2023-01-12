@@ -8,21 +8,24 @@ license     = "GPL-3.0-only"
 name        = "wildland-corex"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.30.1-rc.0"
+version     = "0.31.0-rc.1"
 
 [dependencies]
 
 hex             = { version = "0.4" }
+mockall         = { version = "0.11" }
 serde           = { version = "1.0", features = ["derive"] }
 serde_json      = { version = "1.0" }
 sha2            = { version = "0.10" }
+tera            = { version = "1.17" }
 thiserror       = { version = "1.0" }
 tracing         = { version = "0.1" }
-uuid            = { version = "1.2" }
-wildland-catlib = { version = "0.30.1-rc.0", path = "../wildland-catlib", registry = "wl-dev" }
-wildland-crypto = { version = "0.30.1-rc.0", path = "../wildland-crypto", registry = "wl-dev" }
-wildland-dfs    = { version = "0.30.1-rc.0", path = "../wildland-dfs", registry = "wl-dev" }
+uuid            = { version = "1.2", features = ["v4", "serde"] }
+wildland-crypto = { version = "0.31.0-rc.0", path = "../wildland-crypto", registry = "wl-dev" }
 
 [dev-dependencies]
-mockall  = { version = "0.11" }
-tempfile = { version = "3.3" }
+pretty_assertions = { version = "1.3" }
+rstest            = { version = "0.16" }
+serde_yaml        = { version = "0.9" }
+tempfile          = { version = "3.3" }
+toml              = { version = "0.5" }

@@ -15,160 +15,105 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    api::{
-        cargo_lib::*, cargo_user::*, config::*, container::*, foundation_storage::*, storage::*,
-        storage_template::*, user::*,
-    },
-    errors::{
-        container::*, retrieval_error::*, single_variant::*, storage::*, user::*, ExceptionTrait,
-    },
-};
-use rusty_bind::binding_wrapper;
 use std::sync::{Arc, Mutex};
+
+use rusty_bind::binding_wrapper;
+pub use wildland_corex::catlib_service::error::CatlibError;
+pub use wildland_corex::dfs::interface::*;
+use wildland_corex::entities::Identity;
+use wildland_corex::{BridgeManifest, ContainerManifest, ForestManifest, Signers, StorageManifest};
 pub use wildland_corex::{
-    CatlibError, CoreXError, CryptoError, ForestRetrievalError, LocalSecureStorage, LssError,
-    LssResult,
+    CoreXError,
+    CryptoError,
+    ForestRetrievalError,
+    LocalSecureStorage,
+    LssError,
+    StorageTemplate,
 };
+
+use crate::api::cargo_lib::*;
+use crate::api::cargo_user::*;
+use crate::api::config::*;
+use crate::api::foundation_storage::*;
+use crate::api::user::*;
+use crate::errors::storage::*;
+use crate::errors::user::*;
+use crate::errors::ExceptionTrait;
 
 type VoidType = ();
 
-pub type UserRetrievalExc = RetrievalError<UserRetrievalError>;
-pub type MnemonicCreationExc = SingleVariantError<CryptoError>;
-pub type StringExc = SingleVariantError<String>; // Used for simple errors originating inside CargoLib (not in dependant modules)
-pub type UserCreationExc = SingleVariantError<UserCreationError>;
-pub type CargoLibCreationExc = SingleVariantError<CargoLibCreationError>;
-pub type ConfigParseExc = SingleVariantError<ParseConfigError>;
-pub type FsaExc = FsaError;
-pub type CatlibExc = CatlibError;
-pub type ContainerMountExc = SingleVariantError<ContainerMountError>;
-pub type ContainerUnmountExc = SingleVariantError<ContainerUnmountError>;
-pub type AddStorageExc = SingleVariantError<AddStorageError>;
-pub type DeleteStorageExc = SingleVariantError<DeleteStorageError>;
-pub type GetStoragesExc = SingleVariantError<GetStoragesError>;
-pub type ForestMountExc = SingleVariantError<ForestMountError>;
-
-pub type LssOptionalBytesResult = LssResult<Option<Vec<u8>>>;
-/// constructor of `LssResult<Option<Vec<u8>>>` (aka [`LssOptionalBytesResult`]) with Ok variant
-pub fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult {
-    Ok(ok_val)
-}
-/// constructor of `LssResult<Option<Vec<u8>>>` (aka [`LssOptionalBytesResult`]) with Err variant
-pub fn new_err_lss_optional_bytes(err_val: String) -> LssOptionalBytesResult {
-    Err(LssError(err_val))
-}
-
-pub type LssBoolResult = LssResult<bool>;
-/// constructor of `LssResult<bool>` (aka [`LssBoolResult`]) with Ok variant
-pub fn new_ok_lss_bool(ok_val: bool) -> LssBoolResult {
-    Ok(ok_val)
-}
-/// constructor of `LssResult<bool>` (aka [`LssBoolResult`]) with Err variant
-pub fn new_err_lss_bool(err_val: String) -> LssBoolResult {
-    Err(LssError(err_val))
-}
-
-pub type OptionalBytes = Option<Vec<u8>>;
-/// constructor of `Option<Vec<u8>>` (aka [`OptionalBytes`]) with Some value
-pub fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes {
-    Some(bytes)
-}
-/// constructor of `Option<Vec<u8>>` (aka [`OptionalBytes`]) with None value
-pub fn new_none_bytes() -> OptionalBytes {
-    None
-}
-
-pub type OptionalString = Option<String>;
-/// constructor of `Option<String>` (aka [`OptionalString`]) with Some value
-fn new_some_string(s: String) -> OptionalString {
-    Some(s)
-}
-/// constructor of `Option<String>` (aka [`OptionalString`]) with None value
-fn new_none_string() -> OptionalString {
-    None
-}
-
-pub type LssVecOfStringsResult = LssResult<Vec<String>>;
-/// constructor of `LssResult<Vec<String>>` (aka [`LssVecOfStringsResult`]) with Ok variant
-fn new_ok_lss_vec_of_strings(ok_val: Vec<String>) -> LssVecOfStringsResult {
-    Ok(ok_val)
-}
-/// constructor of `LssResult<Vec<String>>` (aka [`LssVecOfStringsResult`]) with Err variant
-fn new_err_lss_vec_of_strings(err_val: String) -> LssVecOfStringsResult {
-    Err(LssError(err_val))
-}
-
-pub type LssUsizeResult = LssResult<usize>;
-/// constructor of `LssResult<usize>` (aka [`LssUsizeResult`]) with Ok variant
-fn new_ok_lss_usize(ok_val: usize) -> LssUsizeResult {
-    Ok(ok_val)
-}
-/// constructor of `LssResult<usize>` (aka [`LssUsizeResult`]) with Err variant
-pub fn new_err_lss_usize(err_val: String) -> LssUsizeResult {
-    Err(LssError(err_val))
-}
-
-#[binding_wrapper]
+#[cfg_attr(
+    feature = "bindings",
+    binding_wrapper(source = "../../_generated_ffi_code/interface.rs")
+)]
 mod ffi_binding {
     extern "ExceptionTrait" {
         fn reason(&self) -> String;
     }
-    enum UserRetrievalExc {
-        NotFound(_),
-        Unexpected(_),
+    enum UserCreationError {
+        UserAlreadyExists,
+        MnemonicGenerationError(_),
+        IdentityGenerationError(_),
+        UserRetrievalError(_),
+        ForestIdentityCreationError(_),
+        LssError(_),
+        EntropyTooLow,
+        CatlibError(_),
     }
-    enum MnemonicCreationExc {
-        Failure(_),
+    enum UserRetrievalError {
+        ForestRetrievalError(_),
+        ForestNotFound(_),
+        LssError(_),
+        CatlibError(_),
+        DeviceMetadataNotFound,
+        UserNotFound,
     }
-    enum UserCreationExc {
-        Failure(_),
-    }
-    enum CargoLibCreationExc {
-        Failure(_),
-    }
-    enum ConfigParseExc {
-        Failure(_),
-    }
-    enum FsaExc {
+    enum FsaError {
         StorageAlreadyExists,
         EvsError(_),
         CryptoError(_),
         InvalidCredentialsFormat(_),
+        LssError(_),
+        CatlibError(_),
+        StorageTemplateError(_),
+        Generic(_),
     }
-    enum StringExc {
-        Failure(_),
+    enum LssError {
+        Error(_),
     }
-    enum ForestMountExc {
-        Failure(_),
+    enum ParseConfigError {
+        Error(_),
     }
-    enum CatlibExc {
+    enum CargoLibCreationError {
+        Error(_),
+    }
+    enum CreateMnemonicError {
+        InvalidMnemonicWords,
+    }
+    enum ForestMountError {
+        Error,
+    }
+    enum CatlibError {
         NoRecordsFound(_),
         MalformedDatabaseEntry(_),
         RecordAlreadyExists(_),
         Generic(_),
     }
-    enum ContainerMountExc {
-        Failure(_),
+    enum ContainerMountError {
+        Error,
     }
-    enum ContainerUnmountExc {
-        Failure(_),
+    enum ContainerUnmountError {
+        Error,
     }
-    enum GetStoragesExc {
-        Failure(_),
+    enum FoundationCloudMode {
+        Dev,
     }
-    enum DeleteStorageExc {
-        Failure(_),
-    }
-    enum AddStorageExc {
-        Failure(_),
+    enum GetStorageTemplateError {
+        LssError(_),
+        DeserializationError(_),
     }
 
     extern "Traits" {
-
-        // # traits required for main configuration
-        //
-        fn get_evs_url(self: &dyn CargoCfgProvider) -> String;
-        fn get_sc_url(self: &dyn CargoCfgProvider) -> String;
 
         // # traits required for logging configuration
         //
@@ -176,57 +121,44 @@ mod ffi_binding {
         fn get_log_level(self: &dyn CargoCfgProvider) -> String;
         fn get_log_use_ansi(self: &dyn CargoCfgProvider) -> bool;
         fn get_log_file_enabled(self: &dyn CargoCfgProvider) -> bool;
-        fn get_log_file_path(self: &dyn CargoCfgProvider) -> OptionalString;
-        fn get_log_file_rotate_directory(self: &dyn CargoCfgProvider) -> OptionalString;
-        fn get_oslog_category(self: &dyn CargoCfgProvider) -> OptionalString;
-        fn get_oslog_subsystem(self: &dyn CargoCfgProvider) -> OptionalString;
+        fn get_log_file_path(self: &dyn CargoCfgProvider) -> Option<String>;
+        fn get_log_file_rotate_directory(self: &dyn CargoCfgProvider) -> Option<String>;
+
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
+        fn get_oslog_category(self: &dyn CargoCfgProvider) -> Option<String>;
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
+        fn get_oslog_subsystem(self: &dyn CargoCfgProvider) -> Option<String>;
+
+        fn get_foundation_cloud_env_mode(self: &dyn CargoCfgProvider) -> FoundationCloudMode;
 
         // # traits required for lss:
         //
         fn insert(
             self: &dyn LocalSecureStorage,
             key: String,
-            value: Vec<u8>,
-        ) -> LssOptionalBytesResult;
-        fn get(self: &dyn LocalSecureStorage, key: String) -> LssOptionalBytesResult;
-        fn contains_key(self: &dyn LocalSecureStorage, key: String) -> LssBoolResult;
-        fn keys(self: &dyn LocalSecureStorage) -> LssVecOfStringsResult;
-        fn remove(self: &dyn LocalSecureStorage, key: String) -> LssOptionalBytesResult;
-        fn len(self: &dyn LocalSecureStorage) -> LssUsizeResult;
-        fn is_empty(self: &dyn LocalSecureStorage) -> LssBoolResult;
+            value: String,
+        ) -> Result<Option<String>, LssError>;
+        fn get(self: &dyn LocalSecureStorage, key: String) -> Result<Option<String>, LssError>;
+        fn contains_key(self: &dyn LocalSecureStorage, key: String) -> Result<bool, LssError>;
+        fn keys(self: &dyn LocalSecureStorage) -> Result<Vec<String>, LssError>;
+        fn keys_starting_with(
+            self: &dyn LocalSecureStorage,
+            prefix: String,
+        ) -> Result<Vec<String>, LssError>;
+        fn remove(self: &dyn LocalSecureStorage, key: String) -> Result<Option<String>, LssError>;
+        fn len(self: &dyn LocalSecureStorage) -> Result<usize, LssError>;
+        fn is_empty(self: &dyn LocalSecureStorage) -> Result<bool, LssError>;
     }
 
     extern "Rust" {
         type VoidType;
 
-        type LssOptionalBytesResult;
-        fn new_ok_lss_optional_bytes(ok_val: OptionalBytes) -> LssOptionalBytesResult;
-        fn new_err_lss_optional_bytes(err_val: String) -> LssOptionalBytesResult;
-        type LssBoolResult;
-        fn new_ok_lss_bool(ok_val: bool) -> LssBoolResult;
-        fn new_err_lss_bool(err_val: String) -> LssBoolResult;
-        type LssVecOfStringsResult;
-        fn new_ok_lss_vec_of_strings(ok_val: Vec<String>) -> LssVecOfStringsResult;
-        fn new_err_lss_vec_of_strings(err_val: String) -> LssVecOfStringsResult;
-        type LssUsizeResult;
-        fn new_ok_lss_usize(ok_val: usize) -> LssUsizeResult;
-        fn new_err_lss_usize(err_val: String) -> LssUsizeResult;
-
-        type OptionalBytes;
-        fn new_some_bytes(bytes: Vec<u8>) -> OptionalBytes;
-        fn new_none_bytes() -> OptionalBytes;
-        type OptionalString;
-        fn new_some_string(s: String) -> OptionalString;
-        fn new_none_string() -> OptionalString;
-
-        //
-        // CargoConfig
-        //
-        type CargoConfig;
-        fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ConfigParseExc>;
+        fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ParseConfigError>;
         fn collect_config(
             config_provider: &'static dyn CargoCfgProvider,
-        ) -> Result<CargoConfig, ConfigParseExc>;
+        ) -> Result<CargoConfig, ParseConfigError>;
+        fn override_evs_url(self: &CargoConfig, new_evs_url: String);
+        fn override_sc_url(self: &CargoConfig, new_sc_url: String);
 
         //
         // CargoLib
@@ -234,43 +166,37 @@ mod ffi_binding {
         fn create_cargo_lib(
             lss: &'static dyn LocalSecureStorage,
             config: CargoConfig,
-        ) -> Result<Arc<Mutex<CargoLib>>, CargoLibCreationExc>;
+        ) -> Result<Arc<Mutex<CargoLib>>, CargoLibCreationError>;
         fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
-        fn foundation_storage_api(self: &Arc<Mutex<CargoLib>>) -> FoundationStorageApi;
-
-        //
-        // FoundationStorageApi
-        //
-        fn request_free_tier_storage(
-            self: &FoundationStorageApi,
-            email: String,
-        ) -> Result<FreeTierProcessHandle, FsaExc>;
-        fn verify_email(
-            self: &FoundationStorageApi,
-            process_handle: &FreeTierProcessHandle,
-            verification_token: String,
-        ) -> Result<StorageTemplate, FsaExc>;
-        type FreeTierProcessHandle;
+        fn dfs_api(self: &Arc<Mutex<CargoLib>>) -> Arc<Mutex<dyn DfsFrontend>>;
 
         //
         // UserApi
         //
-        fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, MnemonicCreationExc>;
+
+        // Mnemonic
+        fn generate_mnemonic(self: &UserApi) -> Result<MnemonicPayload, CreateMnemonicError>;
         fn create_mnemonic_from_vec(
             self: &UserApi,
             words: Vec<String>,
-        ) -> Result<MnemonicPayload, StringExc>;
+        ) -> Result<MnemonicPayload, CreateMnemonicError>;
+        fn create_mnemonic_from_string(
+            self: &UserApi,
+            mnemonic_str: String,
+        ) -> Result<MnemonicPayload, CreateMnemonicError>;
+
+        // User
         fn create_user_from_entropy(
             self: &UserApi,
             entropy: Vec<u8>,
             device_name: String,
-        ) -> Result<CargoUser, UserCreationExc>;
+        ) -> Result<CargoUser, UserCreationError>;
         fn create_user_from_mnemonic(
             self: &UserApi,
             mnemonic: &MnemonicPayload,
             device_name: String,
-        ) -> Result<CargoUser, UserCreationExc>;
-        fn get_user(self: &UserApi) -> Result<CargoUser, UserRetrievalExc>;
+        ) -> Result<CargoUser, UserCreationError>;
+        fn get_user(self: &UserApi) -> Result<CargoUser, UserRetrievalError>;
 
         //
         // MnemonicPayload
@@ -278,57 +204,145 @@ mod ffi_binding {
         fn stringify(self: &MnemonicPayload) -> String;
         fn get_vec(self: &MnemonicPayload) -> Vec<String>;
 
+        type Identity;
+        type Signers;
+
         //
         // CargoUser
         //
         fn stringify(self: &CargoUser) -> String;
-        fn mount_forest(self: &CargoUser) -> Result<VoidType, ForestMountExc>;
-        fn get_containers(self: &CargoUser) -> Result<Vec<Arc<Mutex<Container>>>, CatlibExc>;
+        fn get_containers(
+            self: &CargoUser,
+        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
         fn create_container(
             self: &CargoUser,
             name: String,
             storage_templates: &StorageTemplate,
-        ) -> Result<Arc<Mutex<Container>>, CatlibExc>;
-        fn delete_container(
+            path: String,
+        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
+        fn get_storage_templates(
             self: &CargoUser,
-            container: &Arc<Mutex<Container>>,
-        ) -> Result<VoidType, CatlibExc>;
+        ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
+
+        // Foundation Storage
+        type FreeTierProcessHandle;
+        fn request_free_tier_storage(
+            self: &CargoUser,
+            email: String,
+        ) -> Result<FreeTierProcessHandle, FsaError>;
+        fn verify_email(
+            self: &CargoUser,
+            process_handle: &FreeTierProcessHandle,
+            verification_token: String,
+        ) -> Result<StorageTemplate, FsaError>;
+        fn is_free_storage_granted(self: &CargoUser) -> Result<bool, CatlibError>;
 
         //
-        // Container
+        // ForestManifest
         //
+        fn add_signer(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            signer: Identity,
+        ) -> Result<bool, CatlibError>;
+        fn del_signer(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            signer: Identity,
+        ) -> Result<bool, CatlibError>;
+        fn containers(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
+        fn update(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            data: Vec<u8>,
+        ) -> Result<VoidType, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn ForestManifest>>) -> Result<bool, CatlibError>;
+        fn create_container(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            name: String,
+            storage_data: &StorageTemplate,
+            path: String,
+        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
+        fn create_bridge(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            path: String,
+            link_data: Vec<u8>,
+        ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
+        fn find_bridge(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            path: String,
+        ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
+        fn find_containers(
+            self: &Arc<Mutex<dyn ForestManifest>>,
+            paths: Vec<String>,
+            include_subdirs: bool,
+        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
+        fn owner(self: &Arc<Mutex<dyn ForestManifest>>) -> Identity;
+        fn signers(self: &Arc<Mutex<dyn ForestManifest>>) -> Result<Signers, CatlibError>;
 
-        // mounting
-        fn mount(self: &Arc<Mutex<Container>>) -> Result<VoidType, ContainerMountExc>;
-        fn unmount(self: &Arc<Mutex<Container>>) -> Result<VoidType, ContainerUnmountExc>;
-        fn is_mounted(self: &Arc<Mutex<Container>>) -> bool;
-
-        // storages
-        fn get_storages(self: &Arc<Mutex<Container>>) -> Result<Vec<Storage>, GetStoragesExc>;
-        fn delete_storage(
-            self: &Arc<Mutex<Container>>,
-            storage: &Storage,
-        ) -> Result<VoidType, DeleteStorageExc>;
+        //
+        // ContainerManifest
+        //
+        fn get_storages(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+        ) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, CatlibError>;
         fn add_storage(
-            self: &Arc<Mutex<Container>>,
+            self: &Arc<Mutex<dyn ContainerManifest>>,
             templates: &StorageTemplate,
-        ) -> Result<VoidType, AddStorageExc>;
+        ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>;
+        fn add_path(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            path: String,
+        ) -> Result<bool, CatlibError>;
+        fn delete_path(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            path: String,
+        ) -> Result<bool, CatlibError>;
+        fn get_paths(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<Vec<String>, CatlibError>;
+        fn set_name(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+            new_name: String,
+        ) -> Result<VoidType, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<VoidType, CatlibError>;
+        fn forest(
+            self: &Arc<Mutex<dyn ContainerManifest>>,
+        ) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError>;
+        fn name(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<String, CatlibError>;
+        fn stringify(self: &Arc<Mutex<dyn ContainerManifest>>) -> String;
 
-        // paths
-        fn add_path(self: &Arc<Mutex<Container>>, path: String) -> Result<bool, CatlibExc>;
-        fn delete_path(self: &Arc<Mutex<Container>>, path: String) -> Result<bool, CatlibExc>;
-        fn get_paths(self: &Arc<Mutex<Container>>) -> Result<Vec<String>, CatlibExc>;
+        //
+        // StorageManifest
+        //
+        fn container(
+            self: &Arc<Mutex<dyn StorageManifest>>,
+        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
+        fn update(
+            self: &Arc<Mutex<dyn StorageManifest>>,
+            data: Vec<u8>,
+        ) -> Result<VoidType, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<bool, CatlibError>;
+        fn data(self: &Arc<Mutex<dyn StorageManifest>>) -> Result<Vec<u8>, CatlibError>;
 
-        fn set_name(self: &Arc<Mutex<Container>>, new_name: String);
-        fn get_name(self: &Arc<Mutex<Container>>) -> String;
-        fn stringify(self: &Arc<Mutex<Container>>) -> String;
-        fn duplicate(self: &Arc<Mutex<Container>>) -> Result<Arc<Mutex<Container>>, CatlibExc>;
+        //
+        // BridgeManifets
+        //
+        fn forest(
+            self: &Arc<Mutex<dyn BridgeManifest>>,
+        ) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError>;
+        fn update(
+            self: &Arc<Mutex<dyn BridgeManifest>>,
+            link: Vec<u8>,
+        ) -> Result<VoidType, CatlibError>;
+        fn remove(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<bool, CatlibError>;
+        fn path(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<String, CatlibError>;
 
         //
         // Storage
         //
-        fn stringify(self: &Storage) -> String;
-
         fn stringify(self: &StorageTemplate) -> String;
+
+        // DFS Frontend
+        fn readdir(self: &Arc<Mutex<dyn DfsFrontend>>, path: String) -> Vec<NodeDescriptor>;
+
+        type NodeDescriptor;
     }
 }

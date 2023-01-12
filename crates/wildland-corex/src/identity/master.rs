@@ -16,10 +16,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use thiserror::Error;
-use wildland_crypto::{
-    error::KeyDeriveError,
-    identity::{new_device_identity, Identity as CryptoIdentity},
-};
+use wildland_crypto::error::KeyDeriveError;
+use wildland_crypto::identity::{new_device_identity, Identity as CryptoIdentity};
 
 use super::wildland::WildlandIdentity;
 
@@ -29,6 +27,7 @@ pub struct MasterIdentity {
 }
 
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
+#[repr(C)]
 pub enum ForestIdentityCreationError {
     #[error("Crypto identity is required to create a new forest")]
     CryptoIdentityNotFound,
@@ -37,13 +36,13 @@ pub enum ForestIdentityCreationError {
 }
 
 impl MasterIdentity {
-    #[tracing::instrument(level = "debug", skip(crypto_identity))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn new(crypto_identity: Option<CryptoIdentity>) -> Self {
         tracing::debug!("creating new identity");
         Self { crypto_identity }
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_forest_identity(
         &self,
         index: u64,
@@ -58,7 +57,7 @@ impl MasterIdentity {
         Ok(identity)
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_device_identity(&self, name: String) -> WildlandIdentity {
         let keypair = new_device_identity();
         WildlandIdentity::Device(name, keypair)
@@ -67,8 +66,9 @@ impl MasterIdentity {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ForestIdentityCreationError, MasterIdentity, WildlandIdentity};
     use wildland_crypto::identity::{generate_random_mnemonic, Identity};
+
+    use crate::{ForestIdentityCreationError, MasterIdentity, WildlandIdentity};
 
     fn create_crypto_identity() -> Identity {
         generate_random_mnemonic()

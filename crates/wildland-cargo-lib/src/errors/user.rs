@@ -16,12 +16,21 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use thiserror::Error;
-use wildland_corex::{
-    CatlibError, CryptoError, ForestIdentityCreationError, ForestRetrievalError, LssError,
-};
+use wildland_corex::catlib_service::error::CatlibError;
+use wildland_corex::{CryptoError, ForestIdentityCreationError, ForestRetrievalError, LssError};
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
+pub enum CreateMnemonicError {
+    #[error("Invalid Mnemonic words")]
+    InvalidMnemonicWords,
+}
+
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
 pub enum UserCreationError {
+    #[error("Generic error: {0}")]
+    Generic(String),
     #[error("User already exists")]
     UserAlreadyExists,
     #[error("Mnemonic generation error: {0}")]
@@ -41,7 +50,6 @@ pub enum UserCreationError {
 }
 
 impl From<CryptoError> for UserCreationError {
-    #[tracing::instrument(level = "debug", ret)]
     fn from(crypto_err: CryptoError) -> Self {
         match &crypto_err {
             CryptoError::MnemonicGenerationError(_) => {
@@ -62,7 +70,7 @@ impl From<CatlibError> for UserCreationError {
     fn from(catlib_err: CatlibError) -> Self {
         match catlib_err {
             CatlibError::NoRecordsFound
-            | CatlibError::MalformedDatabaseEntry
+            | CatlibError::MalformedDatabaseRecord
             | CatlibError::Generic(_) => UserCreationError::CatlibError(catlib_err.to_string()),
             CatlibError::RecordAlreadyExists => UserCreationError::UserAlreadyExists,
         }
@@ -70,6 +78,7 @@ impl From<CatlibError> for UserCreationError {
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
 pub enum UserRetrievalError {
     #[error(transparent)]
     ForestRetrievalError(#[from] ForestRetrievalError),
@@ -81,7 +90,15 @@ pub enum UserRetrievalError {
     CatlibError(#[from] CatlibError),
     #[error("Metadata of this device has not been found in Forest")]
     DeviceMetadataNotFound,
+    #[error("User not found")]
+    UserNotFound,
+    #[error("Generic: {0}")]
+    Generic(String),
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum ForestMountError {}
+#[repr(C)]
+pub enum ForestMountError {
+    #[error("Forest Mount error")]
+    Error,
+}

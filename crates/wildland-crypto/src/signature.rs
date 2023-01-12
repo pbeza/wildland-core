@@ -24,12 +24,11 @@ use crate::error::CryptoError;
 pub struct Signature(pub ed25519_dalek::Signature);
 
 impl Signature {
-    #[tracing::instrument(level = "debug", ret, skip(self))]
     pub fn encode_signature(self) -> String {
         self.0.encode_hex::<String>()
     }
 
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub fn verify(&self, msg: &[u8], public_key: &[u8; 32]) -> Result<(), CryptoError> {
         PublicKey::from_bytes(public_key)
             .map_err(|e| CryptoError::MessageVerificationError(e.to_string()))?
@@ -41,7 +40,10 @@ impl Signature {
 #[cfg(test)]
 mod tests {
     use crate::common::test_utilities::{
-        generate_message, get_expected_message, SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY,
+        generate_message,
+        get_expected_message,
+        SIGNING_PUBLIC_KEY,
+        SIGNING_SECRET_KEY,
     };
     use crate::identity::SigningKeypair;
 

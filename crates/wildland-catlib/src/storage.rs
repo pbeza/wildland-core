@@ -15,99 +15,136 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::*;
-use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
-/// Create String object from its representation in Rust Object Notation
-impl TryFrom<&str> for Storage {
-    type Error = ron::error::SpannedError;
+use derivative::Derivative;
+use serde::{Deserialize, Serialize};
+use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest};
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        ron::from_str(value)
+use super::*;
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub(crate) struct StorageData {
+    pub uuid: Uuid,
+    pub container_uuid: Uuid,
+    pub template_uuid: Option<Uuid>,
+    pub data: Vec<u8>,
+}
+
+impl From<&str> for StorageData {
+    fn from(data_str: &str) -> Self {
+        ron::from_str(data_str).unwrap()
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Storage {
-    uuid: Uuid,
-    container_uuid: Uuid,
-    template_uuid: Option<Uuid>,
-    data: Vec<u8>,
+#[derive(Clone, Derivative)]
+#[derivative(Debug)]
+pub(crate) struct StorageEntity {
+    pub(crate) data: StorageData,
 
-    #[serde(skip, default = "use_default_database")]
-    db: Rc<StoreDb>,
+    #[derivative(Debug = "ignore")]
+    pub(crate) db: Rc<StoreDb>,
 }
 
-impl Storage {
+impl StorageEntity {
     pub fn new(
         container_uuid: Uuid,
         template_uuid: Option<Uuid>,
         data: Vec<u8>,
         db: Rc<StoreDb>,
     ) -> Self {
-        Storage {
-            uuid: Uuid::new_v4(),
-            container_uuid,
-            template_uuid,
-            data,
+        Self {
+            data: StorageData {
+                uuid: Uuid::new_v4(),
+                container_uuid,
+                template_uuid,
+                data,
+            },
             db,
         }
     }
 }
 
-impl IStorage for Storage {
-    fn uuid(&self) -> Uuid {
-        self.uuid
-    }
-
-    fn template_uuid(&self) -> Option<Uuid> {
-        self.template_uuid
-    }
-
-    fn container(&self) -> CatlibResult<crate::container::Container> {
-        fetch_container_by_uuid(self.db.clone(), self.container_uuid)
-    }
-
-    fn data(&self) -> Vec<u8> {
-        self.data.clone()
-    }
-
-    fn update(&mut self, data: Vec<u8>) -> CatlibResult<crate::storage::Storage> {
-        self.data = data;
-        self.save()?;
-        Ok(self.clone())
+impl AsRef<StorageData> for StorageEntity {
+    fn as_ref(&self) -> &StorageData {
+        &self.data
     }
 }
 
-impl Model for Storage {
-    fn save(&mut self) -> CatlibResult<()> {
+impl StorageManifest for StorageEntity {
+    /// ## Errors
+    ///
+    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
+    /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Container`] was found.
+    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    fn container(&self) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
+        fetch_container_by_uuid(self.db.clone(), &self.data.container_uuid)
+    }
+
+    /// ## Errors
+    ///
+    /// Retrieves Storage data
+    fn data(&mut self) -> CatlibResult<Vec<u8>> {
+        self.sync()?;
+        Ok(self.data.data.clone())
+    }
+
+    /// ## Errors
+    ///
+    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    fn update(&mut self, data: Vec<u8>) -> CatlibResult<()> {
+        self.data.data = data;
+        self.save()?;
+        Ok(())
+    }
+
+    /// ## Errors
+    ///
+    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    fn remove(&mut self) -> CatlibResult<bool> {
+        Model::delete(self)?;
+        Ok(true)
+    }
+
+    fn uuid(&self) -> Uuid {
+        self.data.uuid
+    }
+}
+
+impl Model for StorageEntity {
+    fn save(&self) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
-            format!("storage-{}", self.uuid()),
-            ron::to_string(self).unwrap(),
+            format!("storage-{}", self.data.uuid),
+            ron::to_string(&self.data).unwrap(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("storage-{}", self.uuid()))
+        delete_model(self.db.clone(), format!("storage-{}", self.data.uuid))
+    }
+
+    fn sync(&mut self) -> CatlibResult<()> {
+        let data = fetch_storage_data_by_uuid(self.db.clone(), &self.data.uuid)?;
+        self.data = data;
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
+    use std::sync::{Arc, Mutex};
 
-    use crate::container::Container;
-    use crate::contracts::IStorage;
-    use crate::storage::Storage;
-    use crate::*;
     use rstest::*;
-    use uuid::Bytes;
+    use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest};
+    use wildland_corex::StorageTemplate;
 
-    fn _catlib() -> CatLib {
-        let catlib = db::init_catlib(rand::random::<Bytes>());
+    use super::db::test::catlib;
+    use crate::*;
 
+    #[fixture]
+    fn catlib_with_forest(catlib: CatLib) -> CatLib {
         // Create a dummy forest and container to which storages will be bound
         catlib
             .create_forest(
@@ -120,76 +157,158 @@ mod tests {
         catlib
     }
 
-    fn _container(catlib: &CatLib) -> Container {
-        let forest = catlib.find_forest(Identity([1; 32])).unwrap();
-        forest.create_container("name".to_owned()).unwrap()
+    fn _container(catlib: &CatLib) -> Arc<Mutex<dyn ContainerManifest>> {
+        let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
+        let storage_template = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        let locked_forest = forest.lock().unwrap();
+        let path = "/some/path".to_owned();
+        locked_forest
+            .create_container("name".to_owned(), &storage_template, path)
+            .unwrap()
     }
 
     #[fixture]
-    fn catlib() -> CatLib {
-        _catlib()
+    fn container(catlib_with_forest: CatLib) -> Arc<Mutex<dyn ContainerManifest>> {
+        _container(&catlib_with_forest)
     }
 
-    #[fixture]
-    fn container() -> Container {
-        let catlib = _catlib();
-        _container(&catlib)
+    fn make_storage(
+        container: &Arc<Mutex<dyn ContainerManifest>>,
+    ) -> Arc<Mutex<dyn StorageManifest>> {
+        let storage_template = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .add_storage(&storage_template)
+            .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .get_storages()
+            .unwrap()
+            .last()
+            .unwrap()
+            .clone()
     }
 
-    fn make_storage(container: &Container) -> Storage {
-        container.create_storage(None, vec![]).unwrap()
-    }
-
-    fn make_storage_with_template(container: &Container, template_id: Uuid) -> Storage {
-        container.create_storage(Some(template_id), vec![]).unwrap()
+    fn make_storage_with_template(
+        container: &Arc<Mutex<dyn ContainerManifest>>,
+        storage_template: &StorageTemplate,
+    ) -> Arc<Mutex<dyn StorageManifest>> {
+        container
+            .lock()
+            .unwrap()
+            .add_storage(storage_template)
+            .unwrap();
+        container
+            .lock()
+            .unwrap()
+            .get_storages()
+            .unwrap()
+            .last()
+            .unwrap()
+            .clone()
     }
 
     #[rstest]
-    fn create_empty_storage(container: Container) {
+    fn create_empty_storage(container: Arc<Mutex<dyn ContainerManifest>>) {
         make_storage(&container);
 
-        assert_eq!(container.storages().unwrap().len(), 1);
+        assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 2);
 
         make_storage(&container);
 
-        assert_eq!(container.storages().unwrap().len(), 2);
+        assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 3);
     }
 
     #[rstest]
-    fn delete_a_storage(container: Container) {
+    fn delete_a_storage(container: Arc<Mutex<dyn ContainerManifest>>) {
         make_storage(&container);
-        let mut storage = make_storage(&container);
+        let storage = make_storage(&container);
 
-        storage.delete().unwrap();
+        storage.lock().unwrap().remove().unwrap();
 
-        assert_eq!(container.storages().unwrap().len(), 1);
+        assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 2);
     }
 
-    #[rstest]
+    #[rstest(catlib_with_forest as catlib)]
     fn create_storage_with_template_id(catlib: CatLib) {
         let container = _container(&catlib);
         make_storage(&container); // Create storage w/o template id on purpose
-        make_storage_with_template(&container, Uuid::from_u128(1));
-        make_storage_with_template(&container, Uuid::from_u128(1));
-        make_storage_with_template(&container, Uuid::from_u128(2));
+        let storage_template1 = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        let storage_template2 = StorageTemplate::try_new(
+            "FoundationStorage",
+            HashMap::from([
+                (
+                    "field1".to_owned(),
+                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+                ),
+                (
+                    "parameter in key: {{ OWNER }}".to_owned(),
+                    "enum: {{ ACCESS_MODE }}".to_owned(),
+                ),
+                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+            ]),
+        )
+        .unwrap();
+        make_storage_with_template(&container, &storage_template1);
+        make_storage_with_template(&container, &storage_template1);
+        make_storage_with_template(&container, &storage_template2);
 
         let storages = catlib
-            .find_storages_with_template(Uuid::from_u128(1))
+            .find_storages_with_template(&storage_template1.uuid())
             .unwrap();
         assert_eq!(storages.len(), 2);
 
         let storages = catlib
-            .find_storages_with_template(Uuid::from_u128(2))
+            .find_storages_with_template(&storage_template2.uuid())
             .unwrap();
         assert_eq!(storages.len(), 1);
-    }
-
-    #[rstest]
-    fn create_storage_with_data(container: Container) {
-        container
-            .create_storage(None, b"storage data".to_vec())
-            .unwrap();
-
-        assert_eq!(container.storages().unwrap()[0].data(), b"storage data")
     }
 }

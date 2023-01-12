@@ -45,10 +45,12 @@
 //! ```
 //! ## Example usage
 //!
-//! ```rust
+//! ```no_run
 //! # use wildland_catlib::CatLib;
-//! # use std::collections::HashSet;
-//! # use crate::wildland_catlib::*;
+//! # use wildland_corex::entities::Identity;
+//! # use wildland_corex::interface::CatLib as ICatLib;
+//! # use wildland_corex::StorageTemplate;
+//! # use std::collections::{HashSet, HashMap};
 //! # use uuid::Uuid;
 //! let forest_owner = Identity([1; 32]);
 //! let signer = Identity([2; 32]);
@@ -59,36 +61,56 @@
 //!                  HashSet::from([signer]),
 //!                  vec![],
 //!              ).unwrap();
+//! let storage_template = StorageTemplate::try_new(
+//!     "FoundationStorage",
+//!     HashMap::from([
+//!             (
+//!                 "field1".to_owned(),
+//!                 "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+//!             ),
+//!             (
+//!                 "parameter in key: {{ OWNER }}".to_owned(),
+//!                 "enum: {{ ACCESS_MODE }}".to_owned(),
+//!             ),
+//!             ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+//!             ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+//!         ]),
+//!     )
+//!     .unwrap();
+//! let path = "/some/path".to_owned();
+//! let container = forest.lock().unwrap().create_container("container name".to_owned(), &storage_template, path).unwrap();
+//! container.lock().unwrap().add_path("/foo/bar".to_string());
+//! container.lock().unwrap().add_path("/bar/baz".to_string());
 //!
-//! let mut container = forest.create_container("container name".to_owned()).unwrap();
-//! container.add_path("/foo/bar".to_string());
-//! container.add_path("/bar/baz".to_string());
-//!
-//! let storage_template_id = Uuid::from_u128(1);
-//! let storage_data = b"credentials_and_whatnot".to_vec();
-//! container.create_storage(Some(storage_template_id), storage_data);
 //! ```
 //!
 
-#![cfg_attr(test, feature(proc_macro_hygiene))]
-
-pub use bridge::Bridge;
-pub use container::Container;
-pub use contracts::common::*;
-pub use contracts::*;
-use db::*;
-use directories::ProjectDirs;
-pub use error::*;
-pub use forest::Forest;
-use rustbreak::PathDatabase;
 use std::path::PathBuf;
 use std::rc::Rc;
-pub use storage::Storage;
+use std::sync::{Arc, Mutex};
+
+use bridge::Bridge;
+pub use common::*;
+use container::Container;
+use db::*;
+use directories::ProjectDirs;
+use error::*;
+use forest::{Forest, ForestData};
+use rustbreak::PathDatabase;
+use storage::{StorageData, StorageEntity};
 use uuid::Uuid;
+use wildland_corex::catlib_service::entities::{
+    ContainerManifest,
+    ForestManifest,
+    Identity,
+    Signers,
+    StorageManifest,
+};
+use wildland_corex::catlib_service::interface::CatLib as ICatLib;
 
 mod bridge;
+mod common;
 mod container;
-pub mod contracts;
 mod db;
 mod error;
 mod forest;
@@ -112,15 +134,9 @@ impl CatLib {
             db: Rc::new(db.unwrap()),
         }
     }
+}
 
-    /// Create new Forest obect.
-    ///
-    /// `owner` and `signers` are cryptographical objects that are used by the Core module to
-    /// verify the cryptographical integrity of the manifests.
-    ///
-    /// `data` is an arbitrary data object that can be used to synchronize Forest state between
-    /// devices.
-    ///
+impl ICatLib for CatLib {
     /// ## Errors
     ///
     /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
@@ -128,9 +144,10 @@ impl CatLib {
     /// ## Example
     ///
     /// ```rust
-    /// # use wildland_catlib::{CatLib, Identity};
+    /// # use wildland_catlib::CatLib;
+    /// # use wildland_corex::catlib_service::entities::Identity;
+    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
     /// # use std::collections::HashSet;
-    /// # use crate::wildland_catlib::IForest;
     /// let forest_owner = Identity([1; 32]);
     /// let signer = Identity([2; 32]);
     ///
@@ -140,71 +157,78 @@ impl CatLib {
     ///                  HashSet::from([signer]),
     ///                  vec![],
     ///              ).unwrap();
-    pub fn create_forest(
+    /// ```
+    #[tracing::instrument(level = "debug", skip_all)]
+    fn create_forest(
         &self,
         owner: Identity,
         signers: Signers,
         data: Vec<u8>,
-    ) -> CatlibResult<Forest> {
-        let mut forest = Forest::new(owner, signers, data, self.db.clone());
+    ) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
+        let forest = Forest::new(owner, signers, data, self.db.clone());
         forest.save()?;
-
-        Ok(forest)
+        Ok(Arc::new(Mutex::new(forest)))
     }
 
-    /// Return [`Forest`] object by Forest UUID.
-    pub fn get_forest(&self, uuid: Uuid) -> CatlibResult<Forest> {
+    fn get_forest(&self, uuid: &Uuid) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
         fetch_forest_by_uuid(self.db.clone(), uuid)
     }
 
-    /// Return [`Forest`] owned by specified `owner`.
-    ///
-    /// **Note: by design each owner may have only one Forest**
-    ///
     /// ## Errors
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
-    /// - Returns [`CatlibError::MalformedDatabaseEntry`] if more than one [`Forest`] was found.
-    pub fn find_forest(&self, owner: Identity) -> CatlibResult<Forest> {
-        self.db.load()?;
-        let data = self.db.read(|db| db.clone()).map_err(CatlibError::from)?;
+    /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
+    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    #[tracing::instrument(level = "debug", skip_all)]
+    fn find_forest(&self, owner: &Identity) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
+        self.db.load().map_err(to_catlib_error)?;
+        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
-        let forests: Vec<Forest> = data
+        let forests: Vec<_> = data
             .iter()
-            .filter(|(id, _)| (**id).starts_with("forest-"))
-            .map(|(_, forest_str)| Forest::try_from(forest_str.as_str()).unwrap())
-            .filter(|forest| forest.owner() == owner)
+            .filter(|(id, _)| id.starts_with("forest-"))
+            .map(|(_, forest_str)| Forest {
+                data: ForestData::from(forest_str.as_str()),
+                db: self.db.clone(),
+            })
+            .filter(|forest| &forest.owner() == owner)
+            .map(|forest| Arc::new(Mutex::new(forest)))
             .collect();
 
         match forests.len() {
             0 => Err(CatlibError::NoRecordsFound),
             1 => Ok(forests[0].clone()),
-            _ => Err(CatlibError::MalformedDatabaseEntry),
+            _ => Err(CatlibError::MalformedDatabaseRecord),
         }
     }
 
-    /// Return [`Container`] object by Container UUID.
-    pub fn get_container(&self, uuid: Uuid) -> CatlibResult<Container> {
+    fn get_container(&self, uuid: &Uuid) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
         fetch_container_by_uuid(self.db.clone(), uuid)
     }
 
-    /// Return [`Storage`]s that were created using given `template_id` UUID.
-    ///
     /// ## Errors
     ///
-    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
-    /// - Returns [`CatlibError::MalformedDatabaseEntry`] if more than one [`Forest`] was found.
-    pub fn find_storages_with_template(&self, template_id: Uuid) -> CatlibResult<Vec<Storage>> {
-        self.db.load()?;
-        let data = self.db.read(|db| db.clone()).map_err(CatlibError::from)?;
+    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Storage`] was found.
+    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    #[tracing::instrument(level = "debug", skip_all)]
+    fn find_storages_with_template(
+        &self,
+        template_id: &Uuid,
+    ) -> CatlibResult<Vec<Arc<Mutex<dyn StorageManifest>>>> {
+        self.db.load().map_err(to_catlib_error)?;
+        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
-        let storages: Vec<Storage> = data
+        let storages: Vec<_> = data
             .iter()
-            .filter(|(id, _)| (**id).starts_with("storage-"))
-            .map(|(_, storage_str)| Storage::try_from(storage_str.as_str()).unwrap())
-            .filter(|storage| {
-                storage.template_uuid().is_some() && storage.template_uuid().unwrap() == template_id
+            .filter(|(id, _)| id.starts_with("storage-"))
+            .map(|(_, storage_str)| StorageEntity {
+                data: StorageData::from(storage_str.as_str()),
+                db: self.db.clone(),
             })
+            .filter(
+                |storage| matches!(storage.as_ref().template_uuid, Some(val) if val == *template_id),
+            )
+            .map(|storage| Arc::new(Mutex::new(storage)) as Arc<Mutex<dyn StorageManifest>>)
             .collect();
 
         match storages.len() {
@@ -213,16 +237,43 @@ impl CatLib {
         }
     }
 
-    /// Return [`Container`]s that were created using given `template_id` UUID.
-    ///
     /// ## Errors
     ///
-    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
-    /// - Returns [`CatlibError::MalformedDatabaseEntry`] if more than one [`Forest`] was found.
-    pub fn find_containers_with_template(&self, template_id: Uuid) -> CatlibResult<Vec<Container>> {
+    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
+    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    #[tracing::instrument(level = "debug", skip_all)]
+    fn find_containers_with_template(
+        &self,
+        template_id: &Uuid,
+    ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
         let storages = self.find_storages_with_template(template_id)?;
+        storages
+            .iter()
+            .map(|storage| storage.lock().expect("Poisoned Mutex").container())
+            .collect()
+    }
 
-        storages.iter().map(|storage| storage.container()).collect()
+    #[tracing::instrument(level = "debug", skip_all)]
+    fn save_storage_template(&self, template_id: &Uuid, value: String) -> CatlibResult<()> {
+        save_model(
+            self.db.clone(),
+            format!("template-storage-{template_id}"),
+            value,
+        )
+    }
+
+    #[tracing::instrument(level = "debug", skip_all)]
+    fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>> {
+        self.db.load().map_err(to_catlib_error)?;
+        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
+
+        let storages: Vec<_> = data
+            .iter()
+            .filter(|(id, _)| id.starts_with("template-storage-"))
+            .map(|(_, storage_str)| storage_str)
+            .cloned()
+            .collect();
+        Ok(storages)
     }
 }
 
@@ -247,11 +298,4 @@ impl Default for CatLib {
             db: Rc::new(PathDatabase::load_from_path_or_default(db_file).unwrap()),
         }
     }
-}
-
-#[cfg_attr(test, mocktopus::macros::mockable)]
-fn use_default_database() -> Rc<StoreDb> {
-    let db = CatLib::default().db;
-    db.load().unwrap(); // Definitely not thread safe
-    db
 }

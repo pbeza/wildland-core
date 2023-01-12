@@ -17,45 +17,34 @@ namespace Main
         public override bool get_log_file_enabled() {
             return true;
         }
-        public override OptionalString get_log_file_path() {
-            return new_none_string();
+        public override OptionalRustString get_log_file_path() {
+            return new OptionalRustString();
         }
-        public override OptionalString get_log_file_rotate_directory() {
-            return new_none_string();
+        public override OptionalRustString get_log_file_rotate_directory() {
+            return new OptionalRustString();
         }
-        public override OptionalString get_oslog_category() {
-            return new_none_string();
-        }
-        public override OptionalString get_oslog_subsystem() {
-            return new_none_string();
-        }
-
-        public override RustString get_evs_url() {
-            return new RustString("http://localhost:5000/");
-        }
-
-        public override RustString get_sc_url() {
-            return new RustString("http://localhost:5000/");
+        public override FoundationCloudMode get_foundation_cloud_env_mode() {
+            return FoundationCloudMode.Dev;
         }
     }
 
     class LocalSecureStorageImpl : LocalSecureStorage {
-        private Dictionary <string, Vecu8> store = new Dictionary<string, Vecu8>();
+        private Dictionary <string, RustString> store = new Dictionary<string, RustString>();
 
         /// Inserts a key-value pair into the LSS.
         /// If the map did not have this key present, None is returned.
         /// If the map did have this key present, the value is updated, and the old value is returned.
-        public override LssOptionalBytesResult insert(RustString key, Vecu8 value)
+        public override OptionalRustStringResultWithLssError insert(RustString key, RustString value)
         {
             var std_key = key.to_string();
-            LssOptionalBytesResult result;
+            OptionalRustStringResultWithLssError result;
             if (store.ContainsKey(std_key))
             {
-                result = new_ok_lss_optional_bytes(new_some_bytes(store[std_key]));
+                result = OptionalRustStringResultWithLssError.from_ok(new OptionalRustString(store[std_key]));
             }
             else
             {
-                result = new_ok_lss_optional_bytes(new_none_bytes());
+                result = OptionalRustStringResultWithLssError.from_ok(new OptionalRustString());
             }
             store[std_key] = value;
             return result;
@@ -63,65 +52,65 @@ namespace Main
         }
 
         /// Returns a copy of the value corresponding to the key.
-        public override LssOptionalBytesResult get(RustString key)
+        public override OptionalRustStringResultWithLssError get(RustString key)
         {
             var std_key = key.to_string();
             if (store.ContainsKey(std_key))
             {
-                return new_ok_lss_optional_bytes(new_some_bytes(store[std_key]));
+                return OptionalRustStringResultWithLssError.from_ok(new OptionalRustString(store[std_key]));
             }
             else
             {
-                return new_ok_lss_optional_bytes(new_none_bytes());
+                return OptionalRustStringResultWithLssError.from_ok(new OptionalRustString());
             }
         }
 
         /// Returns true if the map contains a value for the specified key.
-        public override LssBoolResult contains_key(RustString key)
+        public override boolResultWithLssError contains_key(RustString key)
         {
             var std_key = key.to_string();
-            return new_ok_lss_bool(store.ContainsKey(std_key));
+            return boolResultWithLssError.from_ok(store.ContainsKey(std_key));
         }
 
         /// Returns all keys in arbitrary order.
-        public override LssVecOfStringsResult keys()
+        public override VecRustStringResultWithLssError keys()
         {
             VecRustString keys = new VecRustString();
-            foreach(KeyValuePair<string, Vecu8> entry in store)
+            foreach(KeyValuePair<string, RustString> entry in store)
             {
                 keys.push(new RustString(entry.Key));
             }
-            return new_ok_lss_vec_of_strings(keys);
+            return VecRustStringResultWithLssError.from_ok(keys);
         }
 
         /// Removes a key from the map, returning the value at the key if the key was previously in the map.
-        public override LssOptionalBytesResult remove(RustString key)
+        public override OptionalRustStringResultWithLssError remove(RustString key)
         {
             var std_key = key.to_string();
-            LssOptionalBytesResult result;
+            OptionalRustStringResultWithLssError result;
             if (store.ContainsKey(std_key))
             {
-                result = new_ok_lss_optional_bytes(new_some_bytes(store[std_key]));
+                result = OptionalRustStringResultWithLssError.from_ok(new OptionalRustString(store[std_key]));
                 store.Remove(std_key);
             }
             else
             {
-                result = new_ok_lss_optional_bytes(new_none_bytes());
+                result = OptionalRustStringResultWithLssError.from_ok(new OptionalRustString());
             }
             return result;
         }
 
         /// Returns the number of elements in the map.
-        public override LssUsizeResult len()
+        public override usizeResultWithLssError len()
         {
             var len = (uint)store.Count;
-            return new_ok_lss_usize(len);
+            return usizeResultWithLssError.from_ok(len);
         }
 
         /// Returns true if the map contains no elements, false otherwise.
-        public override LssBoolResult is_empty()
+        public override boolResultWithLssError is_empty()
         {
-            return new_ok_lss_bool(store.Count == 0);
+            return boolResultWithLssError.from_ok(store.Count == 0);
         }
     }
 

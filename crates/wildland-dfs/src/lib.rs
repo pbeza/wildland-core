@@ -15,6 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub fn get_version() -> &'static str {
-    env!("CARGO_PKG_VERSION")
-}
+pub mod encrypted;
+pub mod storage_backend;
+pub mod unencrypted;
+
+pub use wildland_corex::{
+    Storage,
+    StorageTemplate,
+    StorageTemplateError,
+    CONTAINER_NAME_PARAM,
+    CONTAINER_UUID_PARAM,
+};

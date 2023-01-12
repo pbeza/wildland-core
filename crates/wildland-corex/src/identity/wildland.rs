@@ -15,14 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::WildlandIdentity::{Device, Forest};
 use std::fmt::{self, Display, Formatter};
-use wildland_crypto::identity::{
-    signing_keypair::{PubKey, SecKey},
-    SigningKeypair,
-};
+
+use wildland_crypto::identity::signing_keypair::{PubKey, SecKey};
+use wildland_crypto::identity::SigningKeypair;
+
+use crate::WildlandIdentity::{Device, Forest};
 
 #[derive(Debug, PartialEq)]
+#[repr(C)]
 pub enum WildlandIdentity {
     Forest(u64, SigningKeypair),
     Device(String, SigningKeypair),
@@ -38,7 +39,6 @@ impl Display for WildlandIdentity {
 }
 
 impl WildlandIdentity {
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_identifier(&self) -> String {
         match self {
             Forest(index, _) => index.to_string(),
@@ -46,28 +46,24 @@ impl WildlandIdentity {
         }
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_public_key(&self) -> PubKey {
         match self {
             Forest(_, keypair) | Device(_, keypair) => keypair.public(),
         }
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_private_key(&self) -> SecKey {
         match self {
             Forest(_, keypair) | Device(_, keypair) => keypair.secret(),
         }
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_keypair_bytes(&self) -> Vec<u8> {
         match self {
             Forest(_, keypair) | Device(_, keypair) => keypair.to_bytes(),
         }
     }
 
-    #[tracing::instrument(level = "debug", skip(self))]
     pub fn get_keypair(&self) -> SigningKeypair {
         match self {
             Forest(_, keypair) | Device(_, keypair) => SigningKeypair::from(keypair),
@@ -77,9 +73,10 @@ impl WildlandIdentity {
 
 #[cfg(test)]
 mod tests {
+    use wildland_crypto::identity::SigningKeypair;
+
     use crate::test_utilities::{SIGNING_PUBLIC_KEY, SIGNING_SECRET_KEY};
     use crate::WildlandIdentity;
-    use wildland_crypto::identity::SigningKeypair;
 
     #[test]
     fn should_get_correct_fingerprint() {

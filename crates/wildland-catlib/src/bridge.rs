@@ -15,90 +15,111 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::*;
-use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
-/// Create Bridge object from its representation in Rust Object Notation
-impl TryFrom<String> for Bridge {
-    type Error = ron::error::SpannedError;
+use derivative::Derivative;
+use serde::{Deserialize, Serialize};
+use wildland_corex::catlib_service::entities::{ContainerPath, ForestManifest};
+use wildland_corex::BridgeManifest;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        ron::from_str(value.as_str())
+use super::*;
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct BridgeData {
+    pub uuid: Uuid,
+    pub forest_uuid: Uuid,
+    pub path: ContainerPath,
+    pub link: Vec<u8>,
+}
+
+impl From<&str> for BridgeData {
+    fn from(data_str: &str) -> Self {
+        ron::from_str(data_str).unwrap()
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Bridge {
-    uuid: Uuid,
-    forest_uuid: Uuid,
-    path: ContainerPath,
-    link: Vec<u8>,
+#[derive(Clone, Derivative)]
+#[derivative(Debug)]
+pub(crate) struct Bridge {
+    pub(crate) data: BridgeData,
 
-    #[serde(skip, default = "use_default_database")]
-    db: Rc<StoreDb>,
+    #[derivative(Debug = "ignore")]
+    pub(crate) db: Rc<StoreDb>,
 }
 
 impl Bridge {
     pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>, db: Rc<StoreDb>) -> Self {
-        Bridge {
-            uuid: Uuid::new_v4(),
-            forest_uuid,
-            path,
-            link,
+        Self {
+            data: BridgeData {
+                uuid: Uuid::new_v4(),
+                forest_uuid,
+                path,
+                link,
+            },
             db,
         }
     }
 }
 
-impl IBridge for Bridge {
-    fn uuid(&self) -> Uuid {
-        self.uuid
+impl BridgeManifest for Bridge {
+    /// ## Errors
+    ///
+    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
+    /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
+    fn forest(&self) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
+        fetch_forest_by_uuid(self.db.clone(), &self.data.forest_uuid)
     }
 
-    fn path(&self) -> ContainerPath {
-        self.path.clone()
-    }
-
-    fn forest(&self) -> CatlibResult<crate::forest::Forest> {
-        fetch_forest_by_uuid(self.db.clone(), self.forest_uuid)
-    }
-
-    fn link(&self) -> Vec<u8> {
-        self.link.clone()
-    }
-
-    fn update(&mut self, link: Vec<u8>) -> CatlibResult<crate::bridge::Bridge> {
-        self.link = link;
+    /// ## Errors
+    ///
+    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    fn update(&mut self, link: Vec<u8>) -> CatlibResult<()> {
+        self.data.link = link;
         self.save()?;
-        Ok(self.clone())
+        Ok(())
+    }
+
+    /// ## Errors
+    ///
+    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    fn remove(&mut self) -> CatlibResult<bool> {
+        Model::delete(self)?;
+        Ok(true)
+    }
+
+    /// ## Errors
+    fn path(&mut self) -> CatlibResult<ContainerPath> {
+        self.sync()?;
+        Ok(self.data.path.clone())
     }
 }
 
 impl Model for Bridge {
-    fn save(&mut self) -> CatlibResult<()> {
+    fn save(&self) -> CatlibResult<()> {
         save_model(
             self.db.clone(),
-            format!("bridge-{}", self.uuid),
-            ron::to_string(self).unwrap(),
+            format!("bridge-{}", self.data.uuid),
+            ron::to_string(&self.data).unwrap(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("bridge-{}", self.uuid))
+        delete_model(self.db.clone(), format!("bridge-{}", self.data.uuid))
+    }
+
+    fn sync(&mut self) -> CatlibResult<()> {
+        let data = fetch_bridge_data_by_uuid(self.db.clone(), &self.data.uuid)?;
+        self.data = data;
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
     use rstest::*;
-    use uuid::Bytes;
 
-    #[fixture]
-    fn catlib() -> CatLib {
-        db::init_catlib(rand::random::<Bytes>())
-    }
+    use super::db::test::catlib;
+    use crate::*;
 
     #[rstest]
     fn create_bridge(catlib: CatLib) {
@@ -106,15 +127,24 @@ mod tests {
             .create_forest(Identity([1; 32]), Signers::new(), vec![])
             .unwrap();
 
-        let mut bridge = forest
+        let bridge = forest
+            .lock()
+            .unwrap()
             .create_bridge("/other/forest".to_string(), vec![])
             .unwrap();
 
-        forest.find_bridge("/other/forest".to_string()).unwrap();
+        forest
+            .lock()
+            .unwrap()
+            .find_bridge("/other/forest".to_string())
+            .unwrap();
 
-        bridge.delete().unwrap();
+        bridge.lock().unwrap().remove().unwrap();
 
-        let bridge = forest.find_bridge("/other/forest".to_string());
+        let bridge = forest
+            .lock()
+            .unwrap()
+            .find_bridge("/other/forest".to_string());
 
         assert_eq!(bridge.err(), Some(CatlibError::NoRecordsFound));
     }

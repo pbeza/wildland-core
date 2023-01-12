@@ -15,15 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    api::cargo_user::CargoUser,
-    errors::user::{UserCreationError, UserRetrievalError},
-};
 use uuid::Uuid;
-use wildland_corex::{
-    CatLibService, CatlibError, CryptoError, DeviceMetadata, IForest, Identity, LssService,
-    MasterIdentity, MnemonicPhrase, UserMetaData,
-};
+use wildland_corex::catlib_service::error::CatlibError;
+use wildland_corex::catlib_service::{CatLibService, DeviceMetadata, ForestMetaData};
+use wildland_corex::{CryptoError, Identity, LssService, MasterIdentity, MnemonicPhrase};
+
+use crate::api::cargo_user::CargoUser;
+use crate::api::config::FoundationStorageApiConfig;
+use crate::errors::{UserCreationError, UserRetrievalError};
 
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     wildland_corex::generate_random_mnemonic()
@@ -40,17 +39,23 @@ pub enum CreateUserInput {
 pub(crate) struct UserService {
     lss_service: LssService,
     catlib_service: CatLibService,
+    fsa_config: FoundationStorageApiConfig,
 }
 
 impl UserService {
-    pub(crate) fn new(lss_service: LssService) -> Self {
+    pub(crate) fn new(
+        lss_service: LssService,
+        catlib_service: CatLibService,
+        fsa_config: FoundationStorageApiConfig,
+    ) -> Self {
         Self {
             lss_service,
-            catlib_service: CatLibService::new(),
+            catlib_service,
+            fsa_config,
         }
     }
 
-    #[tracing::instrument(level = "debug", skip(input, self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub(crate) fn create_user(
         &self,
         input: CreateUserInput,
@@ -62,7 +67,7 @@ impl UserService {
             Err(UserRetrievalError::ForestNotFound(_)) => Ok(()),
             Err(e) => Err(UserCreationError::UserRetrievalError(e)),
         }?;
-        tracing::trace!("User does not exist yet");
+        tracing::trace!("User does not exist yet, creating new one");
         let crypto_identity = match input {
             CreateUserInput::Mnemonic(mnemonic) => Identity::try_from(mnemonic.as_ref())?,
             CreateUserInput::Entropy(entropy) => Identity::try_from(entropy.as_slice())?,
@@ -76,15 +81,15 @@ impl UserService {
         let forest = self.catlib_service.add_forest(
             &default_forest_identity,
             &device_identity,
-            UserMetaData {
-                devices: vec![DeviceMetadata {
-                    name: device_name.clone(),
-                    pubkey: device_identity.get_public_key(),
-                }],
-            },
+            ForestMetaData::new(vec![DeviceMetadata {
+                name: device_name.clone(),
+                pubkey: device_identity.get_public_key(),
+            }]),
         )?;
 
-        self.lss_service.save_forest_uuid(&forest)?;
+        tracing::trace!("saving identities to lss");
+        let forest_locked = forest.lock().expect("Poisoned Mutex");
+        self.lss_service.save_forest_uuid(&*forest_locked)?;
 
         self.lss_service.save_identity(&default_forest_identity)?;
         self.lss_service.save_identity(&device_identity)?;
@@ -92,26 +97,33 @@ impl UserService {
         Ok(CargoUser::new(
             device_name.clone(),
             vec![device_name],
-            forest,
+            forest.clone(),
             self.catlib_service.clone(),
+            &self.fsa_config,
         ))
     }
 
     /// Retrieves default forest keypair from LSS and then basing on that reads User metadata from CatLib.
     /// Result is presented in from of [`crate::api::user::CargoUser`].
     ///
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     pub(crate) fn get_user(&self) -> Result<Option<CargoUser>, UserRetrievalError> {
         let default_forest_uuid = self.get_default_forest_uuid()?;
 
-        match self.catlib_service.get_forest(default_forest_uuid) {
+        match self.catlib_service.get_forest(&default_forest_uuid) {
             Ok(forest) => {
-                let user_metadata: UserMetaData =
-                    serde_json::from_slice(&forest.data()).map_err(|e| {
-                        CatlibError::Generic(format!(
-                            "Could not parse forest data retrieved from Catlib: {e}"
-                        ))
-                    })?;
+                let user_metadata: ForestMetaData = serde_json::from_slice(
+                    &forest
+                        .lock()
+                        .expect("Poisoned Mutex")
+                        .data()
+                        .map_err(UserRetrievalError::CatlibError)?,
+                )
+                .map_err(|e| {
+                    CatlibError::Generic(format!(
+                        "Could not parse forest data retrieved from Catlib: {e}"
+                    ))
+                })?;
 
                 let device_identity = self
                     .lss_service
@@ -121,13 +133,10 @@ impl UserService {
                 match user_metadata.get_device_metadata(device_identity.get_public_key()) {
                     Some(device_metadata) => Ok(Some(CargoUser::new(
                         device_metadata.name.clone(),
-                        user_metadata
-                            .devices
-                            .iter()
-                            .map(|dm| dm.name.clone())
-                            .collect(),
+                        user_metadata.devices().map(|dm| dm.name.clone()).collect(),
                         forest,
                         self.catlib_service.clone(),
+                        &self.fsa_config,
                     ))),
                     None => Err(UserRetrievalError::DeviceMetadataNotFound),
                 }
@@ -139,8 +148,9 @@ impl UserService {
 
     /// Retrieves default forest uuid from LSS
     ///
-    #[tracing::instrument(level = "debug", ret, skip(self))]
+    #[tracing::instrument(level = "debug", skip_all)]
     fn get_default_forest_uuid(&self) -> Result<Uuid, UserRetrievalError> {
+        tracing::debug!("searching for user");
         let forest_identity = self
             .lss_service
             .get_default_forest_identity()?

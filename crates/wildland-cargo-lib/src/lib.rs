@@ -33,4 +33,5 @@ pub mod errors;
 #[cfg(feature = "bindings")]
 pub mod ffi;
 mod logging;
+mod templates;
 mod user;
