@@ -54,6 +54,7 @@ cargo workspaces version \
   --no-git-push \
   --allow-branch "**" \
   --pre-id 'rc' \
+  --force '*' \
   "pre$1"
   # --allow-branch '?(release)?(hotfix)/**'
   # https://github.com/pksunkara/cargo-workspaces/issues/85
