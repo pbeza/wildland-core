@@ -5,7 +5,11 @@ set -ex
 /./emsdk/emsdk activate latest
 . /emsdk/emsdk_env.sh
 
+cp ./tests/ffi/wasm/index.html $PROJECT_DIR/ffi_build
 cp ./tests/ffi/wasm/main.cpp $PROJECT_DIR/ffi_build
+cp ./tests/ffi/wasm/package-lock.json $PROJECT_DIR/ffi_build
+cp ./tests/ffi/wasm/package.json $PROJECT_DIR/ffi_build
+cp ./tests/ffi/wasm/run_tests.sh $PROJECT_DIR/ffi_build
 cp ./tests/ffi/wasm/wasm_test.js $PROJECT_DIR/ffi_build
 
 cd $PROJECT_DIR/ffi_build
@@ -24,7 +28,7 @@ em++ ./main.cpp \
         -sMODULARIZE -sEXPORTED_RUNTIME_METHODS=ccall \
         -o wildland.js \
         --debug
-# node wasm_test.js
+./run_tests.sh
 mkdir -p /out
 mv wildland.js /out/
 mv wildland.wasm /out/
