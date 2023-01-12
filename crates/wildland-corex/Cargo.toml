@@ -8,7 +8,7 @@ license     = "GPL-3.0-only"
 name        = "wildland-corex"
 publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.31.1-rc.0"
+version     = "0.31.1"
 
 [dependencies]
 
@@ -21,7 +21,7 @@ tera            = { version = "1.17" }
 thiserror       = { version = "1.0" }
 tracing         = { version = "0.1" }
 uuid            = { version = "1.2", features = ["v4", "serde"] }
-wildland-crypto = { version = "0.31.1-rc.0", path = "../wildland-crypto", registry = "wl-dev" }
+wildland-crypto = { version = "0.31.1", path = "../wildland-crypto", registry = "wl-dev" }
 
 [dev-dependencies]
 pretty_assertions = { version = "1.3" }
