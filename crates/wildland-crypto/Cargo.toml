@@ -6,7 +6,6 @@ homepage    = "https://wildland.io/"
 keywords    = ["crypto"]
 license     = "GPL-3.0-only"
 name        = "wildland-crypto"
-publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
 version     = "0.31.1"
 

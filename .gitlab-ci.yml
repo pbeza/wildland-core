@@ -327,7 +327,10 @@ publish crates:
     - git remote set-url origin "https://wildland-bot:$HOUSEKEEPER_CI_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git"
     - git reset --hard remotes/origin/$CI_COMMIT_BRANCH
     - git checkout -B $CI_COMMIT_BRANCH --track remotes/origin/$CI_COMMIT_BRANCH
-    - RUST_LOG=debug cargo $CARGO_FLAGS release -v --registry wl-dev --workspace --no-confirm --execute release
+    - cargo $CARGO_FLAGS release -v --workspace --no-confirm --no-push --execute release
+    - COREX_CRATE_VERSION=$(cargo workspaces list --json | jq -r '.[] | select(.name == "wildland-corex") | .version')
+    - git push -o ci.skip origin $CI_COMMIT_BRANCH
+    - git push origin tag v$COREX_CRATE_VERSION
 
 publish apple-sdk:
   stage: Deploy

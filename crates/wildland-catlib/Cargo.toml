@@ -6,7 +6,6 @@ homepage    = "https://wildland.io/"
 keywords    = ["storage"]
 license     = "GPL-3.0-only"
 name        = "wildland-catlib"
-publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
 version     = "0.31.1"
 
@@ -23,7 +22,7 @@ tempfile       = { version = "3.3" }
 thiserror      = { version = "1.0" }
 tracing        = { version = "0.1" }
 uuid           = { version = "1.2", features = ["v4", "serde"] }
-wildland-corex = { version = "0.31.1", path = "../wildland-corex", registry = "wl-dev" }
+wildland-corex = { version = "0.31.1", path = "../wildland-corex" }
 
 
 [dev-dependencies]

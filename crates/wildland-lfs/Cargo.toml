@@ -5,7 +5,6 @@ edition     = "2021"
 homepage    = "https://wildland.io/"
 license     = "GPL-3.0-only"
 name        = "wildland-lfs"
-publish     = ["wl-dev"]
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
 version     = "0.31.1"
 
@@ -15,7 +14,7 @@ version     = "0.31.1"
 anyhow       = { version = "1.0" }
 serde        = { version = "1.0" }
 serde_json   = { version = "1.0" }
-wildland-dfs = { version = "0.31.1", path = "../wildland-dfs", registry = "wl-dev" }
+wildland-dfs = { version = "0.31.1", path = "../wildland-dfs" }
 
 [dev-dependencies]
 pretty_assertions = { version = "1.3" }
