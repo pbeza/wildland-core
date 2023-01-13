@@ -34,13 +34,18 @@ pub struct LocalFilesystemStorage {
     base_dir: PathBuf,
 }
 
+fn strip_root(path: &Path) -> &Path {
+    if path.is_absolute() {
+        path.strip_prefix("/").unwrap()
+    } else {
+        path
+    }
+}
+
 impl StorageBackend for LocalFilesystemStorage {
     fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
-        let relative_path = if path.is_absolute() {
-            path.strip_prefix("/").unwrap()
-        } else {
-            path
-        };
+        let relative_path = strip_root(path);
+
         fs::read_dir(self.base_dir.join(relative_path))
             .map_err(|err| {
                 if err.kind() == ErrorKind::NotADirectory {
@@ -60,11 +65,7 @@ impl StorageBackend for LocalFilesystemStorage {
     }
 
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
-        let relative_path = if path.is_absolute() {
-            path.strip_prefix("/").unwrap()
-        } else {
-            path
-        };
+        let relative_path = strip_root(path);
 
         Ok(
             fs::metadata(self.base_dir.join(relative_path)).map(|metadata| {

@@ -285,12 +285,14 @@ impl DfsFrontend for UnencryptedDfs {
                 },
             })
             .collect_vec();
-        let node = self
-            .path_translator
-            .assign_exposed_paths(nodes)
-            .into_iter()
+        let exposed_paths = self.path_translator.assign_exposed_paths(nodes);
+
+        let node = exposed_paths
+            .iter()
             .filter_map(|(node, opt_exposed_path)| {
-                opt_exposed_path.map(|exposed_path| (node, exposed_path))
+                opt_exposed_path
+                    .as_ref()
+                    .map(|exposed_path| (node, exposed_path))
             })
             .find_map(|(node, exposed_path)| {
                 if exposed_path == input_exposed_path {
@@ -298,10 +300,13 @@ impl DfsFrontend for UnencryptedDfs {
                 } else {
                     None
                 }
-            })?;
+            });
 
-        match node.storages {
-            Some(node_storages) => {
+        match node {
+            Some(NodeDescriptor {
+                storages: Some(node_storages),
+                ..
+            }) => {
                 let backends = self.get_backends(&node_storages.storages);
 
                 let backend_ops =
@@ -316,9 +321,10 @@ impl DfsFrontend for UnencryptedDfs {
                 .flatten()
             }
             // Virtual node
-            None => Some(Stat {
+            Some(_) | None if !exposed_paths.is_empty() => Some(Stat {
                 node_type: NodeType::Dir,
             }),
+            _ => None,
         }
     }
 }

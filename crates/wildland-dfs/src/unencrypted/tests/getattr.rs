@@ -11,6 +11,23 @@ use wildland_corex::{MockPathResolver, ResolvedPath};
 use super::{dfs_with_fs, new_mufs_storage};
 
 #[rstest]
+fn test_getattr_of_nonexistent_path() {
+    let mut path_resolver = MockPathResolver::new();
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/file")))
+        .times(1)
+        .returning(move |_path| vec![]);
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+
+    let stat = dfs.getattr("/a/file".to_string());
+    assert_eq!(stat, None)
+}
+
+#[rstest]
 fn test_getattr_of_file_in_container_root() {
     let mut path_resolver = MockPathResolver::new();
     let mufs_storage = new_mufs_storage("/");
@@ -129,8 +146,10 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
     path_resolver
         .expect_resolve()
         .with(predicate::eq(Path::new("/a/b/file_or_dir")))
-        .times(1)
+        .times(2)
         .returning({
+            let storage1 = storage1.clone();
+            let storage2 = storage2.clone();
             move |_path| {
                 vec![
                     ResolvedPath::PathWithStorages {
@@ -157,6 +176,15 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
     fs.create_dir("/storage2/file_or_dir").unwrap();
 
     let stat = dfs.getattr("/a/b/file_or_dir/00000000-0000-0000-0000-000000000002".to_string());
+    assert_eq!(
+        stat,
+        Some(Stat {
+            node_type: NodeType::Dir
+        })
+    );
+
+    // getattr of aggregating dir
+    let stat = dfs.getattr("/a/b/file_or_dir".to_string());
     assert_eq!(
         stat,
         Some(Stat {
