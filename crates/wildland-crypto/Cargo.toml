@@ -7,7 +7,7 @@ keywords    = ["crypto"]
 license     = "GPL-3.0-only"
 name        = "wildland-crypto"
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.40.0-rc.0"
+version     = "0.40.0"
 
 [lib]
 crate-type = ["rlib"]

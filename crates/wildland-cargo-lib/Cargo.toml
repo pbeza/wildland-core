@@ -7,7 +7,7 @@ keywords    = ["storage"]
 license     = "GPL-3.0-only"
 name        = "wildland-cargo-lib"
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.40.0-rc.0"
+version     = "0.40.0"
 
 [features]
 bindings = ["rusty-bind", "rusty-bind-build"]
@@ -35,11 +35,11 @@ tracing-core         = { version = "0.1" }
 tracing-log          = { version = "0.1", features = ["env_logger"] }
 tracing-subscriber   = { version = "0.3", features = ["json", "env-filter", "fmt", "std", "registry"] }
 uuid                 = { version = "1.2", features = ["serde"] }
-wildland-catlib      = { version = "0.40.0-rc.0", path = "../wildland-catlib" }
-wildland-corex       = { version = "0.40.0-rc.0", path = "../wildland-corex" }
-wildland-dfs         = { version = "0.40.0-rc.0", path = "../wildland-dfs" }
-wildland-http-client = { version = "0.40.0-rc.0", path = "../wildland-http-client" }
-wildland-lfs         = { version = "0.40.0-rc.0", path = "../wildland-lfs", optional = true }
+wildland-catlib      = { version = "0.40.0", path = "../wildland-catlib" }
+wildland-corex       = { version = "0.40.0", path = "../wildland-corex" }
+wildland-dfs         = { version = "0.40.0", path = "../wildland-dfs" }
+wildland-http-client = { version = "0.40.0", path = "../wildland-http-client" }
+wildland-lfs         = { version = "0.40.0", path = "../wildland-lfs", optional = true }
 
 [target.'cfg(target_vendor = "apple")'.dependencies]
 tracing-oslog = { version = "0.1" }
