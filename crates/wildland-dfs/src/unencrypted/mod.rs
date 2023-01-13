@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+mod path_translator;
 #[cfg(test)]
 mod tests;
 
@@ -29,6 +30,8 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, NodeType, Stat};
 use wildland_corex::{PathResolver, ResolvedPath, Storage};
 
+use self::path_translator::uuid_in_dir::UuidInDirTranslator;
+use self::path_translator::PathTranslator;
 use crate::storage_backend::{StorageBackend, StorageBackendError};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -72,6 +75,7 @@ pub struct UnencryptedDfs {
     /// given type reuse some connector/client (factory could initiate each backend with some shared
     /// reference).
     storage_backends: HashMap<Uuid, Rc<dyn StorageBackend>>,
+    path_translator: Box<dyn PathTranslator>,
 }
 
 impl UnencryptedDfs {
@@ -80,9 +84,10 @@ impl UnencryptedDfs {
         storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
     ) -> Self {
         Self {
-            path_resolver,
+            path_resolver: path_resolver.clone(),
             storage_backend_factories,
             storage_backends: HashMap::new(),
+            path_translator: Box::new(UuidInDirTranslator::new(path_resolver)),
         }
     }
 
@@ -134,42 +139,6 @@ impl UnencryptedDfs {
                 Ok(backend) => Some(backend),
             }
         })
-    }
-
-    // Extract as a trait
-    // TODO docs
-    // make sure that exposed paths are unique
-    fn assign_exposed_paths(
-        &self,
-        nodes: Vec<NodeDescriptor>,
-    ) -> impl Iterator<Item = (NodeDescriptor, Option<PathBuf>)> + '_ {
-        let counted_abs_paths = nodes.iter().counts_by(|node| node.absolute_path.clone());
-        nodes.into_iter().map(move |node| {
-            let abs_path = node.absolute_path.clone();
-
-            // If another file tries to claim the same path
-            if counted_abs_paths.get(&abs_path).unwrap() > &1
-                // or any physical node has the same path as some virtual node
-                || self.path_resolver.is_virtual_nodes(&abs_path)
-            {
-                // then append uuid to avoid conflict
-                let exposed_path =
-                    abs_path.join(node.storages.as_ref().map_or(PathBuf::new(), |s| {
-                        PathBuf::from_str(s.uuid.to_string().as_str()).unwrap()
-                    }));
-                (node, Some(exposed_path))
-            } else {
-                // otherwise, in case there is no conflicts, expose as the same path
-                (node, Some(abs_path))
-            }
-        })
-    }
-
-    /// TODO description
-    /// abs paths may collide
-    /// exposed should be generated deterministically
-    fn exposed_to_absolute_path(&self, path: &Path) -> PathBuf {
-        pop_uuid_from_path(path)
     }
 }
 
@@ -253,6 +222,7 @@ impl DfsFrontend for UnencryptedDfs {
                         });
 
                         let node_descriptors = execute_backend_op_with_policy(
+                            &storages,
                             operations_on_backends,
                             // TODO WILX-362 getting first should be a temporary policy, maybe we should ping backends to check if any of them
                             // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
@@ -266,13 +236,17 @@ impl DfsFrontend for UnencryptedDfs {
             .flatten()
             .collect_vec();
 
-        self.assign_exposed_paths(nodes)
+        self.path_translator
+            .assign_exposed_paths(nodes)
+            .into_iter()
             .filter_map(|(_node, exposed_path)| match exposed_path {
                 Some(exposed_path) => {
                     if exposed_path.components().count() > requested_path.components().count() + 1 {
                         let mut parent = PathBuf::from(&exposed_path);
                         parent.pop();
                         Some(parent.to_string_lossy().to_string() + "/")
+                    } else if exposed_path == requested_path {
+                        None
                     } else {
                         Some(exposed_path.to_string_lossy().to_string())
                     }
@@ -285,7 +259,9 @@ impl DfsFrontend for UnencryptedDfs {
 
     fn getattr(&mut self, input_exposed_path: String) -> Option<Stat> {
         let input_exposed_path = Path::new(&input_exposed_path);
-        let requested_abs_path = self.exposed_to_absolute_path(input_exposed_path);
+        let requested_abs_path = self
+            .path_translator
+            .exposed_to_absolute_path(input_exposed_path);
 
         let resolved_paths = self.path_resolver.resolve(&requested_abs_path);
         let nodes = resolved_paths
@@ -310,7 +286,9 @@ impl DfsFrontend for UnencryptedDfs {
             })
             .collect_vec();
         let node = self
+            .path_translator
             .assign_exposed_paths(nodes)
+            .into_iter()
             .filter_map(|(node, opt_exposed_path)| {
                 opt_exposed_path.map(|exposed_path| (node, exposed_path))
             })
@@ -331,6 +309,7 @@ impl DfsFrontend for UnencryptedDfs {
 
                 // TODO WILX-362
                 execute_backend_op_with_policy(
+                    &node_storages.storages,
                     backend_ops,
                     ExecutionPolicy::SequentiallyToFirstSuccess,
                 )
@@ -344,21 +323,11 @@ impl DfsFrontend for UnencryptedDfs {
     }
 }
 
-fn pop_uuid_from_path(path: &Path) -> PathBuf {
-    match path.file_name() {
-        Some(file_name) if Uuid::parse_str(&file_name.to_string_lossy()).is_ok() => {
-            let mut path = PathBuf::from(path);
-            path.pop();
-            path
-        }
-        _ => path.into(),
-    }
-}
-
 enum ExecutionPolicy {
     SequentiallyToFirstSuccess,
 }
 fn execute_backend_op_with_policy<T: std::fmt::Debug>(
+    storages: &[Storage],
     ops: impl Iterator<Item = Result<T, StorageBackendError>>,
     policy: ExecutionPolicy,
 ) -> Option<T> {
@@ -378,26 +347,11 @@ fn execute_backend_op_with_policy<T: std::fmt::Debug>(
             .or_else(|| {
                 // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
                 tracing::error!(
-                    "ERROR TODO" // "None of the backends for storages {:?} works", // TODO
-                                 // storages.iter().map(|s| s.backend_type())
+                    "None of the backends for storages {:?} works",
+                    storages.iter().map(|s| s.backend_type())
                 );
                 None
             })
         }
-    }
-}
-
-#[cfg(test)]
-mod unit_tests {
-    use pretty_assertions::assert_eq;
-
-    use super::*;
-
-    #[test]
-    fn test_pop_uuid_from_path() {
-        let expected = PathBuf::from_str("/a/b/file").unwrap();
-        let result =
-            pop_uuid_from_path(Path::new("/a/b/file/00000000-0000-0000-0000-000000000002"));
-        assert_eq!(expected, result);
     }
 }

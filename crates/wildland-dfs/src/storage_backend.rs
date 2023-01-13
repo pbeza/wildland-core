@@ -39,8 +39,6 @@ impl From<std::path::StripPrefixError> for StorageBackendError {
 }
 
 pub trait StorageBackend {
-    // TODO docs
     fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError>;
-    // TODO docs
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError>;
 }

@@ -439,6 +439,7 @@ fn test_file_colliding_with_virtual_node() {
         .with(predicate::eq(Path::new("/a/b/")))
         .times(1)
         .returning(move |_path| vec![]);
+
     path_resolver
         .expect_is_virtual_nodes()
         .with(predicate::eq(Path::new("/a/b/")))
@@ -511,7 +512,7 @@ fn test_dir_colliding_with_virtual_node() {
         .expect_is_virtual_nodes()
         .with(predicate::eq(Path::new("/a/b/c")))
         .times(1)
-        .returning(|_path| false); // returned by containers claiming path /a/b/*
+        .returning(|_path| false);
 
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
@@ -527,4 +528,44 @@ fn test_dir_colliding_with_virtual_node() {
 
     let files = dfs.readdir("/a/b/".to_string());
     assert_eq!(files, vec!["/a/b/c".to_string(),]);
+}
+
+#[rstest]
+fn test_readdir_on_file() {
+    let mut path_resolver = MockPathResolver::new();
+
+    // each container has its own subfolder
+    let storage1 = new_mufs_storage("/storage1/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/")))
+        .times(2)
+        .returning({
+            let storage1 = storage1;
+            move |_path| {
+                vec![ResolvedPath::PathWithStorages {
+                    path_within_storage: "/a".into(), // returned by the container claiming path `/`
+                    storages_id: Uuid::from_u128(1),
+                    storages: vec![storage1.clone()],
+                }]
+            }
+        });
+
+    path_resolver
+        .expect_is_virtual_nodes()
+        .with(predicate::eq(Path::new("/a")))
+        .times(2)
+        .returning(|_path| false);
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_dir("/storage1/").unwrap();
+    fs.create_file("/storage1/a").unwrap();
+
+    let files = dfs.readdir("/a/".to_string());
+    assert_eq!(files, Vec::<String>::new());
+    let files = dfs.readdir("/a".to_string());
+    assert_eq!(files, Vec::<String>::new());
 }
