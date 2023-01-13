@@ -15,7 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+mod getattr;
 mod path_translator;
+mod readdir;
 #[cfg(test)]
 mod tests;
 
@@ -23,12 +25,10 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::str::FromStr;
 
-use itertools::{Either, Itertools};
 use uuid::Uuid;
-use wildland_corex::dfs::interface::{DfsFrontend, NodeType, Stat};
-use wildland_corex::{PathResolver, ResolvedPath, Storage};
+use wildland_corex::dfs::interface::{DfsFrontend, Stat};
+use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathTranslator;
@@ -161,171 +161,12 @@ impl DfsFrontend for UnencryptedDfs {
     /// Full path within the user's forest for both nodes is `/a/b/c`. It is up to FS frontend how to
     /// show it to a user (e.g. by prefixing it with some storage-specific tag).
     fn readdir(&mut self, requested_path: String) -> Vec<String> {
-        let requested_path = PathBuf::from_str(&requested_path).unwrap();
-        let resolved_paths = self.path_resolver.resolve(requested_path.as_ref());
-        let nodes = resolved_paths
-            .into_iter()
-            .filter_map(|resolved_path| {
-                match resolved_path {
-                    ResolvedPath::VirtualPath(virtual_path) => {
-                        let virtual_nodes = self
-                            .path_resolver
-                            .list_virtual_nodes_in(&virtual_path)
-                            .into_iter()
-                            .map(|node_name| NodeDescriptor {
-                                storages: None,
-                                absolute_path: requested_path.join(node_name),
-                            });
-                        Some(Either::Left(virtual_nodes))
-                    }
-                    ResolvedPath::PathWithStorages {
-                        path_within_storage,
-                        storages_id,
-                        storages,
-                    } => {
-                        let backends = self.get_backends(&storages);
-
-                        let operations_on_backends = backends.map(|backend| {
-                            let storages = storages.clone();
-                            {
-                                backend
-                                    .readdir(&path_within_storage)
-                                    .map(|resulting_paths| {
-                                        Either::Left(resulting_paths.into_iter().map({
-                                            let path = requested_path.clone();
-                                            let storages = storages.clone();
-                                            move |entry_path| NodeDescriptor {
-                                                storages: Some(NodeStorages::new(
-                                                    storages.clone(),
-                                                    entry_path.clone(),
-                                                    storages_id,
-                                                )),
-                                                absolute_path: path
-                                                    .join(entry_path.file_name().unwrap()),
-                                            }
-                                        }))
-                                    })
-                                    .or_else(|err| match err {
-                                        StorageBackendError::NotADirectory => {
-                                            Ok(Either::Right(std::iter::once(NodeDescriptor {
-                                                storages: Some(NodeStorages::new(
-                                                    storages.clone(),
-                                                    path_within_storage.clone(),
-                                                    storages_id,
-                                                )),
-                                                absolute_path: requested_path.clone(),
-                                            })))
-                                        }
-                                        _ => Err(err),
-                                    })
-                            }
-                        });
-
-                        let node_descriptors = execute_backend_op_with_policy(
-                            &storages,
-                            operations_on_backends,
-                            // TODO WILX-362 getting first should be a temporary policy, maybe we should ping backends to check if any of them
-                            // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
-                            ExecutionPolicy::SequentiallyToFirstSuccess,
-                        );
-
-                        node_descriptors.map(Either::Right)
-                    }
-                }
-            })
-            .flatten()
-            .collect_vec();
-
-        self.path_translator
-            .assign_exposed_paths(nodes)
-            .into_iter()
-            .filter_map(|(_node, exposed_path)| match exposed_path {
-                Some(exposed_path) => {
-                    if exposed_path.components().count() > requested_path.components().count() + 1 {
-                        let mut parent = PathBuf::from(&exposed_path);
-                        parent.pop();
-                        Some(parent.to_string_lossy().to_string() + "/")
-                    } else if exposed_path == requested_path {
-                        None
-                    } else {
-                        Some(exposed_path.to_string_lossy().to_string())
-                    }
-                }
-                None => None,
-            })
-            .unique()
-            .collect()
+        readdir::readdir(self, requested_path)
     }
 
+    // TODO
     fn getattr(&mut self, input_exposed_path: String) -> Option<Stat> {
-        let input_exposed_path = Path::new(&input_exposed_path);
-        let requested_abs_path = self
-            .path_translator
-            .exposed_to_absolute_path(input_exposed_path);
-
-        let resolved_paths = self.path_resolver.resolve(&requested_abs_path);
-        let nodes = resolved_paths
-            .into_iter()
-            .map(|resolved_path| match resolved_path {
-                ResolvedPath::PathWithStorages {
-                    path_within_storage,
-                    storages_id,
-                    storages,
-                } => NodeDescriptor {
-                    storages: Some(NodeStorages::new(
-                        storages,
-                        path_within_storage,
-                        storages_id,
-                    )),
-                    absolute_path: requested_abs_path.clone(),
-                },
-                ResolvedPath::VirtualPath(_) => NodeDescriptor {
-                    storages: None,
-                    absolute_path: requested_abs_path.clone(),
-                },
-            })
-            .collect_vec();
-        let exposed_paths = self.path_translator.assign_exposed_paths(nodes);
-
-        let node = exposed_paths
-            .iter()
-            .filter_map(|(node, opt_exposed_path)| {
-                opt_exposed_path
-                    .as_ref()
-                    .map(|exposed_path| (node, exposed_path))
-            })
-            .find_map(|(node, exposed_path)| {
-                if exposed_path == input_exposed_path {
-                    Some(node)
-                } else {
-                    None
-                }
-            });
-
-        match node {
-            Some(NodeDescriptor {
-                storages: Some(node_storages),
-                ..
-            }) => {
-                let backends = self.get_backends(&node_storages.storages);
-
-                let backend_ops =
-                    backends.map(|backend| backend.getattr(&node_storages.path_within_storage));
-
-                // TODO WILX-362
-                execute_backend_op_with_policy(
-                    &node_storages.storages,
-                    backend_ops,
-                    ExecutionPolicy::SequentiallyToFirstSuccess,
-                )
-                .flatten()
-            }
-            // Virtual node
-            Some(_) | None if !exposed_paths.is_empty() => Some(Stat {
-                node_type: NodeType::Dir,
-            }),
-            _ => None,
-        }
+        getattr::getattr(self, input_exposed_path)
     }
 }
 
