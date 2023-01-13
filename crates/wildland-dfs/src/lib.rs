@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#![feature(io_error_more)]
+#![cfg_attr(test, feature(io_error_more))]
 
 pub mod encrypted;
 pub mod storage_backend;

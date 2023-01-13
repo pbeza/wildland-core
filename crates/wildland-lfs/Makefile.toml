@@ -1,2 +1,2 @@
-[tasks.test]
-toolchain = "nightly"
+[env]
+CARGO_MAKE_RUST_CHANNEL = "nightly"
