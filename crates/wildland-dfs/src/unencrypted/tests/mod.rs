@@ -112,7 +112,7 @@ fn dfs_with_fs(path_resolver: Rc<MockPathResolver>) -> DfsFixture {
     (dfs, fs)
 }
 
-fn new_mufs_storage(base_dir: impl Into<String>) -> Storage {
+pub fn new_mufs_storage(base_dir: impl Into<String>) -> Storage {
     Storage::new(
         Some("Test MUFS".to_owned()),
         "MUFS".to_owned(),

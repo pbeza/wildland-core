@@ -164,7 +164,7 @@ impl DfsFrontend for UnencryptedDfs {
         readdir::readdir(self, requested_path)
     }
 
-    // TODO
+    // Returns Stat of the file indicated by the provided exposed path
     fn getattr(&mut self, input_exposed_path: String) -> Option<Stat> {
         getattr::getattr(self, input_exposed_path)
     }
