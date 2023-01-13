@@ -59,4 +59,4 @@ cargo workspaces version \
   # --allow-branch '?(release)?(hotfix)/**'
   # https://github.com/pksunkara/cargo-workspaces/issues/85
 
-git log HEAD -1 | ruby ci/commit_helper.rb | xargs -I@ git commit --amend --message "(bump) pre-release crates version to @"
+git log HEAD -1 | ruby ci/commit_helper.rb | xargs -I@ git commit --amend --message "Bump pre-release crates version to @"

@@ -19,7 +19,7 @@ changed.each { |e|
 
 	puts "Checking crate: #{crate} v[#{current_version}]"
 
-	search_result = `cargo search --registry=wl-dev #{crate}`
+	search_result = `cargo search #{crate}`
 
 	# If there were no results from search, it means the package is not published there yet, thus
 	# we can move forward with any version
