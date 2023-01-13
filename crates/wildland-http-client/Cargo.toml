@@ -7,7 +7,7 @@ keywords    = ["http", "client"]
 license     = "GPL-3.0-only"
 name        = "wildland-http-client"
 repository  = "https://gitlab.com/wildland/corex/wildland-core"
-version     = "0.31.1"
+version     = "0.40.0-rc.0"
 
 [dependencies]
 hex             = { version = "0.4" }
@@ -17,7 +17,7 @@ serde_json      = { version = "1.0" }
 thiserror       = { version = "1.0" }
 tracing         = { version = "0.1" }
 url             = { version = "2.3" }
-wildland-crypto = { version = "0.31.1", path = "../wildland-crypto" }
+wildland-crypto = { version = "0.40.0-rc.0", path = "../wildland-crypto" }
 
 [dev-dependencies]
 mockall = { version = "0.11" }
