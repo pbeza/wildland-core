@@ -1,8 +1,9 @@
 allow-branch               = ['master']
 consolidate-commits        = true
-pre-release-commit-message = "Workspace crates release version {{prev_version}} set to {{version}}"
+pre-release-commit-message = "Workspace crates release version set to {{version}}"
+push-options               = ["ci.skip"] # This flag is used by Gitlab CI to skip pipeline
 shared-version             = true
 tag                        = true
-tag-message	               = "Workspace crates release version {{prev_version}} set to {{version}}"
+tag-message	               = "Workspace crates release version set to {{version}}"
 tag-name                   = "v{{version}}"
 verify                     = false
