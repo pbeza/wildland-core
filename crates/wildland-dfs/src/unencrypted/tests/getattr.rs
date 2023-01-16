@@ -1,14 +1,16 @@
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use crate::unencrypted::tests::get_unix_time_of_file;
 use mockall::predicate;
+use pretty_assertions::assert_eq;
 use rsfs::GenFS;
 use rstest::rstest;
 use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, NodeType, Stat};
 use wildland_corex::{MockPathResolver, ResolvedPath};
 
-use super::{dfs_with_fs, new_mufs_storage};
+use super::{dfs_with_fs, new_mufs_storage, MufsAttrs};
 
 #[rstest]
 fn test_getattr_of_nonexistent_path() {
@@ -57,12 +59,22 @@ fn test_getattr_of_file_in_container_root() {
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
+    let MufsAttrs {
+        access_time,
+        modification_time,
+        change_time,
+        size,
+    } = get_unix_time_of_file("/file", &fs);
 
     let stat = dfs.getattr("/file".to_string());
     assert_eq!(
         stat,
         Some(Stat {
-            node_type: NodeType::File
+            node_type: NodeType::File,
+            access_time,
+            modification_time,
+            change_time,
+            size
         })
     )
 }
@@ -97,12 +109,22 @@ fn test_getattr_of_dir_in_container_root() {
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
+    let MufsAttrs {
+        access_time,
+        modification_time,
+        change_time,
+        size,
+    } = get_unix_time_of_file("/dir", &fs);
 
     let stat = dfs.getattr("/dir".to_string());
     assert_eq!(
         stat,
         Some(Stat {
-            node_type: NodeType::Dir
+            node_type: NodeType::Dir,
+            access_time,
+            modification_time,
+            change_time,
+            size
         })
     )
 }
@@ -130,7 +152,11 @@ fn test_getattr_of_virtual_dir() {
     assert_eq!(
         stat,
         Some(Stat {
-            node_type: NodeType::Dir
+            node_type: NodeType::Dir,
+            access_time: None,
+            modification_time: None,
+            change_time: None,
+            size: 0
         })
     )
 }
@@ -146,7 +172,7 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
     path_resolver
         .expect_resolve()
         .with(predicate::eq(Path::new("/a/b/file_or_dir")))
-        .times(2)
+        .times(3)
         .returning({
             let storage1 = storage1;
             let storage2 = storage2;
@@ -175,11 +201,21 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
     fs.create_dir("/storage2/").unwrap();
     fs.create_dir("/storage2/file_or_dir").unwrap();
 
-    let stat = dfs.getattr("/a/b/file_or_dir/00000000-0000-0000-0000-000000000002".to_string());
+    let stat = dfs.getattr("/a/b/file_or_dir/00000000-0000-0000-0000-000000000001".to_string());
+    let MufsAttrs {
+        access_time,
+        modification_time,
+        change_time,
+        size,
+    } = get_unix_time_of_file("/storage1/b/file_or_dir", &fs);
     assert_eq!(
         stat,
         Some(Stat {
-            node_type: NodeType::Dir
+            node_type: NodeType::File,
+            access_time,
+            modification_time,
+            change_time,
+            size
         })
     );
 
@@ -188,9 +224,33 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
     assert_eq!(
         stat,
         Some(Stat {
-            node_type: NodeType::Dir
+            node_type: NodeType::Dir,
+            access_time: None,
+            modification_time: None,
+            change_time: None,
+            size: 0
         })
-    )
+    );
+
+    // Directory /a/b/file_or_dir from storage2 can be accessed by appending path with its uuid.
+    // It is hard to tell whether it is a bug or a feature, bit if it is a bug it is not trivial to fix.
+    let stat = dfs.getattr("/a/b/file_or_dir/00000000-0000-0000-0000-000000000002".to_string());
+    let MufsAttrs {
+        access_time,
+        modification_time,
+        change_time,
+        size,
+    } = get_unix_time_of_file("/storage2/file_or_dir", &fs);
+    assert_eq!(
+        stat,
+        Some(Stat {
+            node_type: NodeType::Dir,
+            access_time,
+            modification_time,
+            change_time,
+            size
+        })
+    );
 }
 
 #[rstest]
@@ -228,16 +288,30 @@ fn test_virtual_path_colliding_with_file() {
     assert_eq!(
         stat,
         Some(Stat {
-            node_type: NodeType::Dir
+            node_type: NodeType::Dir,
+            access_time: None,
+            modification_time: None,
+            change_time: None,
+            size: 0
         })
     );
 
     // file /b from container claiming /a should be represented with appended container uuid to avoid collision
     let stat = dfs.getattr("/a/b/00000000-0000-0000-0000-000000000001".to_string());
+    let MufsAttrs {
+        access_time,
+        modification_time,
+        change_time,
+        size,
+    } = get_unix_time_of_file("/storage1/b", &fs);
     assert_eq!(
         stat,
         Some(Stat {
-            node_type: NodeType::File
+            node_type: NodeType::File,
+            access_time,
+            modification_time,
+            change_time,
+            size
         })
     )
 }
@@ -277,16 +351,30 @@ fn test_virtual_path_colliding_with_dir() {
     assert_eq!(
         stat,
         Some(Stat {
-            node_type: NodeType::Dir
+            node_type: NodeType::Dir,
+            access_time: None,
+            modification_time: None,
+            change_time: None,
+            size: 0
         })
     );
 
     // file /b from container claiming /a should be represented with appended container uuid to avoid collision
     let stat = dfs.getattr("/a/b/00000000-0000-0000-0000-000000000001".to_string());
+    let MufsAttrs {
+        access_time,
+        modification_time,
+        change_time,
+        size,
+    } = get_unix_time_of_file("/storage1/b", &fs);
     assert_eq!(
         stat,
         Some(Stat {
-            node_type: NodeType::Dir
+            node_type: NodeType::Dir,
+            access_time,
+            modification_time,
+            change_time,
+            size
         })
     )
 }

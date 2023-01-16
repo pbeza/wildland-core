@@ -4,14 +4,41 @@ mod readdir;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::time::SystemTime;
 
 use rsfs::mem::FS;
 use rsfs::{DirEntry, FileType, GenFS, Metadata};
-use wildland_corex::dfs::interface::{NodeType, Stat};
+use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
 use wildland_corex::{MockPathResolver, Storage};
 
 use crate::storage_backend::StorageBackendError;
 use crate::unencrypted::{StorageBackend, StorageBackendFactory, UnencryptedDfs};
+
+struct MufsAttrs {
+    access_time: Option<UnixTimestamp>,
+    modification_time: Option<UnixTimestamp>,
+    change_time: Option<UnixTimestamp>,
+    size: u64,
+}
+
+fn systime_to_unix(systime: SystemTime) -> UnixTimestamp {
+    let timestamp = systime.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+    UnixTimestamp {
+        sec: timestamp.as_secs(),
+        nano_sec: (timestamp.as_nanos() % 1_000_000_000) as u32,
+    }
+}
+
+fn get_unix_time_of_file<T: AsRef<Path>, U: AsRef<FS>>(path: T, fs: U) -> MufsAttrs {
+    let md = fs.as_ref().metadata(path).unwrap();
+    MufsAttrs {
+        access_time: md.accessed().ok().map(systime_to_unix),
+        modification_time: md.modified().ok().map(systime_to_unix),
+        // NOTE: Mufs does not support ctime, for tests sake let's use creation time
+        change_time: md.created().ok().map(systime_to_unix),
+        size: md.len(),
+    }
+}
 
 /// Made up Filesystem
 struct Mufs {
@@ -55,7 +82,6 @@ impl StorageBackend for Mufs {
 
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
         let relative_path = strip_root(path);
-
         Ok(self
             .fs
             .metadata(self.base_dir.join(relative_path))
@@ -71,6 +97,11 @@ impl StorageBackend for Mufs {
                     } else {
                         return None;
                     },
+                    size: metadata.len(),
+                    access_time: metadata.accessed().ok().map(systime_to_unix),
+                    modification_time: metadata.modified().ok().map(systime_to_unix),
+                    // NOTE: Mufs does not support ctime, for tests sake let's use creation time
+                    change_time: metadata.created().ok().map(systime_to_unix),
                 })
             })?)
     }

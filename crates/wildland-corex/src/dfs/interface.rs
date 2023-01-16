@@ -18,7 +18,12 @@
 #[derive(Debug, PartialEq, Eq)]
 pub struct Stat {
     pub node_type: NodeType,
-    // TODO fields?
+    /// size in bytes
+    pub size: u64,
+    /// Some nodes, like virtual ones, may have time properties set to None
+    pub access_time: Option<UnixTimestamp>,
+    pub modification_time: Option<UnixTimestamp>,
+    pub change_time: Option<UnixTimestamp>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -26,6 +31,12 @@ pub enum NodeType {
     File,
     Dir,
     Symlink,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct UnixTimestamp {
+    pub sec: u64,
+    pub nano_sec: u32,
 }
 
 /// Interface that DFS should expose towards frontends

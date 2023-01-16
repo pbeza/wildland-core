@@ -18,13 +18,14 @@
 mod template;
 
 use std::fs;
+use std::os::unix::prelude::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::storage_backend::{StorageBackend, StorageBackendError};
 use wildland_dfs::unencrypted::StorageBackendFactory;
-use wildland_dfs::{NodeType, Stat, Storage};
+use wildland_dfs::{NodeType, Stat, Storage, UnixTimestamp};
 
 #[derive(Debug)]
 pub struct LocalFilesystemStorage {
@@ -72,6 +73,19 @@ impl StorageBackend for LocalFilesystemStorage {
                     } else {
                         return None;
                     },
+                    size: metadata.len(),
+                    access_time: Some(UnixTimestamp {
+                        sec: metadata.atime(),
+                        nano_sec: metadata.atime_nsec(),
+                    }),
+                    modification_time: Some(UnixTimestamp {
+                        sec: metadata.mtime(),
+                        nano_sec: metadata.mtime_nsec(),
+                    }),
+                    change_time: Some(UnixTimestamp {
+                        sec: metadata.ctime(),
+                        nano_sec: metadata.ctime_nsec(),
+                    }),
                 })
             })?,
         )
