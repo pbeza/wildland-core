@@ -75,16 +75,16 @@ impl StorageBackend for LocalFilesystemStorage {
                     },
                     size: metadata.len(),
                     access_time: Some(UnixTimestamp {
-                        sec: metadata.atime(),
-                        nano_sec: metadata.atime_nsec(),
+                        sec: metadata.atime() as u64,
+                        nano_sec: metadata.atime_nsec() as u32,
                     }),
                     modification_time: Some(UnixTimestamp {
-                        sec: metadata.mtime(),
-                        nano_sec: metadata.mtime_nsec(),
+                        sec: metadata.mtime() as u64,
+                        nano_sec: metadata.mtime_nsec() as u32,
                     }),
                     change_time: Some(UnixTimestamp {
-                        sec: metadata.ctime(),
-                        nano_sec: metadata.ctime_nsec(),
+                        sec: metadata.ctime() as u64,
+                        nano_sec: metadata.ctime_nsec() as u32,
                     }),
                 })
             })?,
