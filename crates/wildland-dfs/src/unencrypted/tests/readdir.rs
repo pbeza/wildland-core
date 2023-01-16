@@ -557,7 +557,6 @@ fn test_readdir_on_file() {
         .with(predicate::eq(Path::new("/a")))
         .times(2)
         .returning(|_path| false);
-
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 

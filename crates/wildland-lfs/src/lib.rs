@@ -15,12 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#![feature(io_error_more)]
-
 mod template;
 
 use std::fs;
-use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -45,23 +42,18 @@ fn strip_root(path: &Path) -> &Path {
 impl StorageBackend for LocalFilesystemStorage {
     fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
         let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
 
-        fs::read_dir(self.base_dir.join(relative_path))
-            .map_err(|err| {
-                if err.kind() == ErrorKind::NotADirectory {
-                    StorageBackendError::NotADirectory
-                } else {
-                    StorageBackendError::Generic(err.into())
-                }
-            })
-            .and_then(|readdir| {
-                readdir
-                    .into_iter()
-                    .map(|entry_result| {
-                        Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
-                    })
-                    .collect::<Result<Vec<_>, StorageBackendError>>()
-            })
+        if path.is_file() || path.is_symlink() {
+            Err(StorageBackendError::NotADirectory)
+        } else {
+            fs::read_dir(path)?
+                .into_iter()
+                .map(|entry_result| {
+                    Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
+                })
+                .collect()
+        }
     }
 
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {

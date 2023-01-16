@@ -139,7 +139,7 @@ fn map_physical_path_to_node_descriptor<'a>(
                         }
                     }))
                 })
-                .or_else(|err| match err {
+                .or_else(|err| match &err {
                     StorageBackendError::NotADirectory => {
                         Ok(Either::Right(std::iter::once(NodeDescriptor {
                             storages: Some(NodeStorages::new(

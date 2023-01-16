@@ -2,7 +2,6 @@ mod getattr;
 mod readdir;
 
 use std::collections::HashMap;
-use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -39,25 +38,19 @@ fn strip_root(path: &Path) -> &Path {
 impl StorageBackend for Mufs {
     fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
         let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+        let file_type = self.fs.metadata(&path)?.file_type();
+        if file_type.is_file() || file_type.is_symlink() {
+            return Err(StorageBackendError::NotADirectory);
+        }
 
         self.fs
-            .read_dir(self.base_dir.join(relative_path))
-            .map_err(|err| {
-                if err.kind() == ErrorKind::NotADirectory {
-                    StorageBackendError::NotADirectory
-                } else {
-                    StorageBackendError::Generic(err.into())
-                }
+            .read_dir(path)?
+            .into_iter()
+            .map(|entry| {
+                Ok(Path::new("/").join(entry?.path().strip_prefix(&self.base_dir).unwrap()))
             })
-            .map(|readdir| {
-                readdir
-                    .into_iter()
-                    .map(|entry| {
-                        Path::new("/")
-                            .join(entry.unwrap().path().strip_prefix(&self.base_dir).unwrap())
-                    })
-                    .collect()
-            })
+            .collect()
     }
 
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {

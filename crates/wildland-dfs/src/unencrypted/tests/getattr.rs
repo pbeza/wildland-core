@@ -148,8 +148,8 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
         .with(predicate::eq(Path::new("/a/b/file_or_dir")))
         .times(2)
         .returning({
-            let storage1 = storage1.clone();
-            let storage2 = storage2.clone();
+            let storage1 = storage1;
+            let storage2 = storage2;
             move |_path| {
                 vec![
                     ResolvedPath::PathWithStorages {

@@ -24,6 +24,7 @@ use crate::Storage;
 /// Represents result of a possible path within a Storage. Storages field represents all alternative
 /// locations of the path.
 ///
+#[derive(Debug)]
 pub enum ResolvedPath {
     PathWithStorages {
         /// path within storages
