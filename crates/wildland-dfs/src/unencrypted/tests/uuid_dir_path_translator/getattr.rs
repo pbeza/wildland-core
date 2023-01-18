@@ -66,7 +66,7 @@ fn test_getattr_of_file_in_container_root() {
         });
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::always())
         .times(1)
         .returning(move |_path| false);
@@ -116,7 +116,7 @@ fn test_getattr_of_dir_in_container_root() {
         });
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::always())
         .times(1)
         .returning(move |_path| false);
@@ -156,7 +156,7 @@ fn test_getattr_of_virtual_dir() {
         .returning(move |_path| vec![ResolvedPath::VirtualPath(PathBuf::from("/"))]);
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::always())
         .times(1)
         .returning(move |_path| true);

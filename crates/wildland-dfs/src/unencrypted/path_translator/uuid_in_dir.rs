@@ -53,7 +53,7 @@ impl PathTranslator for UuidInDirTranslator {
                 // If another file tries to claim the same path
                 if counted_abs_paths.get(&abs_path).unwrap() > &1
                 // or any physical node has the same path as some virtual node
-                || self.path_resolver.is_virtual_nodes(&abs_path)
+                || self.path_resolver.is_virtual_node(&abs_path)
                 {
                     // then append uuid to avoid conflict
                     let exposed_path =
@@ -109,7 +109,7 @@ mod unit_tests {
         let mufs_storage = new_mufs_storage("/");
 
         path_resolver
-            .expect_is_virtual_nodes()
+            .expect_is_virtual_node()
             .with(predicate::always())
             .times(1)
             .returning(move |_path| false);

@@ -48,7 +48,7 @@ fn test_listing_files_from_root_of_one_container() {
         });
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::always())
         .times(1)
         .returning(move |_path| false);
@@ -83,7 +83,7 @@ fn test_listing_files_from_nested_dir_of_one_container() {
         });
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::always())
         .times(2)
         .returning(move |_path| false);
@@ -127,7 +127,7 @@ fn test_listing_dirs_from_one_container() {
         });
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::always())
         .times(2)
         .returning(move |_path| false);
@@ -154,7 +154,7 @@ fn test_listing_files_and_dirs_from_two_containers() {
     let storage2 = new_mufs_storage("/storage2/");
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::always())
         .times(3)
         .returning(move |_path| false);
@@ -228,7 +228,7 @@ fn test_getting_one_file_from_container_with_multiple_storages() {
         });
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::always())
         .times(1)
         .returning(move |_path| false);
@@ -325,7 +325,7 @@ fn test_first_storage_unavailable() {
         });
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::always())
         .times(1)
         .returning(move |_path| false);
@@ -371,17 +371,17 @@ fn test_listing_virtual_node() {
         .returning(move |_path| vec!["b".to_string()]); // returned by containers claiming path /a/b/*
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::eq(Path::new("/a/dir")))
         .times(1)
         .returning(move |_path| false);
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::eq(Path::new("/a/file_1")))
         .times(1)
         .returning(move |_path| false);
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::eq(Path::new("/a/b")))
         .times(1)
         .returning(move |_path| true);
@@ -458,7 +458,7 @@ fn test_file_colliding_with_virtual_node() {
         .returning(move |_path| vec![]);
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::eq(Path::new("/a/b/")))
         .times(1)
         .returning(move |_path| true);
@@ -526,7 +526,7 @@ fn test_dir_colliding_with_virtual_node() {
         });
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::eq(Path::new("/a/b/c")))
         .times(1)
         .returning(|_path| false);
@@ -570,7 +570,7 @@ fn test_readdir_on_file() {
         });
 
     path_resolver
-        .expect_is_virtual_nodes()
+        .expect_is_virtual_node()
         .with(predicate::eq(Path::new("/a")))
         .times(2)
         .returning(|_path| false);

@@ -65,5 +65,5 @@ pub trait PathResolver {
     fn list_virtual_nodes_in(&self, path: &Path) -> Vec<String>;
 
     /// Checks if provided path is a virtual node
-    fn is_virtual_nodes(&self, path: &Path) -> bool;
+    fn is_virtual_node(&self, path: &Path) -> bool;
 }

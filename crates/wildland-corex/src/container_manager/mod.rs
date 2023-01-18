@@ -32,7 +32,7 @@ impl PathResolver for ContainerManager {
         todo!() // TODO WILX-353 implement when ContainerManager is filled with information about mounted containers
     }
 
-    fn is_virtual_nodes(&self, _path: &Path) -> bool {
+    fn is_virtual_node(&self, _path: &Path) -> bool {
         todo!() // TODO WILX-353 implement when ContainerManager is filled with information about mounted containers
     }
 }
