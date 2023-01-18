@@ -22,7 +22,11 @@ use wildland_corex::dfs::interface::{NodeType, Stat};
 use wildland_corex::ResolvedPath;
 
 use super::{
-    execute_backend_op_with_policy, ExecutionPolicy, NodeDescriptor, NodeStorages, UnencryptedDfs,
+    execute_backend_op_with_policy,
+    ExecutionPolicy,
+    NodeDescriptor,
+    NodeStorages,
+    UnencryptedDfs,
 };
 
 pub fn getattr(dfs_front: &mut UnencryptedDfs, input_exposed_path: String) -> Option<Stat> {

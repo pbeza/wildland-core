@@ -23,7 +23,11 @@ use uuid::Uuid;
 use wildland_corex::{ResolvedPath, Storage};
 
 use super::{
-    execute_backend_op_with_policy, ExecutionPolicy, NodeDescriptor, NodeStorages, UnencryptedDfs,
+    execute_backend_op_with_policy,
+    ExecutionPolicy,
+    NodeDescriptor,
+    NodeStorages,
+    UnencryptedDfs,
 };
 use crate::storage_backend::StorageBackendError;
 
@@ -168,8 +172,9 @@ fn map_physical_path_to_node_descriptor<'a>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use test_case::test_case;
+
+    use super::*;
 
     #[test_case(
         PathBuf::from("/a/b"),
