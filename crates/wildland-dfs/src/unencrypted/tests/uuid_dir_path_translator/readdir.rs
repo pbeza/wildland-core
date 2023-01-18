@@ -360,7 +360,7 @@ fn test_listing_virtual_node() {
                     storages_id: Uuid::from_u128(1),
                     storages: vec![storage1.clone()],
                 },
-                ResolvedPath::VirtualPath("/a".into()),
+                ResolvedPath::VirtualPath("/a".into()), // returned if there is for example container claiming /a/b
             ]
         });
 
@@ -425,7 +425,7 @@ fn test_file_colliding_with_virtual_node() {
                         storages_id: Uuid::from_u128(1),
                         storages: vec![storage1.clone()],
                     },
-                    ResolvedPath::VirtualPath(PathBuf::from("/a")),
+                    ResolvedPath::VirtualPath(PathBuf::from("/a")), // returned if there is for example container claiming /a/b
                 ]
             }
         });
@@ -447,7 +447,7 @@ fn test_file_colliding_with_virtual_node() {
                     storages_id: Uuid::from_u128(1),
                     storages: vec![storage1.clone()],
                 },
-                ResolvedPath::VirtualPath(PathBuf::from("/a/b/")),
+                ResolvedPath::VirtualPath(PathBuf::from("/a/b/")), // returned if there is for example container claiming /a/b/c
             ]
         });
 
@@ -502,7 +502,7 @@ fn test_dir_colliding_with_virtual_node() {
                         storages_id: Uuid::from_u128(1),
                         storages: vec![storage1.clone()],
                     },
-                    ResolvedPath::VirtualPath(PathBuf::from("/a")),
+                    ResolvedPath::VirtualPath(PathBuf::from("/a")), // returned if there is for example container claiming /a/b
                 ]
             }
         });

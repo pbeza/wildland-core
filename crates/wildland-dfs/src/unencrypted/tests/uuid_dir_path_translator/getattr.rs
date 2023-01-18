@@ -151,9 +151,9 @@ fn test_getattr_of_virtual_dir() {
 
     path_resolver
         .expect_resolve()
-        .with(predicate::eq(Path::new("/virtual_dir")))
+        .with(predicate::eq(Path::new("/virtual_dir"))) // e.g. container claiming path /virtual_dir/something
         .times(1)
-        .returning(move |_path| vec![ResolvedPath::VirtualPath(PathBuf::from("/"))]);
+        .returning(move |_path| vec![ResolvedPath::VirtualPath(PathBuf::from("/virtual_dir"))]);
 
     path_resolver
         .expect_is_virtual_node()
@@ -288,7 +288,7 @@ fn test_virtual_path_colliding_with_file() {
                         storages_id: Uuid::from_u128(1),
                         storages: vec![storage1.clone()],
                     },
-                    ResolvedPath::VirtualPath(PathBuf::from("")), // returned by containers claiming path `/a/b/*`
+                    ResolvedPath::VirtualPath(PathBuf::from("/a/b")), // returned by containers claiming path `/a/b/*`
                 ]
             }
         });
@@ -351,7 +351,7 @@ fn test_virtual_path_colliding_with_dir() {
                         storages_id: Uuid::from_u128(1),
                         storages: vec![storage1.clone()],
                     },
-                    ResolvedPath::VirtualPath(PathBuf::from("")), // returned by containers claiming path `/a/b/*`
+                    ResolvedPath::VirtualPath(PathBuf::from("/a/b")), // returned by containers claiming path `/a/b/*`
                 ]
             }
         });
