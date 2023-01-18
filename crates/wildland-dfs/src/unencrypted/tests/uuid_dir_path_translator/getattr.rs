@@ -155,12 +155,6 @@ fn test_getattr_of_virtual_dir() {
         .times(1)
         .returning(move |_path| vec![ResolvedPath::VirtualPath(PathBuf::from("/virtual_dir"))]);
 
-    path_resolver
-        .expect_is_virtual_node()
-        .with(predicate::always())
-        .times(1)
-        .returning(move |_path| true);
-
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 

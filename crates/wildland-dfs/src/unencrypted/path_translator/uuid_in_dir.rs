@@ -53,7 +53,7 @@ impl PathTranslator for UuidInDirTranslator {
                 // If another file tries to claim the same path
                 if counted_abs_paths.get(&abs_path).unwrap() > &1
                 // or any physical node has the same path as some virtual node
-                || self.path_resolver.is_virtual_node(&abs_path)
+                || (node.storages.is_some() && self.path_resolver.is_virtual_node(&abs_path))
                 {
                     // then append uuid to avoid conflict
                     let exposed_path =

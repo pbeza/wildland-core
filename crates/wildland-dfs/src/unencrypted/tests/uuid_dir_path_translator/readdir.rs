@@ -380,11 +380,6 @@ fn test_listing_virtual_node() {
         .with(predicate::eq(Path::new("/a/file_1")))
         .times(1)
         .returning(move |_path| false);
-    path_resolver
-        .expect_is_virtual_node()
-        .with(predicate::eq(Path::new("/a/b")))
-        .times(1)
-        .returning(move |_path| true);
 
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
@@ -400,7 +395,7 @@ fn test_listing_virtual_node() {
         vec![
             "/a/dir".to_string(),
             "/a/file_1".to_string(),
-            "/a/b/".to_string(),
+            "/a/b".to_string(),
         ]
     );
 }
@@ -584,4 +579,27 @@ fn test_readdir_on_file() {
     assert_eq!(files, Vec::<String>::new());
     let files = dfs.readdir("/a".to_string());
     assert_eq!(files, Vec::<String>::new());
+}
+
+#[rstest]
+fn test_readdir_on_virtual_node_only() {
+    let mut path_resolver = MockPathResolver::new();
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/")))
+        .times(1)
+        .returning(|_path| vec![ResolvedPath::VirtualPath(PathBuf::from("/a"))]);
+
+    path_resolver
+        .expect_list_virtual_nodes_in()
+        .with(predicate::eq(Path::new("/a")))
+        .times(1)
+        .returning(move |_path| vec!["b".to_string()]); // returned by containers claiming path /a/b/*
+
+    let path_resolver = Rc::new(path_resolver);
+    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+
+    let files = dfs.readdir("/a/".to_string());
+    assert_eq!(files, vec!["/a/b".to_string()]);
 }
