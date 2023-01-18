@@ -23,11 +23,7 @@ use uuid::Uuid;
 use wildland_corex::{ResolvedPath, Storage};
 
 use super::{
-    execute_backend_op_with_policy,
-    ExecutionPolicy,
-    NodeDescriptor,
-    NodeStorages,
-    UnencryptedDfs,
+    execute_backend_op_with_policy, ExecutionPolicy, NodeDescriptor, NodeStorages, UnencryptedDfs,
 };
 use crate::storage_backend::StorageBackendError;
 
@@ -42,10 +38,11 @@ pub fn readdir(dfs_front: &mut UnencryptedDfs, requested_path: String) -> Vec<St
         })
         .flatten()
         .collect_vec();
+    dbg!(&nodes);
 
     dfs_front
         .path_translator
-        .assign_exposed_paths(nodes)
+        .assign_exposed_paths(&nodes)
         .into_iter()
         .filter_map(|(_node, exposed_path)| filter_exposed_paths(&requested_path, exposed_path))
         .unique()
@@ -79,9 +76,9 @@ fn map_resolved_path_into_node_descriptor<'a>(
     resolved_path: ResolvedPath,
 ) -> Option<impl Iterator<Item = NodeDescriptor> + 'a> {
     match resolved_path {
-        ResolvedPath::VirtualPath(virtual_path) => Some(Either::Left(
-            map_virtual_path_to_node_descriptor(dfs_front, requested_path, &virtual_path),
-        )),
+        ResolvedPath::VirtualPath(virtual_path) => Some(Either::Left(std::iter::once(
+            map_virtual_path_to_node_descriptor(requested_path, &virtual_path),
+        ))),
         ResolvedPath::PathWithStorages {
             path_within_storage,
             storages_id,
@@ -97,19 +94,24 @@ fn map_resolved_path_into_node_descriptor<'a>(
     }
 }
 
-fn map_virtual_path_to_node_descriptor<'a>(
-    dfs_front: &mut UnencryptedDfs,
-    requested_path: &'a Path,
+fn map_virtual_path_to_node_descriptor(
+    requested_path: &Path,
     virtual_path: &Path,
-) -> impl Iterator<Item = NodeDescriptor> + 'a {
-    dfs_front
-        .path_resolver
-        .list_virtual_nodes_in(virtual_path)
-        .into_iter()
-        .map(|node_name| NodeDescriptor {
-            storages: None,
-            absolute_path: requested_path.join(node_name),
-        })
+) -> NodeDescriptor {
+    let component_after_requested_path = virtual_path
+        .strip_prefix(requested_path.to_str().unwrap())
+        .unwrap()
+        .components()
+        .next();
+    let absolute_path = match component_after_requested_path {
+        Some(std::path::Component::Normal(component)) => requested_path.join(component),
+        None => requested_path.into(),
+        _ => panic!("There is a bug in PathResolver, probably it returned a path that does not start with the requested one"),
+    };
+    NodeDescriptor {
+        storages: None,
+        absolute_path,
+    }
 }
 
 fn map_physical_path_to_node_descriptor<'a>(
@@ -162,4 +164,35 @@ fn map_physical_path_to_node_descriptor<'a>(
         // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
         ExecutionPolicy::SequentiallyToFirstSuccess,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+
+    #[test_case(
+        PathBuf::from("/a/b"),
+        PathBuf::from("/a/b/c"),
+        PathBuf::from("/a/b/c")
+    )]
+    #[test_case(PathBuf::from("/a"), PathBuf::from("/a/b"), PathBuf::from("/a/b"))]
+    #[test_case(PathBuf::from("/a"), PathBuf::from("/a/b/c"), PathBuf::from("/a/b"))]
+    #[test_case(PathBuf::from("/"), PathBuf::from("/a/b/"), PathBuf::from("/a"))]
+    #[test_case(PathBuf::from("/"), PathBuf::from("/a/b/c"), PathBuf::from("/a"))]
+    fn test_map_virtual_path_to_node_descriptor(
+        requested_path: PathBuf,
+        resolved_virtual_path: PathBuf,
+        expected_node_path: PathBuf,
+    ) {
+        let node_descriptor =
+            map_virtual_path_to_node_descriptor(&requested_path, &resolved_virtual_path);
+        assert_eq!(
+            node_descriptor,
+            NodeDescriptor {
+                storages: None,
+                absolute_path: expected_node_path
+            }
+        );
+    }
 }

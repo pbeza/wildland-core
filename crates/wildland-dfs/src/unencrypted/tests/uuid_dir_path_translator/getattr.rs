@@ -65,12 +65,6 @@ fn test_getattr_of_file_in_container_root() {
             }
         });
 
-    path_resolver
-        .expect_is_virtual_node()
-        .with(predicate::always())
-        .times(1)
-        .returning(move |_path| false);
-
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
@@ -114,12 +108,6 @@ fn test_getattr_of_dir_in_container_root() {
                 }]
             }
         });
-
-    path_resolver
-        .expect_is_virtual_node()
-        .with(predicate::always())
-        .times(1)
-        .returning(move |_path| false);
 
     let path_resolver = Rc::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);

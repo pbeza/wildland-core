@@ -56,14 +56,6 @@ pub trait PathResolver {
     ///     PathWithStorages { path: "/b/c/", storages: [all storages of C1]},
     ///     PathWithStorages { path: "/c/", storages: [all storages of C2]},
     /// ]
-    ///
+    /// TODO describe returning virtual paths
     fn resolve(&self, path: &Path) -> Vec<ResolvedPath>;
-
-    /// Lists all virtual nodes' names contained by provided path.
-    /// Example: C1 claims /a/b, C2 claims /a/c
-    ///     when called with arg `/a` returns ["b", "c"]
-    fn list_virtual_nodes_in(&self, path: &Path) -> Vec<String>;
-
-    /// Checks if provided path is a virtual node
-    fn is_virtual_node(&self, path: &Path) -> bool;
 }

@@ -22,11 +22,7 @@ use wildland_corex::dfs::interface::{NodeType, Stat};
 use wildland_corex::ResolvedPath;
 
 use super::{
-    execute_backend_op_with_policy,
-    ExecutionPolicy,
-    NodeDescriptor,
-    NodeStorages,
-    UnencryptedDfs,
+    execute_backend_op_with_policy, ExecutionPolicy, NodeDescriptor, NodeStorages, UnencryptedDfs,
 };
 
 pub fn getattr(dfs_front: &mut UnencryptedDfs, input_exposed_path: String) -> Option<Stat> {
@@ -45,7 +41,7 @@ pub fn getattr(dfs_front: &mut UnencryptedDfs, input_exposed_path: String) -> Op
         })
         .collect_vec();
 
-    let exposed_paths = dfs_front.path_translator.assign_exposed_paths(nodes);
+    let exposed_paths = dfs_front.path_translator.assign_exposed_paths(&nodes);
 
     let node = find_node_matching_requested_path(input_exposed_path, &exposed_paths);
 
@@ -58,7 +54,7 @@ pub fn getattr(dfs_front: &mut UnencryptedDfs, input_exposed_path: String) -> Op
         // Virtual node
         Some(_) | None if !exposed_paths.is_empty() => Some(Stat {
             node_type: NodeType::Dir,
-            size: 0, // TODO dir case
+            size: 0,
             access_time: None,
             modification_time: None,
             change_time: None,
@@ -86,7 +82,7 @@ fn fetch_data_from_backend(
 
 fn find_node_matching_requested_path<'a>(
     input_exposed_path: &Path,
-    exposed_paths: &'a [(NodeDescriptor, Option<PathBuf>)],
+    exposed_paths: &[(&'a NodeDescriptor, Option<PathBuf>)],
 ) -> Option<&'a NodeDescriptor> {
     exposed_paths
         .iter()
@@ -102,6 +98,7 @@ fn find_node_matching_requested_path<'a>(
                 None
             }
         })
+        .copied()
 }
 
 fn map_resolved_path_into_node_descriptor(

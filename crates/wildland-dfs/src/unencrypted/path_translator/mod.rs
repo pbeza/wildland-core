@@ -23,10 +23,10 @@ pub mod uuid_in_dir;
 
 pub trait PathTranslator {
     // Returns paths under which the nodes are to be exposed
-    fn assign_exposed_paths(
+    fn assign_exposed_paths<'a>(
         &self,
-        nodes: Vec<NodeDescriptor>,
-    ) -> Vec<(NodeDescriptor, Option<PathBuf>)>;
+        nodes: &'a [NodeDescriptor],
+    ) -> Vec<(&'a NodeDescriptor, Option<PathBuf>)>;
 
     /// determines absolute path basing on the exposed one
     fn exposed_to_absolute_path(&self, path: &Path) -> PathBuf;

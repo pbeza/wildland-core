@@ -87,7 +87,7 @@ impl UnencryptedDfs {
             path_resolver: path_resolver.clone(),
             storage_backend_factories,
             storage_backends: HashMap::new(),
-            path_translator: Box::new(UuidInDirTranslator::new(path_resolver)),
+            path_translator: Box::new(UuidInDirTranslator::new()),
         }
     }
 
