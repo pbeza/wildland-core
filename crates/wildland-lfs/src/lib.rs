@@ -17,38 +17,78 @@
 
 mod template;
 
-use std::fs::read_dir;
+use std::fs;
+use std::os::unix::prelude::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use anyhow::anyhow;
 use template::LocalFilesystemStorageTemplate;
-use wildland_dfs::storage_backend::StorageBackend;
+use wildland_dfs::storage_backend::{StorageBackend, StorageBackendError};
 use wildland_dfs::unencrypted::StorageBackendFactory;
-use wildland_dfs::Storage;
+use wildland_dfs::{NodeType, Stat, Storage, UnixTimestamp};
 
 #[derive(Debug)]
 pub struct LocalFilesystemStorage {
     base_dir: PathBuf,
 }
 
+fn strip_root(path: &Path) -> &Path {
+    if path.is_absolute() {
+        path.strip_prefix("/").unwrap()
+    } else {
+        path
+    }
+}
+
 impl StorageBackend for LocalFilesystemStorage {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, anyhow::Error> {
-        let relative_path = if path.is_absolute() {
-            path.strip_prefix("/").unwrap()
+    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        if path.is_file() || path.is_symlink() {
+            Err(StorageBackendError::NotADirectory)
         } else {
-            path
-        };
-        read_dir(self.base_dir.join(relative_path))
-            .map_err(|e| anyhow!(e))
-            .and_then(|readdir| {
-                readdir
-                    .into_iter()
-                    .map(|entry_result| {
-                        Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
-                    })
-                    .collect::<Result<Vec<_>, anyhow::Error>>()
-            })
+            fs::read_dir(path)?
+                .into_iter()
+                .map(|entry_result| {
+                    Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
+                })
+                .collect()
+        }
+    }
+
+    fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
+        let relative_path = strip_root(path);
+
+        Ok(
+            fs::metadata(self.base_dir.join(relative_path)).map(|metadata| {
+                let file_type = metadata.file_type();
+                Some(Stat {
+                    node_type: if file_type.is_file() {
+                        NodeType::File
+                    } else if file_type.is_dir() {
+                        NodeType::Dir
+                    } else if file_type.is_symlink() {
+                        NodeType::Symlink
+                    } else {
+                        return None;
+                    },
+                    size: metadata.len(),
+                    access_time: Some(UnixTimestamp {
+                        sec: metadata.atime() as u64,
+                        nano_sec: metadata.atime_nsec() as u32,
+                    }),
+                    modification_time: Some(UnixTimestamp {
+                        sec: metadata.mtime() as u64,
+                        nano_sec: metadata.mtime_nsec() as u32,
+                    }),
+                    change_time: Some(UnixTimestamp {
+                        sec: metadata.ctime() as u64,
+                        nano_sec: metadata.ctime_nsec() as u32,
+                    }),
+                })
+            })?,
+        )
     }
 }
 

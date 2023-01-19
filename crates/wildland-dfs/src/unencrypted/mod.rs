@@ -15,25 +15,62 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+mod getattr;
+mod path_translator;
+mod readdir;
 #[cfg(test)]
 mod tests;
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::str::FromStr;
 
-use itertools::Either;
 use uuid::Uuid;
-use wildland_corex::dfs::interface::{DfsFrontend, NodeDescriptor, NodeStorage};
-use wildland_corex::{PathResolver, ResolvedPath, Storage};
+use wildland_corex::dfs::interface::{DfsFrontend, Stat};
+use wildland_corex::{PathResolver, Storage};
 
-use crate::storage_backend::StorageBackend;
+use self::path_translator::uuid_in_dir::UuidInDirTranslator;
+use self::path_translator::PathConflictResolver;
+use crate::storage_backend::{StorageBackend, StorageBackendError};
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NodeDescriptor {
+    pub storages: Option<NodeStorages>, // nodes may not have storage - so called virtual nodes
+    pub absolute_path: PathBuf,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NodeStorages {
+    storages: Vec<Storage>,
+    path_within_storage: PathBuf,
+    uuid: Uuid,
+}
+
+impl NodeStorages {
+    pub fn new(storages: Vec<Storage>, path_within_storage: PathBuf, uuid: Uuid) -> Self {
+        Self {
+            storages,
+            path_within_storage,
+            uuid,
+        }
+    }
+
+    pub fn path_within_storage(&self) -> &Path {
+        &self.path_within_storage
+    }
+}
 
 pub trait StorageBackendFactory {
     fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error>;
 }
+
+// TODO WILX-387 Current DFS implementation uses some kind of mapping paths into another ones in order to
+// avoid conflicts. There is always a probability that mapped path will be in conflict with some
+// other user's file or directory (now we assume that user won't have any file named as an uuid
+// string format). The problem could be solved by checking mapped path (e.g. containing uuid) if
+// it represents a file/dir in the first place, and then, if no results are found, to check if
+// the conflict resolution took place and find files which paths were mapped.
 
 pub struct UnencryptedDfs {
     path_resolver: Rc<dyn PathResolver>,
@@ -45,6 +82,7 @@ pub struct UnencryptedDfs {
     /// given type reuse some connector/client (factory could initiate each backend with some shared
     /// reference).
     storage_backends: HashMap<Uuid, Rc<dyn StorageBackend>>,
+    path_translator: Box<dyn PathConflictResolver>,
 }
 
 impl UnencryptedDfs {
@@ -53,9 +91,10 @@ impl UnencryptedDfs {
         storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
     ) -> Self {
         Self {
-            path_resolver,
+            path_resolver: path_resolver.clone(),
             storage_backend_factories,
             storage_backends: HashMap::new(),
+            path_translator: Box::new(UuidInDirTranslator::new()),
         }
     }
 
@@ -89,10 +128,10 @@ impl UnencryptedDfs {
     }
 
     /// Matches every given Storage with its StorageBackend and return iterator over such pairs.
-    fn assign_backends_to_storages<'a>(
+    fn get_backends<'a>(
         &'a mut self,
         storages: &'a [Storage],
-    ) -> impl Iterator<Item = (Rc<dyn StorageBackend>, &Storage)> + '_ {
+    ) -> impl Iterator<Item = Rc<dyn StorageBackend>> + '_ {
         storages.iter().filter_map(|storage| {
             match self.get_backend(storage) {
                 Err(e) => {
@@ -104,7 +143,7 @@ impl UnencryptedDfs {
                     );
                     None
                 }
-                Ok(backend) => Some((backend, storage)),
+                Ok(backend) => Some(backend),
             }
         })
     }
@@ -128,66 +167,13 @@ impl DfsFrontend for UnencryptedDfs {
     /// ]
     /// Full path within the user's forest for both nodes is `/a/b/c`. It is up to FS frontend how to
     /// show it to a user (e.g. by prefixing it with some storage-specific tag).
-    fn readdir(&mut self, path: String) -> Vec<NodeDescriptor> {
-        let path = PathBuf::from_str(&path).unwrap();
-        let resolved_paths = self.path_resolver.resolve(path.as_ref());
-        let nodes = resolved_paths
-            .into_iter()
-            .filter_map(|resolved_path| {
-                match resolved_path {
-                    ResolvedPath::VirtualPath(virtual_path) => {
-                        Some(Either::Left(std::iter::once(NodeDescriptor {
-                            storage: None,
-                            absolute_path: path.join(virtual_path.file_name().unwrap()),
-                        })))
-                    }
-                    ResolvedPath::PathWithStorages {
-                        path_within_storage,
-                        storages,
-                    } => {
-                        let backends_with_storages = self.assign_backends_to_storages(&storages);
+    fn readdir(&mut self, requested_path: String) -> Vec<String> {
+        readdir::readdir(self, requested_path)
+    }
 
-                        let operations_on_backends =
-                            backends_with_storages.map(|(backend, storage)| {
-                                backend
-                                    .readdir(&path_within_storage)
-                                    .map(|resulting_paths| {
-                                        resulting_paths.into_iter().map({
-                                            let storage = storage.clone();
-                                            let path = path.clone();
-                                            move |entry_path| NodeDescriptor {
-                                                storage: Some(NodeStorage::new(
-                                                    storage.clone(),
-                                                    entry_path.clone(),
-                                                )),
-                                                absolute_path: path
-                                                    .join(entry_path.file_name().unwrap()),
-                                            }
-                                        })
-                                    })
-                            });
-
-                        let node_descriptors = execute_backend_op_with_policy(
-                            operations_on_backends,
-                            // TODO WILX-362 getting first should be a temporary policy, maybe we should ping backends to check if any of them
-                            // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
-                            ExecutionPolicy::SequentiallyToFirstSuccess,
-                        );
-
-                        if node_descriptors.is_none() {
-                            // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                            tracing::error!(
-                                "None of the backends for storages {:?} works",
-                                storages.iter().map(|s| s.backend_type())
-                            );
-                        }
-                        node_descriptors.map(Either::Right)
-                    }
-                }
-            })
-            .flatten();
-
-        nodes.collect()
+    // Returns Stat of the file indicated by the provided exposed path
+    fn getattr(&mut self, input_exposed_path: String) -> Option<Stat> {
+        getattr::getattr(self, input_exposed_path)
     }
 }
 
@@ -195,7 +181,8 @@ enum ExecutionPolicy {
     SequentiallyToFirstSuccess,
 }
 fn execute_backend_op_with_policy<T: std::fmt::Debug>(
-    ops: impl Iterator<Item = Result<T, anyhow::Error>>,
+    storages: &[Storage],
+    ops: impl Iterator<Item = Result<T, StorageBackendError>>,
     policy: ExecutionPolicy,
 ) -> Option<T> {
     match policy {
@@ -211,6 +198,14 @@ fn execute_backend_op_with_policy<T: std::fmt::Debug>(
             })
             .find(Result::is_ok)
             .map(Result::unwrap)
+            .or_else(|| {
+                // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
+                tracing::error!(
+                    "None of the backends for storages {:?} works",
+                    storages.iter().map(|s| s.backend_type())
+                );
+                None
+            })
         }
     }
 }
