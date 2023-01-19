@@ -45,7 +45,7 @@ pub fn getattr(dfs_front: &mut UnencryptedDfs, input_exposed_path: String) -> Op
         })
         .collect_vec();
 
-    let exposed_paths = dfs_front.path_translator.assign_exposed_paths(&nodes);
+    let exposed_paths = dfs_front.path_translator.solve_conflicts(&nodes);
 
     let node = find_node_matching_requested_path(input_exposed_path, &exposed_paths);
 
@@ -86,15 +86,10 @@ fn fetch_data_from_backend(
 
 fn find_node_matching_requested_path<'a>(
     input_exposed_path: &Path,
-    exposed_paths: &[(&'a NodeDescriptor, Option<PathBuf>)],
+    exposed_paths: &[(&'a NodeDescriptor, PathBuf)],
 ) -> Option<&'a NodeDescriptor> {
     exposed_paths
         .iter()
-        .filter_map(|(node, opt_exposed_path)| {
-            opt_exposed_path
-                .as_ref()
-                .map(|exposed_path| (node, exposed_path))
-        })
         .find_map(|(node, exposed_path)| {
             if exposed_path == input_exposed_path {
                 Some(node)

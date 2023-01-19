@@ -21,12 +21,12 @@ use super::NodeDescriptor;
 
 pub mod uuid_in_dir;
 
-pub trait PathTranslator {
+pub trait PathConflictResolver {
     // Returns paths under which the nodes are to be exposed
-    fn assign_exposed_paths<'a>(
+    fn solve_conflicts<'a>(
         &self,
         nodes: &'a [NodeDescriptor],
-    ) -> Vec<(&'a NodeDescriptor, Option<PathBuf>)>;
+    ) -> Vec<(&'a NodeDescriptor, PathBuf)>;
 
     /// determines absolute path basing on the exposed one
     fn exposed_to_absolute_path(&self, path: &Path) -> PathBuf;

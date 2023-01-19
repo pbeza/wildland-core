@@ -31,7 +31,7 @@ use wildland_corex::dfs::interface::{DfsFrontend, Stat};
 use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
-use self::path_translator::PathTranslator;
+use self::path_translator::PathConflictResolver;
 use crate::storage_backend::{StorageBackend, StorageBackendError};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -65,6 +65,13 @@ pub trait StorageBackendFactory {
     fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error>;
 }
 
+// TODO WILX-387 Current DFS implementation uses some kind of mapping paths into another ones in order to
+// avoid conflicts. There is always a probability that mapped path will be in conflict with some
+// other user's file or directory (now we assume that user won't have any file named as an uuid
+// string format). The problem could be solved by checking mapped path (e.g. containing uuid) if
+// it represents a file/dir in the first place, and then, if no results are found, to check if
+// the conflict resolution took place and find files which paths were mapped.
+
 pub struct UnencryptedDfs {
     path_resolver: Rc<dyn PathResolver>,
     /// Stores a factory for each supported backend type
@@ -75,7 +82,7 @@ pub struct UnencryptedDfs {
     /// given type reuse some connector/client (factory could initiate each backend with some shared
     /// reference).
     storage_backends: HashMap<Uuid, Rc<dyn StorageBackend>>,
-    path_translator: Box<dyn PathTranslator>,
+    path_translator: Box<dyn PathConflictResolver>,
 }
 
 impl UnencryptedDfs {

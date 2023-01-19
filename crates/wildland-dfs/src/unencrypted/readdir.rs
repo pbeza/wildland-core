@@ -42,35 +42,29 @@ pub fn readdir(dfs_front: &mut UnencryptedDfs, requested_path: String) -> Vec<St
         })
         .flatten()
         .collect_vec();
-    dbg!(&nodes);
 
     dfs_front
         .path_translator
-        .assign_exposed_paths(&nodes)
+        .solve_conflicts(&nodes)
         .into_iter()
         .filter_map(|(_node, exposed_path)| filter_exposed_paths(&requested_path, exposed_path))
         .unique()
         .collect()
 }
 
-fn filter_exposed_paths(requested_path: &Path, exposed_path: Option<PathBuf>) -> Option<String> {
-    match exposed_path {
-        Some(exposed_path) => {
-            if exposed_path.components().count() > requested_path.components().count() + 1 {
-                // filter out paths that have extended path with uuid at the end due to the conflicts
-                let mut parent = PathBuf::from(&exposed_path);
-                parent.pop();
-                Some(parent.to_string_lossy().to_string() + "/")
-            } else if exposed_path == requested_path {
-                // filter out paths the same as the requested one
-                // it may happen because of the conflicts resolution
-                None
-            } else {
-                Some(exposed_path.to_string_lossy().to_string())
-            }
-        }
-        // Some nodes may not have exposed path
-        None => None,
+// This function probably can be removed in case of using different path translator than `uuid_in_dir`
+fn filter_exposed_paths(requested_path: &Path, exposed_path: PathBuf) -> Option<String> {
+    if exposed_path.components().count() > requested_path.components().count() + 1 {
+        // filter out paths that have extended path with uuid at the end due to the conflicts
+        let mut parent = PathBuf::from(&exposed_path);
+        parent.pop();
+        Some(parent.to_string_lossy().to_string() + "/")
+    } else if exposed_path == requested_path {
+        // filter out paths the same as the requested one
+        // it may happen because of the conflicts resolution
+        None
+    } else {
+        Some(exposed_path.to_string_lossy().to_string())
     }
 }
 
