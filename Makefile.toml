@@ -7,16 +7,16 @@ command       = "cargo"
 install_crate = "clippy"
 
 [tasks.format]
-toolchain = "nightly"
+args          = ["fmt"]
+command       = "cargo"
 install_crate = "rustfmt"
-command = "cargo"
-args = ["fmt"]
+toolchain     = "nightly"
 
 [tasks.format-check]
-toolchain = "nightly"
+args          = ["fmt", "--", "--check"]
+command       = "cargo"
 install_crate = "rustfmt"
-command = "cargo"
-args = ["fmt", "--", "--check"]
+toolchain     = "nightly"
 
 [tasks.bindings-linux]
 args        = ['build', '--package', 'wildland-cargo-lib', '--features', 'bindings', '--target', 'x86_64-unknown-linux-gnu']

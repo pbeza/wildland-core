@@ -341,8 +341,7 @@ mod ffi_binding {
         fn stringify(self: &StorageTemplate) -> String;
 
         // DFS Frontend
-        fn readdir(self: &Arc<Mutex<dyn DfsFrontend>>, path: String) -> Vec<NodeDescriptor>;
+        fn readdir(self: &Arc<Mutex<dyn DfsFrontend>>, path: String) -> Vec<String>;
 
-        type NodeDescriptor;
     }
 }

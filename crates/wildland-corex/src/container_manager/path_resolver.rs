@@ -17,19 +17,25 @@
 
 use std::path::{Path, PathBuf};
 
+use uuid::Uuid;
+
 use crate::Storage;
 
 /// Represents result of a possible path within a Storage. Storages field represents all alternative
 /// locations of the path.
 ///
+#[derive(Debug)]
 pub enum ResolvedPath {
     PathWithStorages {
         /// path within storages
         path_within_storage: PathBuf,
+        /// Container uuid may be used but DFS itself does not recognize Container notion so it is called StoragesId
+        storages_id: Uuid,
         /// all storages that include the path (all replicas)
         storages: Vec<Storage>,
     },
-    /// represents virtual node paths that are not supposed to be looked up for in any backend
+    /// Represents virtual node path that are not supposed to be looked up for in any backend.
+    /// Contains absolute path in forest namespace.
     VirtualPath(PathBuf),
 }
 
@@ -42,14 +48,18 @@ pub trait PathResolver {
     /// path `/a/b/c/d` then [`PathResolver`] should return path `/c/d` with all Storages of that
     /// container as a single [`PathWithStorages`] instance, so DFS could choose which Storage to use.
     ///
-    /// Storages from different containers are represented bu different elements in a resulting vector
-    /// because the matching paths inside containers may be different. E.g. if container C1 claims path
-    /// `/a/` and container C2 claims path `/a/b/` then when PathResolver is asked about path `/a/b/c`
-    /// two-element vector is returned:
+    /// Storages from different containers are represented by different elements in a resulting vector
+    /// because the matching paths inside containers may be different. Additionally, method returns full
+    /// paths of containers that starts with the provided one as an argument.
+    ///
+    /// E.g. if container C1 claims path `/a/` and container C2 claims path `/a/b/` and container C3 claims
+    /// path `/a/b/c/d` when PathResolver is asked about path `/a/b/c`, then three-element vector is returned:
     /// [
     ///     PathWithStorages { path: "/b/c/", storages: [all storages of C1]},
     ///     PathWithStorages { path: "/c/", storages: [all storages of C2]},
+    ///     VirtualPath ( "/a/b/c/d" ),
     /// ]
+    ///
     ///
     fn resolve(&self, path: &Path) -> Vec<ResolvedPath>;
 }

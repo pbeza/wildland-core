@@ -15,15 +15,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod encrypted;
-pub mod storage_backend;
-pub mod unencrypted;
+use std::path::{Path, PathBuf};
 
-pub use wildland_corex::dfs::interface::*;
-pub use wildland_corex::{
-    Storage,
-    StorageTemplate,
-    StorageTemplateError,
-    CONTAINER_NAME_PARAM,
-    CONTAINER_UUID_PARAM,
-};
+use super::NodeDescriptor;
+
+pub mod uuid_in_dir;
+
+pub trait PathConflictResolver {
+    // Returns paths under which the nodes are to be exposed
+    fn solve_conflicts<'a>(
+        &self,
+        nodes: &'a [NodeDescriptor],
+    ) -> Vec<(&'a NodeDescriptor, PathBuf)>;
+
+    /// determines absolute path basing on the exposed one
+    fn exposed_to_absolute_path(&self, path: &Path) -> PathBuf;
+}
