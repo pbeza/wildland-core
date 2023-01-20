@@ -30,3 +30,10 @@ category    = 'Documentation'
 command     = 'cargo'
 description = 'Generate Low Level (ie. rust) Documentation for entire Wildland Core workspace'
 workspace   = false
+
+[tasks.deny-licenses]
+args		= ['deny', 'check', 'licenses']
+category	= 'Checks'
+command		= 'cargo'
+description	= 'check OSS licenses'
+workspace	= true

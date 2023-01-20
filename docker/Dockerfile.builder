@@ -58,6 +58,9 @@ RUN cargo install \
 	cargo-make \
 	cargo-audit
 
+RUN cargo install --no-default-features --features standalone \
+	cargo-deny
+
 RUN 	rustup target add wasm32-unknown-emscripten \
 	&& 	rustup target add x86_64-unknown-linux-gnu
 

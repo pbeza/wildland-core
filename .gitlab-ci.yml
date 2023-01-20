@@ -105,6 +105,21 @@ cargo clippy (lint):
   script:
     - cargo make clippy
 
+cargo deny (licenses):
+  stage: Test
+  tags:
+    - docker
+    - linux
+    - metal
+  needs: []
+  except:
+    - tags
+  only:
+    - master
+    - merge_requests
+  script:
+    - cargo make deny-licenses
+
 cargo fmt (format):
   stage: Test
   tags:
