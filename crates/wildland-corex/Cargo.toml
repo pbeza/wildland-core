@@ -25,3 +25,4 @@ wildland-crypto = { version = "0.40.0", path = "../wildland-crypto" }
 pretty_assertions = { version = "1.3" }
 rstest            = { version = "0.16" }
 toml              = { version = "0.5" }
+wildland-catlib   = { version = "0.40.0", path = "../wildland-catlib" }

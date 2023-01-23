@@ -22,7 +22,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::error::{CatlibError, CatlibResult};
-use crate::StorageTemplate;
 
 pub type PubKey = [u8; 32];
 
@@ -74,7 +73,7 @@ pub trait ForestManifest: std::fmt::Debug {
     /// - If the signer did not previously exist, `false` is returned.
     /// - If the signer existed in the set, `true` is returned.
     ///
-    fn del_signer(&mut self, signer: Identity) -> Result<bool, CatlibError>;
+    fn delete_signer(&mut self, signer: Identity) -> Result<bool, CatlibError>;
 
     /// Return list of Forest Containers
     ///
@@ -96,8 +95,9 @@ pub trait ForestManifest: std::fmt::Debug {
     ///
     fn create_container(
         &self,
+        container_uuid: Uuid,
+        forest_uuid: Uuid,
         name: String,
-        storage_data: &StorageTemplate,
         path: ContainerPath,
     ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
 
@@ -166,7 +166,8 @@ pub trait ContainerManifest: std::fmt::Debug {
     ///
     fn add_storage(
         &mut self,
-        storage_template: &StorageTemplate,
+        template_uuid: Uuid,
+        serialized_storage: Vec<u8>,
     ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>;
 
     /// Returns a printable description of the given container.
@@ -207,6 +208,10 @@ pub trait ContainerManifest: std::fmt::Debug {
     /// This operation involves updating at least the local storage.
     ///
     fn set_name(&mut self, new_name: String) -> Result<(), CatlibError>;
+
+    /// Retrieve Forest's owner identity
+    ///
+    fn owner(&self) -> Result<Identity, CatlibError>;
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -227,6 +232,7 @@ pub trait StorageManifest: std::fmt::Debug {
     fn uuid(&self) -> Uuid;
 }
 
+#[cfg_attr(test, mockall::automock)]
 pub trait BridgeManifest: std::fmt::Debug {
     /// Return [`Forest`] that contains the [`Bridge`].
     fn forest(&self) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>>;

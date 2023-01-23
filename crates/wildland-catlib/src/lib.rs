@@ -52,6 +52,7 @@
 //! # use wildland_corex::StorageTemplate;
 //! # use std::collections::{HashSet, HashMap};
 //! # use uuid::Uuid;
+//! # use std::str::FromStr;
 //! let forest_owner = Identity([1; 32]);
 //! let signer = Identity([2; 32]);
 //!
@@ -61,24 +62,11 @@
 //!                  HashSet::from([signer]),
 //!                  vec![],
 //!              ).unwrap();
-//! let storage_template = StorageTemplate::try_new(
-//!     "FoundationStorage",
-//!     HashMap::from([
-//!             (
-//!                 "field1".to_owned(),
-//!                 "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
-//!             ),
-//!             (
-//!                 "parameter in key: {{ OWNER }}".to_owned(),
-//!                 "enum: {{ ACCESS_MODE }}".to_owned(),
-//!             ),
-//!             ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
-//!             ("paths".to_owned(), "{{ PATHS }}".to_owned()),
-//!         ]),
-//!     )
-//!     .unwrap();
+//! let container_uuid: Uuid = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
+//! let forest_uuid: Uuid = Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap();
+//! let name: String = "container_name".to_owned();
 //! let path = "/some/path".to_owned();
-//! let container = forest.lock().unwrap().create_container("container name".to_owned(), &storage_template, path).unwrap();
+//! let container = forest.lock().unwrap().create_container(container_uuid, forest_uuid, name, path).unwrap();
 //! container.lock().unwrap().add_path("/foo/bar".to_string());
 //! container.lock().unwrap().add_path("/bar/baz".to_string());
 //!
@@ -91,11 +79,11 @@ use std::sync::{Arc, Mutex};
 
 use bridge::Bridge;
 pub use common::*;
-use container::Container;
+use container::ContainerEntity;
 use db::*;
 use directories::ProjectDirs;
 use error::*;
-use forest::{Forest, ForestData};
+use forest::{ForestData, ForestEntity};
 use rustbreak::PathDatabase;
 use storage::{StorageData, StorageEntity};
 use uuid::Uuid;
@@ -165,8 +153,7 @@ impl ICatLib for CatLib {
         signers: Signers,
         data: Vec<u8>,
     ) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
-        let forest = Forest::new(owner, signers, data, self.db.clone());
-        forest.save()?;
+        let forest = ForestEntity::new(owner, signers, data, self.db.clone())?;
         Ok(Arc::new(Mutex::new(forest)))
     }
 
@@ -187,7 +174,7 @@ impl ICatLib for CatLib {
         let forests: Vec<_> = data
             .iter()
             .filter(|(id, _)| id.starts_with("forest-"))
-            .map(|(_, forest_str)| Forest {
+            .map(|(_, forest_str)| ForestEntity {
                 data: ForestData::from(forest_str.as_str()),
                 db: self.db.clone(),
             })

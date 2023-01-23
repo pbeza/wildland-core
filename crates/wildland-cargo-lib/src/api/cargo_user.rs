@@ -15,13 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::sync::{Arc, Mutex};
-
 use derivative::Derivative;
-use wildland_corex::catlib_service::entities::ForestManifest;
 use wildland_corex::catlib_service::error::CatlibError;
 use wildland_corex::catlib_service::CatLibService;
-use wildland_corex::{ContainerManifest, ContainerPath, StorageTemplate};
+use wildland_corex::{Container, ContainerPath, Forest, StorageTemplate};
 
 use super::config::FoundationStorageApiConfig;
 use super::foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError};
@@ -39,8 +36,7 @@ use crate::errors::storage::GetStorageTemplateError;
 pub struct CargoUser {
     this_device: String,
     all_devices: Vec<String>,
-
-    forest: Arc<Mutex<dyn ForestManifest>>,
+    forest: Forest,
 
     #[derivative(Debug = "ignore")]
     catlib_service: CatLibService,
@@ -52,7 +48,7 @@ impl CargoUser {
     pub fn new(
         this_device: String,
         all_devices: Vec<String>,
-        forest: Arc<Mutex<dyn ForestManifest>>,
+        forest: Forest,
         catlib_service: CatLibService,
         fsa_config: &FoundationStorageApiConfig,
     ) -> Self {
@@ -88,8 +84,8 @@ All devices:
 
     /// Returns vector of handles to all containers (mounted or not) found in the user's forest.
     #[tracing::instrument(level = "debug", skip_all)]
-    pub fn get_containers(&self) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError> {
-        self.forest.lock().expect("Poisoned Mutex").containers()
+    pub fn get_containers(&self) -> Result<Vec<Container>, CatlibError> {
+        self.forest.containers()
     }
 
     /// Creates a new container within user's forest and return its handle
@@ -99,9 +95,8 @@ All devices:
         name: String,
         template: &StorageTemplate,
         path: ContainerPath,
-    ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError> {
-        self.catlib_service
-            .create_container(name, &self.forest, template, path)
+    ) -> Result<Container, CatlibError> {
+        self.forest.create_container(name, template, path)
     }
 
     pub fn this_device(&self) -> &str {
@@ -157,29 +152,28 @@ All devices:
         self.catlib_service
             .save_storage_template(&storage_template)?;
         self.catlib_service
-            .mark_free_storage_granted(&self.forest)?;
+            .mark_free_storage_granted(&self.forest.forest_manifest())?;
         Ok(storage_template)
     }
 
     pub fn is_free_storage_granted(&mut self) -> Result<bool, CatlibError> {
-        self.catlib_service.is_free_storage_granted(&self.forest)
+        self.catlib_service
+            .is_free_storage_granted(&self.forest.forest_manifest())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
-    use std::sync::{Arc, Mutex};
 
     use mockito::Matcher;
     use pretty_assertions::assert_eq;
     use rstest::*;
     use serde_json::json;
     use uuid::Uuid;
-    use wildland_corex::catlib_service::entities::ForestManifest;
     use wildland_corex::catlib_service::error::CatlibError;
     use wildland_corex::catlib_service::{CatLibService, DeviceMetadata, ForestMetaData};
-    use wildland_corex::{SigningKeypair, WildlandIdentity};
+    use wildland_corex::{Forest, SigningKeypair, WildlandIdentity};
 
     use super::CargoUser;
     use crate::api::config::FoundationStorageApiConfig;
@@ -187,9 +181,7 @@ mod tests {
     use crate::templates::foundation_storage::FoundationStorageTemplate;
 
     #[fixture]
-    fn setup(
-        catlib_service: CatLibService,
-    ) -> (CargoUser, CatLibService, Arc<Mutex<dyn ForestManifest>>) {
+    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Forest) {
         let this_dev_name = "My device".to_string();
 
         let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
@@ -207,6 +199,7 @@ mod tests {
                 }]),
             )
             .unwrap();
+        let forest = Forest::new(forest);
 
         let cargo_user = CargoUser::new(
             this_dev_name.clone(),
@@ -223,9 +216,7 @@ mod tests {
     }
 
     #[rstest]
-    fn test_requesting_free_tier_storage(
-        setup: (CargoUser, CatLibService, Arc<Mutex<dyn ForestManifest>>),
-    ) {
+    fn test_requesting_free_tier_storage(setup: (CargoUser, CatLibService, Forest)) {
         // given setup
         let (mut cargo_user, catlib_service, forest) = setup;
 
@@ -297,11 +288,13 @@ mod tests {
         assert_eq!(template_data, expected_template_json);
 
         // and storage granted flag is set in catlib
-        assert!(catlib_service.is_free_storage_granted(&forest).unwrap())
+        assert!(catlib_service
+            .is_free_storage_granted(&forest.forest_manifest())
+            .unwrap())
     }
 
     #[rstest]
-    fn test_creating_container(setup: (CargoUser, CatLibService, Arc<Mutex<dyn ForestManifest>>)) {
+    fn test_creating_container(setup: (CargoUser, CatLibService, Forest)) {
         // given setup
         let (cargo_user, catlib_service, forest) = setup;
 
@@ -322,9 +315,7 @@ mod tests {
             .unwrap();
 
         // then it is stored in catlib
-        let retrieved_forest = catlib_service
-            .get_forest(&forest.lock().unwrap().uuid())
-            .unwrap();
+        let retrieved_forest = catlib_service.get_forest(&forest.uuid()).unwrap();
         let containers = retrieved_forest.lock().unwrap().containers().unwrap();
         assert_eq!(containers.len(), 1);
         assert_eq!(
@@ -340,14 +331,12 @@ mod tests {
                 .lock()
                 .unwrap()
                 .uuid(),
-            forest.lock().unwrap().uuid()
+            forest.uuid()
         );
     }
 
     #[rstest]
-    fn test_getting_created_container(
-        setup: (CargoUser, CatLibService, Arc<Mutex<dyn ForestManifest>>),
-    ) {
+    fn test_getting_created_container(setup: (CargoUser, CatLibService, Forest)) {
         // given setup
         let (cargo_user, _catlib_service, _forest) = setup;
 
@@ -370,16 +359,11 @@ mod tests {
         // then it can be retrieved via CargoUser api
         let containers = cargo_user.get_containers().unwrap();
         assert_eq!(containers.len(), 1);
-        assert_eq!(
-            containers[0].lock().unwrap().name().unwrap(),
-            container_name
-        );
+        assert_eq!(containers[0].name().unwrap(), container_name);
     }
 
     #[rstest]
-    fn test_delete_created_container(
-        setup: (CargoUser, CatLibService, Arc<Mutex<dyn ForestManifest>>),
-    ) {
+    fn test_delete_created_container(setup: (CargoUser, CatLibService, Forest)) {
         // given setup
         let (cargo_user, _catlib_service, _forest) = setup;
 
@@ -400,16 +384,13 @@ mod tests {
             .unwrap();
 
         // and the container is deleted
-        container.lock().unwrap().remove().unwrap();
+        container.remove().unwrap();
 
         // then it cannot be retrieved via CargoUser api
         let containers = cargo_user.get_containers();
         assert!(matches!(containers, Err(CatlibError::NoRecordsFound)));
 
         // and the container handle received during creation is marked as deleted
-        assert!(matches!(
-            container.lock().unwrap().name(),
-            Err(CatlibError::NoRecordsFound)
-        ));
+        assert!(matches!(container.name(), Err(CatlibError::NoRecordsFound)));
     }
 }
