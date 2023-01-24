@@ -68,7 +68,7 @@ mod ffi_binding {
         CatlibError(_),
         DeviceMetadataNotFound,
         UserNotFound,
-        Generic(),
+        Generic(_),
     }
     enum FsaError {
         EvsError(_),
