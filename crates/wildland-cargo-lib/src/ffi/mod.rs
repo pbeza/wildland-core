@@ -51,6 +51,7 @@ mod ffi_binding {
         fn reason(&self) -> String;
     }
     enum UserCreationError {
+        Generic(_),
         UserAlreadyExists,
         MnemonicGenerationError(_),
         IdentityGenerationError(_),
@@ -67,9 +68,9 @@ mod ffi_binding {
         CatlibError(_),
         DeviceMetadataNotFound,
         UserNotFound,
+        Generic(),
     }
     enum FsaError {
-        StorageAlreadyExists,
         EvsError(_),
         CryptoError(_),
         InvalidCredentialsFormat(_),
@@ -109,7 +110,7 @@ mod ffi_binding {
         Dev,
     }
     enum GetStorageTemplateError {
-        LssError(_),
+        CatlibError(_),
         DeserializationError(_),
     }
 
