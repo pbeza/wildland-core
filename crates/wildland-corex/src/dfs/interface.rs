@@ -15,7 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#[derive(Debug, PartialEq, Eq)]
+use thiserror::Error;
+
+use crate::PathResolutionError;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Stat {
     pub node_type: NodeType,
     /// size in bytes
@@ -26,21 +30,33 @@ pub struct Stat {
     pub change_time: Option<UnixTimestamp>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum NodeType {
     File,
     Dir,
     Symlink,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct UnixTimestamp {
     pub sec: u64,
     pub nano_sec: u32,
 }
 
+#[derive(Debug, Error, PartialEq, Eq, Clone)]
+#[repr(C)]
+pub enum DfsFrontendError {
+    #[error("Path does not exist")]
+    NoSuchPath,
+    #[error(transparent)]
+    PathResolutionError(#[from] PathResolutionError),
+    #[error("DFS Error: {0}")]
+    Generic(String),
+}
+
 /// Interface that DFS should expose towards frontends
 pub trait DfsFrontend {
-    fn readdir(&mut self, path: String) -> Vec<String>;
-    fn getattr(&mut self, path: String) -> Option<Stat>;
+    // Error probably will be eventually shown to a user
+    fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
+    fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
 }

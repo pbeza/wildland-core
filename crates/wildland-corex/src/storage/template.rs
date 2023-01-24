@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashSet;
 use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
@@ -43,7 +42,7 @@ pub struct TemplateContext {
     #[serde(rename = "CONTAINER_UUID")]
     pub container_uuid: Uuid,
     #[serde(rename = "PATHS")]
-    pub paths: HashSet<String>,
+    pub paths: Vec<String>,
 }
 
 #[derive(Debug, Error, Clone)]
@@ -115,7 +114,7 @@ impl StorageTemplate {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
     use std::str::FromStr;
 
     use pretty_assertions::assert_eq;
@@ -147,7 +146,7 @@ mod tests {
             owner: "John Doe".to_owned(),
             access_mode: crate::StorageAccessMode::ReadOnly,
             container_uuid: Uuid::from_str("00000000-0000-0000-0000-000000001111").unwrap(),
-            paths: HashSet::from_iter(["path1".to_owned()]),
+            paths: Vec::from_iter(["path1".to_owned()]),
         };
 
         let rendered_storage = storage_template.render(params).unwrap();

@@ -153,9 +153,13 @@ impl ContainerManifest for Container {
     /// ```
     fn add_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError> {
         self.sync()?;
-        let inserted = self.container_data.paths.insert(path);
-        self.save()?;
-        Ok(inserted)
+        if self.container_data.paths.contains(&path) {
+            Ok(false)
+        } else {
+            self.container_data.paths.push(path);
+            self.save()?;
+            Ok(true)
+        }
     }
 
     /// ## Errors
@@ -198,9 +202,13 @@ impl ContainerManifest for Container {
     /// ```
     fn delete_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError> {
         self.sync()?;
-        let removed = self.container_data.paths.remove(&path);
-        self.save()?;
-        Ok(removed)
+        if let Some(pos) = self.container_data.paths.iter().position(|p| *p == path) {
+            self.container_data.paths.remove(pos);
+            self.save()?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
     /// ## Errors
@@ -284,7 +292,7 @@ impl ContainerManifest for Container {
 
     fn get_paths(&mut self) -> Result<Vec<ContainerPath>, CatlibError> {
         self.sync()?;
-        Ok(self.container_data.paths.iter().cloned().collect())
+        Ok(self.container_data.paths.to_vec())
     }
 }
 

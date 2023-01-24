@@ -47,8 +47,8 @@ impl From<PubKey> for Identity {
     }
 }
 
-pub type ContainerPath = String;
-pub type ContainerPaths = HashSet<ContainerPath>;
+pub type ContainerPath = String; // TODO change it to path to ensure that every one has a root and that there are no two paths like "/a/b/" and "/a/b"
+pub type ContainerPaths = Vec<ContainerPath>;
 pub type Signers = HashSet<Identity>;
 
 /// `ForestManifest` trait is an API providing methods needed to operate on the forest's

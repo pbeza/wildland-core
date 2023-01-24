@@ -112,6 +112,11 @@ mod ffi_binding {
         LssError(_),
         DeserializationError(_),
     }
+    enum DfsFrontendError {
+        NoSuchPath,
+        PathResolutionError(_),
+        Generic(_),
+    }
 
     extern "Traits" {
 
@@ -341,7 +346,13 @@ mod ffi_binding {
         fn stringify(self: &StorageTemplate) -> String;
 
         // DFS Frontend
-        fn readdir(self: &Arc<Mutex<dyn DfsFrontend>>, path: String) -> Vec<String>;
-
+        fn readdir(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            path: String,
+        ) -> Result<Vec<String>, DfsFrontendError>;
+        fn getattr(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            path: String,
+        ) -> Result<Stat, DfsFrontendError>;
     }
 }
