@@ -258,6 +258,7 @@ mod tests {
 
         #[test_case(PathBuf::from("/"), vec!["/".to_owned()], vec!["/".to_owned()], vec![PathBuf::from("/")], vec![PathBuf::from("/")], vec![PathBuf::from("/")]; "both claiming root")]
         #[test_case(PathBuf::from("/a/b/c"), vec!["/a".to_owned()], vec!["/a/b".to_owned()], vec![PathBuf::from("/b/c")], vec![PathBuf::from("/c")], vec![]; "physical paths from two containers")]
+        #[test_case(PathBuf::from("/a/b/c"), vec!["/a/b/c".to_owned()], vec!["/a/b".to_owned()], vec![PathBuf::from("/")], vec![PathBuf::from("/c")], vec![PathBuf::from("/a/b/c")]; "physical and virtual paths from two containers")]
         fn test_resolve_with_two_containers(
             resolve_arg_path: PathBuf,
             claimed_paths_1: Vec<String>,
