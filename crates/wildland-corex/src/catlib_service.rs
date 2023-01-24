@@ -124,10 +124,11 @@ impl CatLibService {
         storage_template: &StorageTemplate,
         path: ContainerPath,
     ) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
-        forest
-            .lock()
-            .expect("Poisoned Mutex")
-            .create_container(name, storage_template, path)
+        forest.lock().expect("Poisoned Mutex").create_container(
+            name,
+            storage_template,
+            path.to_string_lossy().to_string(),
+        )
     }
 
     pub fn delete_container(&self, container: &mut dyn ContainerManifest) -> CatlibResult<()> {
@@ -196,7 +197,7 @@ mod tests {
             .returning(move |_, _, _| Ok(Arc::new(Mutex::new(MockContainerManifest::new()))));
 
         let forest_mock: Arc<Mutex<dyn ForestManifest>> = Arc::new(Mutex::new(forest_mock));
-        let path = "/some/path".to_owned();
+        let path = "/some/path".into();
         catlib_service
             .create_container(container_name, &forest_mock, &storage_template, path)
             .unwrap();

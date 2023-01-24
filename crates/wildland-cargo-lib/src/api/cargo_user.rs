@@ -15,13 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use derivative::Derivative;
 use wildland_corex::catlib_service::entities::ForestManifest;
 use wildland_corex::catlib_service::error::CatlibError;
 use wildland_corex::catlib_service::CatLibService;
-use wildland_corex::{ContainerManifest, ContainerPath, StorageTemplate};
+use wildland_corex::{ContainerManifest, StorageTemplate};
 
 use super::config::FoundationStorageApiConfig;
 use super::foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError};
@@ -98,8 +99,9 @@ All devices:
         &self,
         name: String,
         template: &StorageTemplate,
-        path: ContainerPath,
+        path: String,
     ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError> {
+        let path = PathBuf::from(path);
         self.catlib_service
             .create_container(name, &self.forest, template, path)
     }

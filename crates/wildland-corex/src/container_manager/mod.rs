@@ -55,6 +55,7 @@ impl ContainerManager {
                 .lock()
                 .expect("Poisoned Mutex")
                 .get_paths()
+                .map(|paths| paths.into_iter().map(PathBuf::from).collect())
                 .map_err(|e| ContainerManagerError::MountingError(format!("{e}")))?;
             e.insert((container.clone(), container_paths));
             Ok(())
@@ -218,16 +219,16 @@ mod tests {
             (container, storage)
         }
 
-        #[test_case(vec!["/".to_owned()], PathBuf::from("/"), Some(PathBuf::from("/")), Some(PathBuf::from("/")); "claimed root")]
-        #[test_case(vec!["/path".to_owned()], PathBuf::from("/path"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "resolved root within storage")]
-        #[test_case(vec!["/path/".to_owned()], PathBuf::from("/path"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "slash at the end of claimed path")]
-        #[test_case(vec!["/path".to_owned()], PathBuf::from("/path/"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "slash at the end of input")]
-        #[test_case(vec!["/books".to_owned()], PathBuf::from("/books/fantasy"), Some(PathBuf::from("/fantasy")), None; "one nested component")]
-        #[test_case(vec!["/books".to_owned(), "/some/other/path".to_owned()], PathBuf::from("/books/fantasy"), Some(PathBuf::from("/fantasy")), None; "more than one claimed path")]
-        #[test_case(vec!["/books/fantasy".to_owned()], PathBuf::from("/books/fantasy/a/lot/of/other/dirs"), Some(PathBuf::from("/a/lot/of/other/dirs")), None; "many nested components")]
-        #[test_case(vec!["/books/fantasy".to_owned()], PathBuf::from("/books/"), None, Some(PathBuf::from("/books/fantasy")); "virtual path extended with one component")]
-        #[test_case(vec!["/books/fantasy".to_owned()], PathBuf::from("/books"), None, Some(PathBuf::from("/books/fantasy")); "virtual path extended with one component (no slash at input's end)")]
-        #[test_case(vec!["/books/fantasy/lord/of/the/rings".to_owned()], PathBuf::from("/books/fantasy"), None, Some(PathBuf::from("/books/fantasy/lord/of/the/rings/")); "virtual path extended with many component")]
+        #[test_case(vec!["/".to_string()], PathBuf::from("/"), Some(PathBuf::from("/")), Some(PathBuf::from("/")); "claimed root")]
+        #[test_case(vec!["/path".to_string()], PathBuf::from("/path"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "resolved root within storage")]
+        #[test_case(vec!["/path/".to_string()], PathBuf::from("/path"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "slash at the end of claimed path")]
+        #[test_case(vec!["/path".to_string()], PathBuf::from("/path/"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "slash at the end of input")]
+        #[test_case(vec!["/books".to_string()], PathBuf::from("/books/fantasy"), Some(PathBuf::from("/fantasy")), None; "one nested component")]
+        #[test_case(vec!["/books".to_string(), "/some/other/path".to_string()], PathBuf::from("/books/fantasy"), Some(PathBuf::from("/fantasy")), None; "more than one claimed path")]
+        #[test_case(vec!["/books/fantasy".to_string()], PathBuf::from("/books/fantasy/a/lot/of/other/dirs"), Some(PathBuf::from("/a/lot/of/other/dirs")), None; "many nested components")]
+        #[test_case(vec!["/books/fantasy".to_string()], PathBuf::from("/books/"), None, Some(PathBuf::from("/books/fantasy")); "virtual path extended with one component")]
+        #[test_case(vec!["/books/fantasy".to_string()], PathBuf::from("/books"), None, Some(PathBuf::from("/books/fantasy")); "virtual path extended with one component (no slash at input's end)")]
+        #[test_case(vec!["/books/fantasy/lord/of/the/rings".to_string()], PathBuf::from("/books/fantasy"), None, Some(PathBuf::from("/books/fantasy/lord/of/the/rings/")); "virtual path extended with many component")]
         fn test_resolve_with_one_container(
             claimed_paths: Vec<String>,
             resolve_arg_path: PathBuf,
@@ -314,7 +315,7 @@ mod tests {
         let mut container1 = MockContainerManifest::new();
         container1
             .expect_get_paths()
-            .returning(|| Ok(vec!["/some/path1".to_owned()]));
+            .returning(|| Ok(vec!["/some/path1".into()]));
         container1
             .expect_uuid()
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
@@ -328,7 +329,7 @@ mod tests {
         let mut container1 = MockContainerManifest::new();
         container1
             .expect_get_paths()
-            .returning(|| Ok(vec!["/some/path1".to_owned()]));
+            .returning(|| Ok(vec!["/some/path1".into()]));
         container1
             .expect_uuid()
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
@@ -346,7 +347,7 @@ mod tests {
         let mut container1 = MockContainerManifest::new();
         container1
             .expect_get_paths()
-            .returning(|| Ok(vec!["/some/path1".to_owned()]));
+            .returning(|| Ok(vec!["/some/path1".into()]));
         container1
             .expect_uuid()
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
@@ -361,7 +362,7 @@ mod tests {
         let mut container1 = MockContainerManifest::new();
         container1
             .expect_get_paths()
-            .returning(|| Ok(vec!["/some/path1".to_owned()]));
+            .returning(|| Ok(vec!["/some/path1".into()]));
         container1
             .expect_uuid()
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
@@ -378,7 +379,7 @@ mod tests {
         let mut container1 = MockContainerManifest::new();
         container1
             .expect_get_paths()
-            .returning(|| Ok(vec!["/some/path1".to_owned(), "/some/path2".to_owned()]));
+            .returning(|| Ok(vec!["/some/path1".into(), "/some/path2".into()]));
         container1
             .expect_uuid()
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
@@ -386,7 +387,7 @@ mod tests {
         let mut container2 = MockContainerManifest::new();
         container2
             .expect_get_paths()
-            .returning(|| Ok(vec!["/some/path1".to_owned(), "/some/path3".to_owned()]));
+            .returning(|| Ok(vec!["/some/path1".into(), "/some/path3".into()]));
         container2
             .expect_uuid()
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap());
@@ -395,7 +396,7 @@ mod tests {
         container_manager.mount(&container2).unwrap();
 
         let containers_claiming_path1 =
-            container_manager.mounted_containers_claiming_path("/some/path1".to_owned());
+            container_manager.mounted_containers_claiming_path("/some/path1".into());
         assert!(containers_claiming_path1
             .iter()
             .any(|container| container.lock().unwrap().uuid()
@@ -406,7 +407,7 @@ mod tests {
                 == Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap()));
 
         let containers_claiming_path2 =
-            container_manager.mounted_containers_claiming_path("/some/path2".to_owned());
+            container_manager.mounted_containers_claiming_path("/some/path2".into());
         assert!(containers_claiming_path2
             .iter()
             .any(|container| container.lock().unwrap().uuid()
@@ -418,7 +419,7 @@ mod tests {
             == Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap()));
 
         let containers_claiming_path3 =
-            container_manager.mounted_containers_claiming_path("/some/path3".to_owned());
+            container_manager.mounted_containers_claiming_path("/some/path3".into());
         assert!(!containers_claiming_path3.iter().any(|container| container
             .lock()
             .unwrap()

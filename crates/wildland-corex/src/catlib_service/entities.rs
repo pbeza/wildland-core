@@ -47,7 +47,7 @@ impl From<PubKey> for Identity {
     }
 }
 
-pub type ContainerPath = String; // TODO change it to path to ensure that every one has a root and that there are no two paths like "/a/b/" and "/a/b"
+pub type ContainerPath = std::path::PathBuf;
 pub type ContainerPaths = Vec<ContainerPath>;
 pub type Signers = HashSet<Identity>;
 
@@ -98,7 +98,7 @@ pub trait ForestManifest: std::fmt::Debug {
         &self,
         name: String,
         storage_data: &StorageTemplate,
-        path: ContainerPath,
+        path: String,
     ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
 
     /// Create a Bridge object with arbitrary link data to another Forest.
@@ -107,16 +107,13 @@ pub trait ForestManifest: std::fmt::Debug {
     ///
     fn create_bridge(
         &self,
-        path: ContainerPath,
+        path: String,
         link_data: Vec<u8>,
     ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
 
     /// Return bridge that matches the given [`ContainerPath`].
     ///
-    fn find_bridge(
-        &self,
-        path: ContainerPath,
-    ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
+    fn find_bridge(&self, path: String) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
 
     /// Retrieve Containers that match given [`ContainerPath`]s.
     ///
@@ -125,7 +122,7 @@ pub trait ForestManifest: std::fmt::Debug {
     ///
     fn find_containers(
         &self,
-        paths: Vec<ContainerPath>,
+        paths: Vec<String>,
         include_subdirs: bool,
     ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
 
@@ -197,7 +194,7 @@ pub trait ContainerManifest: std::fmt::Debug {
 
     /// Lists all the paths from the given container.
     ///
-    fn get_paths(&mut self) -> Result<Vec<ContainerPath>, CatlibError>;
+    fn get_paths(&mut self) -> Result<Vec<String>, CatlibError>; // Returned as String instead of PathBuf due to the ffi limitation
 
     /// User provided name of the container.
     ///
@@ -238,5 +235,5 @@ pub trait BridgeManifest: std::fmt::Debug {
     fn remove(&mut self) -> CatlibResult<bool>;
 
     /// Retrieve Bridge path
-    fn path(&mut self) -> CatlibResult<ContainerPath>;
+    fn path(&mut self) -> CatlibResult<String>; // Returned as String instead of PathBuf due to the ffi limitation
 }

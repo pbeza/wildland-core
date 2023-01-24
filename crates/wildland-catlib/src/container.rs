@@ -149,9 +149,10 @@ impl ContainerManifest for Container {
     ///     .unwrap();
     /// let path = "/some/path".to_owned();
     /// let container = forest.lock().unwrap().create_container("container name2".to_owned(), &storage_template, path).unwrap();
-    /// container.lock().unwrap().add_path("/bar/baz2".to_string()).unwrap();
+    /// container.lock().unwrap().add_path("/bar/baz2".into()).unwrap();
     /// ```
-    fn add_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError> {
+    fn add_path(&mut self, path: String) -> Result<bool, CatlibError> {
+        let path = PathBuf::from(path);
         self.sync()?;
         if self.container_data.paths.contains(&path) {
             Ok(false)
@@ -198,9 +199,10 @@ impl ContainerManifest for Container {
     ///     .unwrap();
     /// let path = "/some/path".to_owned();
     /// let container = forest.lock().unwrap().create_container("container name2".to_owned(), &storage_template, path).unwrap();
-    /// container.lock().unwrap().delete_path("/baz/qux1".to_string()).unwrap();
+    /// container.lock().unwrap().delete_path("/baz/qux1".into()).unwrap();
     /// ```
-    fn delete_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError> {
+    fn delete_path(&mut self, path: String) -> Result<bool, CatlibError> {
+        let path = PathBuf::from(path);
         self.sync()?;
         if let Some(pos) = self.container_data.paths.iter().position(|p| *p == path) {
             self.container_data.paths.remove(pos);
@@ -290,9 +292,14 @@ impl ContainerManifest for Container {
         self.container_data.uuid
     }
 
-    fn get_paths(&mut self) -> Result<Vec<ContainerPath>, CatlibError> {
+    fn get_paths(&mut self) -> Result<Vec<String>, CatlibError> {
         self.sync()?;
-        Ok(self.container_data.paths.to_vec())
+        Ok(self
+            .container_data
+            .paths
+            .iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect())
     }
 }
 
@@ -366,7 +373,7 @@ mod tests {
         )
         .unwrap();
         let locked_forest = forest.lock().unwrap();
-        let path = "/some/path".to_owned();
+        let path = "/some/path".into();
         locked_forest
             .create_container("name".to_owned(), &storage_template, path)
             .unwrap()
@@ -420,12 +427,12 @@ mod tests {
         container
             .lock()
             .unwrap()
-            .add_path("/foo/bar".to_string())
+            .add_path("/foo/bar".into())
             .unwrap();
         container
             .lock()
             .unwrap()
-            .add_path("/bar/baz".to_string())
+            .add_path("/bar/baz".into())
             .unwrap();
 
         assert!(container
@@ -433,19 +440,19 @@ mod tests {
             .unwrap()
             .get_paths()
             .unwrap()
-            .contains(&"/foo/bar".to_string()));
+            .contains(&"/foo/bar".into()));
         assert!(container
             .lock()
             .unwrap()
             .get_paths()
             .unwrap()
-            .contains(&"/bar/baz".to_string()));
+            .contains(&"/bar/baz".into()));
 
         // Try to find that container in the database
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/foo/bar".to_string()], false)
+            .find_containers(vec!["/foo/bar".into()], false)
             .unwrap();
         assert_eq!(containers.len(), 1);
 
@@ -455,20 +462,20 @@ mod tests {
             .unwrap()
             .get_paths()
             .unwrap()
-            .contains(&"/foo/bar".to_string()));
+            .contains(&"/foo/bar".into()));
         assert!(container
             .lock()
             .unwrap()
             .get_paths()
             .unwrap()
-            .contains(&"/bar/baz".to_string()));
+            .contains(&"/bar/baz".into()));
 
         // Try to fetch the same (one) container, using two different paths. The result
         // should be only one (not two) containers.
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/foo/bar".to_string(), "/bar/baz".to_string()], false)
+            .find_containers(vec!["/foo/bar".into(), "/bar/baz".into()], false)
             .unwrap();
         assert_eq!(containers.len(), 1);
     }
@@ -481,12 +488,12 @@ mod tests {
         container
             .lock()
             .unwrap()
-            .add_path("/foo/bar".to_string())
+            .add_path("/foo/bar".into())
             .unwrap();
         container
             .lock()
             .unwrap()
-            .add_path("/bar/baz".to_string())
+            .add_path("/bar/baz".into())
             .unwrap();
 
         // Create another container, that shares a path with the former
@@ -494,7 +501,7 @@ mod tests {
         container
             .lock()
             .unwrap()
-            .add_path("/bar/baz".to_string())
+            .add_path("/bar/baz".into())
             .unwrap();
 
         // And yet another container that doesn't
@@ -502,14 +509,14 @@ mod tests {
         container
             .lock()
             .unwrap()
-            .add_path("/what/ever".to_string())
+            .add_path("/what/ever".into())
             .unwrap();
 
         // try to find the first container
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/foo/bar".to_string()], false)
+            .find_containers(vec!["/foo/bar".into()], false)
             .unwrap();
         assert_eq!(containers.len(), 1);
 
@@ -517,7 +524,7 @@ mod tests {
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/bar/baz".to_string()], false)
+            .find_containers(vec!["/bar/baz".into()], false)
             .unwrap();
         assert_eq!(containers.len(), 2);
 
@@ -611,36 +618,36 @@ mod tests {
         container
             .lock()
             .unwrap()
-            .add_path("/foo/bar1".to_string())
+            .add_path("/foo/bar1".into())
             .unwrap();
 
         let container = make_container(&catlib);
         container
             .lock()
             .unwrap()
-            .add_path("/foo/bar2".to_string())
+            .add_path("/foo/bar2".into())
             .unwrap();
         container
             .lock()
             .unwrap()
-            .add_path("/bar/baz1".to_string())
+            .add_path("/bar/baz1".into())
             .unwrap();
 
         let container = make_container(&catlib);
         container
             .lock()
             .unwrap()
-            .add_path("/bar/baz2".to_string())
+            .add_path("/bar/baz2".into())
             .unwrap();
         container
             .lock()
             .unwrap()
-            .add_path("/baz/qux1".to_string())
+            .add_path("/baz/qux1".into())
             .unwrap();
         container
             .lock()
             .unwrap()
-            .add_path("/baz/qux2".to_string())
+            .add_path("/baz/qux2".into())
             .unwrap();
 
         let containers = forest

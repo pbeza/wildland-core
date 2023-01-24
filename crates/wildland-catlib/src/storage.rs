@@ -176,7 +176,7 @@ mod tests {
         )
         .unwrap();
         let locked_forest = forest.lock().unwrap();
-        let path = "/some/path".to_owned();
+        let path = "/some/path".into();
         locked_forest
             .create_container("name".to_owned(), &storage_template, path)
             .unwrap()

@@ -23,7 +23,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use super::StorageAccessMode;
-use crate::Storage;
+use crate::{ContainerPath, Storage};
 
 pub const CONTAINER_NAME_PARAM: &str = "CONTAINER_NAME";
 pub const OWNER_PARAM: &str = "OWNER";
@@ -42,7 +42,7 @@ pub struct TemplateContext {
     #[serde(rename = "CONTAINER_UUID")]
     pub container_uuid: Uuid,
     #[serde(rename = "PATHS")]
-    pub paths: Vec<String>,
+    pub paths: Vec<ContainerPath>,
 }
 
 #[derive(Debug, Error, Clone)]
@@ -146,7 +146,7 @@ mod tests {
             owner: "John Doe".to_owned(),
             access_mode: crate::StorageAccessMode::ReadOnly,
             container_uuid: Uuid::from_str("00000000-0000-0000-0000-000000001111").unwrap(),
-            paths: Vec::from_iter(["path1".to_owned()]),
+            paths: Vec::from_iter(["path1".into()]),
         };
 
         let rendered_storage = storage_template.render(params).unwrap();
