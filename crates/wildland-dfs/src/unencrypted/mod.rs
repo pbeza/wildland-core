@@ -73,7 +73,7 @@ pub trait StorageBackendFactory {
 // the conflict resolution took place and find files which paths were mapped.
 
 pub struct UnencryptedDfs {
-    path_resolver: Rc<dyn PathResolver>,
+    path_resolver: Box<dyn PathResolver>,
     /// Stores a factory for each supported backend type
     storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
     /// Stores Backend for each storage. Each storage should have its own backend cause even within
@@ -87,11 +87,11 @@ pub struct UnencryptedDfs {
 
 impl UnencryptedDfs {
     pub fn new(
-        path_resolver: Rc<dyn PathResolver>,
+        path_resolver: Box<dyn PathResolver>,
         storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
     ) -> Self {
         Self {
-            path_resolver: path_resolver.clone(),
+            path_resolver,
             storage_backend_factories,
             storage_backends: HashMap::new(),
             path_translator: Box::new(UuidInDirTranslator::new()),

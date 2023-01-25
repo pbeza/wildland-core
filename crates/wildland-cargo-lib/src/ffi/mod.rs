@@ -23,6 +23,7 @@ pub use wildland_corex::dfs::interface::*;
 use wildland_corex::entities::Identity;
 use wildland_corex::{BridgeManifest, ContainerManifest, ForestManifest, Signers, StorageManifest};
 pub use wildland_corex::{
+    ContainerManagerError,
     CoreXError,
     CryptoError,
     ForestRetrievalError,
@@ -69,7 +70,6 @@ mod ffi_binding {
         UserNotFound,
     }
     enum FsaError {
-        StorageAlreadyExists,
         EvsError(_),
         CryptoError(_),
         InvalidCredentialsFormat(_),
@@ -90,20 +90,16 @@ mod ffi_binding {
     enum CreateMnemonicError {
         InvalidMnemonicWords,
     }
-    enum ForestMountError {
-        Error,
-    }
     enum CatlibError {
         NoRecordsFound(_),
         MalformedDatabaseEntry(_),
         RecordAlreadyExists(_),
         Generic(_),
     }
-    enum ContainerMountError {
-        Error,
-    }
-    enum ContainerUnmountError {
-        Error,
+    enum ContainerManagerError {
+        AlreadyMounted,
+        MountingError(_),
+        ContainerNotMounted,
     }
     enum FoundationCloudMode {
         Dev,
@@ -116,6 +112,12 @@ mod ffi_binding {
         NoSuchPath,
         PathResolutionError(_),
         Generic(_),
+    }
+
+    enum NodeType {
+        File,
+        Dir,
+        Symlink,
     }
 
     extern "Traits" {
@@ -216,6 +218,11 @@ mod ffi_binding {
         // CargoUser
         //
         fn stringify(self: &CargoUser) -> String;
+        fn get_storage_templates(
+            self: &CargoUser,
+        ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
+
+        // Containers
         fn get_containers(
             self: &CargoUser,
         ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
@@ -225,9 +232,14 @@ mod ffi_binding {
             storage_templates: &StorageTemplate,
             path: String,
         ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
-        fn get_storage_templates(
+        fn mount(
             self: &CargoUser,
-        ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
+            container: &Arc<Mutex<dyn ContainerManifest>>,
+        ) -> Result<VoidType, ContainerManagerError>;
+        fn unmount(
+            self: &CargoUser,
+            container: &Arc<Mutex<dyn ContainerManifest>>,
+        ) -> Result<VoidType, ContainerManagerError>;
 
         // Foundation Storage
         type FreeTierProcessHandle;
@@ -354,5 +366,20 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
         ) -> Result<Stat, DfsFrontendError>;
+
+        //
+        // Stat
+        //
+        fn node_type(self: &Stat) -> NodeType;
+        fn size(self: &Stat) -> u64;
+        fn access_time(self: &Stat) -> Option<UnixTimestamp>;
+        fn modification_time(self: &Stat) -> Option<UnixTimestamp>;
+        fn change_time(self: &Stat) -> Option<UnixTimestamp>;
+
+        //
+        // UnixTimestamp
+        //
+        fn sec(self: &UnixTimestamp) -> u64;
+        fn nano_sec(self: &UnixTimestamp) -> u32;
     }
 }

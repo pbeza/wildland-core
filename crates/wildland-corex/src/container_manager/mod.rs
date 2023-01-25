@@ -27,7 +27,8 @@ use uuid::Uuid;
 
 use crate::{ContainerManifest, ContainerPath, ContainerPaths, Storage};
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
+#[repr(C)]
 pub enum ContainerManagerError {
     #[error("The given container has been already mounted")]
     AlreadyMounted,
@@ -37,19 +38,25 @@ pub enum ContainerManagerError {
     ContainerNotMounted,
 }
 
-#[derive(Default)]
+type MountedContainerMap =
+    Arc<Mutex<HashMap<Uuid, (Arc<Mutex<dyn ContainerManifest>>, ContainerPaths)>>>;
+
+#[derive(Default, Clone)]
 pub struct ContainerManager {
-    mounted_containers: HashMap<Uuid, (Arc<Mutex<dyn ContainerManifest>>, ContainerPaths)>,
+    mounted_containers: MountedContainerMap,
 }
 
 impl ContainerManager {
     pub fn mount(
-        &mut self,
+        &self,
         container: &Arc<Mutex<dyn ContainerManifest>>,
     ) -> Result<(), ContainerManagerError> {
         let container_uuid = container.lock().expect("Poisoned Mutex").uuid();
-        if let std::collections::hash_map::Entry::Vacant(e) =
-            self.mounted_containers.entry(container_uuid)
+        if let std::collections::hash_map::Entry::Vacant(e) = self
+            .mounted_containers
+            .lock()
+            .expect("Poisoned mutex!")
+            .entry(container_uuid)
         {
             let container_paths = container
                 .lock()
@@ -65,11 +72,13 @@ impl ContainerManager {
     }
 
     pub fn unmount(
-        &mut self,
+        &self,
         container: &Arc<Mutex<dyn ContainerManifest>>,
     ) -> Result<(), ContainerManagerError> {
         let container_uuid = container.lock().expect("Poisoned Mutex").uuid();
         self.mounted_containers
+            .lock()
+            .expect("Poisoned mutex!")
             .remove(&container_uuid)
             .ok_or(ContainerManagerError::ContainerNotMounted)
             .map(|_| ())
@@ -80,6 +89,8 @@ impl ContainerManager {
         path: ContainerPath,
     ) -> Vec<Arc<Mutex<dyn ContainerManifest>>> {
         self.mounted_containers
+            .lock()
+            .expect("Poisoned mutex!")
             .values()
             .filter_map(|(container, paths)| {
                 if paths.contains(&path) {
@@ -98,7 +109,12 @@ impl PathResolver for ContainerManager {
         let mut physical_paths = Vec::new();
         let mut virtual_paths = HashSet::new();
 
-        for (_uuid, (container_manifest, paths)) in self.mounted_containers.iter() {
+        for (_uuid, (container_manifest, paths)) in self
+            .mounted_containers
+            .lock()
+            .expect("Poisoned mutex!")
+            .iter()
+        {
             // only first path, which is considered as a primary, is exposed in a filesystem
             if let Some(path_str) = paths.iter().next() {
                 match input_path.strip_prefix(path_str) {
@@ -235,7 +251,7 @@ mod tests {
             expected_path_within_storage: Option<PathBuf>,
             expected_virtual_path: Option<PathBuf>,
         ) {
-            let mut container_manager = ContainerManager::default();
+            let container_manager = ContainerManager::default();
 
             let (container1, storage) = create_container_with_storage(1, claimed_paths);
 
@@ -268,7 +284,7 @@ mod tests {
             expected_paths_within_storage_2: Vec<PathBuf>,
             expected_virtual_paths: Vec<PathBuf>,
         ) {
-            let mut container_manager = ContainerManager::default();
+            let container_manager = ContainerManager::default();
 
             let (container_1, storage_1) = create_container_with_storage(1, claimed_paths_1);
 
@@ -311,7 +327,7 @@ mod tests {
 
     #[test]
     fn mount_container() {
-        let mut container_manager = ContainerManager::default();
+        let container_manager = ContainerManager::default();
         let mut container1 = MockContainerManifest::new();
         container1
             .expect_get_paths()
@@ -325,7 +341,7 @@ mod tests {
 
     #[test]
     fn mount_mounted_container_returns_error() {
-        let mut container_manager = ContainerManager::default();
+        let container_manager = ContainerManager::default();
         let mut container1 = MockContainerManifest::new();
         container1
             .expect_get_paths()
@@ -343,7 +359,7 @@ mod tests {
 
     #[test]
     fn unmount_container() {
-        let mut container_manager = ContainerManager::default();
+        let container_manager = ContainerManager::default();
         let mut container1 = MockContainerManifest::new();
         container1
             .expect_get_paths()
@@ -358,7 +374,7 @@ mod tests {
 
     #[test]
     fn unmount_not_mounted_container_returns_error() {
-        let mut container_manager = ContainerManager::default();
+        let container_manager = ContainerManager::default();
         let mut container1 = MockContainerManifest::new();
         container1
             .expect_get_paths()
@@ -375,7 +391,7 @@ mod tests {
 
     #[test]
     fn get_containers_with_claimed_path() {
-        let mut container_manager = ContainerManager::default();
+        let container_manager = ContainerManager::default();
         let mut container1 = MockContainerManifest::new();
         container1
             .expect_get_paths()

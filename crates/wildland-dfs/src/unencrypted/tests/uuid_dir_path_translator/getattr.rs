@@ -17,7 +17,6 @@
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
 use mockall::predicate;
 use pretty_assertions::assert_eq;
@@ -39,7 +38,7 @@ fn test_getattr_of_nonexistent_path() {
         .times(1)
         .returning(move |_path| Ok(HashSet::new()));
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
     let stat = dfs.getattr("/a/file".to_string()).unwrap_err();
@@ -66,7 +65,7 @@ fn test_getattr_of_file_in_container_root() {
             }
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
@@ -110,7 +109,7 @@ fn test_getattr_of_dir_in_container_root() {
             }
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
@@ -148,7 +147,7 @@ fn test_getattr_of_virtual_dir() {
             ))]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
     let stat = dfs.getattr("/virtual_dir".to_string()).unwrap();
@@ -195,7 +194,7 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
             }
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
@@ -284,7 +283,7 @@ fn test_virtual_path_colliding_with_file() {
             }
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
@@ -349,7 +348,7 @@ fn test_virtual_path_colliding_with_dir() {
             }
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();

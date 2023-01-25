@@ -34,4 +34,7 @@ pub mod errors;
 pub mod ffi;
 mod logging;
 mod templates;
+#[cfg(test)]
+mod tests;
 mod user;
+mod utils;

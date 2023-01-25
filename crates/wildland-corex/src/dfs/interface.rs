@@ -30,7 +30,29 @@ pub struct Stat {
     pub change_time: Option<UnixTimestamp>,
 }
 
+/// Getter exposed through ffi
+impl Stat {
+    pub fn node_type(&self) -> NodeType {
+        self.node_type
+    }
+
+    pub fn size(&self) -> u64 {
+        self.size
+    }
+
+    pub fn access_time(&self) -> Option<UnixTimestamp> {
+        self.access_time.clone()
+    }
+    pub fn modification_time(&self) -> Option<UnixTimestamp> {
+        self.modification_time.clone()
+    }
+    pub fn change_time(&self) -> Option<UnixTimestamp> {
+        self.change_time.clone()
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(C)]
 pub enum NodeType {
     File,
     Dir,
@@ -39,8 +61,20 @@ pub enum NodeType {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct UnixTimestamp {
+    /// Number of seconds that elapsed since the beginning of the UNIX epoch
     pub sec: u64,
+    /// fraction of a second expressed in nanoseconds
     pub nano_sec: u32,
+}
+
+/// Getter exposed through ffi
+impl UnixTimestamp {
+    pub fn sec(&self) -> u64 {
+        self.sec
+    }
+    pub fn nano_sec(&self) -> u32 {
+        self.nano_sec
+    }
 }
 
 #[derive(Debug, Error, PartialEq, Eq, Clone)]

@@ -56,3 +56,4 @@ rand              = { version = "0.8" }
 rstest            = { version = "0.16" }
 serde_yaml        = { version = "0.9" }
 tempfile          = { version = "3.3" }
+wildland-lfs      = { version = "0.40.0", path = "../wildland-lfs"}

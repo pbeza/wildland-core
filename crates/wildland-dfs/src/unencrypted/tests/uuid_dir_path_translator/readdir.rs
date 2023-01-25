@@ -17,7 +17,6 @@
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
 use mockall::predicate;
 use pretty_assertions::assert_eq;
@@ -48,7 +47,7 @@ fn test_listing_files_from_root_of_one_container() {
             }
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     let files = dfs
@@ -85,7 +84,7 @@ fn test_listing_files_from_nested_dir_of_one_container() {
             }]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     let files = dfs
@@ -131,7 +130,7 @@ fn test_listing_dirs_from_one_container() {
             }]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     let files = dfs
@@ -182,7 +181,7 @@ fn test_listing_files_and_dirs_from_two_containers() {
             ]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
@@ -239,7 +238,7 @@ fn test_getting_one_file_from_container_with_multiple_storages() {
             }]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
@@ -293,7 +292,7 @@ fn test_more_than_one_file_claim_the_same_full_path() {
             ]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
@@ -346,7 +345,7 @@ fn test_first_storage_unavailable() {
             }]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     // don't create storage1 directory so readdir returned "No such file or directory" error
@@ -384,7 +383,7 @@ fn test_listing_virtual_node() {
             ]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage_c1/").unwrap();
@@ -447,7 +446,7 @@ fn test_file_colliding_with_virtual_node() {
             ]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
@@ -517,7 +516,7 @@ fn test_dir_colliding_with_virtual_node() {
             ]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
@@ -563,7 +562,7 @@ fn test_readdir_on_file() {
             }
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
@@ -598,7 +597,7 @@ fn test_readdir_on_virtual_node_only() {
             ]))
         });
 
-    let path_resolver = Rc::new(path_resolver);
+    let path_resolver = Box::new(path_resolver);
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
     let files = dfs

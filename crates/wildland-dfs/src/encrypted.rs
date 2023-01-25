@@ -16,7 +16,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, Stat};
 use wildland_corex::PathResolver;
@@ -29,7 +28,7 @@ pub struct EncryptedDfs {
 
 impl EncryptedDfs {
     pub fn new(
-        path_resolver: Rc<dyn PathResolver>,
+        path_resolver: Box<dyn PathResolver>,
         storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
     ) -> Self {
         Self {

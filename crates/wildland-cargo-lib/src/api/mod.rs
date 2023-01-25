@@ -21,7 +21,6 @@ pub mod config;
 pub mod foundation_storage;
 pub mod storage;
 pub mod user;
-mod utils;
 
 pub use self::cargo_lib::CargoLib;
 pub use self::config::{CargoCfgProvider, CargoConfig};

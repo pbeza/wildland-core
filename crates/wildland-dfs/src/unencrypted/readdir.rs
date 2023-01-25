@@ -49,7 +49,7 @@ pub fn readdir(
 
     Ok(dfs_front
         .path_translator
-        .solve_conflicts(&nodes)
+        .solve_conflicts(nodes.iter().collect::<Vec<_>>())
         .into_iter()
         .filter_map(|(_node, exposed_path)| filter_exposed_paths(&requested_path, exposed_path))
         .unique()
