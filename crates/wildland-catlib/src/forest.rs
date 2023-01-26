@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::rc::Rc;
+use std::path::PathBuf;
 
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
@@ -29,9 +29,7 @@ use wildland_corex::catlib_service::entities::{
 use wildland_corex::{ContainerPath, ContainerPaths};
 
 use super::*;
-use crate::bridge::BridgeData;
 use crate::container::ContainerData;
-use crate::db::{delete_model, save_model};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ForestData {
@@ -47,13 +45,19 @@ impl From<&str> for ForestData {
     }
 }
 
+impl From<&ForestEntity> for String {
+    fn from(value: &ForestEntity) -> Self {
+        ron::to_string(&value.data).unwrap()
+    }
+}
+
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub(crate) struct ForestEntity {
     pub(crate) data: ForestData,
 
     #[derivative(Debug = "ignore")]
-    pub(crate) db: Rc<StoreDb>,
+    pub(crate) db: RedisDb,
 }
 
 impl ForestEntity {
@@ -61,7 +65,7 @@ impl ForestEntity {
         owner: Identity,
         signers: Signers,
         data: Vec<u8>,
-        db: Rc<StoreDb>,
+        db: RedisDb,
     ) -> Result<Self, CatlibError> {
         let forest = Self {
             data: ForestData {
@@ -74,6 +78,13 @@ impl ForestEntity {
         };
         forest.save()?;
         Ok(forest)
+    }
+
+    pub fn from_forest_data(forest_data: ForestData, db: RedisDb) -> Self {
+        Self {
+            data: forest_data,
+            db,
+        }
     }
 }
 
@@ -94,35 +105,15 @@ impl ForestManifest for ForestEntity {
     /// ## Errors
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if Forest has no [`Container`].
-    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn containers(&self) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-        let containers: Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError> = data
-            .iter()
-            .filter(|(id, _)| id.starts_with("container-"))
-            .map(|(_, container_str)| ContainerData::from(container_str.as_str()))
-            .filter(|container_data| container_data.forest_uuid == self.data.uuid)
-            .map(|container_data| {
-                ContainerEntity::from_container_data(container_data, self.db.clone()).map(
-                    |container| {
-                        Arc::new(Mutex::new(container)) as Arc<Mutex<dyn ContainerManifest>>
-                    },
-                )
-            })
-            .collect();
-        let containers = containers?;
-
-        match containers.len() {
-            0 => Err(CatlibError::NoRecordsFound),
-            _ => Ok(containers),
-        }
+        db::fetch_containers_by_forest_uuid(self.db.clone(), &self.data.uuid)
     }
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<()> {
         self.data.data = data;
@@ -132,7 +123,7 @@ impl ForestManifest for ForestEntity {
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn remove(&mut self) -> CatlibResult<bool> {
         Model::delete(self)?;
@@ -153,13 +144,14 @@ impl ForestManifest for ForestEntity {
             name,
             paths: ContainerPaths::from([path]),
         };
-        let container = ContainerEntity::from_container_data(container_data, self.db.clone())?;
+        let container = ContainerEntity::from_container_data(container_data, self.db.clone());
+        container.save()?;
         Ok(Arc::new(Mutex::new(container)))
     }
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     ///
     /// ## Example
     ///
@@ -196,37 +188,16 @@ impl ForestManifest for ForestEntity {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Bridge`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Bridge`] was found.
-    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn find_bridge(&self, path: String) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-
-        let bridges: Vec<_> = data
-            .iter()
-            .filter(|(id, _)| id.starts_with("bridge-"))
-            .map(|(_, bridge_str)| Bridge {
-                data: BridgeData::from(bridge_str.as_str()),
-                db: self.db.clone(),
-            })
-            .filter(|bridge| {
-                bridge.data.forest_uuid == self.data.uuid
-                    && bridge.data.path == PathBuf::from(&path)
-            })
-            .map(|bridge| Arc::new(Mutex::new(bridge)))
-            .collect();
-
-        match bridges.len() {
-            0 => Err(CatlibError::NoRecordsFound),
-            1 => Ok(bridges[0].clone()),
-            _ => Err(CatlibError::MalformedDatabaseRecord),
-        }
+        db::fetch_bridge_by_path(self.db.clone(), &self.uuid(), path)
     }
 
     /// ## Errors
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
-    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     ///
     /// ## Example
     /// # use wildland_catlib::CatLib;
@@ -249,36 +220,7 @@ impl ForestManifest for ForestEntity {
         paths: ContainerPaths,
         include_subdirs: bool,
     ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-
-        let containers: Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError> = data
-            .iter()
-            .filter(|(id, _)| id.starts_with("container-"))
-            .map(|(_, container_str)| ContainerData::from(container_str.as_str()))
-            .filter(|container_data| container_data.forest_uuid == self.data.uuid)
-            .filter(|container_data| {
-                container_data.paths.iter().any(|container_path| {
-                    paths.iter().any(|path| {
-                        (include_subdirs && container_path.starts_with(path))
-                            || container_path.eq(&PathBuf::from(path))
-                    })
-                })
-            })
-            .map(|container_data| {
-                ContainerEntity::from_container_data(container_data, self.db.clone()).map(
-                    |container| {
-                        Arc::new(Mutex::new(container)) as Arc<Mutex<dyn ContainerManifest>>
-                    },
-                )
-            })
-            .collect();
-        let containers = containers?;
-
-        match containers.len() {
-            0 => Err(CatlibError::NoRecordsFound),
-            _ => Ok(containers),
-        }
+        db::fetch_containers_by_path(self.db.clone(), &self.uuid(), paths, include_subdirs)
     }
 
     fn data(&mut self) -> CatlibResult<Vec<u8>> {
@@ -298,24 +240,29 @@ impl ForestManifest for ForestEntity {
         self.sync()?;
         Ok(self.data.signers.clone())
     }
+
+    fn serialise(&self) -> String {
+        self.into()
+    }
 }
 
 impl Model for ForestEntity {
     fn save(&self) -> CatlibResult<()> {
-        save_model(
+        db::commands::set(
             self.db.clone(),
-            format!("forest-{}", self.data.uuid),
-            ron::to_string(&self.data).unwrap(),
+            format!("forest-{}", self.uuid()),
+            self.serialise(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("forest-{}", self.data.uuid))
+        db::commands::delete(self.db.clone(), format!("forest-{}", self.uuid()))
     }
 
     fn sync(&mut self) -> CatlibResult<()> {
-        let forest_data = fetch_forest_data_by_uuid(self.db.clone(), &self.data.uuid)?;
-        self.data = forest_data;
+        let forest = db::fetch_forest_by_uuid(self.db.clone(), &self.uuid())?;
+        let forest_lock = forest.lock().expect("Poisoned Mutex");
+        self.data = ForestData::from(forest_lock.serialise().as_str());
         Ok(())
     }
 }

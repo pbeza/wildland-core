@@ -36,3 +36,13 @@ args          = ["deny", "check", "licenses"]
 command       = "cargo"
 description   = "check OSS licenses"
 install_crate = "cargo-deny"
+
+[tasks.clippy-fix]
+args		= ['clippy', "--all-targets", "--fix", "--allow-no-vcs", "--", "-D", "warnings"]
+command		= "cargo"
+toolchain     = "nightly"
+install_crate = "clippy"
+env = { "__CARGO_FIX_YOLO" = "1" }
+
+[tasks.code-fix]
+run_task = { name = ["clippy-fix", "format"] }

@@ -15,12 +15,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use rustbreak::deser::Ron;
-use rustbreak::PathDatabase;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use redis::Connection;
 use wildland_corex::catlib_service::error::CatlibResult;
 
-pub(crate) type CatLibData = std::collections::HashMap<String, String>;
-pub(crate) type StoreDb = PathDatabase<CatLibData, Ron>;
+pub(crate) type DbClient = Rc<RefCell<Connection>>;
+
+#[derive(Clone)]
+pub(crate) struct RedisDb {
+    pub client: DbClient,
+    pub key_prefix: String,
+}
 
 pub trait Model {
     fn delete(&mut self) -> CatlibResult<()>;

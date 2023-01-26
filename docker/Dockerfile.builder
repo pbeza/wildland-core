@@ -28,6 +28,7 @@ RUN apt-get -qy update \
 	git \
 	jq \
 	ruby \
+	redis-server \
 	valgrind \
 	libatk1.0 libatk-bridge2.0 libdrm2 libxcomposite-dev \
 	libxdamage1 libxrandr2 libgbm1 libxkbcommon-dev libpango-1.0 libcairo2 \

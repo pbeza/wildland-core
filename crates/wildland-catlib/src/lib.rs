@@ -73,7 +73,7 @@
 //! ```
 //!
 
-use std::path::PathBuf;
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
@@ -81,11 +81,9 @@ use bridge::Bridge;
 pub use common::*;
 use container::ContainerEntity;
 use db::*;
-use directories::ProjectDirs;
 use error::*;
-use forest::{ForestData, ForestEntity};
-use rustbreak::PathDatabase;
-use storage::{StorageData, StorageEntity};
+use forest::ForestEntity;
+use storage::StorageEntity;
 use uuid::Uuid;
 use wildland_corex::catlib_service::entities::{
     ContainerManifest,
@@ -106,20 +104,27 @@ mod storage;
 
 #[derive(Clone)]
 pub struct CatLib {
-    db: Rc<StoreDb>,
+    db: RedisDb,
 }
 
 impl CatLib {
-    pub fn new(path: PathBuf) -> Self {
-        let db = PathDatabase::create_at_path(path.clone(), CatLibData::new());
+    pub fn new(redis_url: String, key_prefix: String) -> Self {
+        let db = db::db_conn(redis_url.clone());
 
         if db.is_err() {
-            let path_str = path.to_str().unwrap();
-            panic!("Could not create CatLib database at {path_str}");
+            // TODO COR-61: The app should not crash just because there's no connection to the DB
+            panic!(
+                "Could not connect to Redis Server. [{}] {:?}",
+                redis_url,
+                db.err().unwrap()
+            );
         }
 
         CatLib {
-            db: Rc::new(db.unwrap()),
+            db: RedisDb {
+                client: Rc::new(RefCell::new(db.unwrap())),
+                key_prefix,
+            },
         }
     }
 }
@@ -127,7 +132,7 @@ impl CatLib {
 impl ICatLib for CatLib {
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     ///
     /// ## Example
     ///
@@ -165,21 +170,13 @@ impl ICatLib for CatLib {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
-    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn find_forest(&self, owner: &Identity) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-
-        let forests: Vec<_> = data
+        let forests = db::fetch_all_forests(self.db.clone())?;
+        let forests: Vec<_> = forests
             .iter()
-            .filter(|(id, _)| id.starts_with("forest-"))
-            .map(|(_, forest_str)| ForestEntity {
-                data: ForestData::from(forest_str.as_str()),
-                db: self.db.clone(),
-            })
-            .filter(|forest| &forest.owner() == owner)
-            .map(|forest| Arc::new(Mutex::new(forest)))
+            .filter(|forest| &forest.lock().expect("Poisoned Mutex").owner() == owner)
             .collect();
 
         match forests.len() {
@@ -196,38 +193,19 @@ impl ICatLib for CatLib {
     /// ## Errors
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Storage`] was found.
-    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn find_storages_with_template(
         &self,
         template_id: &Uuid,
     ) -> CatlibResult<Vec<Arc<Mutex<dyn StorageManifest>>>> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-
-        let storages: Vec<_> = data
-            .iter()
-            .filter(|(id, _)| id.starts_with("storage-"))
-            .map(|(_, storage_str)| StorageEntity {
-                data: StorageData::from(storage_str.as_str()),
-                db: self.db.clone(),
-            })
-            .filter(
-                |storage| matches!(storage.as_ref().template_uuid, Some(val) if val == *template_id),
-            )
-            .map(|storage| Arc::new(Mutex::new(storage)) as Arc<Mutex<dyn StorageManifest>>)
-            .collect();
-
-        match storages.len() {
-            0 => Err(CatlibError::NoRecordsFound),
-            _ => Ok(storages),
-        }
+        db::fetch_storages_by_template_uuid(self.db.clone(), template_id)
     }
 
     /// ## Errors
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
-    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn find_containers_with_template(
         &self,
@@ -242,47 +220,22 @@ impl ICatLib for CatLib {
 
     #[tracing::instrument(level = "debug", skip_all)]
     fn save_storage_template(&self, template_id: &Uuid, value: String) -> CatlibResult<()> {
-        save_model(
-            self.db.clone(),
-            format!("template-storage-{template_id}"),
-            value,
-        )
+        db::commands::set(self.db.clone(), format!("template-{template_id}"), value)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
     fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>> {
-        self.db.load().map_err(to_catlib_error)?;
-        let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
-
-        let storages: Vec<_> = data
-            .iter()
-            .filter(|(id, _)| id.starts_with("template-storage-"))
-            .map(|(_, storage_str)| storage_str)
-            .cloned()
-            .collect();
-        Ok(storages)
+        db::fetch_templates(self.db.clone())
     }
 }
 
 impl Default for CatLib {
     fn default() -> Self {
-        let project_dirs = ProjectDirs::from("com", "wildland", "Cargo");
+        use std::env;
+        let redis_url =
+            env::var("CARGO_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/0".into());
+        let db_prefix = env::var("CARGO_DB_KEY_PREFIX").unwrap_or_else(|_| "".into());
 
-        let db_file = if let Some(project_dirs) = project_dirs {
-            let db_dir = project_dirs.data_local_dir().join("catlib");
-
-            if !db_dir.exists() {
-                std::fs::create_dir_all(&db_dir).unwrap();
-            }
-
-            db_dir.join("catlib.database")
-        } else {
-            tracing::info!("Could not create ProjectDirs. Using working directory.");
-            "./catlib.database".into()
-        };
-
-        CatLib {
-            db: Rc::new(PathDatabase::load_from_path_or_default(db_file).unwrap()),
-        }
+        CatLib::new(redis_url, db_prefix)
     }
 }

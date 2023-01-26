@@ -23,7 +23,7 @@ impl Forest {
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     ///
     /// ## Example
     ///
@@ -137,7 +137,7 @@ impl Forest {
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     pub fn add_signer(&mut self, signer: Identity) -> Result<bool, CatlibError> {
         self.forest_manifest
             .lock()
@@ -147,7 +147,7 @@ impl Forest {
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn delete_signer(&self, signer: Identity) -> Result<bool, CatlibError> {
         self.forest_manifest
@@ -160,7 +160,7 @@ impl Forest {
     ///
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to sync to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to sync to the database.
     pub fn signers(&mut self) -> Result<Vec<Identity>, CatlibError> {
         self.forest_manifest
             .lock()
@@ -171,7 +171,7 @@ impl Forest {
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn remove(self) -> Result<bool, CatlibError> {
         self.forest_manifest

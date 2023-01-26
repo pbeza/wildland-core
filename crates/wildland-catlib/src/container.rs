@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::rc::Rc;
-
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use wildland_corex::catlib_service::entities::{
@@ -43,22 +41,23 @@ impl From<&str> for ContainerData {
     }
 }
 
+impl From<&ContainerEntity> for String {
+    fn from(value: &ContainerEntity) -> Self {
+        ron::to_string(&value.container_data).unwrap()
+    }
+}
+
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub(crate) struct ContainerEntity {
     pub(crate) container_data: ContainerData,
     #[derivative(Debug = "ignore")]
-    pub(crate) db: Rc<StoreDb>,
+    pub(crate) db: RedisDb,
 }
 
 impl ContainerEntity {
-    pub fn from_container_data(
-        container_data: ContainerData,
-        db: Rc<StoreDb>,
-    ) -> Result<Self, CatlibError> {
-        let container = Self { container_data, db };
-        container.save()?;
-        Ok(container)
+    pub fn from_container_data(container_data: ContainerData, db: RedisDb) -> Self {
+        Self { container_data, db }
     }
 }
 
@@ -143,27 +142,29 @@ impl ContainerManifest for ContainerEntity {
         let forest_lock = forest.lock().expect("Poisoned Mutex");
         Ok(forest_lock.owner())
     }
+
+    fn serialise(&self) -> String {
+        self.into()
+    }
 }
 
 impl Model for ContainerEntity {
     fn save(&self) -> CatlibResult<()> {
-        save_model(
+        db::commands::set(
             self.db.clone(),
-            format!("container-{}", self.container_data.uuid),
-            ron::to_string(&self.container_data).unwrap(),
+            format!("container-{}", self.uuid()),
+            self.serialise(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(
-            self.db.clone(),
-            format!("container-{}", self.container_data.uuid),
-        )
+        db::commands::delete(self.db.clone(), format!("container-{}", self.uuid()))
     }
 
     fn sync(&mut self) -> CatlibResult<()> {
-        self.container_data =
-            fetch_container_data_by_uuid(self.db.clone(), &self.container_data.uuid)?;
+        let container = db::fetch_container_by_uuid(self.db.clone(), &self.uuid())?;
+        let container_lock = container.lock().expect("Poisoned Mutex");
+        self.container_data = ContainerData::from(container_lock.serialise().as_str());
         Ok(())
     }
 }

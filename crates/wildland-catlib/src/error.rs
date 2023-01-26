@@ -15,17 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use rustbreak::error::RustbreakError;
+use redis::RedisError;
 pub(crate) use wildland_corex::catlib_service::error::{CatlibError, CatlibResult};
 
-pub(crate) fn to_catlib_error(rb_error: RustbreakError) -> CatlibError {
-    match rb_error {
-        RustbreakError::DeSerialization(_) => {
-            CatlibError::Generic("RustbreakError::DeSerialization".into())
-        }
-        RustbreakError::Poison => CatlibError::Generic("RustbreakError::Poison".into()),
-        RustbreakError::Backend(_) => CatlibError::Generic("RustbreakError::Backend".into()),
-        RustbreakError::WritePanic => CatlibError::Generic("RustbreakError::WritePanic".into()),
-        _ => CatlibError::Generic("Unknown Rustbreak error".into()),
-    }
+pub(crate) fn to_catlib_error(err: RedisError) -> CatlibError {
+    CatlibError::Generic(format!("Redis error: {err}"))
 }

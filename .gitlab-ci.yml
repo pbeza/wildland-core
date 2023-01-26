@@ -82,6 +82,7 @@ cargo test:
     - master
     - merge_requests
   script:
+    - redis-server --daemonize yes
     - cargo make test
 
 cargo clippy (lint):
@@ -243,6 +244,7 @@ csharp x86_64 linux:
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
+    - redis-server --daemonize yes
     - bash docker/scripts/bindings_csharp-x64-86-linux.bash
     - mv /out ${CI_PROJECT_DIR}/build
   artifacts:
@@ -282,14 +284,16 @@ webassembly emscripten linux:
     - docker
     - linux
     - metal
-  only:
-    - master
-    - merge_requests
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
+      allow_failure: true # Catlib for WASM - WILX-351
+    - when: never
 
 swift x86_64 linux:
   stage: Bindings
   needs: ["x86_64_linux ffi"]
   script:
+    - redis-server --daemonize yes
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
     - bash docker/scripts/bindings_swift-x64-86-linux.bash
