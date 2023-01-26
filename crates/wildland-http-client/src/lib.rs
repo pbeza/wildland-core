@@ -20,3 +20,5 @@ pub mod error;
 pub mod evs;
 mod response_handler;
 pub mod sc;
+
+pub use cross_platform_http_client::{Body, CurrentPlatformClient, HttpClient, HttpError};

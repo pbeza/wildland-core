@@ -15,26 +15,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+pub mod s3;
+
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use wildland_corex::dfs::interface::Stat;
+use wildland_corex::Storage;
 
 use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 
 #[derive(thiserror::Error, Debug)]
 pub enum StorageBackendError {
     #[error(transparent)]
-    Generic(anyhow::Error),
+    Generic(#[from] anyhow::Error),
 }
 
 impl From<std::io::Error> for StorageBackendError {
     fn from(e: std::io::Error) -> Self {
-        StorageBackendError::Generic(e.into())
+        Self::Generic(e.into())
     }
 }
 impl From<std::path::StripPrefixError> for StorageBackendError {
     fn from(e: std::path::StripPrefixError) -> Self {
-        StorageBackendError::Generic(e.into())
+        Self::Generic(e.into())
     }
 }
 
@@ -74,4 +78,8 @@ pub trait StorageBackend {
     fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError>;
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError>;
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError>;
+}
+
+pub trait StorageBackendFactory {
+    fn init_backend(&self, storage: Storage) -> anyhow::Result<Rc<dyn StorageBackend>>;
 }

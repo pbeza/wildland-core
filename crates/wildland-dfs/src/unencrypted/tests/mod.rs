@@ -31,7 +31,7 @@ use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
 use wildland_corex::{MockPathResolver, Storage};
 
 use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
-use crate::storage_backend::{
+use crate::storage_backends::{
     CloseError,
     OpenResponse,
     OpenedFileDescriptor,
@@ -108,14 +108,14 @@ impl StorageBackend for Mufs {
         ))
     }
 
-    fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
+    fn getattr(&self, path: &Path) -> Result<Stat, StorageBackendError> {
         let relative_path = strip_root(path);
         Ok(self
             .fs
             .metadata(self.base_dir.join(relative_path))
             .map(|metadata| {
                 let file_type = metadata.file_type();
-                Some(Stat {
+                Stat {
                     node_type: if file_type.is_file() {
                         NodeType::File
                     } else if file_type.is_dir() {
@@ -123,14 +123,14 @@ impl StorageBackend for Mufs {
                     } else if file_type.is_symlink() {
                         NodeType::Symlink
                     } else {
-                        return None;
+                        NodeType::Other
                     },
                     size: metadata.len(),
                     access_time: metadata.accessed().ok().map(systime_to_unix),
                     modification_time: metadata.modified().ok().map(systime_to_unix),
                     // NOTE: Mufs does not support ctime, for tests sake let's use creation time
                     change_time: metadata.created().ok().map(systime_to_unix),
-                })
+                }
             })?)
     }
 
@@ -179,10 +179,10 @@ impl MufsFactory {
     }
 }
 impl StorageBackendFactory for MufsFactory {
-    fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error> {
+    fn init_backend(&self, storage: Storage) -> anyhow::Result<Rc<dyn StorageBackend>> {
         Ok(Rc::new(Mufs::new(
             self.fs.clone(),
-            serde_json::from_value::<String>(storage.data().clone())?,
+            serde_json::from_value::<String>(storage.data())?,
         )))
     }
 }

@@ -24,7 +24,7 @@ use std::rc::Rc;
 
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::close_on_drop_descriptor::CloseOnDropDescriptor;
-use wildland_dfs::storage_backend::{
+use wildland_dfs::storage_backends::{
     CloseError,
     OpenResponse,
     OpenedFileDescriptor,
@@ -67,7 +67,7 @@ impl StorageBackend for LocalFilesystemStorage {
         }
     }
 
-    fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
+    fn getattr(&self, path: &Path) -> Result<Stat, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
@@ -144,9 +144,8 @@ impl OpenedFileDescriptor for StdFsOpenedFile {
 
 pub struct LfsBackendFactory {}
 impl StorageBackendFactory for LfsBackendFactory {
-    fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error> {
-        let template: LocalFilesystemStorageTemplate =
-            serde_json::from_value(storage.data().clone())?;
+    fn init_backend(&self, storage: Storage) -> anyhow::Result<Rc<dyn StorageBackend>> {
+        let template: LocalFilesystemStorageTemplate = serde_json::from_value(storage.data())?;
         Ok(Rc::new(LocalFilesystemStorage {
             base_dir: template.local_dir.join(template.container_prefix),
         }))

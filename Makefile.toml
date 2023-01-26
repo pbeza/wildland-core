@@ -5,6 +5,7 @@ CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = "true"
 args          = ["clippy", "--all-targets", "--", "-D", "warnings"]
 command       = "cargo"
 install_crate = "clippy"
+toolchain     = "nightly"
 
 [tasks.format]
 args          = ["fmt"]
@@ -19,21 +20,19 @@ install_crate = "rustfmt"
 toolchain     = "nightly"
 
 [tasks.bindings-linux]
-args        = ['build', '--package', 'wildland-cargo-lib', '--features', 'bindings', '--target', 'x86_64-unknown-linux-gnu']
-command     = 'cargo'
+args        = ["build", "--package", "wildland-cargo-lib", "--features", "bindings", "--target", "x86_64-unknown-linux-gnu"]
+command     = "cargo"
 description = "Build Cargo bindings for x86_64 linux"
 
-
 [tasks.lld-docs]
-args        = ['doc', '--target-dir', '.docs/lld', '--all-features', '--no-deps']
-category    = 'Documentation'
-command     = 'cargo'
-description = 'Generate Low Level (ie. rust) Documentation for entire Wildland Core workspace'
+args        = ["doc", "--target-dir", ".docs/lld", "--all-features", "--no-deps"]
+category    = "Documentation"
+command     = "cargo"
+description = "Generate Low Level (ie. rust) Documentation for entire Wildland Core workspace"
 workspace   = false
 
 [tasks.deny-licenses]
-args		= ['deny', 'check', 'licenses']
-category	= 'Checks'
-command		= 'cargo'
-description	= 'check OSS licenses'
-workspace	= true
+args          = ["deny", "check", "licenses"]
+command       = "cargo"
+description   = "check OSS licenses"
+install_crate = "cargo-deny"
