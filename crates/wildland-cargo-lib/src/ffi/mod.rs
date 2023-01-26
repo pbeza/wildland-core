@@ -21,8 +21,9 @@ use rusty_bind::binding_wrapper;
 pub use wildland_corex::catlib_service::error::CatlibError;
 pub use wildland_corex::dfs::interface::*;
 use wildland_corex::entities::Identity;
-use wildland_corex::{BridgeManifest, ContainerManifest, ForestManifest, Signers, StorageManifest};
+use wildland_corex::{BridgeManifest, Signers, StorageManifest};
 pub use wildland_corex::{
+    Container,
     ContainerManagerError,
     CoreXError,
     CryptoError,
@@ -220,27 +221,23 @@ mod ffi_binding {
         // CargoUser
         //
         fn stringify(self: &CargoUser) -> String;
-        fn get_storage_templates(
-            self: &CargoUser,
-        ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
-
-        // Containers
-        fn get_containers(
-            self: &CargoUser,
-        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
+        fn get_containers(self: &CargoUser) -> Result<Vec<Container>, CatlibError>;
         fn create_container(
             self: &CargoUser,
             name: String,
             storage_templates: &StorageTemplate,
             path: String,
-        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
+        ) -> Result<Container, CatlibError>;
+        fn get_storage_templates(
+            self: &CargoUser,
+        ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
         fn mount(
             self: &CargoUser,
-            container: &Arc<Mutex<dyn ContainerManifest>>,
+            container: &Container,
         ) -> Result<VoidType, ContainerManagerError>;
         fn unmount(
             self: &CargoUser,
-            container: &Arc<Mutex<dyn ContainerManifest>>,
+            container: &Container,
         ) -> Result<VoidType, ContainerManagerError>;
 
         // Foundation Storage
@@ -257,83 +254,26 @@ mod ffi_binding {
         fn is_free_storage_granted(self: &CargoUser) -> Result<bool, CatlibError>;
 
         //
-        // ForestManifest
-        //
-        fn add_signer(
-            self: &Arc<Mutex<dyn ForestManifest>>,
-            signer: Identity,
-        ) -> Result<bool, CatlibError>;
-        fn del_signer(
-            self: &Arc<Mutex<dyn ForestManifest>>,
-            signer: Identity,
-        ) -> Result<bool, CatlibError>;
-        fn containers(
-            self: &Arc<Mutex<dyn ForestManifest>>,
-        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
-        fn update(
-            self: &Arc<Mutex<dyn ForestManifest>>,
-            data: Vec<u8>,
-        ) -> Result<VoidType, CatlibError>;
-        fn remove(self: &Arc<Mutex<dyn ForestManifest>>) -> Result<bool, CatlibError>;
-        fn create_container(
-            self: &Arc<Mutex<dyn ForestManifest>>,
-            name: String,
-            storage_data: &StorageTemplate,
-            path: String,
-        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
-        fn create_bridge(
-            self: &Arc<Mutex<dyn ForestManifest>>,
-            path: String,
-            link_data: Vec<u8>,
-        ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
-        fn find_bridge(
-            self: &Arc<Mutex<dyn ForestManifest>>,
-            path: String,
-        ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
-        fn find_containers(
-            self: &Arc<Mutex<dyn ForestManifest>>,
-            paths: Vec<String>,
-            include_subdirs: bool,
-        ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
-        fn owner(self: &Arc<Mutex<dyn ForestManifest>>) -> Identity;
-        fn signers(self: &Arc<Mutex<dyn ForestManifest>>) -> Result<Signers, CatlibError>;
-
-        //
-        // ContainerManifest
+        // Container
         //
         fn get_storages(
-            self: &Arc<Mutex<dyn ContainerManifest>>,
+            self: &Container,
         ) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, CatlibError>;
         fn add_storage(
-            self: &Arc<Mutex<dyn ContainerManifest>>,
+            self: &Container,
             templates: &StorageTemplate,
         ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>;
-        fn add_path(
-            self: &Arc<Mutex<dyn ContainerManifest>>,
-            path: String,
-        ) -> Result<bool, CatlibError>;
-        fn delete_path(
-            self: &Arc<Mutex<dyn ContainerManifest>>,
-            path: String,
-        ) -> Result<bool, CatlibError>;
-        fn get_paths(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<Vec<String>, CatlibError>;
-        fn set_name(
-            self: &Arc<Mutex<dyn ContainerManifest>>,
-            new_name: String,
-        ) -> Result<VoidType, CatlibError>;
-        fn remove(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<VoidType, CatlibError>;
-        fn forest(
-            self: &Arc<Mutex<dyn ContainerManifest>>,
-        ) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError>;
-        fn name(self: &Arc<Mutex<dyn ContainerManifest>>) -> Result<String, CatlibError>;
-        fn stringify(self: &Arc<Mutex<dyn ContainerManifest>>) -> String;
+        fn add_path(self: &Container, path: String) -> Result<bool, CatlibError>;
+        fn delete_path(self: &Container, path: String) -> Result<bool, CatlibError>;
+        fn get_paths(self: &Container) -> Result<Vec<String>, CatlibError>;
+        fn set_name(self: &Container, new_name: String) -> Result<VoidType, CatlibError>;
+        fn remove(self: &Container) -> Result<VoidType, CatlibError>;
+        fn name(self: &Container) -> Result<String, CatlibError>;
+        fn stringify(self: &Container) -> String;
 
         //
         // StorageManifest
         //
-        fn container(
-            self: &Arc<Mutex<dyn StorageManifest>>,
-        ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
         fn update(
             self: &Arc<Mutex<dyn StorageManifest>>,
             data: Vec<u8>,
@@ -344,9 +284,6 @@ mod ffi_binding {
         //
         // BridgeManifets
         //
-        fn forest(
-            self: &Arc<Mutex<dyn BridgeManifest>>,
-        ) -> Result<Arc<Mutex<dyn ForestManifest>>, CatlibError>;
         fn update(
             self: &Arc<Mutex<dyn BridgeManifest>>,
             link: Vec<u8>,
