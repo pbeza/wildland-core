@@ -90,7 +90,7 @@ pub enum DfsFrontendError {
 
 /// Interface that DFS should expose towards frontends
 pub trait DfsFrontend {
-    // Error probably will be eventually shown to a user
+    // Error probably will be eventually shown to a user as a text
     fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
     fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
 }
