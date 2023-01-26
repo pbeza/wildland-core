@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::path::PathBuf;
-
 use derivative::Derivative;
 use wildland_corex::catlib_service::error::CatlibError;
 use wildland_corex::catlib_service::CatLibService;
@@ -102,8 +100,7 @@ All devices:
         template: &StorageTemplate,
         path: String,
     ) -> Result<Container, CatlibError> {
-        let path = PathBuf::from(path);
-        self.forest.create_container(name, template, path)
+        self.forest.create_container(name, template, path.into())
     }
 
     pub fn this_device(&self) -> &str {
