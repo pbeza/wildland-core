@@ -17,7 +17,7 @@
 
 use std::path::{Path, PathBuf};
 
-use wildland_corex::dfs::interface::Stat;
+use wildland_corex::dfs::interface::{FileDescriptor, Stat};
 
 #[derive(thiserror::Error, Debug)]
 pub enum StorageBackendError {
@@ -41,4 +41,5 @@ impl From<std::path::StripPrefixError> for StorageBackendError {
 pub trait StorageBackend {
     fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError>;
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError>;
+    fn open(&self, path: &Path) -> Result<Option<FileDescriptor>, StorageBackendError>;
 }

@@ -124,6 +124,13 @@ impl StorageBackend for Mufs {
                 })
             })?)
     }
+
+    fn open(
+        &self,
+        path: &Path,
+    ) -> Result<Option<wildland_corex::dfs::interface::FileDescriptor>, StorageBackendError> {
+        todo!() // TODO implement it
+    }
 }
 
 struct MufsFactory {

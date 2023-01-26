@@ -77,6 +77,9 @@ impl UnixTimestamp {
     }
 }
 
+#[derive(Debug)]
+pub struct FileDescriptor {}
+
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
 #[repr(C)]
 pub enum DfsFrontendError {
@@ -93,4 +96,11 @@ pub trait DfsFrontend {
     // Error probably will be eventually shown to a user as a text
     fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
     fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
+
+    /// Opens a file.
+    ///
+    /// Opening a file means initiating its state in DFS memory.
+    ///
+    /// Returns an error in case of file absence.
+    fn open(&mut self, path: String) -> Result<FileDescriptor, DfsFrontendError>;
 }

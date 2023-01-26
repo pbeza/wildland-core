@@ -23,13 +23,8 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::DfsFrontendError;
 use wildland_corex::{ResolvedPath, Storage};
 
-use super::{
-    execute_backend_op_with_policy,
-    ExecutionPolicy,
-    NodeDescriptor,
-    NodeStorages,
-    UnencryptedDfs,
-};
+use super::utils::{execute_backend_op_with_policy, ExecutionPolicy};
+use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
 use crate::storage_backend::StorageBackendError;
 
 pub fn readdir(

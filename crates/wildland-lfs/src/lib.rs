@@ -90,6 +90,13 @@ impl StorageBackend for LocalFilesystemStorage {
             })?,
         )
     }
+
+    fn open(
+        &self,
+        path: &Path,
+    ) -> Result<Option<wildland_dfs::FileDescriptor>, StorageBackendError> {
+        todo!() // TODO implement it
+    }
 }
 
 pub struct LfsBackendFactory {}

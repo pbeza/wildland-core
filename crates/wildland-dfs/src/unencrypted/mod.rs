@@ -16,10 +16,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 mod getattr;
+mod open;
 mod path_translator;
 mod readdir;
 #[cfg(test)]
 mod tests;
+mod utils;
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -32,7 +34,7 @@ use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
-use crate::storage_backend::{StorageBackend, StorageBackendError};
+use crate::storage_backend::StorageBackend;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct NodeDescriptor {
@@ -175,37 +177,11 @@ impl DfsFrontend for UnencryptedDfs {
     fn getattr(&mut self, input_exposed_path: String) -> Result<Stat, DfsFrontendError> {
         getattr::getattr(self, input_exposed_path)
     }
-}
 
-enum ExecutionPolicy {
-    SequentiallyToFirstSuccess,
-}
-fn execute_backend_op_with_policy<T: std::fmt::Debug>(
-    storages: &[Storage],
-    ops: impl Iterator<Item = Result<T, StorageBackendError>>,
-    policy: ExecutionPolicy,
-) -> Option<T> {
-    match policy {
-        ExecutionPolicy::SequentiallyToFirstSuccess => {
-            ops.inspect(|result| {
-                if result.is_err() {
-                    // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                    tracing::error!(
-                        "Backend returned error for operation: {}",
-                        result.as_ref().unwrap_err()
-                    );
-                }
-            })
-            .find(Result::is_ok)
-            .map(Result::unwrap)
-            .or_else(|| {
-                // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                tracing::error!(
-                    "None of the backends for storages {:?} works",
-                    storages.iter().map(|s| s.backend_type())
-                );
-                None
-            })
-        }
+    fn open(
+        &mut self,
+        input_exposed_path: String,
+    ) -> Result<wildland_corex::dfs::interface::FileDescriptor, DfsFrontendError> {
+        open::open(self, input_exposed_path)
     }
 }
