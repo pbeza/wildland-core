@@ -16,17 +16,21 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod catlib_service;
+pub mod container;
 pub mod container_manager;
 pub mod dfs;
 mod error;
+pub mod forest;
 mod identity;
 mod lss;
 mod storage;
 
 pub use catlib_service::*;
+pub use container::*;
 pub use container_manager::*;
 pub use entities::*;
 pub use error::*;
+pub use forest::*;
 pub use identity::master::*;
 pub use identity::wildland::*;
 pub use lss::*;

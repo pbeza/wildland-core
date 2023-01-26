@@ -24,8 +24,8 @@ use wildland_crypto::identity::SigningKeypair;
 
 use super::api::LocalSecureStorage;
 use super::result::LssResult;
-use crate::catlib_service::entities::{ForestManifest, Identity};
-use crate::{ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY};
+use crate::catlib_service::entities::Identity;
+use crate::{Forest, ForestRetrievalError, LssError, WildlandIdentity, DEFAULT_FOREST_KEY};
 
 #[derive(Clone)]
 pub struct LssService {
@@ -64,7 +64,7 @@ impl LssService {
         })
     }
 
-    pub fn save_forest_uuid(&self, forest: &dyn ForestManifest) -> LssResult<bool> {
+    pub fn save_forest_uuid(&self, forest: &Forest) -> LssResult<bool> {
         tracing::trace!("Saving forest uuid");
         self.serialize_and_save(forest.owner().encode(), &forest.uuid())
     }
@@ -135,6 +135,7 @@ impl LssService {
 mod tests {
     use std::cell::RefCell;
     use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
 
     use rstest::{fixture, rstest};
     use uuid::Uuid;
@@ -143,7 +144,7 @@ mod tests {
     use crate::catlib_service::entities::Identity;
     use crate::lss::service::{THIS_DEVICE_KEYPAIR_KEY, THIS_DEVICE_NAME_KEY};
     use crate::{
-        ForestManifest,
+        Forest,
         LocalSecureStorage,
         LssResult,
         LssService,
@@ -285,6 +286,7 @@ mod tests {
             move || fi.clone()
         });
         forest.expect_uuid().returning(move || uuid);
+        let forest = Forest::new(Arc::new(Mutex::new(forest)));
 
         service.save_forest_uuid(&forest).unwrap();
 
@@ -292,7 +294,7 @@ mod tests {
             serde_json::from_str(&lss_stub.get(forest_identity.encode()).unwrap().unwrap())
                 .unwrap();
 
-        assert_eq!(retrieved_uuid, ForestManifest::uuid(&forest));
+        assert_eq!(retrieved_uuid, forest.uuid());
     }
 
     #[rstest]

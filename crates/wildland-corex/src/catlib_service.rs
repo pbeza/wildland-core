@@ -27,10 +27,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use wildland_crypto::identity::signing_keypair::PubKey;
 
-use self::entities::{ContainerManifest, ForestManifest};
+use self::entities::ForestManifest;
 use self::error::{CatlibError, CatlibResult};
 use self::interface::CatLib;
-use crate::{ContainerPath, StorageTemplate, WildlandIdentity};
+use crate::{StorageTemplate, WildlandIdentity};
 
 #[derive(Serialize, Deserialize)]
 pub struct DeviceMetadata {
@@ -116,24 +116,6 @@ impl CatLibService {
         self.catlib.get_forest(forest_uuid)
     }
 
-    #[tracing::instrument(level = "debug", skip_all)]
-    pub fn create_container(
-        &self,
-        name: String,
-        forest: &Arc<Mutex<dyn ForestManifest>>,
-        storage_template: &StorageTemplate,
-        path: ContainerPath,
-    ) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
-        forest
-            .lock()
-            .expect("Poisoned Mutex")
-            .create_container(name, storage_template, path)
-    }
-
-    pub fn delete_container(&self, container: &mut dyn ContainerManifest) -> CatlibResult<()> {
-        container.remove().map(|_| ())
-    }
-
     fn get_parsed_forest_metadata(
         &self,
         forest: &Arc<Mutex<dyn ForestManifest>>,
@@ -152,53 +134,5 @@ impl CatLibService {
             serde_json::to_string(storage_template)
                 .map_err(|e| CatlibError::Generic(format!("Could not serialize object: {e}")))?,
         )
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-    use std::rc::Rc;
-    use std::sync::{Arc, Mutex};
-
-    use mockall::predicate;
-    use rstest::rstest;
-
-    use crate::catlib_service::entities::MockContainerManifest;
-    use crate::catlib_service::interface::MockCatLib;
-    use crate::catlib_service::CatLibService;
-    use crate::{ForestManifest, MockForestManifest, StorageTemplate};
-
-    #[rstest]
-    fn test_create_container() {
-        let catlib_mock = MockCatLib::new();
-        let catlib = Rc::new(catlib_mock);
-        let catlib_service = CatLibService::new(catlib);
-
-        let container_name = "Books".to_owned();
-
-        let hashmap_template = HashMap::from([
-            ("field1", "prefix {{ OWNER }} suffix"),
-            ("field2", "{{ CONTAINER_NAME }}"),
-        ]);
-        let storage_template =
-            StorageTemplate::try_new("FoundationStorage", hashmap_template).unwrap();
-
-        let mut forest_mock = MockForestManifest::new();
-        forest_mock
-            .expect_create_container()
-            .with(
-                predicate::eq(container_name.clone()),
-                predicate::always(),
-                predicate::eq("/some/path".to_owned()),
-            )
-            .times(1)
-            .returning(move |_, _, _| Ok(Arc::new(Mutex::new(MockContainerManifest::new()))));
-
-        let forest_mock: Arc<Mutex<dyn ForestManifest>> = Arc::new(Mutex::new(forest_mock));
-        let path = "/some/path".to_owned();
-        catlib_service
-            .create_container(container_name, &forest_mock, &storage_template, path)
-            .unwrap();
     }
 }
