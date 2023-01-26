@@ -34,7 +34,7 @@ pub(crate) fn fetch_forest_by_uuid(
     uuid: &Uuid,
 ) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
     let data = fetch_forest_data_by_uuid(db.clone(), uuid)?;
-    let forest = Forest { data, db };
+    let forest = ForestEntity { data, db };
     Ok(Arc::new(Mutex::new(forest)))
 }
 
@@ -61,7 +61,7 @@ pub(crate) fn fetch_container_by_uuid(
     uuid: &Uuid,
 ) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
     let container_data = fetch_container_data_by_uuid(db.clone(), uuid)?;
-    Container::from_container_data(container_data, db)
+    ContainerEntity::from_container_data(container_data, db)
         .map(|c| Arc::new(Mutex::new(c)) as Arc<Mutex<dyn ContainerManifest>>)
 }
 
