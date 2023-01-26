@@ -133,12 +133,12 @@ impl Model for StorageEntity {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashSet;
+    use std::str::FromStr;
     use std::sync::{Arc, Mutex};
 
     use rstest::*;
     use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest};
-    use wildland_corex::StorageTemplate;
 
     use super::db::test::catlib;
     use crate::*;
@@ -159,26 +159,12 @@ mod tests {
 
     fn _container(catlib: &CatLib) -> Arc<Mutex<dyn ContainerManifest>> {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
-        let storage_template = StorageTemplate::try_new(
-            "FoundationStorage",
-            HashMap::from([
-                (
-                    "field1".to_owned(),
-                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
-                ),
-                (
-                    "parameter in key: {{ OWNER }}".to_owned(),
-                    "enum: {{ ACCESS_MODE }}".to_owned(),
-                ),
-                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
-                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
-            ]),
-        )
-        .unwrap();
         let locked_forest = forest.lock().unwrap();
+        let forest_uuid = locked_forest.uuid();
+        let container_uuid = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
         let path = "/some/path".to_owned();
         locked_forest
-            .create_container("name".to_owned(), &storage_template, path)
+            .create_container(container_uuid, forest_uuid, "name".to_owned(), path)
             .unwrap()
     }
 
@@ -189,27 +175,12 @@ mod tests {
 
     fn make_storage(
         container: &Arc<Mutex<dyn ContainerManifest>>,
+        storage_uuid: Uuid,
     ) -> Arc<Mutex<dyn StorageManifest>> {
-        let storage_template = StorageTemplate::try_new(
-            "FoundationStorage",
-            HashMap::from([
-                (
-                    "field1".to_owned(),
-                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
-                ),
-                (
-                    "parameter in key: {{ OWNER }}".to_owned(),
-                    "enum: {{ ACCESS_MODE }}".to_owned(),
-                ),
-                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
-                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
-            ]),
-        )
-        .unwrap();
         container
             .lock()
             .unwrap()
-            .add_storage(&storage_template)
+            .add_storage(storage_uuid, vec![])
             .unwrap();
         container
             .lock()
@@ -223,12 +194,13 @@ mod tests {
 
     fn make_storage_with_template(
         container: &Arc<Mutex<dyn ContainerManifest>>,
-        storage_template: &StorageTemplate,
+        serialized_storage: Vec<u8>,
+        storage_uuid: Uuid,
     ) -> Arc<Mutex<dyn StorageManifest>> {
         container
             .lock()
             .unwrap()
-            .add_storage(storage_template)
+            .add_storage(storage_uuid, serialized_storage)
             .unwrap();
         container
             .lock()
@@ -242,73 +214,45 @@ mod tests {
 
     #[rstest]
     fn create_empty_storage(container: Arc<Mutex<dyn ContainerManifest>>) {
-        make_storage(&container);
+        let storage_uuid1 = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let storage_uuid2 = Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap();
+
+        make_storage(&container, storage_uuid1);
+
+        assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 1);
+
+        make_storage(&container, storage_uuid2);
 
         assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 2);
-
-        make_storage(&container);
-
-        assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 3);
     }
 
     #[rstest]
     fn delete_a_storage(container: Arc<Mutex<dyn ContainerManifest>>) {
-        make_storage(&container);
-        let storage = make_storage(&container);
+        let storage_uuid1 = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let storage_uuid2 = Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap();
+        make_storage(&container, storage_uuid1);
+        let storage = make_storage(&container, storage_uuid2);
 
         storage.lock().unwrap().remove().unwrap();
 
-        assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 2);
+        assert_eq!(container.lock().unwrap().get_storages().unwrap().len(), 1);
     }
 
     #[rstest(catlib_with_forest as catlib)]
     fn create_storage_with_template_id(catlib: CatLib) {
         let container = _container(&catlib);
-        make_storage(&container); // Create storage w/o template id on purpose
-        let storage_template1 = StorageTemplate::try_new(
-            "FoundationStorage",
-            HashMap::from([
-                (
-                    "field1".to_owned(),
-                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
-                ),
-                (
-                    "parameter in key: {{ OWNER }}".to_owned(),
-                    "enum: {{ ACCESS_MODE }}".to_owned(),
-                ),
-                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
-                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
-            ]),
-        )
-        .unwrap();
-        let storage_template2 = StorageTemplate::try_new(
-            "FoundationStorage",
-            HashMap::from([
-                (
-                    "field1".to_owned(),
-                    "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
-                ),
-                (
-                    "parameter in key: {{ OWNER }}".to_owned(),
-                    "enum: {{ ACCESS_MODE }}".to_owned(),
-                ),
-                ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
-                ("paths".to_owned(), "{{ PATHS }}".to_owned()),
-            ]),
-        )
-        .unwrap();
-        make_storage_with_template(&container, &storage_template1);
-        make_storage_with_template(&container, &storage_template1);
-        make_storage_with_template(&container, &storage_template2);
+        let storage_uuid0 = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
+        make_storage(&container, storage_uuid0); // Create storage w/o template id on purpose
+        let storage_uuid1 = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let storage_uuid2 = Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap();
+        make_storage_with_template(&container, vec![], storage_uuid1);
+        make_storage_with_template(&container, vec![], storage_uuid1);
+        make_storage_with_template(&container, vec![], storage_uuid2);
 
-        let storages = catlib
-            .find_storages_with_template(&storage_template1.uuid())
-            .unwrap();
+        let storages = catlib.find_storages_with_template(&storage_uuid1).unwrap();
         assert_eq!(storages.len(), 2);
 
-        let storages = catlib
-            .find_storages_with_template(&storage_template2.uuid())
-            .unwrap();
+        let storages = catlib.find_storages_with_template(&storage_uuid2).unwrap();
         assert_eq!(storages.len(), 1);
     }
 }
