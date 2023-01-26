@@ -21,6 +21,7 @@ use wildland_corex::catlib_service::{CatLibService, DeviceMetadata, ForestMetaDa
 use wildland_corex::{
     ContainerManager,
     CryptoError,
+    Forest,
     Identity,
     LssService,
     MasterIdentity,
@@ -97,9 +98,10 @@ impl UserService {
             }]),
         )?;
 
+        let forest = Forest::new(forest);
+
         tracing::trace!("saving identities to lss");
-        let forest_locked = forest.lock().expect("Poisoned Mutex");
-        self.lss_service.save_forest_uuid(&*forest_locked)?;
+        self.lss_service.save_forest_uuid(&forest)?;
 
         self.lss_service.save_identity(&default_forest_identity)?;
         self.lss_service.save_identity(&device_identity)?;
@@ -107,7 +109,7 @@ impl UserService {
         Ok(CargoUser::new(
             device_name.clone(),
             vec![device_name],
-            forest.clone(),
+            forest,
             self.catlib_service.clone(),
             &self.fsa_config,
             self.container_manager.clone(),
@@ -140,6 +142,8 @@ impl UserService {
                     .lss_service
                     .get_this_device_identity()?
                     .ok_or(UserRetrievalError::DeviceMetadataNotFound)?;
+
+                let forest = Forest::new(forest);
 
                 match user_metadata.get_device_metadata(device_identity.get_public_key()) {
                     Some(device_metadata) => Ok(Some(CargoUser::new(

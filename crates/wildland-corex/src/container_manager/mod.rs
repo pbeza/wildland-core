@@ -25,7 +25,7 @@ pub use path_resolver::*;
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::{ContainerManifest, ContainerPath, ContainerPaths, Storage};
+use crate::{Container, ContainerPath, ContainerPaths, Storage};
 
 #[derive(Debug, Error, Clone)]
 #[repr(C)]
@@ -38,8 +38,7 @@ pub enum ContainerManagerError {
     ContainerNotMounted,
 }
 
-type MountedContainerMap =
-    Arc<Mutex<HashMap<Uuid, (Arc<Mutex<dyn ContainerManifest>>, ContainerPaths)>>>;
+type MountedContainerMap = Arc<Mutex<HashMap<Uuid, (Container, ContainerPaths)>>>;
 
 #[derive(Default, Clone)]
 pub struct ContainerManager {
@@ -47,11 +46,8 @@ pub struct ContainerManager {
 }
 
 impl ContainerManager {
-    pub fn mount(
-        &self,
-        container: &Arc<Mutex<dyn ContainerManifest>>,
-    ) -> Result<(), ContainerManagerError> {
-        let container_uuid = container.lock().expect("Poisoned Mutex").uuid();
+    pub fn mount(&self, container: &Container) -> Result<(), ContainerManagerError> {
+        let container_uuid = container.uuid();
         if let std::collections::hash_map::Entry::Vacant(e) = self
             .mounted_containers
             .lock()
@@ -59,8 +55,6 @@ impl ContainerManager {
             .entry(container_uuid)
         {
             let container_paths = container
-                .lock()
-                .expect("Poisoned Mutex")
                 .get_paths()
                 .map(|paths| paths.into_iter().map(PathBuf::from).collect())
                 .map_err(|e| ContainerManagerError::MountingError(format!("{e}")))?;
@@ -71,11 +65,8 @@ impl ContainerManager {
         }
     }
 
-    pub fn unmount(
-        &self,
-        container: &Arc<Mutex<dyn ContainerManifest>>,
-    ) -> Result<(), ContainerManagerError> {
-        let container_uuid = container.lock().expect("Poisoned Mutex").uuid();
+    pub fn unmount(&self, container: &Container) -> Result<(), ContainerManagerError> {
+        let container_uuid = container.uuid();
         self.mounted_containers
             .lock()
             .expect("Poisoned mutex!")
@@ -84,10 +75,7 @@ impl ContainerManager {
             .map(|_| ())
     }
 
-    pub fn mounted_containers_claiming_path(
-        &self,
-        path: ContainerPath,
-    ) -> Vec<Arc<Mutex<dyn ContainerManifest>>> {
+    pub fn mounted_containers_claiming_path(&self, path: ContainerPath) -> Vec<Container> {
         self.mounted_containers
             .lock()
             .expect("Poisoned mutex!")
@@ -109,11 +97,11 @@ impl PathResolver for ContainerManager {
         let mut physical_paths = Vec::new();
         let mut virtual_paths = HashSet::new();
 
-        for (_uuid, (container_manifest, paths)) in self
+        for (_uuid, (container, paths)) in self
             .mounted_containers
             .lock()
             .expect("Poisoned mutex!")
-            .iter()
+            .iter_mut()
         {
             // only first path, which is considered as a primary, is exposed in a filesystem
             if let Some(path_str) = paths.iter().next() {
@@ -122,10 +110,7 @@ impl PathResolver for ContainerManager {
                         let mut path_within_storage = PathBuf::from("/");
                         path_within_storage.push(stripped_path);
 
-                        let mut container_manifest =
-                            container_manifest.lock().expect("Poisoned mutex");
-
-                        let storages = container_manifest
+                        let storages = container
                             .get_storages()?
                             .into_iter()
                             .map(|storage_manifest| {
@@ -152,7 +137,7 @@ impl PathResolver for ContainerManager {
 
                         let physical_path = ResolvedPath::PathWithStorages {
                             path_within_storage,
-                            storages_id: container_manifest.uuid(),
+                            storages_id: container.uuid(),
                             storages,
                         };
 
@@ -183,7 +168,7 @@ mod tests {
     use uuid::Uuid;
 
     use crate::catlib_service::entities::MockContainerManifest;
-    use crate::{ContainerManager, ContainerManagerError, ContainerManifest};
+    use crate::{Container, ContainerManager, ContainerManagerError, ContainerManifest};
 
     mod path_resolver_tests {
         use std::collections::HashSet;
@@ -197,8 +182,9 @@ mod tests {
 
         use crate::ResolvedPath::{self, PathWithStorages};
         use crate::{
+            Container,
             ContainerManager,
-            ContainerManifest,
+            ContainerPaths,
             MockContainerManifest,
             MockStorageManifest,
             PathResolver,
@@ -207,8 +193,8 @@ mod tests {
 
         fn create_container_with_storage(
             id: u128,
-            claimed_paths: Vec<String>,
-        ) -> (MockContainerManifest, Storage) {
+            claimed_paths: ContainerPaths,
+        ) -> (Container, Storage) {
             let storage = Storage::new(None, format!("test backend type {id}"), json!({}));
             let storage_uuid = storage.uuid();
 
@@ -232,21 +218,23 @@ mod tests {
                 Ok(vec![Arc::new(Mutex::new(storage_manifest))])
             });
 
+            let container = Container::from_container_manifest(Arc::new(Mutex::new(container)));
+
             (container, storage)
         }
 
-        #[test_case(vec!["/".to_string()], PathBuf::from("/"), Some(PathBuf::from("/")), Some(PathBuf::from("/")); "claimed root")]
-        #[test_case(vec!["/path".to_string()], PathBuf::from("/path"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "resolved root within storage")]
-        #[test_case(vec!["/path/".to_string()], PathBuf::from("/path"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "slash at the end of claimed path")]
-        #[test_case(vec!["/path".to_string()], PathBuf::from("/path/"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "slash at the end of input")]
-        #[test_case(vec!["/books".to_string()], PathBuf::from("/books/fantasy"), Some(PathBuf::from("/fantasy")), None; "one nested component")]
-        #[test_case(vec!["/books".to_string(), "/some/other/path".to_string()], PathBuf::from("/books/fantasy"), Some(PathBuf::from("/fantasy")), None; "more than one claimed path")]
-        #[test_case(vec!["/books/fantasy".to_string()], PathBuf::from("/books/fantasy/a/lot/of/other/dirs"), Some(PathBuf::from("/a/lot/of/other/dirs")), None; "many nested components")]
-        #[test_case(vec!["/books/fantasy".to_string()], PathBuf::from("/books/"), None, Some(PathBuf::from("/books/fantasy")); "virtual path extended with one component")]
-        #[test_case(vec!["/books/fantasy".to_string()], PathBuf::from("/books"), None, Some(PathBuf::from("/books/fantasy")); "virtual path extended with one component (no slash at input's end)")]
-        #[test_case(vec!["/books/fantasy/lord/of/the/rings".to_string()], PathBuf::from("/books/fantasy"), None, Some(PathBuf::from("/books/fantasy/lord/of/the/rings/")); "virtual path extended with many component")]
+        #[test_case(vec!["/".into()], PathBuf::from("/"), Some(PathBuf::from("/")), Some(PathBuf::from("/")); "claimed root")]
+        #[test_case(vec!["/path".into()], PathBuf::from("/path"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "resolved root within storage")]
+        #[test_case(vec!["/path/".into()], PathBuf::from("/path"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "slash at the end of claimed path")]
+        #[test_case(vec!["/path".into()], PathBuf::from("/path/"), Some(PathBuf::from("/")), Some(PathBuf::from("/path")); "slash at the end of input")]
+        #[test_case(vec!["/books".into()], PathBuf::from("/books/fantasy"), Some(PathBuf::from("/fantasy")), None; "one nested component")]
+        #[test_case(vec!["/books".into(), "/some/other/path".into()], PathBuf::from("/books/fantasy"), Some(PathBuf::from("/fantasy")), None; "more than one claimed path")]
+        #[test_case(vec!["/books/fantasy".into()], PathBuf::from("/books/fantasy/a/lot/of/other/dirs"), Some(PathBuf::from("/a/lot/of/other/dirs")), None; "many nested components")]
+        #[test_case(vec!["/books/fantasy".into()], PathBuf::from("/books/"), None, Some(PathBuf::from("/books/fantasy")); "virtual path extended with one component")]
+        #[test_case(vec!["/books/fantasy".into()], PathBuf::from("/books"), None, Some(PathBuf::from("/books/fantasy")); "virtual path extended with one component (no slash at input's end)")]
+        #[test_case(vec!["/books/fantasy/lord/of/the/rings".into()], PathBuf::from("/books/fantasy"), None, Some(PathBuf::from("/books/fantasy/lord/of/the/rings/")); "virtual path extended with many component")]
         fn test_resolve_with_one_container(
-            claimed_paths: Vec<String>,
+            claimed_paths: ContainerPaths,
             resolve_arg_path: PathBuf,
             expected_path_within_storage: Option<PathBuf>,
             expected_virtual_path: Option<PathBuf>,
@@ -255,7 +243,7 @@ mod tests {
 
             let (container1, storage) = create_container_with_storage(1, claimed_paths);
 
-            let container1 = Arc::new(Mutex::new(container1)) as Arc<Mutex<dyn ContainerManifest>>;
+            let container1 = container1;
             container_manager.mount(&container1).unwrap();
 
             let resolved_paths = container_manager.resolve(&resolve_arg_path).unwrap();
@@ -273,13 +261,13 @@ mod tests {
             assert_eq!(expected, resolved_paths);
         }
 
-        #[test_case(PathBuf::from("/"), vec!["/".to_owned()], vec!["/".to_owned()], vec![PathBuf::from("/")], vec![PathBuf::from("/")], vec![PathBuf::from("/")]; "both claiming root")]
-        #[test_case(PathBuf::from("/a/b/c"), vec!["/a".to_owned()], vec!["/a/b".to_owned()], vec![PathBuf::from("/b/c")], vec![PathBuf::from("/c")], vec![]; "physical paths from two containers")]
-        #[test_case(PathBuf::from("/a/b/c"), vec!["/a/b/c".to_owned()], vec!["/a/b".to_owned()], vec![PathBuf::from("/")], vec![PathBuf::from("/c")], vec![PathBuf::from("/a/b/c")]; "physical and virtual paths from two containers")]
+        #[test_case(PathBuf::from("/"), vec!["/".into()], vec!["/".into()], vec![PathBuf::from("/")], vec![PathBuf::from("/")], vec![PathBuf::from("/")]; "both claiming root")]
+        #[test_case(PathBuf::from("/a/b/c"), vec!["/a".into()], vec!["/a/b".into()], vec![PathBuf::from("/b/c")], vec![PathBuf::from("/c")], vec![]; "physical paths from two containers")]
+        #[test_case(PathBuf::from("/a/b/c"), vec!["/a/b/c".into()], vec!["/a/b".into()], vec![PathBuf::from("/")], vec![PathBuf::from("/c")], vec![PathBuf::from("/a/b/c")]; "physical and virtual paths from two containers")]
         fn test_resolve_with_two_containers(
             resolve_arg_path: PathBuf,
-            claimed_paths_1: Vec<String>,
-            claimed_paths_2: Vec<String>,
+            claimed_paths_1: ContainerPaths,
+            claimed_paths_2: ContainerPaths,
             expected_paths_within_storage_1: Vec<PathBuf>,
             expected_paths_within_storage_2: Vec<PathBuf>,
             expected_virtual_paths: Vec<PathBuf>,
@@ -287,15 +275,9 @@ mod tests {
             let container_manager = ContainerManager::default();
 
             let (container_1, storage_1) = create_container_with_storage(1, claimed_paths_1);
-
-            let container_1 =
-                Arc::new(Mutex::new(container_1)) as Arc<Mutex<dyn ContainerManifest>>;
             container_manager.mount(&container_1).unwrap();
 
             let (container_2, storage_2) = create_container_with_storage(2, claimed_paths_2);
-
-            let container_2 =
-                Arc::new(Mutex::new(container_2)) as Arc<Mutex<dyn ContainerManifest>>;
             container_manager.mount(&container_2).unwrap();
 
             let resolved_paths = container_manager.resolve(&resolve_arg_path).unwrap();
@@ -336,7 +318,9 @@ mod tests {
             .expect_uuid()
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
         let container1 = Arc::new(Mutex::new(container1)) as Arc<Mutex<dyn ContainerManifest>>;
-        container_manager.mount(&container1).unwrap();
+        container_manager
+            .mount(&Container::from_container_manifest(container1))
+            .unwrap();
     }
 
     #[test]
@@ -350,9 +334,11 @@ mod tests {
             .expect_uuid()
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
         let container1 = Arc::new(Mutex::new(container1)) as Arc<Mutex<dyn ContainerManifest>>;
-        container_manager.mount(&container1).unwrap();
+        container_manager
+            .mount(&&Container::from_container_manifest(container1.clone()))
+            .unwrap();
         assert!(matches!(
-            container_manager.mount(&container1),
+            container_manager.mount(&Container::from_container_manifest(container1)),
             Err(ContainerManagerError::AlreadyMounted)
         ));
     }
@@ -368,8 +354,12 @@ mod tests {
             .expect_uuid()
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
         let container1 = Arc::new(Mutex::new(container1)) as Arc<Mutex<dyn ContainerManifest>>;
-        container_manager.mount(&container1).unwrap();
-        container_manager.unmount(&container1).unwrap();
+        container_manager
+            .mount(&Container::from_container_manifest(container1.clone()))
+            .unwrap();
+        container_manager
+            .unmount(&Container::from_container_manifest(container1))
+            .unwrap();
     }
 
     #[test]
@@ -384,7 +374,7 @@ mod tests {
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
         let container1 = Arc::new(Mutex::new(container1)) as Arc<Mutex<dyn ContainerManifest>>;
         assert!(matches!(
-            container_manager.unmount(&container1),
+            container_manager.unmount(&Container::from_container_manifest(container1)),
             Err(ContainerManagerError::ContainerNotMounted)
         ));
     }
@@ -408,42 +398,44 @@ mod tests {
             .expect_uuid()
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap());
         let container2 = Arc::new(Mutex::new(container2)) as Arc<Mutex<dyn ContainerManifest>>;
-        container_manager.mount(&container1).unwrap();
-        container_manager.mount(&container2).unwrap();
+        container_manager
+            .mount(&Container::from_container_manifest(container1))
+            .unwrap();
+        container_manager
+            .mount(&Container::from_container_manifest(container2))
+            .unwrap();
 
         let containers_claiming_path1 =
             container_manager.mounted_containers_claiming_path("/some/path1".into());
         assert!(containers_claiming_path1
             .iter()
-            .any(|container| container.lock().unwrap().uuid()
+            .any(|container| container.uuid()
                 == Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap()));
         assert!(containers_claiming_path1
             .iter()
-            .any(|container| container.lock().unwrap().uuid()
+            .any(|container| container.uuid()
                 == Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap()));
 
         let containers_claiming_path2 =
             container_manager.mounted_containers_claiming_path("/some/path2".into());
         assert!(containers_claiming_path2
             .iter()
-            .any(|container| container.lock().unwrap().uuid()
+            .any(|container| container.uuid()
                 == Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap()));
-        assert!(!containers_claiming_path2.iter().any(|container| container
-            .lock()
-            .unwrap()
-            .uuid()
-            == Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap()));
+        assert!(!containers_claiming_path2
+            .iter()
+            .any(|container| container.uuid()
+                == Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap()));
 
         let containers_claiming_path3 =
             container_manager.mounted_containers_claiming_path("/some/path3".into());
-        assert!(!containers_claiming_path3.iter().any(|container| container
-            .lock()
-            .unwrap()
-            .uuid()
-            == Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap()));
+        assert!(!containers_claiming_path3
+            .iter()
+            .any(|container| container.uuid()
+                == Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap()));
         assert!(containers_claiming_path3
             .iter()
-            .any(|container| container.lock().unwrap().uuid()
+            .any(|container| container.uuid()
                 == Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap()));
     }
 }

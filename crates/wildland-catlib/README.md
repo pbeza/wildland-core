@@ -16,10 +16,38 @@ Location of the database file depends on the platform where the application runs
 ### Creating container with paths
 
 ```rust
+use wildland_catlib::CatLib;
+use wildland_corex::interface::CatLib as ICatLib;
+use std::collections::{HashSet, HashMap};
+use wildland_corex::entities::Identity;
+use wildland_corex::StorageTemplate;
+use wildland_corex::Forest;
 let catlib = CatLib::default();
-let forest = catlib.create_forest(b"owner".to_vec(), Signers::new(), vec![]).unwrap();
-let container = forest.create_container("container name".to_owned()).unwrap();
-container.add_path("/foo/bar".to_string());
+let forest = catlib.create_forest(
+                 Identity([1; 32]),
+                 HashSet::from([Identity([2; 32])]),
+                 vec![],
+             ).unwrap();
+let forest = Forest::new(forest);
+let storage_template = StorageTemplate::try_new(
+    "FoundationStorage",
+    HashMap::from([
+            (
+                "field1".to_owned(),
+                "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
+            ),
+            (
+                "parameter in key: {{ OWNER }}".to_owned(),
+                "enum: {{ ACCESS_MODE }}".to_owned(),
+            ),
+            ("uuid".to_owned(), "{{ CONTAINER_UUID }}".to_owned()),
+            ("paths".to_owned(), "{{ PATHS }}".to_owned()),
+        ]),
+    )
+    .unwrap();
+let path = "/some/path".into();
+let container = forest.create_container("container name2".to_owned(), &storage_template, path).unwrap();
+container.add_path("/bar/baz2".into()).unwrap();
 ```
 
 ### Finding container(s) by paths

@@ -22,7 +22,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::error::{CatlibError, CatlibResult};
-use crate::StorageTemplate;
 
 pub type PubKey = [u8; 32];
 
@@ -74,7 +73,7 @@ pub trait ForestManifest: std::fmt::Debug {
     /// - If the signer did not previously exist, `false` is returned.
     /// - If the signer existed in the set, `true` is returned.
     ///
-    fn del_signer(&mut self, signer: Identity) -> Result<bool, CatlibError>;
+    fn delete_signer(&mut self, signer: Identity) -> Result<bool, CatlibError>;
 
     /// Return list of Forest Containers
     ///
@@ -96,9 +95,10 @@ pub trait ForestManifest: std::fmt::Debug {
     ///
     fn create_container(
         &self,
+        container_uuid: Uuid,
+        forest_uuid: Uuid,
         name: String,
-        storage_data: &StorageTemplate,
-        path: String,
+        path: ContainerPath,
     ) -> Result<Arc<Mutex<dyn ContainerManifest>>, CatlibError>;
 
     /// Create a Bridge object with arbitrary link data to another Forest.
@@ -122,7 +122,7 @@ pub trait ForestManifest: std::fmt::Debug {
     ///
     fn find_containers(
         &self,
-        paths: Vec<String>,
+        paths: ContainerPaths,
         include_subdirs: bool,
     ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
 
@@ -163,7 +163,8 @@ pub trait ContainerManifest: std::fmt::Debug {
     ///
     fn add_storage(
         &mut self,
-        storage_template: &StorageTemplate,
+        template_uuid: Uuid,
+        serialized_storage: Vec<u8>,
     ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>;
 
     /// Returns a printable description of the given container.
@@ -185,16 +186,16 @@ pub trait ContainerManifest: std::fmt::Debug {
 
     /// Returns true if path was actually added, false otherwise.
     ///
-    fn add_path(&mut self, path: String) -> Result<bool, CatlibError>;
+    fn add_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError>;
 
     /// Removes the given path. Returns true if the path was actually deleted,
     /// false if the path was not present within the container.
     ///
-    fn delete_path(&mut self, path: String) -> Result<bool, CatlibError>;
+    fn delete_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError>;
 
     /// Lists all the paths from the given container.
     ///
-    fn get_paths(&mut self) -> Result<Vec<String>, CatlibError>; // Returned as String instead of PathBuf due to the ffi limitation
+    fn get_paths(&mut self) -> Result<ContainerPaths, CatlibError>; // Returned as String instead of PathBuf due to the ffi limitation
 
     /// User provided name of the container.
     ///
@@ -204,6 +205,10 @@ pub trait ContainerManifest: std::fmt::Debug {
     /// This operation involves updating at least the local storage.
     ///
     fn set_name(&mut self, new_name: String) -> Result<(), CatlibError>;
+
+    /// Retrieve Forest's owner identity
+    ///
+    fn owner(&self) -> Result<Identity, CatlibError>;
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -224,6 +229,7 @@ pub trait StorageManifest: std::fmt::Debug {
     fn uuid(&self) -> Uuid;
 }
 
+#[cfg_attr(test, mockall::automock)]
 pub trait BridgeManifest: std::fmt::Debug {
     /// Return [`Forest`] that contains the [`Bridge`].
     fn forest(&self) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>>;
