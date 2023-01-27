@@ -45,9 +45,9 @@ let storage_template = StorageTemplate::try_new(
         ]),
     )
     .unwrap();
-let path = "/some/path".to_owned();
+let path = "/some/path".into();
 let container = forest.create_container("container name2".to_owned(), &storage_template, path).unwrap();
-container.add_path("/bar/baz2".to_string()).unwrap();
+container.add_path("/bar/baz2".into()).unwrap();
 ```
 
 ### Finding container(s) by paths

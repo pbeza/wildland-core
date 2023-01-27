@@ -88,9 +88,9 @@ impl BridgeManifest for Bridge {
     }
 
     /// ## Errors
-    fn path(&mut self) -> CatlibResult<ContainerPath> {
+    fn path(&mut self) -> CatlibResult<String> {
         self.sync()?;
-        Ok(self.data.path.clone())
+        Ok(self.data.path.to_string_lossy().to_string())
     }
 }
 
@@ -130,21 +130,18 @@ mod tests {
         let bridge = forest
             .lock()
             .unwrap()
-            .create_bridge("/other/forest".to_string(), vec![])
+            .create_bridge("/other/forest".into(), vec![])
             .unwrap();
 
         forest
             .lock()
             .unwrap()
-            .find_bridge("/other/forest".to_string())
+            .find_bridge("/other/forest".into())
             .unwrap();
 
         bridge.lock().unwrap().remove().unwrap();
 
-        let bridge = forest
-            .lock()
-            .unwrap()
-            .find_bridge("/other/forest".to_string());
+        let bridge = forest.lock().unwrap().find_bridge("/other/forest".into());
 
         assert_eq!(bridge.err(), Some(CatlibError::NoRecordsFound));
     }

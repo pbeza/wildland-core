@@ -1,8 +1,9 @@
-use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
+use uuid::Uuid;
+
 use crate::catlib_service::error::CatlibError;
-use crate::{ContainerManifest, ContainerPath, StorageManifest, StorageTemplate, TemplateContext};
+use crate::{ContainerManifest, StorageManifest, StorageTemplate, TemplateContext};
 
 #[derive(Clone, Debug)]
 pub struct Container {
@@ -69,15 +70,15 @@ impl Container {
     ///         ]),
     ///     )
     ///     .unwrap();
-    /// let path = "/some/path".to_owned();
+    /// let path = "/some/path".into();
     /// let container = forest.create_container("container name2".to_owned(), &storage_template, path).unwrap();
-    /// container.add_path("/bar/baz2".to_string()).unwrap();
+    /// container.add_path("/bar/baz2".into()).unwrap();
     /// ```
-    pub fn add_path(&self, path: ContainerPath) -> Result<bool, CatlibError> {
+    pub fn add_path(&self, path: String) -> Result<bool, CatlibError> {
         self.container_manifest
             .lock()
             .expect("Poisoned Mutex")
-            .add_path(path)
+            .add_path(path.into())
     }
 
     /// ## Errors
@@ -116,16 +117,16 @@ impl Container {
     ///         ]),
     ///     )
     ///     .unwrap();
-    /// let path = "/some/path".to_owned();
+    /// let path = "/some/path".into();
     /// let container = forest.create_container("container name2".to_owned(), &storage_template, path).unwrap();
-    /// container.delete_path("/baz/qux1".to_string()).unwrap();
+    /// container.delete_path("/baz/qux1".into()).unwrap();
     /// ```
     ///
-    pub fn delete_path(&self, path: ContainerPath) -> Result<bool, CatlibError> {
+    pub fn delete_path(&self, path: String) -> Result<bool, CatlibError> {
         self.container_manifest
             .lock()
             .expect("Poisoned Mutex")
-            .delete_path(path)
+            .delete_path(path.into())
     }
 
     /// Returns the current collection of paths claimed by the given container.
@@ -139,6 +140,12 @@ impl Container {
             .lock()
             .expect("Poisoned Mutex")
             .get_paths()
+            .map(|paths| {
+                paths
+                    .into_iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect()
+            })
     }
 
     /// ## Errors
@@ -168,7 +175,7 @@ impl Container {
                 .encode(),
             access_mode: crate::StorageAccessMode::ReadWrite,
             container_uuid,
-            paths: HashSet::from_iter(container_paths.into_iter()),
+            paths: container_paths,
         };
         let storage = storage_template
             .render(template_context)
@@ -221,6 +228,15 @@ impl Container {
             .lock()
             .expect("Poisoned Mutex")
             .name()
+    }
+
+    /// Get the container's uuid
+    ///
+    pub fn uuid(&self) -> Uuid {
+        self.container_manifest
+            .lock()
+            .expect("Poisoned Mutex")
+            .uuid()
     }
 
     /// Returns a string representation of the Container object.
@@ -293,7 +309,7 @@ mod tests {
     #[test]
     fn new_container_should_has_at_least_one_storage_and_path() {
         let container_uuid = Uuid::new_v4();
-        let container = make_container(container_uuid, "/some/path".to_owned());
+        let container = make_container(container_uuid, "/some/path".into());
         let paths = container.get_paths().unwrap();
         assert_eq!(paths.len(), 1);
         assert!(paths.contains(&"/some/path".to_string()));

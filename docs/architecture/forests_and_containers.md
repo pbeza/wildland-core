@@ -149,13 +149,13 @@ pub trait ContainersManager {
     ///
     /// This procedure is considered to work in background.
     /// 
-    fn mount(&mut self, container: &dyn ContainerManifest) -> Result<(), ContainerMountError>;
+    fn mount(&mut self, container: &dyn ContainerManifest) -> Result<(), ContainerManagerError>;
 
     /// The operation oposit to mount. It removes the container from the file tree representation.
     /// 
     /// This procedure is considered to work in background.
     /// 
-    fn unmount(&mut self, container: &dyn ContainerManifest) -> Result<(), ContainerUnmountError>;
+    fn unmount(&mut self, container: &dyn ContainerManifest) -> Result<(), ContainerManagerError>;
 
     /// Checks whether the given container was mounted in the file tree.
     /// 

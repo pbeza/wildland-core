@@ -15,16 +15,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+use thiserror::Error;
 use uuid::Uuid;
 
+use crate::catlib_service::error::CatlibError;
 use crate::Storage;
 
 /// Represents result of a possible path within a Storage. Storages field represents all alternative
 /// locations of the path.
 ///
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub enum ResolvedPath {
     PathWithStorages {
         /// path within storages
@@ -37,6 +40,15 @@ pub enum ResolvedPath {
     /// Represents virtual node path that are not supposed to be looked up for in any backend.
     /// Contains absolute path in forest namespace.
     VirtualPath(PathBuf),
+}
+
+#[derive(Debug, Error, PartialEq, Eq, Clone)]
+#[repr(C)]
+pub enum PathResolutionError {
+    #[error(transparent)]
+    CatlibError(#[from] CatlibError),
+    #[error("Resolution error: {0}")]
+    Generic(String),
 }
 
 #[mockall::automock]
@@ -61,5 +73,5 @@ pub trait PathResolver {
     /// ]
     ///
     ///
-    fn resolve(&self, path: &Path) -> Vec<ResolvedPath>;
+    fn resolve(&self, path: &Path) -> Result<HashSet<ResolvedPath>, PathResolutionError>;
 }

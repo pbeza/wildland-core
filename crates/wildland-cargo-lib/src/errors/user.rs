@@ -95,10 +95,3 @@ pub enum UserRetrievalError {
     #[error("Generic: {0}")]
     Generic(String),
 }
-
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
-#[repr(C)]
-pub enum ForestMountError {
-    #[error("Forest Mount error")]
-    Error,
-}

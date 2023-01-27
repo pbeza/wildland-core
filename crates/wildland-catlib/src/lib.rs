@@ -65,10 +65,10 @@
 //! let container_uuid: Uuid = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
 //! let forest_uuid: Uuid = Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap();
 //! let name: String = "container_name".to_owned();
-//! let path = "/some/path".to_owned();
+//! let path = "/some/path".into();
 //! let container = forest.lock().unwrap().create_container(container_uuid, forest_uuid, name, path).unwrap();
-//! container.lock().unwrap().add_path("/foo/bar".to_string());
-//! container.lock().unwrap().add_path("/bar/baz".to_string());
+//! container.lock().unwrap().add_path("/foo/bar".into());
+//! container.lock().unwrap().add_path("/bar/baz".into());
 //!
 //! ```
 //!

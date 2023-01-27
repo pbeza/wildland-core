@@ -2742,7 +2742,9 @@ dependencies = [
 name = "wildland-corex"
 version = "0.40.0"
 dependencies = [
+ "derivative",
  "hex",
+ "itertools",
  "mockall",
  "pretty_assertions",
  "rstest",
@@ -2750,6 +2752,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.6",
  "tera",
+ "test-case",
  "thiserror",
  "toml",
  "tracing",

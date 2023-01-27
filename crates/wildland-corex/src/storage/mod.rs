@@ -17,17 +17,20 @@
 
 mod template;
 
+use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 pub use template::*;
 use uuid::Uuid;
 
 /// Storage is basically the same struct as [`super::StorageTemplate`] but it serializable/deserializable content is filled with values provided by corex for a particular container
 ///
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, Eq, Derivative)]
+#[derivative(Hash, PartialEq)]
 pub struct Storage {
     name: Option<String>,
     uuid: Uuid,
     backend_type: String,
+    #[derivative(Hash = "ignore", PartialEq = "ignore")]
     data: serde_json::Value,
 }
 
