@@ -18,7 +18,7 @@ pub(crate) fn find_keys(db: RedisDb, query: String) -> CatlibResult<Vec<String>>
     // TODO [COR-72]: use scan, not keys (optimisation)
     db.client
         .borrow_mut()
-        .keys(handle_key_prefix(db.clone(), query).as_str())
+        .keys(handle_key_prefix(db.clone(), query))
         .map_err(|e| e.into())
 }
 
@@ -35,16 +35,16 @@ pub(crate) fn query_get(
 
     let values: Vec<Option<String>> = db.client.borrow_mut().get(keys.clone())?;
 
-    Ok(keys.iter().cloned().zip(values).collect())
+    Ok(keys.into_iter().zip(values).collect())
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
-pub(crate) fn get(db: RedisDb, key: String) -> CatlibResult<(String, Option<String>)> {
+pub(crate) fn get(db: RedisDb, key: String) -> CatlibResult<Option<String>> {
     let key = handle_key_prefix(db.clone(), key);
 
-    let value = db.client.borrow_mut().get(key.clone())?;
+    let value = db.client.borrow_mut().get(key)?;
 
-    Ok((key, value))
+    Ok(value)
 }
 
 #[tracing::instrument(level = "debug", skip_all)]

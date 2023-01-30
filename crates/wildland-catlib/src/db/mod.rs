@@ -179,7 +179,7 @@ pub(crate) fn fetch_container_by_uuid(
     db: RedisDb,
     uuid: &Uuid,
 ) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
-    let (_key, data) = get(db.clone(), format!("container-{uuid}"))?;
+    let data = get(db.clone(), format!("container-{uuid}"))?;
 
     match data {
         Some(serialised) => {
@@ -199,7 +199,7 @@ pub(crate) fn fetch_forest_by_uuid(
     db: RedisDb,
     uuid: &Uuid,
 ) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
-    let (_key, data) = get(db.clone(), format!("forest-{uuid}"))?;
+    let data = get(db.clone(), format!("forest-{uuid}"))?;
 
     match data {
         Some(serialised) => {
@@ -318,7 +318,7 @@ pub(crate) fn fetch_storage_by_uuid(
     db: RedisDb,
     uuid: &Uuid,
 ) -> CatlibResult<Arc<Mutex<dyn StorageManifest>>> {
-    let (_key, data) = get(db.clone(), format!("storage-{uuid}"))?;
+    let data = get(db.clone(), format!("storage-{uuid}"))?;
 
     match data {
         Some(serialised) => {
@@ -336,7 +336,7 @@ pub(crate) fn fetch_bridge_by_uuid(
     db: RedisDb,
     uuid: &Uuid,
 ) -> CatlibResult<Arc<Mutex<dyn BridgeManifest>>> {
-    let (_key, data) = get(db.clone(), format!("bridge-{uuid}"))?;
+    let data = get(db.clone(), format!("bridge-{uuid}"))?;
 
     match data {
         Some(serialised) => {
