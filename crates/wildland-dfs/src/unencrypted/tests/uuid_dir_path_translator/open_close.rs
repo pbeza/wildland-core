@@ -101,3 +101,65 @@ fn test_open_the_same_file_twice() {
     let _file = dfs.open("/file".into()).unwrap();
     let _file = dfs.open("/file".into()).unwrap();
 }
+
+#[rstest]
+fn test_open_and_close_file() {
+    let mut path_resolver = MockPathResolver::new();
+    let mufs_storage = new_mufs_storage("/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/file")))
+        .times(1)
+        .returning({
+            let storage = mufs_storage;
+            move |_path| {
+                Ok(HashSet::from([ResolvedPath::PathWithStorages {
+                    path_within_storage: "/file".into(),
+                    storages_id: Uuid::from_u128(1),
+                    storages: vec![storage.clone()],
+                }]))
+            }
+        });
+
+    let path_resolver = Box::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_file("/file").unwrap();
+
+    let file = dfs.open("/file".into()).unwrap();
+    dfs.close(&file).unwrap();
+}
+
+#[rstest]
+fn test_open_and_close_the_same_file_twice() {
+    let mut path_resolver = MockPathResolver::new();
+    let mufs_storage = new_mufs_storage("/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/file")))
+        .times(1)
+        .returning({
+            let storage = mufs_storage;
+            move |_path| {
+                Ok(HashSet::from([ResolvedPath::PathWithStorages {
+                    path_within_storage: "/file".into(),
+                    storages_id: Uuid::from_u128(1),
+                    storages: vec![storage.clone()],
+                }]))
+            }
+        });
+
+    let path_resolver = Box::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_file("/file").unwrap();
+
+    let file = dfs.open("/file".into()).unwrap();
+    dfs.close(&file).unwrap();
+    assert_eq!(
+        DfsFrontendError::FileAlreadyClosed,
+        dfs.close(&file).unwrap_err()
+    );
+}

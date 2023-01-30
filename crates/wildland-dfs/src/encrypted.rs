@@ -52,4 +52,9 @@ impl DfsFrontend for EncryptedDfs {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.open(path)
     }
+
+    fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.close(file)
+    }
 }

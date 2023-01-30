@@ -81,9 +81,11 @@ impl UnixTimestamp {
 /// FileDescriptor contains state of opened file and definition of how it is stored, therefore
 /// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
 /// on the backend's type) and e.g. seek operation may be implemented differently.
-pub trait OpenedFileDescriptor: std::fmt::Debug {}
+pub trait OpenedFileDescriptor: std::fmt::Debug {
+    fn close(&self);
+}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileHandle {
     pub descriptor_uuid: Uuid,
 }
@@ -97,6 +99,8 @@ pub enum DfsFrontendError {
     PathResolutionError(#[from] PathResolutionError),
     #[error("DFS Error: {0}")]
     Generic(String),
+    #[error("This file handle has been already closed")]
+    FileAlreadyClosed,
 }
 
 /// Interface that DFS should expose towards frontends
@@ -111,4 +115,6 @@ pub trait DfsFrontend {
     ///
     /// Returns an error in case of file absence.
     fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
+
+    fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
 }

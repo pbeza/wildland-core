@@ -16,7 +16,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 mod getattr;
-mod open;
 mod path_translator;
 mod readdir;
 #[cfg(test)]
@@ -40,6 +39,7 @@ use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
+use self::utils::{fetch_data_from_backends, get_related_nodes};
 use crate::storage_backend::StorageBackend;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -195,10 +195,27 @@ impl DfsFrontend for UnencryptedDfs {
         getattr::getattr(self, input_exposed_path)
     }
 
-    fn open(
-        &mut self,
-        input_exposed_path: String,
-    ) -> Result<wildland_corex::dfs::interface::FileHandle, DfsFrontendError> {
-        open::open(self, input_exposed_path)
+    fn open(&mut self, input_exposed_path: String) -> Result<FileHandle, DfsFrontendError> {
+        let input_exposed_path = Path::new(&input_exposed_path);
+
+        let nodes = get_related_nodes(self, input_exposed_path)?;
+
+        let mut descriptors: Vec<(&NodeDescriptor, Rc<dyn OpenedFileDescriptor>)> =
+            fetch_data_from_backends(&nodes, self, |backend, path| backend.open(path)).collect();
+
+        match descriptors.len() {
+            0 => Err(DfsFrontendError::NoSuchPath),
+            1 => Ok(self.insert_opened_file(descriptors.pop().unwrap().1)),
+            _ => todo!(),
+        }
+    }
+
+    fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
+        if let Some(opened_file) = self.open_files.remove(&file.descriptor_uuid) {
+            opened_file.close();
+            Ok(())
+        } else {
+            Err(DfsFrontendError::FileAlreadyClosed)
+        }
     }
 }

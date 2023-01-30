@@ -335,7 +335,7 @@ mod tests {
             .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
         let container1 = Arc::new(Mutex::new(container1)) as Arc<Mutex<dyn ContainerManifest>>;
         container_manager
-            .mount(&&Container::from_container_manifest(container1.clone()))
+            .mount(&Container::from_container_manifest(container1.clone()))
             .unwrap();
         assert!(matches!(
             container_manager.mount(&Container::from_container_manifest(container1)),

@@ -115,16 +115,20 @@ impl StorageBackend for LocalFilesystemStorage {
 
 #[derive(Debug)]
 pub struct StdFsOpenedFile {
-    inner: File,
+    _inner: File,
 }
 
 impl StdFsOpenedFile {
     fn new(inner: File) -> Self {
-        Self { inner }
+        Self { _inner: inner }
     }
 }
 
-impl OpenedFileDescriptor for StdFsOpenedFile {}
+impl OpenedFileDescriptor for StdFsOpenedFile {
+    fn close(&self) {
+        // std::fs::File is closed when going out of scope, so there is nothing to do here
+    }
+}
 
 pub struct LfsBackendFactory {}
 impl StorageBackendFactory for LfsBackendFactory {
