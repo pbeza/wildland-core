@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use redis::Commands;
 use wildland_corex::catlib_service::error::{CatlibError, CatlibResult};
 
-use crate::error::to_catlib_error;
 use crate::RedisDb;
 
 fn handle_key_prefix(db: RedisDb, mut key: String) -> String {
@@ -16,11 +15,11 @@ fn handle_key_prefix(db: RedisDb, mut key: String) -> String {
 
 #[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn find_keys(db: RedisDb, query: String) -> CatlibResult<Vec<String>> {
-    // todotodo: use scan, not keys (optimisation)
+    // TODO [COR-72]: use scan, not keys (optimisation)
     db.client
         .borrow_mut()
         .keys(handle_key_prefix(db.clone(), query).as_str())
-        .map_err(to_catlib_error)
+        .map_err(|e| e.into())
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
@@ -34,11 +33,7 @@ pub(crate) fn query_get(
         return Err(CatlibError::NoRecordsFound);
     };
 
-    let values: Vec<Option<String>> = db
-        .client
-        .borrow_mut()
-        .get(keys.clone())
-        .map_err(to_catlib_error)?;
+    let values: Vec<Option<String>> = db.client.borrow_mut().get(keys.clone())?;
 
     Ok(keys.iter().cloned().zip(values).collect())
 }
@@ -47,11 +42,7 @@ pub(crate) fn query_get(
 pub(crate) fn get(db: RedisDb, key: String) -> CatlibResult<(String, Option<String>)> {
     let key = handle_key_prefix(db.clone(), key);
 
-    let value = db
-        .client
-        .borrow_mut()
-        .get(key.clone())
-        .map_err(to_catlib_error)?;
+    let value = db.client.borrow_mut().get(key.clone())?;
 
     Ok((key, value))
 }
@@ -60,8 +51,7 @@ pub(crate) fn get(db: RedisDb, key: String) -> CatlibResult<(String, Option<Stri
 pub(crate) fn set(db: RedisDb, key: String, data: String) -> CatlibResult<()> {
     db.client
         .borrow_mut()
-        .set(handle_key_prefix(db.clone(), key), data)
-        .map_err(to_catlib_error)?;
+        .set(handle_key_prefix(db.clone(), key), data)?;
 
     Ok(())
 }
@@ -70,8 +60,7 @@ pub(crate) fn set(db: RedisDb, key: String, data: String) -> CatlibResult<()> {
 pub(crate) fn delete(db: RedisDb, key: String) -> CatlibResult<()> {
     db.client
         .borrow_mut()
-        .del(handle_key_prefix(db.clone(), key))
-        .map_err(to_catlib_error)?;
+        .del(handle_key_prefix(db.clone(), key))?;
 
     Ok(())
 }

@@ -1,6 +1,13 @@
+use redis::RedisError;
 use thiserror::Error;
 
 pub type CatlibResult<T> = Result<T, CatlibError>;
+
+impl From<RedisError> for CatlibError {
+    fn from(err: RedisError) -> Self {
+        CatlibError::Generic(format!("Redis error: {err}"))
+    }
+}
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
 #[repr(C)]

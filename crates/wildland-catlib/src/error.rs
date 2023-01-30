@@ -15,9 +15,4 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use redis::RedisError;
 pub(crate) use wildland_corex::catlib_service::error::{CatlibError, CatlibResult};
-
-pub(crate) fn to_catlib_error(err: RedisError) -> CatlibError {
-    CatlibError::Generic(format!("Redis error: {err}"))
-}

@@ -50,7 +50,6 @@ pub(crate) fn fetch_bridge_by_path(
 
     let bridges: Vec<_> = data
         .iter()
-        .filter(|(_, value)| value.is_some())
         .map(|(key, value)| {
             (
                 key.clone(),

@@ -3245,6 +3245,7 @@ dependencies = [
  "itertools",
  "mockall",
  "pretty_assertions",
+ "redis",
  "rstest",
  "serde",
  "serde_json",
