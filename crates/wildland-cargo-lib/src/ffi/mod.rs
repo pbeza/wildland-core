@@ -292,7 +292,7 @@ mod ffi_binding {
         fn path(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<String, CatlibError>;
 
         //
-        // Storage
+        // StorageTemplate
         //
         fn stringify(self: &StorageTemplate) -> String;
 
