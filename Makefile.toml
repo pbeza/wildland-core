@@ -46,3 +46,31 @@ env = { "__CARGO_FIX_YOLO" = "1" }
 
 [tasks.code-fix]
 run_task = { name = ["clippy-fix", "format"] }
+
+# +----------------+
+# | DOCKER HELPERS |
+# +----------------+
+
+[tasks.docker]
+private = false
+extend = "subcommand"
+env = { "SUBCOMMAND_PREFIX" = "docker" }
+workspace = false
+
+[tasks.subcommand]
+private = true
+script = '''
+#!@duckscript
+
+cm_run_task ${SUBCOMMAND_PREFIX}_${1}
+'''
+
+[tasks.docker_redis-start]
+private = true
+command = "docker"
+args = ["run", "-d", "--rm", "--publish=6379:6379", "--name=cargoredis", "redis"]
+
+[tasks.docker_redis-stop]
+private = true
+command = "docker"
+args = ["stop", "cargoredis"]
