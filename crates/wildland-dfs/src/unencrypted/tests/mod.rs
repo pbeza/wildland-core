@@ -25,9 +25,9 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::SystemTime;
 
-use rsfs::mem::FS;
-use rsfs::{DirEntry, FileType, GenFS, Metadata};
-use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
+use rsfs::mem::{File, FS};
+use rsfs::{DirEntry, FileType, GenFS, Metadata, OpenOptions};
+use wildland_corex::dfs::interface::{NodeType, OpenedFileDescriptor, Stat, UnixTimestamp};
 use wildland_corex::{MockPathResolver, Storage};
 
 use crate::storage_backend::StorageBackendError;
@@ -128,10 +128,29 @@ impl StorageBackend for Mufs {
     fn open(
         &self,
         path: &Path,
-    ) -> Result<Option<wildland_corex::dfs::interface::FileDescriptor>, StorageBackendError> {
-        todo!() // TODO implement it
+    ) -> Result<Option<Rc<dyn OpenedFileDescriptor>>, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+        let file = self.fs.new_openopts().read(true).write(true).open(path)?;
+
+        let opened_file = MufsOpenedFile::new(file);
+
+        Ok(Some(Rc::new(opened_file)))
     }
 }
+
+#[derive(Debug)]
+pub struct MufsOpenedFile {
+    inner: File,
+}
+
+impl MufsOpenedFile {
+    fn new(inner: File) -> Self {
+        Self { inner }
+    }
+}
+
+impl OpenedFileDescriptor for MufsOpenedFile {}
 
 struct MufsFactory {
     fs: Rc<FS>,

@@ -17,7 +17,7 @@
 
 pub mod template;
 
-use std::fs;
+use std::fs::{self, File, OpenOptions};
 use std::os::unix::prelude::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -25,7 +25,7 @@ use std::rc::Rc;
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::storage_backend::{StorageBackend, StorageBackendError};
 use wildland_dfs::unencrypted::StorageBackendFactory;
-use wildland_dfs::{NodeType, Stat, Storage, UnixTimestamp};
+use wildland_dfs::{NodeType, OpenedFileDescriptor, Stat, Storage, UnixTimestamp};
 
 #[derive(Debug)]
 pub struct LocalFilesystemStorage {
@@ -59,45 +59,72 @@ impl StorageBackend for LocalFilesystemStorage {
 
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
         let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
 
-        Ok(
-            fs::metadata(self.base_dir.join(relative_path)).map(|metadata| {
-                let file_type = metadata.file_type();
-                Some(Stat {
-                    node_type: if file_type.is_file() {
-                        NodeType::File
-                    } else if file_type.is_dir() {
-                        NodeType::Dir
-                    } else if file_type.is_symlink() {
-                        NodeType::Symlink
-                    } else {
-                        return None;
-                    },
-                    size: metadata.len(),
-                    access_time: Some(UnixTimestamp {
-                        sec: metadata.atime() as u64,
-                        nano_sec: metadata.atime_nsec() as u32,
-                    }),
-                    modification_time: Some(UnixTimestamp {
-                        sec: metadata.mtime() as u64,
-                        nano_sec: metadata.mtime_nsec() as u32,
-                    }),
-                    change_time: Some(UnixTimestamp {
-                        sec: metadata.ctime() as u64,
-                        nano_sec: metadata.ctime_nsec() as u32,
-                    }),
-                })
-            })?,
-        )
+        if !path.exists() {
+            return Ok(None);
+        }
+
+        Ok(fs::metadata(path).map(|metadata| {
+            let file_type = metadata.file_type();
+            Some(Stat {
+                node_type: if file_type.is_file() {
+                    NodeType::File
+                } else if file_type.is_dir() {
+                    NodeType::Dir
+                } else if file_type.is_symlink() {
+                    NodeType::Symlink
+                } else {
+                    return None;
+                },
+                size: metadata.len(),
+                access_time: Some(UnixTimestamp {
+                    sec: metadata.atime() as u64,
+                    nano_sec: metadata.atime_nsec() as u32,
+                }),
+                modification_time: Some(UnixTimestamp {
+                    sec: metadata.mtime() as u64,
+                    nano_sec: metadata.mtime_nsec() as u32,
+                }),
+                change_time: Some(UnixTimestamp {
+                    sec: metadata.ctime() as u64,
+                    nano_sec: metadata.ctime_nsec() as u32,
+                }),
+            })
+        })?)
     }
 
     fn open(
         &self,
         path: &Path,
-    ) -> Result<Option<wildland_dfs::FileDescriptor>, StorageBackendError> {
-        todo!() // TODO implement it
+    ) -> Result<Option<Rc<dyn OpenedFileDescriptor>>, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        if !path.exists() {
+            return Ok(None);
+        }
+
+        let file = OpenOptions::new().read(true).write(true).open(path)?;
+
+        let opened_file = StdFsOpenedFile::new(file);
+
+        Ok(Some(Rc::new(opened_file)))
     }
 }
+
+#[derive(Debug)]
+pub struct StdFsOpenedFile {
+    inner: File,
+}
+
+impl StdFsOpenedFile {
+    fn new(inner: File) -> Self {
+        Self { inner }
+    }
+}
+
+impl OpenedFileDescriptor for StdFsOpenedFile {}
 
 pub struct LfsBackendFactory {}
 impl StorageBackendFactory for LfsBackendFactory {

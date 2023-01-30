@@ -6,9 +6,8 @@ use itertools::Itertools;
 use wildland_corex::dfs::interface::DfsFrontendError;
 use wildland_corex::{ResolvedPath, Storage};
 
-use crate::storage_backend::{StorageBackend, StorageBackendError};
-
 use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
+use crate::storage_backend::{StorageBackend, StorageBackendError};
 
 type BackendOp<T> =
     fn(Rc<dyn StorageBackend>, path: &Path) -> Result<Option<T>, StorageBackendError>;

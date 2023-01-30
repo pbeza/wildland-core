@@ -29,7 +29,13 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use uuid::Uuid;
-use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, Stat};
+use wildland_corex::dfs::interface::{
+    DfsFrontend,
+    DfsFrontendError,
+    FileHandle,
+    OpenedFileDescriptor,
+    Stat,
+};
 use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
@@ -75,6 +81,8 @@ pub trait StorageBackendFactory {
 // the conflict resolution took place and find files which paths were mapped.
 
 pub struct UnencryptedDfs {
+    open_files: HashMap<Uuid, Rc<dyn OpenedFileDescriptor>>,
+
     path_resolver: Box<dyn PathResolver>,
     /// Stores a factory for each supported backend type
     storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
@@ -93,10 +101,19 @@ impl UnencryptedDfs {
         storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
     ) -> Self {
         Self {
+            open_files: Default::default(),
             path_resolver,
             storage_backend_factories,
             storage_backends: HashMap::new(),
             path_translator: Box::new(UuidInDirTranslator::new()),
+        }
+    }
+
+    fn insert_opened_file(&mut self, opened_file: Rc<dyn OpenedFileDescriptor>) -> FileHandle {
+        let uuid = Uuid::new_v4();
+        self.open_files.insert(uuid, opened_file);
+        FileHandle {
+            descriptor_uuid: uuid,
         }
     }
 
@@ -181,7 +198,7 @@ impl DfsFrontend for UnencryptedDfs {
     fn open(
         &mut self,
         input_exposed_path: String,
-    ) -> Result<wildland_corex::dfs::interface::FileDescriptor, DfsFrontendError> {
+    ) -> Result<wildland_corex::dfs::interface::FileHandle, DfsFrontendError> {
         open::open(self, input_exposed_path)
     }
 }

@@ -17,7 +17,7 @@
 
 use std::collections::HashMap;
 
-use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, FileDescriptor, Stat};
+use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, FileHandle, Stat};
 use wildland_corex::PathResolver;
 
 use crate::unencrypted::{StorageBackendFactory, UnencryptedDfs};
@@ -48,7 +48,7 @@ impl DfsFrontend for EncryptedDfs {
         self.inner.getattr(path)
     }
 
-    fn open(&mut self, path: String) -> Result<FileDescriptor, DfsFrontendError> {
+    fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.open(path)
     }

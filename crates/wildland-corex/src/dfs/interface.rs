@@ -16,6 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::PathResolutionError;
 
@@ -77,8 +78,15 @@ impl UnixTimestamp {
     }
 }
 
+/// FileDescriptor contains state of opened file and definition of how it is stored, therefore
+/// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
+/// on the backend's type) and e.g. seek operation may be implemented differently.
+pub trait OpenedFileDescriptor: std::fmt::Debug {}
+
 #[derive(Debug)]
-pub struct FileDescriptor {}
+pub struct FileHandle {
+    pub descriptor_uuid: Uuid,
+}
 
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
 #[repr(C)]
@@ -102,5 +110,5 @@ pub trait DfsFrontend {
     /// Opening a file means initiating its state in DFS memory.
     ///
     /// Returns an error in case of file absence.
-    fn open(&mut self, path: String) -> Result<FileDescriptor, DfsFrontendError>;
+    fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
 }
