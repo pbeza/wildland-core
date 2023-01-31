@@ -30,7 +30,7 @@ use rsfs::{DirEntry, FileType, GenFS, Metadata, OpenOptions};
 use wildland_corex::dfs::interface::{NodeType, OpenedFileDescriptor, Stat, UnixTimestamp};
 use wildland_corex::{MockPathResolver, Storage};
 
-use crate::storage_backend::StorageBackendError;
+use crate::storage_backend::{OpenResponse, StorageBackendError};
 use crate::unencrypted::{StorageBackend, StorageBackendFactory, UnencryptedDfs};
 
 struct MufsAttrs {
@@ -125,17 +125,19 @@ impl StorageBackend for Mufs {
             })?)
     }
 
-    fn open(
-        &self,
-        path: &Path,
-    ) -> Result<Option<Rc<dyn OpenedFileDescriptor>>, StorageBackendError> {
+    fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
+
+        if !self.fs.metadata(&path).unwrap().is_file() {
+            return Ok(OpenResponse::NotAFile);
+        }
+
         let file = self.fs.new_openopts().read(true).write(true).open(path)?;
 
         let opened_file = MufsOpenedFile::new(file);
 
-        Ok(Some(Rc::new(opened_file)))
+        Ok(OpenResponse::Found(Rc::new(opened_file)))
     }
 }
 

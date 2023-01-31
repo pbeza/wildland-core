@@ -23,7 +23,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use template::LocalFilesystemStorageTemplate;
-use wildland_dfs::storage_backend::{StorageBackend, StorageBackendError};
+use wildland_dfs::storage_backend::{OpenResponse, StorageBackend, StorageBackendError};
 use wildland_dfs::unencrypted::StorageBackendFactory;
 use wildland_dfs::{NodeType, OpenedFileDescriptor, Stat, Storage, UnixTimestamp};
 
@@ -94,22 +94,21 @@ impl StorageBackend for LocalFilesystemStorage {
         })?)
     }
 
-    fn open(
-        &self,
-        path: &Path,
-    ) -> Result<Option<Rc<dyn OpenedFileDescriptor>>, StorageBackendError> {
+    fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
         if !path.exists() {
-            return Ok(None);
+            Ok(OpenResponse::NotFound)
+        } else if !path.metadata()?.is_file() {
+            Ok(OpenResponse::NotAFile)
+        } else {
+            let file = OpenOptions::new().read(true).write(true).open(path)?;
+
+            let opened_file = StdFsOpenedFile::new(file);
+
+            Ok(OpenResponse::Found(Rc::new(opened_file)))
         }
-
-        let file = OpenOptions::new().read(true).write(true).open(path)?;
-
-        let opened_file = StdFsOpenedFile::new(file);
-
-        Ok(Some(Rc::new(opened_file)))
     }
 }
 

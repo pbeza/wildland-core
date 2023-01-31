@@ -163,3 +163,49 @@ fn test_open_and_close_the_same_file_twice() {
         dfs.close(&file).unwrap_err()
     );
 }
+
+#[rstest]
+fn test_open_and_close_conflicting_files() {
+    let mut path_resolver = MockPathResolver::new();
+
+    // each container has its own subfolder
+    let storage1 = new_mufs_storage("/storage1/");
+    let storage2 = new_mufs_storage("/storage2/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b/file_or_dir")))
+        .times(1)
+        .returning({
+            let storage1 = storage1;
+            let storage2 = storage2;
+            move |_path| {
+                Ok(HashSet::from([
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/b/file_or_dir".into(), // returned by the container claiming path `/a/`
+                        storages_id: Uuid::from_u128(1),
+                        storages: vec![storage1.clone()],
+                    },
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/file_or_dir".into(), // returned by the container claiming path `/a/b/`
+                        storages_id: Uuid::from_u128(2),
+                        storages: vec![storage2.clone()],
+                    },
+                ]))
+            }
+        });
+
+    let path_resolver = Box::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_dir("/storage1/").unwrap();
+    fs.create_dir("/storage1/b").unwrap();
+    fs.create_file("/storage1/b/file_or_dir").unwrap();
+    fs.create_dir("/storage2/").unwrap();
+    fs.create_dir("/storage2/file_or_dir").unwrap();
+
+    assert_eq!(
+        DfsFrontendError::NotAFile,
+        dfs.open("/a/b/file_or_dir".into()).unwrap_err()
+    );
+}

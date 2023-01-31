@@ -9,21 +9,21 @@ use wildland_corex::{ResolvedPath, Storage};
 use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
 use crate::storage_backend::{StorageBackend, StorageBackendError};
 
-type BackendOp<T> =
-    fn(Rc<dyn StorageBackend>, path: &Path) -> Result<Option<T>, StorageBackendError>;
-pub fn fetch_data_from_backends<'a: 'b, 'b, T: Debug + 'a>(
+type BackendOp<T> = fn(Rc<dyn StorageBackend>, path: &Path) -> Result<T, StorageBackendError>;
+pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
     nodes: &'a [NodeDescriptor],
     dfs_front: &'b mut UnencryptedDfs,
     backend_op: BackendOp<T>,
 ) -> impl Iterator<Item = (&'a NodeDescriptor, T)> + 'b {
     nodes.iter().filter_map(move |node| {
-        node.storages.as_ref().and_then(|storages| {
-            fetch_data_from_backend(dfs_front, storages, backend_op).map(|result| (node, result))
-        })
+        node.storages
+            .as_ref()
+            .and_then(|storages| fetch_data_from_container(dfs_front, storages, backend_op))
+            .map(|result| (node, result))
     })
 }
 
-fn fetch_data_from_backend<T: Debug>(
+fn fetch_data_from_container<T: Debug>(
     dfs_front: &mut UnencryptedDfs,
     node_storages: &NodeStorages,
     backend_op: BackendOp<T>,
@@ -39,7 +39,6 @@ fn fetch_data_from_backend<T: Debug>(
         backend_ops,
         ExecutionPolicy::SequentiallyToFirstSuccess,
     )
-    .flatten()
 }
 
 pub fn get_related_nodes(

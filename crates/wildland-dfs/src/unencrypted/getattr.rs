@@ -31,7 +31,8 @@ pub fn getattr(
     let nodes = get_related_nodes(dfs_front, input_exposed_path)?;
 
     let mut stats: Vec<(&NodeDescriptor, Stat)> =
-        fetch_data_from_backends(&nodes, dfs_front, |backend, path| backend.getattr(path))
+        fetch_data_from_containers(&nodes, dfs_front, |backend, path| backend.getattr(path))
+            .filter_map(|(node, opt_result)| opt_result.map(|result| (node, result)))
             .chain(nodes.iter().filter_map(|n| {
                 if n.storages.is_none() {
                     Some((

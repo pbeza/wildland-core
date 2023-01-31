@@ -39,8 +39,8 @@ use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
-use self::utils::{fetch_data_from_backends, get_related_nodes};
-use crate::storage_backend::StorageBackend;
+use self::utils::{fetch_data_from_containers, get_related_nodes};
+use crate::storage_backend::{OpenResponse, StorageBackend};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct NodeDescriptor {
@@ -200,13 +200,22 @@ impl DfsFrontend for UnencryptedDfs {
 
         let nodes = get_related_nodes(self, input_exposed_path)?;
 
-        let mut descriptors: Vec<(&NodeDescriptor, Rc<dyn OpenedFileDescriptor>)> =
-            fetch_data_from_backends(&nodes, self, |backend, path| backend.open(path)).collect();
+        let mut descriptors: Vec<(&NodeDescriptor, OpenResponse)> =
+            fetch_data_from_containers(&nodes, self, |backend, path| backend.open(path))
+                .filter(|(_node, response)| !matches!(response, OpenResponse::NotFound))
+                .collect();
 
         match descriptors.len() {
             0 => Err(DfsFrontendError::NoSuchPath),
-            1 => Ok(self.insert_opened_file(descriptors.pop().unwrap().1)),
-            _ => todo!(),
+            1 => match descriptors.pop().unwrap().1 {
+                OpenResponse::Found(opened_file) => Ok(self.insert_opened_file(opened_file)),
+                OpenResponse::NotAFile => Err(DfsFrontendError::NotAFile),
+                _ => Err(DfsFrontendError::NoSuchPath),
+            },
+            _ => {
+                // More that 1 descriptor means that files are in conflict, so they are exposed under different paths
+                Err(DfsFrontendError::NotAFile)
+            }
         }
     }
 

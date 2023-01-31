@@ -93,6 +93,8 @@ pub struct FileHandle {
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
 #[repr(C)]
 pub enum DfsFrontendError {
+    #[error("Operation not permitted on other nodes than files")]
+    NotAFile,
     #[error("Path does not exist")]
     NoSuchPath,
     #[error(transparent)]

@@ -22,7 +22,7 @@ use wildland_corex::dfs::interface::{OpenedFileDescriptor, Stat};
 
 #[derive(thiserror::Error, Debug)]
 pub enum StorageBackendError {
-    #[error("Not a directory")]
+    #[error("Operation not permitted for paths that don't represent directories")]
     NotADirectory,
     #[error(transparent)]
     Generic(anyhow::Error),
@@ -39,11 +39,15 @@ impl From<std::path::StripPrefixError> for StorageBackendError {
     }
 }
 
+#[derive(Debug)]
+pub enum OpenResponse {
+    Found(Rc<dyn OpenedFileDescriptor>),
+    NotAFile,
+    NotFound,
+}
+
 pub trait StorageBackend {
     fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError>;
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError>;
-    fn open(
-        &self,
-        path: &Path,
-    ) -> Result<Option<Rc<dyn OpenedFileDescriptor>>, StorageBackendError>;
+    fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError>;
 }
