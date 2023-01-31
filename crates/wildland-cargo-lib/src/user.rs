@@ -18,7 +18,15 @@
 use uuid::Uuid;
 use wildland_corex::catlib_service::error::CatlibError;
 use wildland_corex::catlib_service::{CatLibService, DeviceMetadata, ForestMetaData};
-use wildland_corex::{CryptoError, Forest, Identity, LssService, MasterIdentity, MnemonicPhrase};
+use wildland_corex::{
+    ContainerManager,
+    CryptoError,
+    Forest,
+    Identity,
+    LssService,
+    MasterIdentity,
+    MnemonicPhrase,
+};
 
 use crate::api::cargo_user::CargoUser;
 use crate::api::config::FoundationStorageApiConfig;
@@ -40,6 +48,7 @@ pub(crate) struct UserService {
     lss_service: LssService,
     catlib_service: CatLibService,
     fsa_config: FoundationStorageApiConfig,
+    container_manager: ContainerManager,
 }
 
 impl UserService {
@@ -47,11 +56,13 @@ impl UserService {
         lss_service: LssService,
         catlib_service: CatLibService,
         fsa_config: FoundationStorageApiConfig,
+        container_manager: ContainerManager,
     ) -> Self {
         Self {
             lss_service,
             catlib_service,
             fsa_config,
+            container_manager,
         }
     }
 
@@ -101,6 +112,7 @@ impl UserService {
             forest,
             self.catlib_service.clone(),
             &self.fsa_config,
+            self.container_manager.clone(),
         ))
     }
 
@@ -140,6 +152,7 @@ impl UserService {
                         forest,
                         self.catlib_service.clone(),
                         &self.fsa_config,
+                        self.container_manager.clone(),
                     ))),
                     None => Err(UserRetrievalError::DeviceMetadataNotFound),
                 }

@@ -46,8 +46,8 @@ impl From<PubKey> for Identity {
     }
 }
 
-pub type ContainerPath = String;
-pub type ContainerPaths = HashSet<ContainerPath>;
+pub type ContainerPath = std::path::PathBuf;
+pub type ContainerPaths = Vec<ContainerPath>;
 pub type Signers = HashSet<Identity>;
 
 /// `ForestManifest` trait is an API providing methods needed to operate on the forest's
@@ -107,16 +107,13 @@ pub trait ForestManifest: std::fmt::Debug {
     ///
     fn create_bridge(
         &self,
-        path: ContainerPath,
+        path: String,
         link_data: Vec<u8>,
     ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
 
     /// Return bridge that matches the given [`ContainerPath`].
     ///
-    fn find_bridge(
-        &self,
-        path: ContainerPath,
-    ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
+    fn find_bridge(&self, path: String) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
 
     /// Retrieve Containers that match given [`ContainerPath`]s.
     ///
@@ -125,7 +122,7 @@ pub trait ForestManifest: std::fmt::Debug {
     ///
     fn find_containers(
         &self,
-        paths: Vec<ContainerPath>,
+        paths: ContainerPaths,
         include_subdirs: bool,
     ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
 
@@ -189,16 +186,16 @@ pub trait ContainerManifest: std::fmt::Debug {
 
     /// Returns true if path was actually added, false otherwise.
     ///
-    fn add_path(&mut self, path: String) -> Result<bool, CatlibError>;
+    fn add_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError>;
 
     /// Removes the given path. Returns true if the path was actually deleted,
     /// false if the path was not present within the container.
     ///
-    fn delete_path(&mut self, path: String) -> Result<bool, CatlibError>;
+    fn delete_path(&mut self, path: ContainerPath) -> Result<bool, CatlibError>;
 
     /// Lists all the paths from the given container.
     ///
-    fn get_paths(&mut self) -> Result<Vec<ContainerPath>, CatlibError>;
+    fn get_paths(&mut self) -> Result<ContainerPaths, CatlibError>; // Returned as String instead of PathBuf due to the ffi limitation
 
     /// User provided name of the container.
     ///
@@ -244,5 +241,5 @@ pub trait BridgeManifest: std::fmt::Debug {
     fn remove(&mut self) -> CatlibResult<bool>;
 
     /// Retrieve Bridge path
-    fn path(&mut self) -> CatlibResult<ContainerPath>;
+    fn path(&mut self) -> CatlibResult<String>; // Returned as String instead of PathBuf due to the ffi limitation
 }

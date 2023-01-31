@@ -183,7 +183,7 @@ auto foundation_storage_test(CargoUser &cargo_user)
 
 auto container_test(CargoUser &user, StorageTemplate &storage_template)
 {
-    auto container = user.create_container(RustString{"My Container"}, storage_template);
+    auto container = user.create_container(RustString{"My Container"}, storage_template, RustString{"/some/path"});
     std::cout << container.stringify().to_string() << std::endl;
 
     auto containers = user.get_containers();
@@ -191,19 +191,14 @@ auto container_test(CargoUser &user, StorageTemplate &storage_template)
     {
         auto current_container = containers.at(i).unwrap();
         std::cout << container.stringify().to_string() << std::endl;
-        user.delete_container(current_container);
-        std::cout << "IN LOOP: " << current_container.stringify().to_string() << std::endl;
     }
-
-    // this container is also mark deleted (deleted in loop)
-    std::cout << "AFTER LOOP: " << container.stringify().to_string() << std::endl;
 }
 
 int main()
 {
     CargoCfgProviderImpl cfg_provider{};
     CargoConfig cfg = collect_config(cfg_provider);
-    // cfg.override_evs_url(RustString{"new url"});
+    cfg.override_evs_url(RustString{"overridden url"});
     LocalSecureStorageImpl lss{};
     SharedMutexCargoLib cargo_lib;
     try

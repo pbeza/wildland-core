@@ -18,7 +18,7 @@
 use derivative::Derivative;
 use wildland_corex::catlib_service::error::CatlibError;
 use wildland_corex::catlib_service::CatLibService;
-use wildland_corex::{Container, ContainerPath, Forest, StorageTemplate};
+use wildland_corex::{Container, ContainerManager, ContainerManagerError, Forest, StorageTemplate};
 
 use super::config::FoundationStorageApiConfig;
 use super::foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError};
@@ -42,6 +42,8 @@ pub struct CargoUser {
     catlib_service: CatLibService,
     #[derivative(Debug = "ignore")]
     fsa_api: FoundationStorageApi,
+    #[derivative(Debug = "ignore")]
+    container_manager: ContainerManager,
 }
 
 impl CargoUser {
@@ -51,6 +53,7 @@ impl CargoUser {
         forest: Forest,
         catlib_service: CatLibService,
         fsa_config: &FoundationStorageApiConfig,
+        container_manager: ContainerManager,
     ) -> Self {
         Self {
             this_device,
@@ -58,6 +61,7 @@ impl CargoUser {
             forest,
             catlib_service,
             fsa_api: FoundationStorageApi::new(fsa_config),
+            container_manager,
         }
     }
 
@@ -94,9 +98,9 @@ All devices:
         &self,
         name: String,
         template: &StorageTemplate,
-        path: ContainerPath,
+        path: String,
     ) -> Result<Container, CatlibError> {
-        self.forest.create_container(name, template, path)
+        self.forest.create_container(name, template, path.into())
     }
 
     pub fn this_device(&self) -> &str {
@@ -160,6 +164,14 @@ All devices:
         self.catlib_service
             .is_free_storage_granted(&self.forest.forest_manifest())
     }
+
+    pub fn mount(&self, container: &Container) -> Result<(), ContainerManagerError> {
+        self.container_manager.mount(container)
+    }
+
+    pub fn unmount(&self, container: &Container) -> Result<(), ContainerManagerError> {
+        self.container_manager.unmount(container)
+    }
 }
 
 #[cfg(test)]
@@ -173,12 +185,12 @@ mod tests {
     use uuid::Uuid;
     use wildland_corex::catlib_service::error::CatlibError;
     use wildland_corex::catlib_service::{CatLibService, DeviceMetadata, ForestMetaData};
-    use wildland_corex::{Forest, SigningKeypair, WildlandIdentity};
+    use wildland_corex::{ContainerManager, Forest, SigningKeypair, WildlandIdentity};
 
     use super::CargoUser;
     use crate::api::config::FoundationStorageApiConfig;
-    use crate::api::utils::test::catlib_service;
     use crate::templates::foundation_storage::FoundationStorageTemplate;
+    use crate::utils::test::catlib_service;
 
     #[fixture]
     fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Forest) {
@@ -210,6 +222,7 @@ mod tests {
                 evs_url: mockito::server_url(),
                 sc_url: "".to_string(),
             },
+            ContainerManager::default(),
         );
 
         (cargo_user, catlib_service, forest)

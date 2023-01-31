@@ -15,7 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#[derive(Debug, PartialEq, Eq)]
+use thiserror::Error;
+
+use crate::PathResolutionError;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Stat {
     pub node_type: NodeType,
     /// size in bytes
@@ -26,21 +30,67 @@ pub struct Stat {
     pub change_time: Option<UnixTimestamp>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+/// Getter exposed through ffi
+impl Stat {
+    pub fn node_type(&self) -> NodeType {
+        self.node_type
+    }
+
+    pub fn size(&self) -> u64 {
+        self.size
+    }
+
+    pub fn access_time(&self) -> Option<UnixTimestamp> {
+        self.access_time.clone()
+    }
+    pub fn modification_time(&self) -> Option<UnixTimestamp> {
+        self.modification_time.clone()
+    }
+    pub fn change_time(&self) -> Option<UnixTimestamp> {
+        self.change_time.clone()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(C)]
 pub enum NodeType {
     File,
     Dir,
     Symlink,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct UnixTimestamp {
+    /// Number of seconds that elapsed since the beginning of the UNIX epoch
     pub sec: u64,
+    /// fraction of a second expressed in nanoseconds
     pub nano_sec: u32,
+}
+
+/// Getter exposed through ffi
+impl UnixTimestamp {
+    pub fn sec(&self) -> u64 {
+        self.sec
+    }
+    pub fn nano_sec(&self) -> u32 {
+        self.nano_sec
+    }
+}
+
+#[derive(Debug, Error, PartialEq, Eq, Clone)]
+#[repr(C)]
+pub enum DfsFrontendError {
+    #[error("Path does not exist")]
+    NoSuchPath,
+    #[error(transparent)]
+    PathResolutionError(#[from] PathResolutionError),
+    #[error("DFS Error: {0}")]
+    Generic(String),
 }
 
 /// Interface that DFS should expose towards frontends
 pub trait DfsFrontend {
-    fn readdir(&mut self, path: String) -> Vec<String>;
-    fn getattr(&mut self, path: String) -> Option<Stat>;
+    // Error probably will be eventually shown to a user as a text
+    fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
+    fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
 }

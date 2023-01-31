@@ -157,15 +157,16 @@ impl UserApi {
 
 #[cfg(test)]
 mod tests {
+
     use rstest::rstest;
     use wildland_corex::catlib_service::CatLibService;
-    use wildland_corex::{LocalSecureStorage, LssService};
+    use wildland_corex::{ContainerManager, LocalSecureStorage, LssService};
 
     use super::UserApi;
     use crate::api::config::FoundationStorageApiConfig;
-    use crate::api::utils::test::{catlib_service, lss_stub};
     use crate::errors::UserRetrievalError;
     use crate::user::UserService;
+    use crate::utils::test::{catlib_service, lss_stub};
 
     #[rstest]
     fn create_mnemonic_from_string_with_valid_words_should_succeed(
@@ -176,6 +177,7 @@ mod tests {
             LssService::new(lss_stub),
             catlib_service,
             FoundationStorageApiConfig::default(),
+            ContainerManager::default(),
         ));
         let words = "wise exile kingdom cabbage improve also ridge fortune when joke market argue";
 
@@ -191,6 +193,7 @@ mod tests {
             LssService::new(lss_stub),
             catlib_service,
             FoundationStorageApiConfig::default(),
+            ContainerManager::default(),
         ));
         let words =
             "wise exile kingdom cabbage improve also ridge fortune when joke market invalid_word";
@@ -207,6 +210,7 @@ mod tests {
             LssService::new(lss_stub),
             catlib_service,
             FoundationStorageApiConfig::default(),
+            ContainerManager::default(),
         ));
         let words = "wise exile kingdom cabbage improve also ridge fortune when joke market argue";
 
@@ -224,6 +228,7 @@ mod tests {
             LssService::new(lss_stub),
             catlib_service,
             FoundationStorageApiConfig::default(),
+            ContainerManager::default(),
         ));
         let words =
             "wise exile kingdom cabbage improve also ridge fortune when joke market invalid_word";
@@ -243,6 +248,7 @@ mod tests {
             lss_service,
             catlib_service,
             FoundationStorageApiConfig::default(),
+            ContainerManager::default(),
         );
         let user_api = UserApi::new(user_service);
 
@@ -263,6 +269,7 @@ mod tests {
             lss_service,
             catlib_service,
             FoundationStorageApiConfig::default(),
+            ContainerManager::default(),
         );
         let user_api = UserApi::new(user_service);
 
@@ -286,6 +293,7 @@ mod tests {
             lss_service,
             catlib_service,
             FoundationStorageApiConfig::default(),
+            ContainerManager::default(),
         );
         let user_api = UserApi::new(user_service);
 
