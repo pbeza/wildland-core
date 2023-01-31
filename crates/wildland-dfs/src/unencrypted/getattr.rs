@@ -33,10 +33,10 @@ pub fn getattr(
     let mut stats: Vec<(&NodeDescriptor, Stat)> =
         fetch_data_from_containers(&nodes, dfs_front, |backend, path| backend.getattr(path))
             .filter_map(|(node, opt_result)| opt_result.map(|result| (node, result)))
-            .chain(nodes.iter().filter_map(|n| {
-                if n.storages.is_none() {
+            .chain(nodes.iter().filter_map(|node| {
+                if node.is_virtual() {
                     Some((
-                        n,
+                        node,
                         Stat {
                             node_type: NodeType::Dir,
                             size: 0,
@@ -60,12 +60,7 @@ pub fn getattr(
             let node = find_node_matching_requested_path(input_exposed_path, &exposed_paths);
             match node {
                 // Physical node
-                Some(
-                    node @ NodeDescriptor {
-                        storages: Some(_node_storages),
-                        ..
-                    },
-                ) => stats
+                Some(node @ NodeDescriptor::Physical { .. }) => stats
                     .into_iter()
                     .find_map(|(n, stat)| if n == node { Some(stat) } else { None })
                     .ok_or(DfsFrontendError::NoSuchPath),

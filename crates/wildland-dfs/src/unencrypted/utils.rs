@@ -16,8 +16,7 @@ pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
     backend_op: BackendOp<T>,
 ) -> impl Iterator<Item = (&'a NodeDescriptor, T)> + 'b {
     nodes.iter().filter_map(move |node| {
-        node.storages
-            .as_ref()
+        node.storages()
             .and_then(|storages| fetch_data_from_container(dfs_front, storages, backend_op))
             .map(|result| (node, result))
     })
@@ -68,16 +67,11 @@ fn map_resolved_path_into_node_descriptor(
             path_within_storage,
             storages_id,
             storages,
-        } => NodeDescriptor {
-            storages: Some(NodeStorages::new(
-                storages,
-                path_within_storage,
-                storages_id,
-            )),
+        } => NodeDescriptor::Physical {
+            storages: NodeStorages::new(storages, path_within_storage, storages_id),
             absolute_path: requested_abs_path,
         },
-        ResolvedPath::VirtualPath(_) => NodeDescriptor {
-            storages: None,
+        ResolvedPath::VirtualPath(_) => NodeDescriptor::Virtual {
             absolute_path: requested_abs_path,
         },
     }

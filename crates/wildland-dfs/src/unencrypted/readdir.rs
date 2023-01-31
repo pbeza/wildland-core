@@ -105,10 +105,7 @@ fn map_virtual_path_to_node_descriptor(
         None => requested_path.into(),
         _ => panic!("There is a bug in PathResolver, probably it returned a path that does not start with the requested one"),
     };
-    NodeDescriptor {
-        storages: None,
-        absolute_path,
-    }
+    NodeDescriptor::Virtual { absolute_path }
 }
 
 fn map_physical_path_to_node_descriptor<'a>(
@@ -128,24 +125,24 @@ fn map_physical_path_to_node_descriptor<'a>(
                 .map(|resulting_paths| {
                     Either::Left(resulting_paths.into_iter().map({
                         let node_storages = node_storages.clone();
-                        move |entry_path| NodeDescriptor {
-                            storages: Some(NodeStorages::new(
+                        move |entry_path| NodeDescriptor::Physical {
+                            storages: NodeStorages::new(
                                 node_storages.clone(),
                                 entry_path.clone(),
                                 storages_id,
-                            )),
+                            ),
                             absolute_path: requested_path.join(entry_path.file_name().unwrap()),
                         }
                     }))
                 })
                 .or_else(|err| match &err {
                     StorageBackendError::NotADirectory => {
-                        Ok(Either::Right(std::iter::once(NodeDescriptor {
-                            storages: Some(NodeStorages::new(
+                        Ok(Either::Right(std::iter::once(NodeDescriptor::Physical {
+                            storages: NodeStorages::new(
                                 node_storages.clone(),
                                 path_within_storage.clone(),
                                 storages_id,
-                            )),
+                            ),
                             absolute_path: PathBuf::from(requested_path),
                         })))
                     }
@@ -187,8 +184,7 @@ mod tests {
             map_virtual_path_to_node_descriptor(&requested_path, &resolved_virtual_path);
         assert_eq!(
             node_descriptor,
-            NodeDescriptor {
-                storages: None,
+            NodeDescriptor::Virtual {
                 absolute_path: expected_node_path
             }
         );

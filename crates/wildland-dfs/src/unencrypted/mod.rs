@@ -43,9 +43,41 @@ use self::utils::{fetch_data_from_containers, get_related_nodes};
 use crate::storage_backend::{OpenResponse, StorageBackend};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct NodeDescriptor {
-    pub storages: Option<NodeStorages>, // nodes may not have storage - so called virtual nodes
-    pub absolute_path: PathBuf,
+pub enum NodeDescriptor {
+    Physical {
+        storages: NodeStorages,
+        absolute_path: PathBuf,
+    },
+    Virtual {
+        absolute_path: PathBuf,
+    },
+}
+
+impl NodeDescriptor {
+    pub fn abs_path(&self) -> &Path {
+        match self {
+            NodeDescriptor::Physical { absolute_path, .. }
+            | NodeDescriptor::Virtual { absolute_path } => absolute_path,
+        }
+    }
+
+    pub fn is_physical(&self) -> bool {
+        match self {
+            NodeDescriptor::Virtual { .. } => false,
+            NodeDescriptor::Physical { .. } => true,
+        }
+    }
+
+    pub fn is_virtual(&self) -> bool {
+        !self.is_physical()
+    }
+
+    pub fn storages(&self) -> Option<&NodeStorages> {
+        match self {
+            NodeDescriptor::Physical { storages, .. } => Some(storages),
+            NodeDescriptor::Virtual { .. } => None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
