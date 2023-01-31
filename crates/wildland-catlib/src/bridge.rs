@@ -52,7 +52,7 @@ pub(crate) struct Bridge {
 }
 
 impl Bridge {
-    pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>, db: RedisDb) -> Self {
+    pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>, db: &RedisDb) -> Self {
         Self {
             bridge_data: BridgeData {
                 uuid: Uuid::new_v4(),
@@ -60,12 +60,15 @@ impl Bridge {
                 path,
                 link,
             },
-            db,
+            db: db.clone(),
         }
     }
 
-    pub fn from_bridge_data(bridge_data: BridgeData, db: RedisDb) -> Self {
-        Self { bridge_data, db }
+    pub fn from_bridge_data(bridge_data: BridgeData, db: &RedisDb) -> Self {
+        Self {
+            bridge_data,
+            db: db.clone(),
+        }
     }
 }
 
@@ -75,7 +78,7 @@ impl BridgeManifest for Bridge {
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
     fn forest(&self) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
-        fetch_forest_by_uuid(self.db.clone(), &self.bridge_data.forest_uuid)
+        fetch_forest_by_uuid(&self.db, &self.bridge_data.forest_uuid)
     }
 
     /// ## Errors
@@ -115,18 +118,18 @@ impl BridgeManifest for Bridge {
 impl Model for Bridge {
     fn save(&self) -> CatlibResult<()> {
         db::commands::set(
-            self.db.clone(),
+            &self.db,
             format!("bridge-{}", self.uuid()),
             self.serialise(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        db::commands::delete(self.db.clone(), format!("bridge-{}", self.uuid()))
+        db::commands::delete(&self.db, format!("bridge-{}", self.uuid()))
     }
 
     fn sync(&mut self) -> CatlibResult<()> {
-        let bridge = db::fetch_bridge_by_uuid(self.db.clone(), &self.uuid())?;
+        let bridge = db::fetch_bridge_by_uuid(&self.db, &self.uuid())?;
         let bridge_lock = bridge.lock().expect("Poisoned Mutex");
         self.bridge_data = BridgeData::from(bridge_lock.serialise().as_str());
         Ok(())

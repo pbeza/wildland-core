@@ -56,8 +56,11 @@ pub(crate) struct ContainerEntity {
 }
 
 impl ContainerEntity {
-    pub fn from_container_data(container_data: ContainerData, db: RedisDb) -> Self {
-        Self { container_data, db }
+    pub fn from_container_data(container_data: ContainerData, db: &RedisDb) -> Self {
+        Self {
+            container_data,
+            db: db.clone(),
+        }
     }
 }
 
@@ -85,7 +88,7 @@ impl ContainerManifest for ContainerEntity {
     }
 
     fn get_storages(&mut self) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, CatlibError> {
-        fetch_storages_by_container_uuid(self.db.clone(), &self.container_data.uuid)
+        fetch_storages_by_container_uuid(&self.db, &self.container_data.uuid)
     }
 
     fn add_storage(
@@ -97,7 +100,7 @@ impl ContainerManifest for ContainerEntity {
             self.container_data.uuid,
             Some(template_uuid),
             serialized_storage,
-            self.db.clone(),
+            &self.db,
         );
         storage_entity.save()?;
         self.sync()?;
@@ -125,7 +128,7 @@ impl ContainerManifest for ContainerEntity {
     }
 
     fn forest(&self) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
-        fetch_forest_by_uuid(self.db.clone(), &self.container_data.forest_uuid)
+        fetch_forest_by_uuid(&self.db, &self.container_data.forest_uuid)
     }
 
     fn uuid(&self) -> Uuid {
@@ -138,7 +141,7 @@ impl ContainerManifest for ContainerEntity {
     }
 
     fn owner(&self) -> Result<Identity, CatlibError> {
-        let forest = fetch_forest_by_uuid(self.db.clone(), &self.container_data.forest_uuid)?;
+        let forest = fetch_forest_by_uuid(&self.db, &self.container_data.forest_uuid)?;
         let forest_lock = forest.lock().expect("Poisoned Mutex");
         Ok(forest_lock.owner())
     }
@@ -151,18 +154,18 @@ impl ContainerManifest for ContainerEntity {
 impl Model for ContainerEntity {
     fn save(&self) -> CatlibResult<()> {
         db::commands::set(
-            self.db.clone(),
+            &self.db,
             format!("container-{}", self.uuid()),
             self.serialise(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        db::commands::delete(self.db.clone(), format!("container-{}", self.uuid()))
+        db::commands::delete(&self.db, format!("container-{}", self.uuid()))
     }
 
     fn sync(&mut self) -> CatlibResult<()> {
-        let container = db::fetch_container_by_uuid(self.db.clone(), &self.uuid())?;
+        let container = db::fetch_container_by_uuid(&self.db, &self.uuid())?;
         let container_lock = container.lock().expect("Poisoned Mutex");
         self.container_data = ContainerData::from(container_lock.serialise().as_str());
         Ok(())

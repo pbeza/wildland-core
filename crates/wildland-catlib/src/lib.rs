@@ -73,8 +73,6 @@
 //! ```
 //!
 
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use bridge::Bridge;
@@ -122,7 +120,7 @@ impl CatLib {
 
         CatLib {
             db: RedisDb {
-                client: Rc::new(RefCell::new(db.unwrap())),
+                client: db.unwrap(),
                 key_prefix,
             },
         }
@@ -158,12 +156,12 @@ impl ICatLib for CatLib {
         signers: Signers,
         data: Vec<u8>,
     ) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
-        let forest = ForestEntity::new(owner, signers, data, self.db.clone())?;
+        let forest = ForestEntity::new(owner, signers, data, &self.db)?;
         Ok(Arc::new(Mutex::new(forest)))
     }
 
     fn get_forest(&self, uuid: &Uuid) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
-        fetch_forest_by_uuid(self.db.clone(), uuid)
+        fetch_forest_by_uuid(&self.db, uuid)
     }
 
     /// ## Errors
@@ -173,7 +171,7 @@ impl ICatLib for CatLib {
     /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn find_forest(&self, owner: &Identity) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
-        let forests = db::fetch_all_forests(self.db.clone())?;
+        let forests = db::fetch_all_forests(&self.db)?;
         let forests: Vec<_> = forests
             .iter()
             .filter(|forest| &forest.lock().expect("Poisoned Mutex").owner() == owner)
@@ -187,7 +185,7 @@ impl ICatLib for CatLib {
     }
 
     fn get_container(&self, uuid: &Uuid) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
-        fetch_container_by_uuid(self.db.clone(), uuid)
+        fetch_container_by_uuid(&self.db, uuid)
     }
 
     /// ## Errors
@@ -199,7 +197,7 @@ impl ICatLib for CatLib {
         &self,
         template_id: &Uuid,
     ) -> CatlibResult<Vec<Arc<Mutex<dyn StorageManifest>>>> {
-        db::fetch_storages_by_template_uuid(self.db.clone(), template_id)
+        db::fetch_storages_by_template_uuid(&self.db, template_id)
     }
 
     /// ## Errors
@@ -220,12 +218,12 @@ impl ICatLib for CatLib {
 
     #[tracing::instrument(level = "debug", skip_all)]
     fn save_storage_template(&self, template_id: &Uuid, value: String) -> CatlibResult<()> {
-        db::commands::set(self.db.clone(), format!("template-{template_id}"), value)
+        db::commands::set(&self.db, format!("template-{template_id}"), value)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
     fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>> {
-        db::fetch_templates(self.db.clone())
+        db::fetch_templates(&self.db)
     }
 }
 

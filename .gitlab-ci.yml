@@ -267,27 +267,30 @@ csharp x86_64 linux:
     - master
     - merge_requests
 
-webassembly emscripten linux:
-  stage: Bindings
-  needs: ["cargo test", "x86_64 linux build"]
-  script:
-    - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
-    - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
-    - mv /out ${CI_PROJECT_DIR}/build
-  artifacts:
-    expose_as: "wasm"
-    name: wasm
-    paths:
-      - build/
-    expire_in: 1 week
-  tags:
-    - docker
-    - linux
-    - metal
-  rules:
-    - if: $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
-      allow_failure: true # Catlib for WASM - WILX-351
-    - when: never
+# DISABLED after implementing Redis Backend.
+# TBD whether this target will even persist, and if it does, see COR-65
+#
+# webassembly emscripten linux:
+#   stage: Bindings
+#   needs: ["cargo test", "x86_64 linux build"]
+#   script:
+#     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
+#     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
+#     - mv /out ${CI_PROJECT_DIR}/build
+#   artifacts:
+#     expose_as: "wasm"
+#     name: wasm
+#     paths:
+#       - build/
+#     expire_in: 1 week
+#   tags:
+#     - docker
+#     - linux
+#     - metal
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
+#       allow_failure: true
+#     - when: never
 
 swift x86_64 linux:
   stage: Bindings

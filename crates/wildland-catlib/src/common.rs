@@ -15,13 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use redis::Connection;
 use wildland_corex::catlib_service::error::CatlibResult;
 
-pub(crate) type DbClient = Rc<RefCell<Connection>>;
+// pub(crate) type DbClient = Rc<RefCell<Connection>>;
+pub(crate) type DbClient = r2d2::Pool<redis::Client>;
 
 #[derive(Clone)]
 pub(crate) struct RedisDb {

@@ -55,7 +55,7 @@ impl StorageEntity {
         container_uuid: Uuid,
         template_uuid: Option<Uuid>,
         data: Vec<u8>,
-        db: RedisDb,
+        db: &RedisDb,
     ) -> Self {
         Self {
             storage_data: StorageData {
@@ -64,12 +64,15 @@ impl StorageEntity {
                 template_uuid,
                 data,
             },
-            db,
+            db: db.clone(),
         }
     }
 
-    pub fn from_storage_data(storage_data: StorageData, db: RedisDb) -> Self {
-        Self { storage_data, db }
+    pub fn from_storage_data(storage_data: StorageData, db: &RedisDb) -> Self {
+        Self {
+            storage_data,
+            db: db.clone(),
+        }
     }
 }
 
@@ -86,7 +89,7 @@ impl StorageManifest for StorageEntity {
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Container`] was found.
     /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     fn container(&self) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
-        fetch_container_by_uuid(self.db.clone(), &self.storage_data.container_uuid)
+        fetch_container_by_uuid(&self.db, &self.storage_data.container_uuid)
     }
 
     /// ## Errors
@@ -130,18 +133,18 @@ impl StorageManifest for StorageEntity {
 impl Model for StorageEntity {
     fn save(&self) -> CatlibResult<()> {
         db::commands::set(
-            self.db.clone(),
+            &self.db,
             format!("storage-{}", self.uuid()),
             self.serialise(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        db::commands::delete(self.db.clone(), format!("storage-{}", self.uuid()))
+        db::commands::delete(&self.db, format!("storage-{}", self.uuid()))
     }
 
     fn sync(&mut self) -> CatlibResult<()> {
-        let storage = db::fetch_storage_by_uuid(self.db.clone(), &self.uuid())?;
+        let storage = db::fetch_storage_by_uuid(&self.db, &self.uuid())?;
         let storage_lock = storage.lock().expect("Poisoned Mutex");
         self.storage_data = StorageData::from(storage_lock.serialise().as_str());
         Ok(())

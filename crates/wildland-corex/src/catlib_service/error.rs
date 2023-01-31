@@ -9,6 +9,12 @@ impl From<RedisError> for CatlibError {
     }
 }
 
+impl From<r2d2::Error> for CatlibError {
+    fn from(err: r2d2::Error) -> Self {
+        CatlibError::Generic(format!("R2D2 error: {err}"))
+    }
+}
+
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
 #[repr(C)]
 pub enum CatlibError {
