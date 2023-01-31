@@ -46,6 +46,12 @@ pub enum OpenResponse {
     NotFound,
 }
 
+/// Error represents scenario when data could not be retrieved from the StorageBackend, e.g. some
+/// network error. This mean that operation can be called again later of data can still be successfully
+/// retrieved from another equivalent backend.
+///
+/// All logical errors, e.g. trying opening directory, should be reflected in the inner type, like OpenResponse.
+/// Those variants are hidden inside Ok value because they should not trigger retrying operation.
 pub trait StorageBackend {
     fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError>;
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError>;

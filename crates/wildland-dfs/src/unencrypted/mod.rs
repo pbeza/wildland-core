@@ -41,6 +41,7 @@ use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{fetch_data_from_containers, get_related_nodes};
 use crate::storage_backend::{OpenResponse, StorageBackend};
+use crate::unencrypted::utils::find_node_matching_requested_path;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NodeDescriptor {
@@ -237,16 +238,34 @@ impl DfsFrontend for UnencryptedDfs {
                 .filter(|(_node, response)| !matches!(response, OpenResponse::NotFound))
                 .collect();
 
+        let map_response_to_result = |dfs_front: &mut UnencryptedDfs, resp: OpenResponse| match resp
+        {
+            OpenResponse::Found(opened_file) => Ok(dfs_front.insert_opened_file(opened_file)),
+            OpenResponse::NotAFile => Err(DfsFrontendError::NotAFile),
+            _ => Err(DfsFrontendError::NoSuchPath),
+        };
+
         match descriptors.len() {
             0 => Err(DfsFrontendError::NoSuchPath),
-            1 => match descriptors.pop().unwrap().1 {
-                OpenResponse::Found(opened_file) => Ok(self.insert_opened_file(opened_file)),
-                OpenResponse::NotAFile => Err(DfsFrontendError::NotAFile),
-                _ => Err(DfsFrontendError::NoSuchPath),
-            },
+            1 => map_response_to_result(self, descriptors.pop().unwrap().1),
             _ => {
                 // More that 1 descriptor means that files are in conflict, so they are exposed under different paths
-                Err(DfsFrontendError::NotAFile)
+                let nodes: Vec<&NodeDescriptor> = descriptors.iter().map(|(n, _)| *n).collect();
+                let exposed_paths = self.path_translator.solve_conflicts(nodes);
+                let node = find_node_matching_requested_path(input_exposed_path, &exposed_paths);
+                match node {
+                    // Physical node
+                    Some(node @ NodeDescriptor::Physical { .. }) => {
+                        let opened_file = descriptors
+                            .into_iter()
+                            .find_map(|(n, resp)| if n == node { Some(resp) } else { None })
+                            .ok_or(DfsFrontendError::NoSuchPath)?;
+                        map_response_to_result(self, opened_file)
+                    }
+                    // Virtual node
+                    Some(_) | None if !exposed_paths.is_empty() => Err(DfsFrontendError::NotAFile),
+                    _ => Err(DfsFrontendError::NoSuchPath),
+                }
             }
         }
     }

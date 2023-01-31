@@ -175,7 +175,7 @@ fn test_open_and_close_conflicting_files() {
     path_resolver
         .expect_resolve()
         .with(predicate::eq(Path::new("/a/b/file_or_dir")))
-        .times(1)
+        .times(3)
         .returning({
             let storage1 = storage1;
             let storage2 = storage2;
@@ -207,5 +207,16 @@ fn test_open_and_close_conflicting_files() {
     assert_eq!(
         DfsFrontendError::NotAFile,
         dfs.open("/a/b/file_or_dir".into()).unwrap_err()
+    );
+
+    let file = dfs
+        .open("/a/b/file_or_dir/00000000-0000-0000-0000-000000000001".into())
+        .unwrap();
+    dfs.close(&file).unwrap();
+
+    assert_eq!(
+        DfsFrontendError::NotAFile,
+        dfs.open("/a/b/file_or_dir/00000000-0000-0000-0000-000000000002".into())
+            .unwrap_err()
     );
 }

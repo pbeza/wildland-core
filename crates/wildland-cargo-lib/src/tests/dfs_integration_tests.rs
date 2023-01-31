@@ -119,6 +119,9 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     let c1_file_stat = dfs.getattr("/some/path/dir/".to_owned()).unwrap();
     assert_eq!(c1_file_stat.node_type, NodeType::Dir);
 
+    let file = dfs.open("/some/path/dir/c1_file".to_owned()).unwrap();
+    dfs.close(&file).unwrap();
+
     //
     // And when one container is unmounted
     //
