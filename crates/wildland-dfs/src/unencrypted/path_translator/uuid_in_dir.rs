@@ -38,7 +38,7 @@ impl PathConflictResolver for UuidInDirTranslator {
     // containers' storages.
     fn solve_conflicts<'a>(
         &self,
-        nodes: &'a [NodeDescriptor],
+        nodes: Vec<&'a NodeDescriptor>,
     ) -> Vec<(&'a NodeDescriptor, PathBuf)> {
         let counted_abs_paths = nodes.iter().counts_by(|node| node.absolute_path.clone());
         nodes
@@ -49,17 +49,17 @@ impl PathConflictResolver for UuidInDirTranslator {
                 // If another file tries to claim the same path
                 if counted_abs_paths.get(&abs_path).unwrap() > &1
                 // or a physical node has the same path as some virtual node
-                || (node.storages.is_some() && conflicts_with_virtual_path(&node.absolute_path, nodes))
+                || (node.storages.is_some() && conflicts_with_virtual_path(&node.absolute_path, &nodes))
                 {
                     // then append uuid to avoid conflict
                     let exposed_path =
                         abs_path.join(node.storages.as_ref().map_or(PathBuf::new(), |s| {
                             PathBuf::from_str(s.uuid.to_string().as_str()).unwrap()
                         }));
-                    (node, exposed_path)
+                    (*node, exposed_path)
                 } else {
                     // otherwise, in case there is no conflicts, expose as the same path
-                    (node, abs_path)
+                    (*node, abs_path)
                 }
             })
             .collect_vec()
@@ -70,7 +70,7 @@ impl PathConflictResolver for UuidInDirTranslator {
     }
 }
 
-fn conflicts_with_virtual_path(physical_node_abs_path: &Path, nodes: &[NodeDescriptor]) -> bool {
+fn conflicts_with_virtual_path(physical_node_abs_path: &Path, nodes: &[&NodeDescriptor]) -> bool {
     nodes
         .iter()
         .filter(|node| node.storages.is_none())
@@ -118,8 +118,8 @@ mod unit_tests {
             }),
             absolute_path: "/file".into(),
         };
-        let nodes = vec![node.clone()];
-        let exposed_paths = translator.solve_conflicts(&nodes);
+        let nodes = vec![&node];
+        let exposed_paths = translator.solve_conflicts(nodes);
 
         assert_eq!(exposed_paths, vec![(&node, "/file".into())])
     }
@@ -147,8 +147,8 @@ mod unit_tests {
             }),
             absolute_path: "/file".into(),
         };
-        let nodes = vec![node1.clone(), node2.clone()];
-        let exposed_paths = translator.solve_conflicts(&nodes);
+        let nodes = vec![&node1, &node2];
+        let exposed_paths = translator.solve_conflicts(nodes);
 
         assert_eq!(
             exposed_paths,
@@ -177,8 +177,8 @@ mod unit_tests {
             storages: None,
             absolute_path: "/a".into(),
         };
-        let nodes = vec![node1.clone(), node2.clone()];
-        let exposed_paths = translator.solve_conflicts(&nodes);
+        let nodes = vec![&node1, &node2];
+        let exposed_paths = translator.solve_conflicts(nodes);
 
         assert_eq!(
             exposed_paths,

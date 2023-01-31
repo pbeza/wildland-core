@@ -22,12 +22,11 @@ use serde::{Deserialize, Serialize};
 use wildland_corex::catlib_service::entities::{
     BridgeManifest,
     ContainerManifest,
-    ContainerPath,
     ForestManifest,
     Identity,
     Signers,
 };
-use wildland_corex::ContainerPaths;
+use wildland_corex::{ContainerPath, ContainerPaths};
 
 use super::*;
 use crate::bridge::BridgeData;
@@ -180,10 +179,15 @@ impl ForestManifest for ForestEntity {
     #[tracing::instrument(level = "debug", skip_all)]
     fn create_bridge(
         &self,
-        path: ContainerPath,
+        path: String,
         link_data: Vec<u8>,
     ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError> {
-        let bridge = Bridge::new(self.data.uuid, path, link_data, self.db.clone());
+        let bridge = Bridge::new(
+            self.data.uuid,
+            PathBuf::from(path),
+            link_data,
+            self.db.clone(),
+        );
         bridge.save()?;
         Ok(Arc::new(Mutex::new(bridge)))
     }
@@ -194,10 +198,7 @@ impl ForestManifest for ForestEntity {
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Bridge`] was found.
     /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
-    fn find_bridge(
-        &self,
-        path: ContainerPath,
-    ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError> {
+    fn find_bridge(&self, path: String) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError> {
         self.db.load().map_err(to_catlib_error)?;
         let data = self.db.read(|db| db.clone()).map_err(to_catlib_error)?;
 
@@ -208,7 +209,10 @@ impl ForestManifest for ForestEntity {
                 data: BridgeData::from(bridge_str.as_str()),
                 db: self.db.clone(),
             })
-            .filter(|bridge| bridge.data.forest_uuid == self.data.uuid && bridge.data.path == path)
+            .filter(|bridge| {
+                bridge.data.forest_uuid == self.data.uuid
+                    && bridge.data.path == PathBuf::from(&path)
+            })
             .map(|bridge| Arc::new(Mutex::new(bridge)))
             .collect();
 
@@ -236,13 +240,13 @@ impl ForestManifest for ForestEntity {
     ///                  vec![],
     ///              ).unwrap();
     /// let container = forest.lock().unwrap().create_container("container name".to_owned()).unwrap();
-    /// container.lock().unwrap().add_path("/foo/bar".to_string());
+    /// container.lock().unwrap().add_path("/foo/bar".into());
     ///
     /// let containers = forest.find_containers(vec!["/foo/bar".to_string()], false).unwrap();
     #[tracing::instrument(level = "debug", skip_all)]
     fn find_containers(
         &self,
-        paths: Vec<String>,
+        paths: ContainerPaths,
         include_subdirs: bool,
     ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
         self.db.load().map_err(to_catlib_error)?;
@@ -257,7 +261,7 @@ impl ForestManifest for ForestEntity {
                 container_data.paths.iter().any(|container_path| {
                     paths.iter().any(|path| {
                         (include_subdirs && container_path.starts_with(path))
-                            || container_path.eq(path)
+                            || container_path.eq(&PathBuf::from(path))
                     })
                 })
             })

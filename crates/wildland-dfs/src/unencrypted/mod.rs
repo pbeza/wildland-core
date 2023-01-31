@@ -27,7 +27,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use uuid::Uuid;
-use wildland_corex::dfs::interface::{DfsFrontend, Stat};
+use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, Stat};
 use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
@@ -73,7 +73,7 @@ pub trait StorageBackendFactory {
 // the conflict resolution took place and find files which paths were mapped.
 
 pub struct UnencryptedDfs {
-    path_resolver: Rc<dyn PathResolver>,
+    path_resolver: Box<dyn PathResolver>,
     /// Stores a factory for each supported backend type
     storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
     /// Stores Backend for each storage. Each storage should have its own backend cause even within
@@ -87,11 +87,11 @@ pub struct UnencryptedDfs {
 
 impl UnencryptedDfs {
     pub fn new(
-        path_resolver: Rc<dyn PathResolver>,
+        path_resolver: Box<dyn PathResolver>,
         storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
     ) -> Self {
         Self {
-            path_resolver: path_resolver.clone(),
+            path_resolver,
             storage_backend_factories,
             storage_backends: HashMap::new(),
             path_translator: Box::new(UuidInDirTranslator::new()),
@@ -167,12 +167,12 @@ impl DfsFrontend for UnencryptedDfs {
     /// ]
     /// Full path within the user's forest for both nodes is `/a/b/c`. It is up to FS frontend how to
     /// show it to a user (e.g. by prefixing it with some storage-specific tag).
-    fn readdir(&mut self, requested_path: String) -> Vec<String> {
+    fn readdir(&mut self, requested_path: String) -> Result<Vec<String>, DfsFrontendError> {
         readdir::readdir(self, requested_path)
     }
 
     // Returns Stat of the file indicated by the provided exposed path
-    fn getattr(&mut self, input_exposed_path: String) -> Option<Stat> {
+    fn getattr(&mut self, input_exposed_path: String) -> Result<Stat, DfsFrontendError> {
         getattr::getattr(self, input_exposed_path)
     }
 }

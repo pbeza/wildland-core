@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use uuid::Uuid;
@@ -57,10 +58,10 @@ impl Forest {
     ///         ]),
     ///     )
     ///     .unwrap();
-    /// let path = "/some/path".to_owned();
+    /// let path = "/some/path".into();
     /// let container = forest.create_container("container name1".to_owned(), &storage_template, path).unwrap();
-    /// container.add_path("/foo/bar1".to_string());
-    /// container.add_path("/bar/baz1".to_string());
+    /// container.add_path("/foo/bar1".into());
+    /// container.add_path("/bar/baz1".into());
     /// ```
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_container(
@@ -102,7 +103,10 @@ impl Forest {
         self.forest_manifest
             .lock()
             .expect("Poisoned Mutex")
-            .find_containers(paths, include_subdirs)
+            .find_containers(
+                paths.into_iter().map(PathBuf::from).collect(),
+                include_subdirs,
+            )
             .map(|containers_vec| {
                 containers_vec
                     .into_iter()
@@ -115,7 +119,7 @@ impl Forest {
 
     pub fn create_bridge(
         &self,
-        path: ContainerPath,
+        path: String,
         link_data: Vec<u8>,
     ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError> {
         self.forest_manifest
@@ -124,10 +128,7 @@ impl Forest {
             .create_bridge(path, link_data)
     }
 
-    pub fn find_bridge(
-        &self,
-        path: ContainerPath,
-    ) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError> {
+    pub fn find_bridge(&self, path: String) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError> {
         self.forest_manifest
             .lock()
             .expect("Poisoned Mutex")

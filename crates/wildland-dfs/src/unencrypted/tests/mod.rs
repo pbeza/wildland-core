@@ -144,7 +144,7 @@ impl StorageBackendFactory for MufsFactory {
 }
 
 type DfsFixture = (UnencryptedDfs, Rc<FS>);
-fn dfs_with_fs(path_resolver: Rc<MockPathResolver>) -> DfsFixture {
+fn dfs_with_fs(path_resolver: Box<MockPathResolver>) -> DfsFixture {
     let fs = Rc::new(FS::new());
     let factory = MufsFactory::new(fs.clone());
     let mut backend_factories: HashMap<String, Box<dyn StorageBackendFactory>> = HashMap::new();

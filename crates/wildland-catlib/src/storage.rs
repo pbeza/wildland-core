@@ -162,7 +162,7 @@ mod tests {
         let locked_forest = forest.lock().unwrap();
         let forest_uuid = locked_forest.uuid();
         let container_uuid = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
-        let path = "/some/path".to_owned();
+        let path = "/some/path".into();
         locked_forest
             .create_container(container_uuid, forest_uuid, "name".to_owned(), path)
             .unwrap()

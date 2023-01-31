@@ -5,7 +5,6 @@ pub(crate) mod test {
     use std::rc::Rc;
 
     use rstest::fixture;
-    use tempfile;
     use uuid::Bytes;
     use wildland_catlib::CatLib;
     use wildland_corex::catlib_service::CatLibService;

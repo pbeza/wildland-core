@@ -16,9 +16,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
-use wildland_corex::dfs::interface::{DfsFrontend, Stat};
+use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, Stat};
 use wildland_corex::PathResolver;
 
 use crate::unencrypted::{StorageBackendFactory, UnencryptedDfs};
@@ -29,7 +28,7 @@ pub struct EncryptedDfs {
 
 impl EncryptedDfs {
     pub fn new(
-        path_resolver: Rc<dyn PathResolver>,
+        path_resolver: Box<dyn PathResolver>,
         storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
     ) -> Self {
         Self {
@@ -39,12 +38,12 @@ impl EncryptedDfs {
 }
 
 impl DfsFrontend for EncryptedDfs {
-    fn readdir(&mut self, path: String) -> Vec<String> {
+    fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.readdir(path)
     }
 
-    fn getattr(&mut self, path: String) -> Option<Stat> {
+    fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.getattr(path)
     }

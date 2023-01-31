@@ -25,7 +25,7 @@ pub trait PathConflictResolver {
     // Returns paths under which the nodes are to be exposed
     fn solve_conflicts<'a>(
         &self,
-        nodes: &'a [NodeDescriptor],
+        nodes: Vec<&'a NodeDescriptor>,
     ) -> Vec<(&'a NodeDescriptor, PathBuf)>;
 
     /// determines absolute path basing on the exposed one

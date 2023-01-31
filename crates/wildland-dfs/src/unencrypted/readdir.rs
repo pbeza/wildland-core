@@ -20,6 +20,7 @@ use std::str::FromStr;
 
 use itertools::{Either, Itertools};
 use uuid::Uuid;
+use wildland_corex::dfs::interface::DfsFrontendError;
 use wildland_corex::{ResolvedPath, Storage};
 
 use super::{
@@ -31,9 +32,12 @@ use super::{
 };
 use crate::storage_backend::StorageBackendError;
 
-pub fn readdir(dfs_front: &mut UnencryptedDfs, requested_path: String) -> Vec<String> {
+pub fn readdir(
+    dfs_front: &mut UnencryptedDfs,
+    requested_path: String,
+) -> Result<Vec<String>, DfsFrontendError> {
     let requested_path = PathBuf::from_str(&requested_path).unwrap();
-    let resolved_paths = dfs_front.path_resolver.resolve(requested_path.as_ref());
+    let resolved_paths = dfs_front.path_resolver.resolve(requested_path.as_ref())?;
 
     let nodes = resolved_paths
         .into_iter()
@@ -43,13 +47,13 @@ pub fn readdir(dfs_front: &mut UnencryptedDfs, requested_path: String) -> Vec<St
         .flatten()
         .collect_vec();
 
-    dfs_front
+    Ok(dfs_front
         .path_translator
-        .solve_conflicts(&nodes)
+        .solve_conflicts(nodes.iter().collect::<Vec<_>>())
         .into_iter()
         .filter_map(|(_node, exposed_path)| filter_exposed_paths(&requested_path, exposed_path))
         .unique()
-        .collect()
+        .collect())
 }
 
 // This function probably can be removed in case of using different path translator than `uuid_in_dir`

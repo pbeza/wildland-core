@@ -24,6 +24,7 @@ use wildland_corex::entities::Identity;
 use wildland_corex::{BridgeManifest, Signers, StorageManifest};
 pub use wildland_corex::{
     Container,
+    ContainerManagerError,
     CoreXError,
     CryptoError,
     ForestRetrievalError,
@@ -98,11 +99,10 @@ mod ffi_binding {
         RecordAlreadyExists(_),
         Generic(_),
     }
-    enum ContainerMountError {
-        Error,
-    }
-    enum ContainerUnmountError {
-        Error,
+    enum ContainerManagerError {
+        AlreadyMounted,
+        MountingError(_),
+        ContainerNotMounted,
     }
     enum FoundationCloudMode {
         Dev,
@@ -110,6 +110,17 @@ mod ffi_binding {
     enum GetStorageTemplateError {
         CatlibError(_),
         DeserializationError(_),
+    }
+    enum DfsFrontendError {
+        NoSuchPath,
+        PathResolutionError(_),
+        Generic(_),
+    }
+
+    enum NodeType {
+        File,
+        Dir,
+        Symlink,
     }
 
     extern "Traits" {
@@ -220,6 +231,14 @@ mod ffi_binding {
         fn get_storage_templates(
             self: &CargoUser,
         ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
+        fn mount(
+            self: &CargoUser,
+            container: &Container,
+        ) -> Result<VoidType, ContainerManagerError>;
+        fn unmount(
+            self: &CargoUser,
+            container: &Container,
+        ) -> Result<VoidType, ContainerManagerError>;
 
         // Foundation Storage
         type FreeTierProcessHandle;
@@ -278,7 +297,28 @@ mod ffi_binding {
         fn stringify(self: &StorageTemplate) -> String;
 
         // DFS Frontend
-        fn readdir(self: &Arc<Mutex<dyn DfsFrontend>>, path: String) -> Vec<String>;
+        fn readdir(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            path: String,
+        ) -> Result<Vec<String>, DfsFrontendError>;
+        fn getattr(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            path: String,
+        ) -> Result<Stat, DfsFrontendError>;
 
+        //
+        // Stat
+        //
+        fn node_type(self: &Stat) -> NodeType;
+        fn size(self: &Stat) -> u64;
+        fn access_time(self: &Stat) -> Option<UnixTimestamp>;
+        fn modification_time(self: &Stat) -> Option<UnixTimestamp>;
+        fn change_time(self: &Stat) -> Option<UnixTimestamp>;
+
+        //
+        // UnixTimestamp
+        //
+        fn sec(self: &UnixTimestamp) -> u64;
+        fn nano_sec(self: &UnixTimestamp) -> u32;
     }
 }
