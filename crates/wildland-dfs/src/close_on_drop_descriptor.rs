@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::storage_backend::{OpenedFileDescriptor, StorageBackendError};
+use crate::storage_backend::{CloseError, OpenedFileDescriptor};
 
 /// Wrapper ensuring that close is always called on `OpenedFileDescriptor`
 #[derive(Debug)]
@@ -36,7 +36,7 @@ impl Drop for CloseOnDropDescriptor {
 }
 
 impl OpenedFileDescriptor for CloseOnDropDescriptor {
-    fn close(&self) -> Result<(), StorageBackendError> {
+    fn close(&self) -> Result<(), CloseError> {
         self.inner.close()
     }
 }

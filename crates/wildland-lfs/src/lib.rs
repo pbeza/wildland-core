@@ -25,6 +25,7 @@ use std::rc::Rc;
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::close_on_drop_descriptor::CloseOnDropDescriptor;
 use wildland_dfs::storage_backend::{
+    CloseError,
     OpenResponse,
     OpenedFileDescriptor,
     ReaddirResponse,
@@ -135,7 +136,7 @@ impl StdFsOpenedFile {
 }
 
 impl OpenedFileDescriptor for StdFsOpenedFile {
-    fn close(&self) -> Result<(), StorageBackendError> {
+    fn close(&self) -> Result<(), CloseError> {
         // std::fs::File is closed when going out of scope, so there is nothing to do here
         Ok(())
     }

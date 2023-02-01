@@ -32,6 +32,7 @@ use wildland_corex::{MockPathResolver, Storage};
 
 use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 use crate::storage_backend::{
+    CloseError,
     OpenResponse,
     OpenedFileDescriptor,
     ReaddirResponse,
@@ -163,7 +164,7 @@ impl MufsOpenedFile {
 }
 
 impl OpenedFileDescriptor for MufsOpenedFile {
-    fn close(&self) -> Result<(), StorageBackendError> {
+    fn close(&self) -> Result<(), CloseError> {
         // rsfs File is closed when going out of scope, so there is nothing to do here
         Ok(())
     }
