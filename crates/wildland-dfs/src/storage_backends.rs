@@ -68,6 +68,12 @@ pub enum ReaddirResponse {
     NotADirectory,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum GetattrResponse {
+    Found(Stat),
+    NotFound,
+}
+
 /// Error represents scenario when data could not be retrieved from the StorageBackend, e.g. some
 /// network error. This mean that operation can be called again later of data can still be successfully
 /// retrieved from another equivalent backend.
@@ -76,7 +82,7 @@ pub enum ReaddirResponse {
 /// Those variants are hidden inside Ok value because they should not trigger retrying operation.
 pub trait StorageBackend {
     fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError>;
-    fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError>;
+    fn getattr(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError>;
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError>;
 }
 

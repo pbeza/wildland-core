@@ -1,9 +1,13 @@
-use std::path::{Path, PathBuf};
-
-use wildland_corex::dfs::interface::Stat;
+use std::path::Path;
 
 use super::client::S3Client;
-use crate::storage_backends::{StorageBackend, StorageBackendError};
+use crate::storage_backends::{
+    GetattrResponse,
+    OpenResponse,
+    ReaddirResponse,
+    StorageBackend,
+    StorageBackendError,
+};
 
 pub struct S3Backend {
     client: Box<dyn S3Client>,
@@ -20,15 +24,21 @@ impl S3Backend {
 }
 
 impl StorageBackend for S3Backend {
-    fn readdir(&self, path_within_storage: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
-        Ok(self
-            .client
-            .list_files(path_within_storage, &self.bucket_name)?)
+    fn readdir(&self, path_within_storage: &Path) -> Result<ReaddirResponse, StorageBackendError> {
+        Ok(ReaddirResponse::Entries(
+            self.client
+                .list_files(path_within_storage, &self.bucket_name)?,
+        ))
     }
 
-    fn getattr(&self, path_within_storage: &Path) -> Result<Stat, StorageBackendError> {
-        Ok(self
-            .client
-            .get_object_attributes(path_within_storage, &self.bucket_name)?)
+    fn getattr(&self, path_within_storage: &Path) -> Result<GetattrResponse, StorageBackendError> {
+        Ok(GetattrResponse::Found(self.client.get_object_attributes(
+            path_within_storage,
+            &self.bucket_name,
+        )?))
+    }
+
+    fn open(&self, _path: &Path) -> Result<OpenResponse, StorageBackendError> {
+        todo!()
     }
 }
