@@ -19,7 +19,7 @@ crate-type = ["staticlib", "lib"]
 
 [dependencies]
 anyhow               = { version = "1.0" }
-base64               = { version = "0.20" }
+base64               = { version = "0.21" }
 derivative           = { version = "2.2" }
 hex                  = { version = "0.4" }
 log                  = { version = "0.4" }

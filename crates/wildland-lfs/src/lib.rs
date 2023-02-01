@@ -24,15 +24,16 @@ use std::rc::Rc;
 
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::close_on_drop_descriptor::CloseOnDropDescriptor;
-use wildland_dfs::storage_backend::{
+use wildland_dfs::storage_backends::{
     CloseError,
+    GetattrResponse,
     OpenResponse,
     OpenedFileDescriptor,
     ReaddirResponse,
     StorageBackend,
     StorageBackendError,
+    StorageBackendFactory,
 };
-use wildland_dfs::unencrypted::StorageBackendFactory;
 use wildland_dfs::{NodeType, Stat, Storage, UnixTimestamp};
 
 #[derive(Debug)]
@@ -58,7 +59,6 @@ impl StorageBackend for LocalFilesystemStorage {
         } else {
             Ok(ReaddirResponse::Entries(
                 fs::read_dir(path)?
-                    .into_iter()
                     .map(|entry_result| {
                         Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
                     })
@@ -67,17 +67,17 @@ impl StorageBackend for LocalFilesystemStorage {
         }
     }
 
-    fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
+    fn getattr(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
         if !path.exists() {
-            return Ok(None);
+            return Ok(GetattrResponse::NotFound);
         }
 
         Ok(fs::metadata(path).map(|metadata| {
             let file_type = metadata.file_type();
-            Some(Stat {
+            GetattrResponse::Found(Stat {
                 node_type: if file_type.is_file() {
                     NodeType::File
                 } else if file_type.is_dir() {
@@ -85,7 +85,7 @@ impl StorageBackend for LocalFilesystemStorage {
                 } else if file_type.is_symlink() {
                     NodeType::Symlink
                 } else {
-                    return None;
+                    NodeType::Other
                 },
                 size: metadata.len(),
                 access_time: Some(UnixTimestamp {
@@ -144,9 +144,8 @@ impl OpenedFileDescriptor for StdFsOpenedFile {
 
 pub struct LfsBackendFactory {}
 impl StorageBackendFactory for LfsBackendFactory {
-    fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error> {
-        let template: LocalFilesystemStorageTemplate =
-            serde_json::from_value(storage.data().clone())?;
+    fn init_backend(&self, storage: Storage) -> anyhow::Result<Rc<dyn StorageBackend>> {
+        let template: LocalFilesystemStorageTemplate = serde_json::from_value(storage.data())?;
         Ok(Rc::new(LocalFilesystemStorage {
             base_dir: template.local_dir.join(template.container_prefix),
         }))

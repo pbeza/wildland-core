@@ -20,7 +20,8 @@ use std::collections::HashMap;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, FileHandle, Stat};
 use wildland_corex::PathResolver;
 
-use crate::unencrypted::{StorageBackendFactory, UnencryptedDfs};
+use crate::storage_backends::StorageBackendFactory;
+use crate::unencrypted::UnencryptedDfs;
 
 pub struct EncryptedDfs {
     inner: UnencryptedDfs,

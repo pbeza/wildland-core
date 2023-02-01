@@ -17,7 +17,7 @@
 
 pub mod close_on_drop_descriptor;
 pub mod encrypted;
-pub mod storage_backend;
+pub mod storage_backends;
 pub mod unencrypted;
 
 pub use wildland_corex::dfs::interface::*;
