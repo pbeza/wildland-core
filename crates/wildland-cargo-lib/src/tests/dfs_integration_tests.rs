@@ -28,7 +28,10 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
         "evs_url": "some_url",
         "sc_url": "some_url"
     }"#;
-    let cfg: CargoConfig = serde_json::from_str(config_str).unwrap();
+    let mut cfg: CargoConfig = serde_json::from_str(config_str).unwrap();
+
+    let catlib_path = tmpdir.join("db.ron").to_string_lossy().to_string();
+    cfg.override_catlib_path(catlib_path);
 
     let cargo_lib = create_cargo_lib(lss_stub, cfg).unwrap();
     let cargo_lib = cargo_lib.lock().unwrap();
@@ -38,8 +41,9 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
         .create_user_from_mnemonic(&mnemonic, "device_name".to_string())
         .unwrap();
 
+    let storage_dir = tmpdir.join("storage_dir");
     let template = LocalFilesystemStorageTemplate {
-        local_dir: tmpdir.clone(),
+        local_dir: storage_dir.clone(),
         container_prefix: "{{ CONTAINER_NAME }}".to_owned(),
     };
     let container1 = user
@@ -64,15 +68,17 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
         )
         .unwrap();
 
-    std::fs::create_dir(tmpdir.join("C1")).unwrap();
-    std::fs::create_dir(tmpdir.join("C1/dir")).unwrap();
-    std::fs::File::create(tmpdir.join("C1/dir/c1_file")).unwrap();
+    std::fs::create_dir(&storage_dir).unwrap();
 
-    std::fs::create_dir(tmpdir.join("C2")).unwrap();
-    std::fs::File::create(tmpdir.join("C2/c2_file")).unwrap();
+    std::fs::create_dir(storage_dir.join("C1")).unwrap();
+    std::fs::create_dir(storage_dir.join("C1/dir")).unwrap();
+    std::fs::File::create(storage_dir.join("C1/dir/c1_file")).unwrap();
 
-    std::fs::create_dir(tmpdir.join("C3")).unwrap();
-    std::fs::File::create(tmpdir.join("C3/c3_file")).unwrap();
+    std::fs::create_dir(storage_dir.join("C2")).unwrap();
+    std::fs::File::create(storage_dir.join("C2/c2_file")).unwrap();
+
+    std::fs::create_dir(storage_dir.join("C3")).unwrap();
+    std::fs::File::create(storage_dir.join("C3/c3_file")).unwrap();
 
     let dfs = cargo_lib.dfs_api();
     let mut dfs = dfs.lock().unwrap();

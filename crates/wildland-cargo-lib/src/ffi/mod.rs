@@ -169,6 +169,7 @@ mod ffi_binding {
         ) -> Result<CargoConfig, ParseConfigError>;
         fn override_evs_url(self: &CargoConfig, new_evs_url: String);
         fn override_sc_url(self: &CargoConfig, new_sc_url: String);
+        fn override_catlib_path(self: &CargoConfig, new_catlib_path: String);
 
         //
         // CargoLib
