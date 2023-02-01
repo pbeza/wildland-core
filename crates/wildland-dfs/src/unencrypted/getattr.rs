@@ -15,19 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use itertools::Itertools;
 use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat};
-use wildland_corex::ResolvedPath;
 
-use super::{
-    execute_backend_op_with_policy,
-    ExecutionPolicy,
-    NodeDescriptor,
-    NodeStorages,
-    UnencryptedDfs,
-};
+use super::utils::*;
+use super::{NodeDescriptor, UnencryptedDfs};
 
 pub fn getattr(
     dfs_front: &mut UnencryptedDfs,
@@ -35,57 +28,41 @@ pub fn getattr(
 ) -> Result<Stat, DfsFrontendError> {
     let input_exposed_path = Path::new(&input_exposed_path);
 
-    let requested_abs_path = dfs_front
-        .path_translator
-        .exposed_to_absolute_path(input_exposed_path);
+    let nodes = get_related_nodes(dfs_front, input_exposed_path)?;
 
-    let resolved_paths = dfs_front.path_resolver.resolve(&requested_abs_path)?;
-
-    let nodes = resolved_paths
-        .into_iter()
-        .map(|resolved_path| {
-            map_resolved_path_into_node_descriptor(requested_abs_path.clone(), resolved_path)
-        })
-        .collect_vec();
-
-    let mut stats: Vec<(&NodeDescriptor, Stat)> = nodes
-        .iter()
-        .filter_map(|node| {
-            node.storages.as_ref().and_then(|storages| {
-                fetch_data_from_backend(dfs_front, storages).map(|stat| (node, stat))
-            })
-        })
-        .chain(nodes.iter().filter_map(|n| {
-            if n.storages.is_none() {
-                Some((
-                    n,
-                    Stat {
-                        node_type: NodeType::Dir,
-                        size: 0,
-                        access_time: None,
-                        modification_time: None,
-                        change_time: None,
-                    },
-                ))
-            } else {
-                None
-            }
-        }))
-        .collect();
+    let mut stats: Vec<(&NodeDescriptor, Stat)> =
+        fetch_data_from_containers(&nodes, dfs_front, |backend, path| backend.getattr(path))
+            .filter_map(|(node, opt_result)| opt_result.map(|result| (node, result)))
+            .chain(nodes.iter().filter_map(|node| {
+                if node.is_virtual() {
+                    Some((
+                        node,
+                        Stat {
+                            node_type: NodeType::Dir,
+                            size: 0,
+                            access_time: None,
+                            modification_time: None,
+                            change_time: None,
+                        },
+                    ))
+                } else {
+                    None
+                }
+            }))
+            .collect();
 
     match stats.len() {
         0 => Err(DfsFrontendError::NoSuchPath),
         1 => Ok(stats.pop().unwrap().1),
         _ => {
-            let nodes: Vec<&NodeDescriptor> = stats.into_iter().map(|(n, _)| n).collect();
+            let nodes: Vec<&NodeDescriptor> = stats.iter().map(|(n, _)| *n).collect();
             let exposed_paths = dfs_front.path_translator.solve_conflicts(nodes);
             let node = find_node_matching_requested_path(input_exposed_path, &exposed_paths);
             match node {
                 // Physical node
-                Some(NodeDescriptor {
-                    storages: Some(node_storages),
-                    ..
-                }) => fetch_data_from_backend(dfs_front, node_storages)
+                Some(node @ NodeDescriptor::Physical { .. }) => stats
+                    .into_iter()
+                    .find_map(|(n, stat)| if n == node { Some(stat) } else { None })
                     .ok_or(DfsFrontendError::NoSuchPath),
                 // Virtual node
                 Some(_) | None if !exposed_paths.is_empty() => Ok(Stat {
@@ -98,62 +75,5 @@ pub fn getattr(
                 _ => Err(DfsFrontendError::NoSuchPath),
             }
         }
-    }
-}
-
-fn fetch_data_from_backend(
-    dfs_front: &mut UnencryptedDfs,
-    node_storages: &NodeStorages,
-) -> Option<Stat> {
-    let backends = dfs_front.get_backends(&node_storages.storages);
-
-    let backend_ops = backends.map(|backend| backend.getattr(&node_storages.path_within_storage));
-
-    // TODO WILX-362
-    execute_backend_op_with_policy(
-        &node_storages.storages,
-        backend_ops,
-        ExecutionPolicy::SequentiallyToFirstSuccess,
-    )
-    .flatten()
-}
-
-fn find_node_matching_requested_path<'a>(
-    input_exposed_path: &Path,
-    exposed_paths: &[(&'a NodeDescriptor, PathBuf)],
-) -> Option<&'a NodeDescriptor> {
-    exposed_paths
-        .iter()
-        .find_map(|(node, exposed_path)| {
-            if exposed_path == input_exposed_path {
-                Some(node)
-            } else {
-                None
-            }
-        })
-        .copied()
-}
-
-fn map_resolved_path_into_node_descriptor(
-    requested_abs_path: PathBuf,
-    resolved_path: ResolvedPath,
-) -> NodeDescriptor {
-    match resolved_path {
-        ResolvedPath::PathWithStorages {
-            path_within_storage,
-            storages_id,
-            storages,
-        } => NodeDescriptor {
-            storages: Some(NodeStorages::new(
-                storages,
-                path_within_storage,
-                storages_id,
-            )),
-            absolute_path: requested_abs_path,
-        },
-        ResolvedPath::VirtualPath(_) => NodeDescriptor {
-            storages: None,
-            absolute_path: requested_abs_path,
-        },
     }
 }
