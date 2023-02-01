@@ -16,6 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::PathResolutionError;
 
@@ -77,15 +78,24 @@ impl UnixTimestamp {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct FileHandle {
+    pub descriptor_uuid: Uuid,
+}
+
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
 #[repr(C)]
 pub enum DfsFrontendError {
+    #[error("Operation not permitted on other nodes than files")]
+    NotAFile,
     #[error("Path does not exist")]
     NoSuchPath,
     #[error(transparent)]
     PathResolutionError(#[from] PathResolutionError),
     #[error("DFS Error: {0}")]
     Generic(String),
+    #[error("This file handle has been already closed")]
+    FileAlreadyClosed,
 }
 
 /// Interface that DFS should expose towards frontends
@@ -93,4 +103,13 @@ pub trait DfsFrontend {
     // Error probably will be eventually shown to a user as a text
     fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
     fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
+
+    /// Opens a file.
+    ///
+    /// Opening a file means initiating its state in DFS memory.
+    ///
+    /// Returns an error in case of file absence.
+    fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
+
+    fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
 }

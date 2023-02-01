@@ -179,8 +179,6 @@ mod ffi {
     //
     // ForestManifest
     //
-    fn get_storages(self: &Arc<Mutex<ForestManifest>>) -> Result<Vec<&dyn StorageBackend>, GetStoragesError>;
-    fn add_storage(self: &Arc<Mutex<ForestManifest>>, storage: &dyn StorageBackend) -> Result<(), AddStorageError>;
     fn is_deleted(self: &Arc<Mutex<ForestManifest>>) -> bool;
     fn stringify(self: &Arc<Mutex<ForestManifest>>) -> String;
     fn delete(self: &Arc<Mutex<ForestManifest>>, catlib_service: &CatLibService) -> Result<(), CatlibError>;

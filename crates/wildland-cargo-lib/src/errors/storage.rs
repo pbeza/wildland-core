@@ -20,20 +20,6 @@ use wildland_corex::catlib_service::error::CatlibError;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[repr(C)]
-pub enum GetStoragesError {
-    #[error("Get Storage error")]
-    Error,
-}
-
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
-#[repr(C)]
-pub enum AddStorageError {
-    #[error("Add Storage error")]
-    Error,
-}
-
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
-#[repr(C)]
 pub enum GetStorageTemplateError {
     #[error(transparent)]
     CatlibError(#[from] CatlibError),

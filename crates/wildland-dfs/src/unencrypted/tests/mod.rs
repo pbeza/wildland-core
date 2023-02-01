@@ -25,12 +25,19 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::SystemTime;
 
-use rsfs::mem::FS;
-use rsfs::{DirEntry, FileType, GenFS, Metadata};
+use rsfs::mem::{File, FS};
+use rsfs::{DirEntry, FileType, GenFS, Metadata, OpenOptions};
 use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
 use wildland_corex::{MockPathResolver, Storage};
 
-use crate::storage_backend::StorageBackendError;
+use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
+use crate::storage_backend::{
+    CloseError,
+    OpenResponse,
+    OpenedFileDescriptor,
+    ReaddirResponse,
+    StorageBackendError,
+};
 use crate::unencrypted::{StorageBackend, StorageBackendFactory, UnencryptedDfs};
 
 struct MufsAttrs {
@@ -82,21 +89,23 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for Mufs {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
+    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
         let file_type = self.fs.metadata(&path)?.file_type();
         if file_type.is_file() || file_type.is_symlink() {
-            return Err(StorageBackendError::NotADirectory);
+            return Ok(ReaddirResponse::NotADirectory);
         }
 
-        self.fs
-            .read_dir(path)?
-            .into_iter()
-            .map(|entry| {
-                Ok(Path::new("/").join(entry?.path().strip_prefix(&self.base_dir).unwrap()))
-            })
-            .collect()
+        Ok(ReaddirResponse::Entries(
+            self.fs
+                .read_dir(path)?
+                .into_iter()
+                .map(|entry| {
+                    Ok(Path::new("/").join(entry?.path().strip_prefix(&self.base_dir).unwrap()))
+                })
+                .collect::<Result<_, StorageBackendError>>()?,
+        ))
     }
 
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
@@ -123,6 +132,41 @@ impl StorageBackend for Mufs {
                     change_time: metadata.created().ok().map(systime_to_unix),
                 })
             })?)
+    }
+
+    fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        if !self.fs.metadata(&path).unwrap().is_file() {
+            return Ok(OpenResponse::NotAFile);
+        }
+
+        let file = self.fs.new_openopts().read(true).write(true).open(path)?;
+
+        let opened_file = MufsOpenedFile::new(file);
+
+        Ok(OpenResponse::Found(CloseOnDropDescriptor::new(Box::new(
+            opened_file,
+        ))))
+    }
+}
+
+#[derive(Debug)]
+pub struct MufsOpenedFile {
+    _inner: File,
+}
+
+impl MufsOpenedFile {
+    fn new(inner: File) -> Self {
+        Self { _inner: inner }
+    }
+}
+
+impl OpenedFileDescriptor for MufsOpenedFile {
+    fn close(&self) -> Result<(), CloseError> {
+        // rsfs File is closed when going out of scope, so there is nothing to do here
+        Ok(())
     }
 }
 

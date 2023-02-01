@@ -40,26 +40,25 @@ impl PathConflictResolver for UuidInDirTranslator {
         &self,
         nodes: Vec<&'a NodeDescriptor>,
     ) -> Vec<(&'a NodeDescriptor, PathBuf)> {
-        let counted_abs_paths = nodes.iter().counts_by(|node| node.absolute_path.clone());
+        let counted_abs_paths = nodes.iter().counts_by(|node| node.abs_path());
         nodes
             .iter()
             .map(|node| {
-                let abs_path = node.absolute_path.clone();
+                let abs_path = node.abs_path();
 
                 // If another file tries to claim the same path
                 if counted_abs_paths.get(&abs_path).unwrap() > &1
                 // or a physical node has the same path as some virtual node
-                || (node.storages.is_some() && conflicts_with_virtual_path(&node.absolute_path, &nodes))
+                || (node.is_physical() && conflicts_with_virtual_path(node.abs_path(), &nodes))
                 {
                     // then append uuid to avoid conflict
-                    let exposed_path =
-                        abs_path.join(node.storages.as_ref().map_or(PathBuf::new(), |s| {
-                            PathBuf::from_str(s.uuid.to_string().as_str()).unwrap()
-                        }));
+                    let exposed_path = abs_path.join(node.storages().map_or(PathBuf::new(), |s| {
+                        PathBuf::from_str(s.uuid.to_string().as_str()).unwrap()
+                    }));
                     (*node, exposed_path)
                 } else {
                     // otherwise, in case there is no conflicts, expose as the same path
-                    (*node, abs_path)
+                    (*node, abs_path.into())
                 }
             })
             .collect_vec()
@@ -73,8 +72,8 @@ impl PathConflictResolver for UuidInDirTranslator {
 fn conflicts_with_virtual_path(physical_node_abs_path: &Path, nodes: &[&NodeDescriptor]) -> bool {
     nodes
         .iter()
-        .filter(|node| node.storages.is_none())
-        .any(|node| node.absolute_path.starts_with(physical_node_abs_path))
+        .filter(|node| node.is_virtual())
+        .any(|node| node.abs_path().starts_with(physical_node_abs_path))
 }
 
 fn pop_uuid_from_path(path: &Path) -> PathBuf {
@@ -110,12 +109,12 @@ mod unit_tests {
 
         let translator = UuidInDirTranslator::new();
 
-        let node = NodeDescriptor {
-            storages: Some(NodeStorages {
+        let node = NodeDescriptor::Physical {
+            storages: NodeStorages {
                 storages: vec![mufs_storage],
                 path_within_storage: "/file".into(),
                 uuid: Uuid::from_u128(1),
-            }),
+            },
             absolute_path: "/file".into(),
         };
         let nodes = vec![&node];
@@ -131,20 +130,20 @@ mod unit_tests {
 
         let translator = UuidInDirTranslator::new();
 
-        let node1 = NodeDescriptor {
-            storages: Some(NodeStorages {
+        let node1 = NodeDescriptor::Physical {
+            storages: NodeStorages {
                 storages: vec![storage1],
                 path_within_storage: "/file".into(),
                 uuid: Uuid::from_u128(1),
-            }),
+            },
             absolute_path: "/file".into(),
         };
-        let node2 = NodeDescriptor {
-            storages: Some(NodeStorages {
+        let node2 = NodeDescriptor::Physical {
+            storages: NodeStorages {
                 storages: vec![storage2],
                 path_within_storage: "/file".into(),
                 uuid: Uuid::from_u128(2),
-            }),
+            },
             absolute_path: "/file".into(),
         };
         let nodes = vec![&node1, &node2];
@@ -165,16 +164,15 @@ mod unit_tests {
 
         let translator = UuidInDirTranslator::new();
 
-        let node1 = NodeDescriptor {
-            storages: Some(NodeStorages {
+        let node1 = NodeDescriptor::Physical {
+            storages: NodeStorages {
                 storages: vec![storage1],
                 path_within_storage: "/a".into(),
                 uuid: Uuid::from_u128(1),
-            }),
+            },
             absolute_path: "/a".into(),
         };
-        let node2 = NodeDescriptor {
-            storages: None,
+        let node2 = NodeDescriptor::Virtual {
             absolute_path: "/a".into(),
         };
         let nodes = vec![&node1, &node2];

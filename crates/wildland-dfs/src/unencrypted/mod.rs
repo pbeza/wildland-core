@@ -20,6 +20,7 @@ mod path_translator;
 mod readdir;
 #[cfg(test)]
 mod tests;
+mod utils;
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -27,17 +28,52 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use uuid::Uuid;
-use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, Stat};
+use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, FileHandle, Stat};
 use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
-use crate::storage_backend::{StorageBackend, StorageBackendError};
+use self::utils::{fetch_data_from_containers, get_related_nodes};
+use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
+use crate::storage_backend::{CloseError, OpenResponse, OpenedFileDescriptor, StorageBackend};
+use crate::unencrypted::utils::find_node_matching_requested_path;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct NodeDescriptor {
-    pub storages: Option<NodeStorages>, // nodes may not have storage - so called virtual nodes
-    pub absolute_path: PathBuf,
+pub enum NodeDescriptor {
+    Physical {
+        storages: NodeStorages,
+        absolute_path: PathBuf,
+    },
+    Virtual {
+        absolute_path: PathBuf,
+    },
+}
+
+impl NodeDescriptor {
+    pub fn abs_path(&self) -> &Path {
+        match self {
+            NodeDescriptor::Physical { absolute_path, .. }
+            | NodeDescriptor::Virtual { absolute_path } => absolute_path,
+        }
+    }
+
+    pub fn is_physical(&self) -> bool {
+        match self {
+            NodeDescriptor::Virtual { .. } => false,
+            NodeDescriptor::Physical { .. } => true,
+        }
+    }
+
+    pub fn is_virtual(&self) -> bool {
+        !self.is_physical()
+    }
+
+    pub fn storages(&self) -> Option<&NodeStorages> {
+        match self {
+            NodeDescriptor::Physical { storages, .. } => Some(storages),
+            NodeDescriptor::Virtual { .. } => None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -73,6 +109,8 @@ pub trait StorageBackendFactory {
 // the conflict resolution took place and find files which paths were mapped.
 
 pub struct UnencryptedDfs {
+    open_files: HashMap<Uuid, CloseOnDropDescriptor>,
+
     path_resolver: Box<dyn PathResolver>,
     /// Stores a factory for each supported backend type
     storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
@@ -91,10 +129,19 @@ impl UnencryptedDfs {
         storage_backend_factories: HashMap<String, Box<dyn StorageBackendFactory>>,
     ) -> Self {
         Self {
+            open_files: Default::default(),
             path_resolver,
             storage_backend_factories,
             storage_backends: HashMap::new(),
             path_translator: Box::new(UuidInDirTranslator::new()),
+        }
+    }
+
+    fn insert_opened_file(&mut self, opened_file: CloseOnDropDescriptor) -> FileHandle {
+        let uuid = Uuid::new_v4();
+        self.open_files.insert(uuid, opened_file);
+        FileHandle {
+            descriptor_uuid: uuid,
         }
     }
 
@@ -175,37 +222,56 @@ impl DfsFrontend for UnencryptedDfs {
     fn getattr(&mut self, input_exposed_path: String) -> Result<Stat, DfsFrontendError> {
         getattr::getattr(self, input_exposed_path)
     }
-}
 
-enum ExecutionPolicy {
-    SequentiallyToFirstSuccess,
-}
-fn execute_backend_op_with_policy<T: std::fmt::Debug>(
-    storages: &[Storage],
-    ops: impl Iterator<Item = Result<T, StorageBackendError>>,
-    policy: ExecutionPolicy,
-) -> Option<T> {
-    match policy {
-        ExecutionPolicy::SequentiallyToFirstSuccess => {
-            ops.inspect(|result| {
-                if result.is_err() {
-                    // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                    tracing::error!(
-                        "Backend returned error for operation: {}",
-                        result.as_ref().unwrap_err()
-                    );
+    fn open(&mut self, input_exposed_path: String) -> Result<FileHandle, DfsFrontendError> {
+        let input_exposed_path = Path::new(&input_exposed_path);
+
+        let nodes = get_related_nodes(self, input_exposed_path)?;
+
+        let mut descriptors: Vec<(&NodeDescriptor, OpenResponse)> =
+            fetch_data_from_containers(&nodes, self, |backend, path| backend.open(path))
+                .filter(|(_node, response)| !matches!(response, OpenResponse::NotFound))
+                .collect();
+
+        let map_response_to_result = |dfs_front: &mut UnencryptedDfs, resp: OpenResponse| match resp
+        {
+            OpenResponse::Found(opened_file) => Ok(dfs_front.insert_opened_file(opened_file)),
+            OpenResponse::NotAFile => Err(DfsFrontendError::NotAFile),
+            _ => Err(DfsFrontendError::NoSuchPath),
+        };
+
+        match descriptors.len() {
+            0 => Err(DfsFrontendError::NoSuchPath),
+            1 => map_response_to_result(self, descriptors.pop().unwrap().1),
+            _ => {
+                // More that 1 descriptor means that files are in conflict, so they are exposed under different paths
+                let nodes: Vec<&NodeDescriptor> = descriptors.iter().map(|(n, _)| *n).collect();
+                let exposed_paths = self.path_translator.solve_conflicts(nodes);
+                let node = find_node_matching_requested_path(input_exposed_path, &exposed_paths);
+                match node {
+                    // Physical node
+                    Some(node @ NodeDescriptor::Physical { .. }) => {
+                        let opened_file = descriptors
+                            .into_iter()
+                            .find_map(|(n, resp)| if n == node { Some(resp) } else { None })
+                            .ok_or(DfsFrontendError::NoSuchPath)?;
+                        map_response_to_result(self, opened_file)
+                    }
+                    // Virtual node
+                    Some(_) | None if !exposed_paths.is_empty() => Err(DfsFrontendError::NotAFile),
+                    _ => Err(DfsFrontendError::NoSuchPath),
                 }
+            }
+        }
+    }
+
+    fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
+        if let Some(opened_file) = self.open_files.remove(&file.descriptor_uuid) {
+            opened_file.close().map_err(|e| match e {
+                CloseError::FileAlreadyClosed => DfsFrontendError::FileAlreadyClosed,
             })
-            .find(Result::is_ok)
-            .map(Result::unwrap)
-            .or_else(|| {
-                // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                tracing::error!(
-                    "None of the backends for storages {:?} works",
-                    storages.iter().map(|s| s.backend_type())
-                );
-                None
-            })
+        } else {
+            Err(DfsFrontendError::FileAlreadyClosed)
         }
     }
 }
