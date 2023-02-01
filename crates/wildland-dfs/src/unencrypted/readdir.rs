@@ -23,14 +23,9 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::DfsFrontendError;
 use wildland_corex::{ResolvedPath, Storage};
 
-use super::{
-    execute_backend_op_with_policy,
-    ExecutionPolicy,
-    NodeDescriptor,
-    NodeStorages,
-    UnencryptedDfs,
-};
-use crate::storage_backend::StorageBackendError;
+use super::utils::{execute_backend_op_with_policy, ExecutionPolicy};
+use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
+use crate::storage_backend::ReaddirResponse;
 
 pub fn readdir(
     dfs_front: &mut UnencryptedDfs,
@@ -110,10 +105,7 @@ fn map_virtual_path_to_node_descriptor(
         None => requested_path.into(),
         _ => panic!("There is a bug in PathResolver, probably it returned a path that does not start with the requested one"),
     };
-    NodeDescriptor {
-        storages: None,
-        absolute_path,
-    }
+    NodeDescriptor::Virtual { absolute_path }
 }
 
 fn map_physical_path_to_node_descriptor<'a>(
@@ -130,31 +122,30 @@ fn map_physical_path_to_node_descriptor<'a>(
         {
             backend
                 .readdir(&path_within_storage)
-                .map(|resulting_paths| {
-                    Either::Left(resulting_paths.into_iter().map({
-                        let node_storages = node_storages.clone();
-                        move |entry_path| NodeDescriptor {
-                            storages: Some(NodeStorages::new(
-                                node_storages.clone(),
-                                entry_path.clone(),
-                                storages_id,
-                            )),
-                            absolute_path: requested_path.join(entry_path.file_name().unwrap()),
-                        }
-                    }))
-                })
-                .or_else(|err| match &err {
-                    StorageBackendError::NotADirectory => {
-                        Ok(Either::Right(std::iter::once(NodeDescriptor {
-                            storages: Some(NodeStorages::new(
+                .map(|response| match response {
+                    ReaddirResponse::Entries(resulting_paths) => {
+                        Either::Left(resulting_paths.into_iter().map({
+                            let node_storages = node_storages.clone();
+                            move |entry_path| NodeDescriptor::Physical {
+                                storages: NodeStorages::new(
+                                    node_storages.clone(),
+                                    entry_path.clone(),
+                                    storages_id,
+                                ),
+                                absolute_path: requested_path.join(entry_path.file_name().unwrap()),
+                            }
+                        }))
+                    }
+                    ReaddirResponse::NotADirectory => {
+                        Either::Right(std::iter::once(NodeDescriptor::Physical {
+                            storages: NodeStorages::new(
                                 node_storages.clone(),
                                 path_within_storage.clone(),
                                 storages_id,
-                            )),
+                            ),
                             absolute_path: PathBuf::from(requested_path),
-                        })))
+                        }))
                     }
-                    _ => Err(err),
                 })
         }
     });
@@ -192,8 +183,7 @@ mod tests {
             map_virtual_path_to_node_descriptor(&requested_path, &resolved_virtual_path);
         assert_eq!(
             node_descriptor,
-            NodeDescriptor {
-                storages: None,
+            NodeDescriptor::Virtual {
                 absolute_path: expected_node_path
             }
         );

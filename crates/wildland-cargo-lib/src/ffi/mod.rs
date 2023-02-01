@@ -292,7 +292,7 @@ mod ffi_binding {
         fn path(self: &Arc<Mutex<dyn BridgeManifest>>) -> Result<String, CatlibError>;
 
         //
-        // Storage
+        // StorageTemplate
         //
         fn stringify(self: &StorageTemplate) -> String;
 
@@ -305,6 +305,19 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
         ) -> Result<Stat, DfsFrontendError>;
+        fn open(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            path: String,
+        ) -> Result<FileHandle, DfsFrontendError>;
+        fn close(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file_handle: &FileHandle,
+        ) -> Result<VoidType, DfsFrontendError>;
+
+        //
+        // FileHandle
+        //
+        type FileHandle;
 
         //
         // Stat

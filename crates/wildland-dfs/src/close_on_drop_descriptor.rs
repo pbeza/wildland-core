@@ -15,11 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#[derive(Debug, Clone)]
-pub struct Storage {}
+use crate::storage_backend::{CloseError, OpenedFileDescriptor};
 
-impl Storage {
-    pub fn stringify(&self) -> String {
-        todo!()
+/// Wrapper ensuring that close is always called on `OpenedFileDescriptor`
+#[derive(Debug)]
+pub struct CloseOnDropDescriptor {
+    inner: Box<dyn OpenedFileDescriptor>,
+}
+
+impl CloseOnDropDescriptor {
+    pub fn new(inner: Box<dyn OpenedFileDescriptor>) -> Self {
+        Self { inner }
+    }
+}
+
+impl Drop for CloseOnDropDescriptor {
+    fn drop(&mut self) {
+        let _ = self.inner.close();
+    }
+}
+
+impl OpenedFileDescriptor for CloseOnDropDescriptor {
+    fn close(&self) -> Result<(), CloseError> {
+        self.inner.close()
     }
 }

@@ -17,13 +17,21 @@
 
 pub mod template;
 
-use std::fs;
+use std::fs::{self, File, OpenOptions};
 use std::os::unix::prelude::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use template::LocalFilesystemStorageTemplate;
-use wildland_dfs::storage_backend::{StorageBackend, StorageBackendError};
+use wildland_dfs::close_on_drop_descriptor::CloseOnDropDescriptor;
+use wildland_dfs::storage_backend::{
+    CloseError,
+    OpenResponse,
+    OpenedFileDescriptor,
+    ReaddirResponse,
+    StorageBackend,
+    StorageBackendError,
+};
 use wildland_dfs::unencrypted::StorageBackendFactory;
 use wildland_dfs::{NodeType, Stat, Storage, UnixTimestamp};
 
@@ -41,54 +49,96 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for LocalFilesystemStorage {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
+    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
         if path.is_file() || path.is_symlink() {
-            Err(StorageBackendError::NotADirectory)
+            Ok(ReaddirResponse::NotADirectory)
         } else {
-            fs::read_dir(path)?
-                .into_iter()
-                .map(|entry_result| {
-                    Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
-                })
-                .collect()
+            Ok(ReaddirResponse::Entries(
+                fs::read_dir(path)?
+                    .into_iter()
+                    .map(|entry_result| {
+                        Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
+                    })
+                    .collect::<Result<_, StorageBackendError>>()?,
+            ))
         }
     }
 
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
         let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
 
-        Ok(
-            fs::metadata(self.base_dir.join(relative_path)).map(|metadata| {
-                let file_type = metadata.file_type();
-                Some(Stat {
-                    node_type: if file_type.is_file() {
-                        NodeType::File
-                    } else if file_type.is_dir() {
-                        NodeType::Dir
-                    } else if file_type.is_symlink() {
-                        NodeType::Symlink
-                    } else {
-                        return None;
-                    },
-                    size: metadata.len(),
-                    access_time: Some(UnixTimestamp {
-                        sec: metadata.atime() as u64,
-                        nano_sec: metadata.atime_nsec() as u32,
-                    }),
-                    modification_time: Some(UnixTimestamp {
-                        sec: metadata.mtime() as u64,
-                        nano_sec: metadata.mtime_nsec() as u32,
-                    }),
-                    change_time: Some(UnixTimestamp {
-                        sec: metadata.ctime() as u64,
-                        nano_sec: metadata.ctime_nsec() as u32,
-                    }),
-                })
-            })?,
-        )
+        if !path.exists() {
+            return Ok(None);
+        }
+
+        Ok(fs::metadata(path).map(|metadata| {
+            let file_type = metadata.file_type();
+            Some(Stat {
+                node_type: if file_type.is_file() {
+                    NodeType::File
+                } else if file_type.is_dir() {
+                    NodeType::Dir
+                } else if file_type.is_symlink() {
+                    NodeType::Symlink
+                } else {
+                    return None;
+                },
+                size: metadata.len(),
+                access_time: Some(UnixTimestamp {
+                    sec: metadata.atime() as u64,
+                    nano_sec: metadata.atime_nsec() as u32,
+                }),
+                modification_time: Some(UnixTimestamp {
+                    sec: metadata.mtime() as u64,
+                    nano_sec: metadata.mtime_nsec() as u32,
+                }),
+                change_time: Some(UnixTimestamp {
+                    sec: metadata.ctime() as u64,
+                    nano_sec: metadata.ctime_nsec() as u32,
+                }),
+            })
+        })?)
+    }
+
+    fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        if !path.exists() {
+            Ok(OpenResponse::NotFound)
+        } else if !path.metadata()?.is_file() {
+            Ok(OpenResponse::NotAFile)
+        } else {
+            let file = OpenOptions::new().read(true).write(true).open(path)?;
+
+            let opened_file = StdFsOpenedFile::new(file);
+
+            Ok(OpenResponse::Found(CloseOnDropDescriptor::new(Box::new(
+                opened_file,
+            ))))
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct StdFsOpenedFile {
+    _inner: File,
+}
+
+impl StdFsOpenedFile {
+    fn new(inner: File) -> Self {
+        Self { _inner: inner }
+    }
+}
+
+impl OpenedFileDescriptor for StdFsOpenedFile {
+    fn close(&self) -> Result<(), CloseError> {
+        // std::fs::File is closed when going out of scope, so there is nothing to do here
+        Ok(())
     }
 }
 
@@ -133,7 +183,10 @@ mod tests {
 
         let files = backend.readdir(Path::new("/")).unwrap();
 
-        assert_eq!(files, vec![PathBuf::from_str("/file1").unwrap()]);
+        assert_eq!(
+            files,
+            ReaddirResponse::Entries(vec![PathBuf::from_str("/file1").unwrap()])
+        );
     }
     #[test]
     fn test_reading_file_in_subdir_of_lfs_backend() {
@@ -155,6 +208,9 @@ mod tests {
 
         let files = backend.readdir(Path::new("/dir")).unwrap();
 
-        assert_eq!(files, vec![PathBuf::from_str("/dir/file1").unwrap()]);
+        assert_eq!(
+            files,
+            ReaddirResponse::Entries(vec![PathBuf::from_str("/dir/file1").unwrap()])
+        );
     }
 }
