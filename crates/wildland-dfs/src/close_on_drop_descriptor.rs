@@ -15,16 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod close_on_drop_descriptor;
-pub mod encrypted;
-pub mod storage_backend;
-pub mod unencrypted;
+use crate::storage_backend::{OpenedFileDescriptor, StorageBackendError};
 
-pub use wildland_corex::dfs::interface::*;
-pub use wildland_corex::{
-    Storage,
-    StorageTemplate,
-    StorageTemplateError,
-    CONTAINER_NAME_PARAM,
-    CONTAINER_UUID_PARAM,
-};
+/// Wrapper ensuring that close is always called on `OpenedFileDescriptor`
+#[derive(Debug)]
+pub struct CloseOnDropDescriptor {
+    inner: Box<dyn OpenedFileDescriptor>,
+}
+
+impl CloseOnDropDescriptor {
+    pub fn new(inner: Box<dyn OpenedFileDescriptor>) -> Self {
+        Self { inner }
+    }
+}
+
+impl Drop for CloseOnDropDescriptor {
+    fn drop(&mut self) {
+        let _ = self.inner.close();
+    }
+}
+
+impl OpenedFileDescriptor for CloseOnDropDescriptor {
+    fn close(&self) -> Result<(), StorageBackendError> {
+        self.inner.close()
+    }
+}

@@ -16,12 +16,15 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
 use wildland_corex::dfs::interface::Stat;
 
+use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
+
 #[derive(thiserror::Error, Debug)]
 pub enum StorageBackendError {
+    #[error("File has been already closed")]
+    FileAlreadyClosed,
     #[error(transparent)]
     Generic(anyhow::Error),
 }
@@ -41,12 +44,12 @@ impl From<std::path::StripPrefixError> for StorageBackendError {
 /// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
 /// on the backend's type) and e.g. seek operation may be implemented differently.
 pub trait OpenedFileDescriptor: std::fmt::Debug {
-    fn close(&self);
+    fn close(&self) -> Result<(), StorageBackendError>;
 }
 
 #[derive(Debug)]
 pub enum OpenResponse {
-    Found(Rc<dyn OpenedFileDescriptor>),
+    Found(CloseOnDropDescriptor),
     NotAFile,
     NotFound,
 }

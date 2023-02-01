@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use template::LocalFilesystemStorageTemplate;
+use wildland_dfs::close_on_drop_descriptor::CloseOnDropDescriptor;
 use wildland_dfs::storage_backend::{
     OpenResponse,
     OpenedFileDescriptor,
@@ -115,7 +116,9 @@ impl StorageBackend for LocalFilesystemStorage {
 
             let opened_file = StdFsOpenedFile::new(file);
 
-            Ok(OpenResponse::Found(Rc::new(opened_file)))
+            Ok(OpenResponse::Found(CloseOnDropDescriptor::new(Box::new(
+                opened_file,
+            ))))
         }
     }
 }
@@ -132,8 +135,9 @@ impl StdFsOpenedFile {
 }
 
 impl OpenedFileDescriptor for StdFsOpenedFile {
-    fn close(&self) {
+    fn close(&self) -> Result<(), StorageBackendError> {
         // std::fs::File is closed when going out of scope, so there is nothing to do here
+        Ok(())
     }
 }
 
