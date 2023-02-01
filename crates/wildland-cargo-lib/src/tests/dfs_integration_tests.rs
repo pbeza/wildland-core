@@ -41,7 +41,7 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
         .create_user_from_mnemonic(&mnemonic, "device_name".to_string())
         .unwrap();
 
-    let storage_dir = tmpdir.clone().join("storage_dir");
+    let storage_dir = tmpdir.join("storage_dir");
     let template = LocalFilesystemStorageTemplate {
         local_dir: storage_dir.clone(),
         container_prefix: "{{ CONTAINER_NAME }}".to_owned(),
