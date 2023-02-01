@@ -27,10 +27,15 @@ use std::time::SystemTime;
 
 use rsfs::mem::{File, FS};
 use rsfs::{DirEntry, FileType, GenFS, Metadata, OpenOptions};
-use wildland_corex::dfs::interface::{NodeType, OpenedFileDescriptor, Stat, UnixTimestamp};
+use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
 use wildland_corex::{MockPathResolver, Storage};
 
-use crate::storage_backend::{OpenResponse, ReaddirResponse, StorageBackendError};
+use crate::storage_backend::{
+    OpenResponse,
+    OpenedFileDescriptor,
+    ReaddirResponse,
+    StorageBackendError,
+};
 use crate::unencrypted::{StorageBackend, StorageBackendFactory, UnencryptedDfs};
 
 struct MufsAttrs {

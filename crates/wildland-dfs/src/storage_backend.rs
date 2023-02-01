@@ -18,7 +18,7 @@
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use wildland_corex::dfs::interface::{OpenedFileDescriptor, Stat};
+use wildland_corex::dfs::interface::Stat;
 
 #[derive(thiserror::Error, Debug)]
 pub enum StorageBackendError {
@@ -35,6 +35,13 @@ impl From<std::path::StripPrefixError> for StorageBackendError {
     fn from(e: std::path::StripPrefixError) -> Self {
         StorageBackendError::Generic(e.into())
     }
+}
+
+/// FileDescriptor contains state of opened file and definition of how it is stored, therefore
+/// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
+/// on the backend's type) and e.g. seek operation may be implemented differently.
+pub trait OpenedFileDescriptor: std::fmt::Debug {
+    fn close(&self);
 }
 
 #[derive(Debug)]

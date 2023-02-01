@@ -28,19 +28,13 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use uuid::Uuid;
-use wildland_corex::dfs::interface::{
-    DfsFrontend,
-    DfsFrontendError,
-    FileHandle,
-    OpenedFileDescriptor,
-    Stat,
-};
+use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, FileHandle, Stat};
 use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{fetch_data_from_containers, get_related_nodes};
-use crate::storage_backend::{OpenResponse, StorageBackend};
+use crate::storage_backend::{OpenResponse, OpenedFileDescriptor, StorageBackend};
 use crate::unencrypted::utils::find_node_matching_requested_path;
 
 #[derive(Debug, PartialEq, Eq, Clone)]

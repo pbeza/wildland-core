@@ -25,12 +25,13 @@ use std::rc::Rc;
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::storage_backend::{
     OpenResponse,
+    OpenedFileDescriptor,
     ReaddirResponse,
     StorageBackend,
     StorageBackendError,
 };
 use wildland_dfs::unencrypted::StorageBackendFactory;
-use wildland_dfs::{NodeType, OpenedFileDescriptor, Stat, Storage, UnixTimestamp};
+use wildland_dfs::{NodeType, Stat, Storage, UnixTimestamp};
 
 #[derive(Debug)]
 pub struct LocalFilesystemStorage {

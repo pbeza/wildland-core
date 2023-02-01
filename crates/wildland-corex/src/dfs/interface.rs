@@ -78,13 +78,6 @@ impl UnixTimestamp {
     }
 }
 
-/// FileDescriptor contains state of opened file and definition of how it is stored, therefore
-/// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
-/// on the backend's type) and e.g. seek operation may be implemented differently.
-pub trait OpenedFileDescriptor: std::fmt::Debug {
-    fn close(&self);
-}
-
 #[derive(Debug, Clone)]
 pub struct FileHandle {
     pub descriptor_uuid: Uuid,
