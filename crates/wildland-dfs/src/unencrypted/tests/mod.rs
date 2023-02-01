@@ -30,7 +30,7 @@ use rsfs::{DirEntry, FileType, GenFS, Metadata, OpenOptions};
 use wildland_corex::dfs::interface::{NodeType, OpenedFileDescriptor, Stat, UnixTimestamp};
 use wildland_corex::{MockPathResolver, Storage};
 
-use crate::storage_backend::{OpenResponse, StorageBackendError};
+use crate::storage_backend::{OpenResponse, ReaddirResponse, StorageBackendError};
 use crate::unencrypted::{StorageBackend, StorageBackendFactory, UnencryptedDfs};
 
 struct MufsAttrs {
@@ -82,21 +82,23 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for Mufs {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
+    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
         let file_type = self.fs.metadata(&path)?.file_type();
         if file_type.is_file() || file_type.is_symlink() {
-            return Err(StorageBackendError::NotADirectory);
+            return Ok(ReaddirResponse::NotADirectory);
         }
 
-        self.fs
-            .read_dir(path)?
-            .into_iter()
-            .map(|entry| {
-                Ok(Path::new("/").join(entry?.path().strip_prefix(&self.base_dir).unwrap()))
-            })
-            .collect()
+        Ok(ReaddirResponse::Entries(
+            self.fs
+                .read_dir(path)?
+                .into_iter()
+                .map(|entry| {
+                    Ok(Path::new("/").join(entry?.path().strip_prefix(&self.base_dir).unwrap()))
+                })
+                .collect::<Result<_, StorageBackendError>>()?,
+        ))
     }
 
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {

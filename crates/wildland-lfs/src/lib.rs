@@ -23,7 +23,12 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use template::LocalFilesystemStorageTemplate;
-use wildland_dfs::storage_backend::{OpenResponse, StorageBackend, StorageBackendError};
+use wildland_dfs::storage_backend::{
+    OpenResponse,
+    ReaddirResponse,
+    StorageBackend,
+    StorageBackendError,
+};
 use wildland_dfs::unencrypted::StorageBackendFactory;
 use wildland_dfs::{NodeType, OpenedFileDescriptor, Stat, Storage, UnixTimestamp};
 
@@ -41,19 +46,21 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for LocalFilesystemStorage {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
+    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
         if path.is_file() || path.is_symlink() {
-            Err(StorageBackendError::NotADirectory)
+            Ok(ReaddirResponse::NotADirectory)
         } else {
-            fs::read_dir(path)?
-                .into_iter()
-                .map(|entry_result| {
-                    Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
-                })
-                .collect()
+            Ok(ReaddirResponse::Entries(
+                fs::read_dir(path)?
+                    .into_iter()
+                    .map(|entry_result| {
+                        Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
+                    })
+                    .collect::<Result<_, StorageBackendError>>()?,
+            ))
         }
     }
 
@@ -170,7 +177,10 @@ mod tests {
 
         let files = backend.readdir(Path::new("/")).unwrap();
 
-        assert_eq!(files, vec![PathBuf::from_str("/file1").unwrap()]);
+        assert_eq!(
+            files,
+            ReaddirResponse::Entries(vec![PathBuf::from_str("/file1").unwrap()])
+        );
     }
     #[test]
     fn test_reading_file_in_subdir_of_lfs_backend() {
@@ -192,6 +202,9 @@ mod tests {
 
         let files = backend.readdir(Path::new("/dir")).unwrap();
 
-        assert_eq!(files, vec![PathBuf::from_str("/dir/file1").unwrap()]);
+        assert_eq!(
+            files,
+            ReaddirResponse::Entries(vec![PathBuf::from_str("/dir/file1").unwrap()])
+        );
     }
 }
