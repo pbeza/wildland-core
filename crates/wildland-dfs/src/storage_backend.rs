@@ -44,12 +44,17 @@ pub enum SeekFrom {
     Current(i64),
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum CloseError {
+    #[error("File has been already closed")]
+    FileAlreadyClosed,
+}
+
 /// FileDescriptor contains state of opened file and definition of how it is stored, therefore
 /// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
 /// on the backend's type) and e.g. seek operation may be implemented differently.
 pub trait OpenedFileDescriptor: std::fmt::Debug {
-    fn close(&self) -> Result<(), DfsFrontendError>;
-
+    fn close(&self) -> Result<(), CloseError>;
     /// Reads number of bytes specified by the `count` parameter and advances inner cursor of the
     /// opened file.
     ///

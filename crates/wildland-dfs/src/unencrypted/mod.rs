@@ -35,7 +35,13 @@ use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{fetch_data_from_containers, get_related_nodes};
 use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
-use crate::storage_backend::{OpenResponse, OpenedFileDescriptor, SeekFrom, StorageBackend};
+use crate::storage_backend::{
+    CloseError,
+    OpenResponse,
+    OpenedFileDescriptor,
+    SeekFrom,
+    StorageBackend,
+};
 use crate::unencrypted::utils::find_node_matching_requested_path;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -275,7 +281,9 @@ impl DfsFrontend for UnencryptedDfs {
 
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
         if let Some(opened_file) = self.open_files.remove(&file.descriptor_uuid) {
-            opened_file.close()
+            opened_file.close().map_err(|e| match e {
+                CloseError::FileAlreadyClosed => DfsFrontendError::FileAlreadyClosed,
+            })
         } else {
             Err(DfsFrontendError::FileAlreadyClosed)
         }
