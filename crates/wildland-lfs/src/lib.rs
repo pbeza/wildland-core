@@ -59,7 +59,6 @@ impl StorageBackend for LocalFilesystemStorage {
         } else {
             Ok(ReaddirResponse::Entries(
                 fs::read_dir(path)?
-                    .into_iter()
                     .map(|entry_result| {
                         Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
                     })
