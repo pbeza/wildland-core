@@ -101,7 +101,6 @@ impl StorageBackend for Mufs {
         Ok(ReaddirResponse::Entries(
             self.fs
                 .read_dir(path)?
-                .into_iter()
                 .map(|entry| {
                     Ok(Path::new("/").join(entry?.path().strip_prefix(&self.base_dir).unwrap()))
                 })
