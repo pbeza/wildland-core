@@ -23,8 +23,6 @@ use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 
 #[derive(thiserror::Error, Debug)]
 pub enum StorageBackendError {
-    #[error("File has been already closed")]
-    FileAlreadyClosed,
     #[error(transparent)]
     Generic(anyhow::Error),
 }
@@ -51,11 +49,17 @@ pub enum SeekFrom {
 /// on the backend's type) and e.g. seek operation may be implemented differently.
 pub trait OpenedFileDescriptor: std::fmt::Debug {
     fn close(&self) -> Result<(), DfsFrontendError>;
-    /// TODO description
+
+    /// Reads number of bytes specified by the `count` parameter and advances inner cursor of the
+    /// opened file.
+    ///
+    /// Returns vector of bytes which can have length smaller than requested.
     fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
-    /// TODO description
+
+    /// Writes bytes at the current cursor position and returns number of written bytes.
     fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError>;
-    /// TODO description
+
+    /// Changes inner cursor position.
     fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError>;
 }
 

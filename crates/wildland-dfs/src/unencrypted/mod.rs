@@ -194,6 +194,14 @@ impl UnencryptedDfs {
             }
         })
     }
+
+    fn seek(&mut self, file: &FileHandle, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
+        if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
+            opened_file.seek(seek_from).map(|p| p as usize)
+        } else {
+            Err(DfsFrontendError::FileAlreadyClosed)
+        }
+    }
 }
 
 impl DfsFrontend for UnencryptedDfs {
@@ -273,7 +281,6 @@ impl DfsFrontend for UnencryptedDfs {
         }
     }
 
-    /// TODO description
     fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
         if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
             opened_file.read(count)
@@ -282,7 +289,6 @@ impl DfsFrontend for UnencryptedDfs {
         }
     }
 
-    // TODO description
     fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError> {
         if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
             opened_file.write(&buf)
@@ -291,21 +297,27 @@ impl DfsFrontend for UnencryptedDfs {
         }
     }
 
-    // TODO description
     fn seek_from_start(
         &mut self,
         file: &FileHandle,
         pos_from_start: usize,
     ) -> Result<usize, DfsFrontendError> {
-        if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
-            opened_file
-                .seek(SeekFrom::Start(pos_from_start as u64))
-                .map(|p| p as usize)
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        self.seek(file, SeekFrom::Start(pos_from_start as u64))
     }
 
-    // TODO seek from current
-    // TODO seek from end
+    fn seek_from_current(
+        &mut self,
+        file: &FileHandle,
+        pos_from_current: i64,
+    ) -> Result<usize, DfsFrontendError> {
+        self.seek(file, SeekFrom::Current(pos_from_current))
+    }
+
+    fn seek_from_end(
+        &mut self,
+        file: &FileHandle,
+        pos_from_end: i64,
+    ) -> Result<usize, DfsFrontendError> {
+        self.seek(file, SeekFrom::Current(pos_from_end))
+    }
 }

@@ -120,6 +120,12 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     assert_eq!(c1_file_stat.node_type, NodeType::Dir);
 
     let file = dfs.open("/some/path/dir/c1_file".to_owned()).unwrap();
+
+    dfs.write(&file, vec![1, 2, 3, 4, 5]).unwrap();
+    dfs.seek_from_start(&file, 1).unwrap();
+    let read_buf = dfs.read(&file, 3).unwrap();
+    assert_eq!(read_buf, vec![2, 3, 4]);
+
     dfs.close(&file).unwrap();
 
     //

@@ -99,8 +99,8 @@ pub enum DfsFrontendError {
 }
 
 impl From<std::io::Error> for DfsFrontendError {
-    fn from(_: std::io::Error) -> Self {
-        todo!() // TODO implement it
+    fn from(err: std::io::Error) -> Self {
+        DfsFrontendError::Generic(err.to_string())
     }
 }
 
@@ -123,5 +123,15 @@ pub trait DfsFrontend {
         &mut self,
         file: &FileHandle,
         pos_from_start: usize,
+    ) -> Result<usize, DfsFrontendError>;
+    fn seek_from_current(
+        &mut self,
+        file: &FileHandle,
+        pos_from_current: i64,
+    ) -> Result<usize, DfsFrontendError>;
+    fn seek_from_end(
+        &mut self,
+        file: &FileHandle,
+        pos_from_end: i64,
     ) -> Result<usize, DfsFrontendError>;
 }

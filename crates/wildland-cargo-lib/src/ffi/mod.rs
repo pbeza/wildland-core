@@ -296,7 +296,9 @@ mod ffi_binding {
         //
         fn stringify(self: &StorageTemplate) -> String;
 
+        //
         // DFS Frontend
+        //
         fn readdir(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
@@ -313,6 +315,31 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn DfsFrontend>>,
             file_handle: &FileHandle,
         ) -> Result<VoidType, DfsFrontendError>;
+        fn read(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+            count: usize,
+        ) -> Result<Vec<u8>, DfsFrontendError>;
+        fn write(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+            buf: Vec<u8>,
+        ) -> Result<usize, DfsFrontendError>;
+        fn seek_from_start(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+            pos_from_start: usize,
+        ) -> Result<usize, DfsFrontendError>;
+        fn seek_from_current(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+            pos_from_current: i64,
+        ) -> Result<usize, DfsFrontendError>;
+        fn seek_from_end(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+            pos_from_end: i64,
+        ) -> Result<usize, DfsFrontendError>;
 
         //
         // FileHandle
