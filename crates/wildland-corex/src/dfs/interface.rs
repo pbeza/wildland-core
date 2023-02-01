@@ -78,11 +78,23 @@ impl UnixTimestamp {
     }
 }
 
+pub enum SeekFrom {
+    Start(u64),
+    End(i64),
+    Current(i64),
+}
+
 /// FileDescriptor contains state of opened file and definition of how it is stored, therefore
 /// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
 /// on the backend's type) and e.g. seek operation may be implemented differently.
 pub trait OpenedFileDescriptor: std::fmt::Debug {
     fn close(&self);
+    /// TODO description
+    fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
+    /// TODO description
+    fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError>;
+    /// TODO description
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError>;
 }
 
 #[derive(Debug, Clone)]
@@ -105,6 +117,12 @@ pub enum DfsFrontendError {
     FileAlreadyClosed,
 }
 
+impl From<std::io::Error> for DfsFrontendError {
+    fn from(_: std::io::Error) -> Self {
+        todo!() // TODO implement it
+    }
+}
+
 /// Interface that DFS should expose towards frontends
 pub trait DfsFrontend {
     // Error probably will be eventually shown to a user as a text
@@ -117,6 +135,12 @@ pub trait DfsFrontend {
     ///
     /// Returns an error in case of file absence.
     fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
-
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
+    fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
+    fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError>;
+    fn seek_from_start(
+        &mut self,
+        file: &FileHandle,
+        pos_from_start: usize,
+    ) -> Result<usize, DfsFrontendError>;
 }

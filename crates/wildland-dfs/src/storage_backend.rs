@@ -16,7 +16,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
 use wildland_corex::dfs::interface::{OpenedFileDescriptor, Stat};
 
@@ -41,7 +40,7 @@ impl From<std::path::StripPrefixError> for StorageBackendError {
 
 #[derive(Debug)]
 pub enum OpenResponse {
-    Found(Rc<dyn OpenedFileDescriptor>),
+    Found(Box<dyn OpenedFileDescriptor>),
     NotAFile,
     NotFound,
 }

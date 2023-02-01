@@ -21,13 +21,16 @@
 mod uuid_dir_path_translator;
 
 use std::collections::HashMap;
+use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::SystemTime;
 
 use rsfs::mem::{File, FS};
 use rsfs::{DirEntry, FileType, GenFS, Metadata, OpenOptions};
-use wildland_corex::dfs::interface::{NodeType, OpenedFileDescriptor, Stat, UnixTimestamp};
+use wildland_corex::dfs::interface::{
+    DfsFrontendError, NodeType, OpenedFileDescriptor, SeekFrom, Stat, UnixTimestamp,
+};
 use wildland_corex::{MockPathResolver, Storage};
 
 use crate::storage_backend::{OpenResponse, StorageBackendError};
@@ -137,24 +140,49 @@ impl StorageBackend for Mufs {
 
         let opened_file = MufsOpenedFile::new(file);
 
-        Ok(OpenResponse::Found(Rc::new(opened_file)))
+        Ok(OpenResponse::Found(Box::new(opened_file)))
     }
 }
 
 #[derive(Debug)]
 pub struct MufsOpenedFile {
-    _inner: File,
+    inner: File,
 }
 
 impl MufsOpenedFile {
     fn new(inner: File) -> Self {
-        Self { _inner: inner }
+        Self { inner }
     }
 }
 
 impl OpenedFileDescriptor for MufsOpenedFile {
     fn close(&self) {
         // rsfs File is closed when going out of scope, so there is nothing to do here
+    }
+
+    fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
+        let mut buffer = vec![0; count];
+        let read_count = self.inner.read(&mut buffer)?;
+        if read_count < buffer.len() {
+            buffer.truncate(read_count);
+        }
+        Ok(buffer)
+    }
+
+    fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError> {
+        Ok(self.inner.write(buf)?)
+    }
+
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError> {
+        Ok(self.inner.seek(seek_from_to_std(seek_from))?)
+    }
+}
+
+fn seek_from_to_std(seek_from: SeekFrom) -> std::io::SeekFrom {
+    match seek_from {
+        SeekFrom::Start(p) => std::io::SeekFrom::Start(p),
+        SeekFrom::End(p) => std::io::SeekFrom::End(p),
+        SeekFrom::Current(p) => std::io::SeekFrom::Current(p),
     }
 }
 

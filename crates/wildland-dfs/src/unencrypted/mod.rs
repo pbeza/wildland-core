@@ -29,11 +29,7 @@ use std::rc::Rc;
 
 use uuid::Uuid;
 use wildland_corex::dfs::interface::{
-    DfsFrontend,
-    DfsFrontendError,
-    FileHandle,
-    OpenedFileDescriptor,
-    Stat,
+    DfsFrontend, DfsFrontendError, FileHandle, OpenedFileDescriptor, SeekFrom, Stat,
 };
 use wildland_corex::{PathResolver, Storage};
 
@@ -114,7 +110,7 @@ pub trait StorageBackendFactory {
 // the conflict resolution took place and find files which paths were mapped.
 
 pub struct UnencryptedDfs {
-    open_files: HashMap<Uuid, Rc<dyn OpenedFileDescriptor>>,
+    open_files: HashMap<Uuid, Box<dyn OpenedFileDescriptor>>,
 
     path_resolver: Box<dyn PathResolver>,
     /// Stores a factory for each supported backend type
@@ -142,7 +138,7 @@ impl UnencryptedDfs {
         }
     }
 
-    fn insert_opened_file(&mut self, opened_file: Rc<dyn OpenedFileDescriptor>) -> FileHandle {
+    fn insert_opened_file(&mut self, opened_file: Box<dyn OpenedFileDescriptor>) -> FileHandle {
         let uuid = Uuid::new_v4();
         self.open_files.insert(uuid, opened_file);
         FileHandle {
@@ -278,4 +274,40 @@ impl DfsFrontend for UnencryptedDfs {
             Err(DfsFrontendError::FileAlreadyClosed)
         }
     }
+
+    /// TODO description
+    fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
+        if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
+            opened_file.read(count)
+        } else {
+            Err(DfsFrontendError::FileAlreadyClosed)
+        }
+    }
+
+    // TODO description
+    fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError> {
+        if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
+            opened_file.write(&buf)
+        } else {
+            Err(DfsFrontendError::FileAlreadyClosed)
+        }
+    }
+
+    // TODO description
+    fn seek_from_start(
+        &mut self,
+        file: &FileHandle,
+        pos_from_start: usize,
+    ) -> Result<usize, DfsFrontendError> {
+        if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
+            opened_file
+                .seek(SeekFrom::Start(pos_from_start as u64))
+                .map(|p| p as usize)
+        } else {
+            Err(DfsFrontendError::FileAlreadyClosed)
+        }
+    }
+
+    // TODO seek from current
+    // TODO seek from end
 }

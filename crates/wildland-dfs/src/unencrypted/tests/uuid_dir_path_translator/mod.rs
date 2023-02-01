@@ -17,4 +17,5 @@
 
 mod getattr;
 mod open_close;
+mod read_write_seek;
 mod readdir;

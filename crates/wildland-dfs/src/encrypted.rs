@@ -57,4 +57,23 @@ impl DfsFrontend for EncryptedDfs {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.close(file)
     }
+
+    fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.read(file, count)
+    }
+
+    fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.write(file, buf)
+    }
+
+    fn seek_from_start(
+        &mut self,
+        file: &FileHandle,
+        pos_from_start: usize,
+    ) -> Result<usize, DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.seek_from_start(file, pos_from_start)
+    }
 }
