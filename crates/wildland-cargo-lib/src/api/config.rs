@@ -288,6 +288,7 @@ pub struct CargoConfig {
     pub fsa_config: FoundationStorageApiConfig,
     #[serde(flatten)]
     pub logger_config: LoggerConfig,
+    pub catlib_path: Option<String>,
 }
 
 impl CargoConfig {
@@ -297,6 +298,10 @@ impl CargoConfig {
 
     pub fn override_sc_url(&mut self, new_sc_url: String) {
         self.fsa_config.sc_url = new_sc_url;
+    }
+
+    pub fn override_catlib_path(&mut self, new_catlib_path: String) {
+        self.catlib_path = Some(new_catlib_path);
     }
 }
 
@@ -333,6 +338,7 @@ pub fn collect_config(
             oslog_subsystem: config_provider.get_oslog_subsystem(),
         },
         fsa_config: config_provider.get_foundation_cloud_env_mode().into(),
+        catlib_path: None,
     })
 }
 
@@ -384,7 +390,8 @@ mod tests {
                     log_file_path: PathBuf::from("cargo_lib_log"),
                     log_file_rotate_directory: PathBuf::from("."),
                     log_file_enabled: true,
-                }
+                },
+                catlib_path: None
             }
         )
     }
@@ -413,7 +420,8 @@ mod tests {
                     log_file_path: LoggerConfig::default().log_file_path,
                     log_file_rotate_directory: LoggerConfig::default().log_file_rotate_directory,
                     log_file_enabled: false,
-                }
+                },
+                catlib_path: None
             }
         )
     }

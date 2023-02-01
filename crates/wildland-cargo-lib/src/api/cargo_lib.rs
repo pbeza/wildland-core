@@ -73,6 +73,7 @@ impl CargoLib {
     pub fn new(
         lss: &'static dyn LocalSecureStorage,
         fsa_config: FoundationStorageApiConfig,
+        catlib_path: Option<String>,
     ) -> Self {
         let lss_service = LssService::new(lss);
         let container_manager = ContainerManager::default();
@@ -85,10 +86,14 @@ impl CargoLib {
             Box::new(LfsBackendFactory {}),
         );
 
+        let catlib = catlib_path
+            .map(|path| CatLib::new(path.into()))
+            .unwrap_or_default();
+
         Self {
             user_api: UserApi::new(UserService::new(
                 lss_service,
-                CatLibService::new(Rc::new(CatLib::default())),
+                CatLibService::new(Rc::new(catlib)),
                 fsa_config,
                 container_manager.clone(),
             )),
@@ -160,6 +165,7 @@ impl CargoLib {
 ///         evs_url: "some_url".to_owned(),
 ///         sc_url: "some_url".to_owned(),
 ///     },
+///     catlib_path: None,
 /// };
 ///
 /// let lss: &'static TestLss = unsafe { std::mem::transmute(&lss) };
@@ -175,7 +181,11 @@ pub fn create_cargo_lib(
         logging::init_subscriber(cfg.logger_config)
             .map_err(|e| CargoLibCreationError::Error(e.to_string()))?;
 
-        let cargo_lib = Arc::new(Mutex::new(CargoLib::new(lss, cfg.fsa_config)));
+        let cargo_lib = Arc::new(Mutex::new(CargoLib::new(
+            lss,
+            cfg.fsa_config,
+            cfg.catlib_path,
+        )));
 
         unsafe {
             CARGO_LIB.write(cargo_lib);
