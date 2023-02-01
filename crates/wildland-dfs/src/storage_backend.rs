@@ -17,12 +17,14 @@
 
 use std::path::{Path, PathBuf};
 
-use wildland_corex::dfs::interface::{OpenedFileDescriptor, Stat};
+use wildland_corex::dfs::interface::{DfsFrontendError, Stat};
+
+use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 
 #[derive(thiserror::Error, Debug)]
 pub enum StorageBackendError {
-    #[error("Operation not permitted for paths that don't represent directories")]
-    NotADirectory,
+    #[error("File has been already closed")]
+    FileAlreadyClosed,
     #[error(transparent)]
     Generic(anyhow::Error),
 }
@@ -38,11 +40,36 @@ impl From<std::path::StripPrefixError> for StorageBackendError {
     }
 }
 
+pub enum SeekFrom {
+    Start(u64),
+    End(i64),
+    Current(i64),
+}
+
+/// FileDescriptor contains state of opened file and definition of how it is stored, therefore
+/// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
+/// on the backend's type) and e.g. seek operation may be implemented differently.
+pub trait OpenedFileDescriptor: std::fmt::Debug {
+    fn close(&self) -> Result<(), DfsFrontendError>;
+    /// TODO description
+    fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
+    /// TODO description
+    fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError>;
+    /// TODO description
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError>;
+}
+
 #[derive(Debug)]
 pub enum OpenResponse {
-    Found(Box<dyn OpenedFileDescriptor>),
+    Found(CloseOnDropDescriptor),
     NotAFile,
     NotFound,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum ReaddirResponse {
+    Entries(Vec<PathBuf>),
+    NotADirectory,
 }
 
 /// Error represents scenario when data could not be retrieved from the StorageBackend, e.g. some
@@ -52,7 +79,7 @@ pub enum OpenResponse {
 /// All logical errors, e.g. trying opening directory, should be reflected in the inner type, like OpenResponse.
 /// Those variants are hidden inside Ok value because they should not trigger retrying operation.
 pub trait StorageBackend {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError>;
+    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError>;
     fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError>;
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError>;
 }

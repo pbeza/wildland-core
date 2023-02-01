@@ -24,11 +24,17 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use template::LocalFilesystemStorageTemplate;
-use wildland_dfs::storage_backend::{OpenResponse, StorageBackend, StorageBackendError};
-use wildland_dfs::unencrypted::StorageBackendFactory;
-use wildland_dfs::{
-    DfsFrontendError, NodeType, OpenedFileDescriptor, SeekFrom, Stat, Storage, UnixTimestamp,
+use wildland_dfs::close_on_drop_descriptor::CloseOnDropDescriptor;
+use wildland_dfs::storage_backend::{
+    OpenResponse,
+    OpenedFileDescriptor,
+    ReaddirResponse,
+    SeekFrom,
+    StorageBackend,
+    StorageBackendError,
 };
+use wildland_dfs::unencrypted::StorageBackendFactory;
+use wildland_dfs::{DfsFrontendError, NodeType, Stat, Storage, UnixTimestamp};
 
 #[derive(Debug)]
 pub struct LocalFilesystemStorage {
@@ -44,19 +50,21 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for LocalFilesystemStorage {
-    fn readdir(&self, path: &Path) -> Result<Vec<PathBuf>, StorageBackendError> {
+    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
         if path.is_file() || path.is_symlink() {
-            Err(StorageBackendError::NotADirectory)
+            Ok(ReaddirResponse::NotADirectory)
         } else {
-            fs::read_dir(path)?
-                .into_iter()
-                .map(|entry_result| {
-                    Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
-                })
-                .collect()
+            Ok(ReaddirResponse::Entries(
+                fs::read_dir(path)?
+                    .into_iter()
+                    .map(|entry_result| {
+                        Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
+                    })
+                    .collect::<Result<_, StorageBackendError>>()?,
+            ))
         }
     }
 
@@ -110,7 +118,9 @@ impl StorageBackend for LocalFilesystemStorage {
 
             let opened_file = StdFsOpenedFile::new(file);
 
-            Ok(OpenResponse::Found(Box::new(opened_file)))
+            Ok(OpenResponse::Found(CloseOnDropDescriptor::new(Box::new(
+                opened_file,
+            ))))
         }
     }
 }
@@ -127,8 +137,9 @@ impl StdFsOpenedFile {
 }
 
 impl OpenedFileDescriptor for StdFsOpenedFile {
-    fn close(&self) {
+    fn close(&self) -> Result<(), DfsFrontendError> {
         // std::fs::File is closed when going out of scope, so there is nothing to do here
+        Ok(())
     }
 
     fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
@@ -198,7 +209,10 @@ mod tests {
 
         let files = backend.readdir(Path::new("/")).unwrap();
 
-        assert_eq!(files, vec![PathBuf::from_str("/file1").unwrap()]);
+        assert_eq!(
+            files,
+            ReaddirResponse::Entries(vec![PathBuf::from_str("/file1").unwrap()])
+        );
     }
     #[test]
     fn test_reading_file_in_subdir_of_lfs_backend() {
@@ -220,6 +234,9 @@ mod tests {
 
         let files = backend.readdir(Path::new("/dir")).unwrap();
 
-        assert_eq!(files, vec![PathBuf::from_str("/dir/file1").unwrap()]);
+        assert_eq!(
+            files,
+            ReaddirResponse::Entries(vec![PathBuf::from_str("/dir/file1").unwrap()])
+        );
     }
 }

@@ -28,15 +28,14 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use uuid::Uuid;
-use wildland_corex::dfs::interface::{
-    DfsFrontend, DfsFrontendError, FileHandle, OpenedFileDescriptor, SeekFrom, Stat,
-};
+use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, FileHandle, Stat};
 use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{fetch_data_from_containers, get_related_nodes};
-use crate::storage_backend::{OpenResponse, StorageBackend};
+use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
+use crate::storage_backend::{OpenResponse, OpenedFileDescriptor, SeekFrom, StorageBackend};
 use crate::unencrypted::utils::find_node_matching_requested_path;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -110,7 +109,7 @@ pub trait StorageBackendFactory {
 // the conflict resolution took place and find files which paths were mapped.
 
 pub struct UnencryptedDfs {
-    open_files: HashMap<Uuid, Box<dyn OpenedFileDescriptor>>,
+    open_files: HashMap<Uuid, CloseOnDropDescriptor>,
 
     path_resolver: Box<dyn PathResolver>,
     /// Stores a factory for each supported backend type
@@ -138,7 +137,7 @@ impl UnencryptedDfs {
         }
     }
 
-    fn insert_opened_file(&mut self, opened_file: Box<dyn OpenedFileDescriptor>) -> FileHandle {
+    fn insert_opened_file(&mut self, opened_file: CloseOnDropDescriptor) -> FileHandle {
         let uuid = Uuid::new_v4();
         self.open_files.insert(uuid, opened_file);
         FileHandle {
@@ -268,8 +267,7 @@ impl DfsFrontend for UnencryptedDfs {
 
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
         if let Some(opened_file) = self.open_files.remove(&file.descriptor_uuid) {
-            opened_file.close();
-            Ok(())
+            opened_file.close()
         } else {
             Err(DfsFrontendError::FileAlreadyClosed)
         }
