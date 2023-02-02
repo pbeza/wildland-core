@@ -20,6 +20,17 @@ HLD link: <https://docs.wildland.dev/>
 MLD link: <https://docs.wildland.dev/docs/wildland/mld/index.html>
 LLD link: <https://docs.wildland.dev/docs/wildland/lld/doc/wildland_cargo_lib/index.html>
 
+## Catlib backend
+
+Running Wildland Core requires Redis server to be accessible from local or remote network. The
+server must be accessible at all times even if one does not interact with Catalog backend.
+
+The default connection string is `redis://127.0.0.1:6379/0` where `/0` denotes database with id `0`.
+The default connection string can be overriden by specifying it in a `CARGO_REDIS_URL` environment
+variable.
+
+_note: this solution is temporary and will be shortly replaced by a cargo configuration entry_
+
 ## Local Documentation
 
 To build the documentation locally, the cargo tool and some dependencies are required.
