@@ -15,15 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+mod close_on_drop_descriptor;
 pub mod s3;
 
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+pub use close_on_drop_descriptor::CloseOnDropDescriptor;
 use wildland_corex::dfs::interface::{DfsFrontendError, Stat};
 use wildland_corex::Storage;
-
-use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 
 #[derive(thiserror::Error, Debug)]
 pub enum StorageBackendError {
@@ -36,6 +36,7 @@ impl From<std::io::Error> for StorageBackendError {
         Self::Generic(e.into())
     }
 }
+
 impl From<std::path::StripPrefixError> for StorageBackendError {
     fn from(e: std::path::StripPrefixError) -> Self {
         Self::Generic(e.into())
@@ -87,6 +88,12 @@ pub enum OpenResponse {
     Found(CloseOnDropDescriptor),
     NotAFile,
     NotFound,
+}
+
+impl OpenResponse {
+    pub fn found<T: OpenedFileDescriptor + 'static>(descriptor: T) -> Self {
+        Self::Found(CloseOnDropDescriptor::new(Box::new(descriptor)))
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]

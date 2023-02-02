@@ -31,7 +31,6 @@ use rsfs::{DirEntry, FileType, GenFS, Metadata, OpenOptions};
 use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat, UnixTimestamp};
 use wildland_corex::{MockPathResolver, Storage};
 
-use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 use crate::storage_backends::{
     CloseError,
     GetattrResponse,
@@ -149,9 +148,7 @@ impl StorageBackend for Mufs {
 
         let opened_file = MufsOpenedFile::new(file);
 
-        Ok(OpenResponse::Found(CloseOnDropDescriptor::new(Box::new(
-            opened_file,
-        ))))
+        Ok(OpenResponse::found(opened_file))
     }
 }
 

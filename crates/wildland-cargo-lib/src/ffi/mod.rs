@@ -123,6 +123,7 @@ mod ffi_binding {
         File,
         Dir,
         Symlink,
+        Other,
     }
 
     extern "Traits" {
