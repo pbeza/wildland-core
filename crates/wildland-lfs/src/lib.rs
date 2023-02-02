@@ -18,6 +18,7 @@
 pub mod template;
 
 use std::fs::{self, File, OpenOptions};
+use std::io::{Read, Seek, Write};
 use std::os::unix::prelude::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -29,11 +30,12 @@ use wildland_dfs::storage_backends::{
     OpenResponse,
     OpenedFileDescriptor,
     ReaddirResponse,
+    SeekFrom,
     StorageBackend,
     StorageBackendError,
     StorageBackendFactory,
 };
-use wildland_dfs::{NodeType, Stat, Storage, UnixTimestamp};
+use wildland_dfs::{DfsFrontendError, NodeType, Stat, Storage, UnixTimestamp};
 
 #[derive(Debug)]
 pub struct LocalFilesystemStorage {
@@ -123,12 +125,12 @@ impl StorageBackend for LocalFilesystemStorage {
 
 #[derive(Debug)]
 pub struct StdFsOpenedFile {
-    _inner: File,
+    inner: File,
 }
 
 impl StdFsOpenedFile {
     fn new(inner: File) -> Self {
-        Self { _inner: inner }
+        Self { inner }
     }
 }
 
@@ -136,6 +138,23 @@ impl OpenedFileDescriptor for StdFsOpenedFile {
     fn close(&self) -> Result<(), CloseError> {
         // std::fs::File is closed when going out of scope, so there is nothing to do here
         Ok(())
+    }
+
+    fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
+        let mut buffer = vec![0; count];
+        let read_count = self.inner.read(&mut buffer)?;
+        if read_count < buffer.len() {
+            buffer.truncate(read_count);
+        }
+        Ok(buffer)
+    }
+
+    fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError> {
+        Ok(self.inner.write(buf)?)
+    }
+
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError> {
+        Ok(self.inner.seek(seek_from.to_std())?)
     }
 }
 
