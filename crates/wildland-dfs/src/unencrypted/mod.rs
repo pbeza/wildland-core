@@ -34,9 +34,9 @@ use wildland_corex::{PathResolver, Storage};
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{fetch_data_from_containers, get_related_nodes};
-use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 use crate::storage_backends::{
     CloseError,
+    CloseOnDropDescriptor,
     OpenResponse,
     OpenedFileDescriptor,
     StorageBackend,
