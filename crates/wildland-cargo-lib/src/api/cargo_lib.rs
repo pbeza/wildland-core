@@ -28,7 +28,8 @@ use wildland_corex::container_manager::ContainerManager;
 use wildland_corex::dfs::interface::DfsFrontend;
 use wildland_corex::{LocalSecureStorage, LssService};
 use wildland_dfs::encrypted::EncryptedDfs as Dfs;
-use wildland_dfs::unencrypted::StorageBackendFactory;
+use wildland_dfs::storage_backends::s3::S3BackendFactory;
+use wildland_dfs::storage_backends::StorageBackendFactory;
 #[cfg(feature = "lfs")]
 use wildland_lfs::LfsBackendFactory;
 
@@ -84,6 +85,8 @@ impl CargoLib {
             "LocalFilesystem".to_string(),
             Box::new(LfsBackendFactory {}),
         );
+
+        dfs_storage_factories.insert("S3".to_string(), Box::new(S3BackendFactory::new()));
 
         Self {
             user_api: UserApi::new(UserService::new(

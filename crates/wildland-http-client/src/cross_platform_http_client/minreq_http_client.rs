@@ -1,51 +1,57 @@
-use super::{HttpClient, HttpError, HttpResult, Request, Response};
+use anyhow::Context;
 
-pub(crate) struct MinreqHttpClient {
-    pub(crate) base_url: String,
-}
+use super::{Body, HttpClient, HttpError, HttpResult, Request};
+
+#[derive(Clone, Default)]
+pub struct MinreqHttpClient {}
 
 impl HttpClient for MinreqHttpClient {
-    fn post(&self, request: Request) -> HttpResult {
-        let url = format!("{}{}", self.base_url, request.url);
-        let mut req = minreq::post(url);
-        if let Some(json) = request.json {
-            req = req
-                .with_json(&json)
-                .map_err(|err| HttpError::Generic(err.to_string()))?;
+    fn send(&self, request: Request) -> HttpResult {
+        let method = match request.method().as_str() {
+            "GET" => minreq::Method::Get,
+            "POST" => minreq::Method::Post,
+            "PUT" => minreq::Method::Put,
+            "DELETE" => minreq::Method::Delete,
+            "HEAD" => minreq::Method::Head,
+            "OPTIONS" => minreq::Method::Options,
+            "CONNECT" => minreq::Method::Connect,
+            "PATCH" => minreq::Method::Patch,
+            "TRACE" => minreq::Method::Trace,
+            v => minreq::Method::Custom(v.into()),
+        };
+
+        let mut req = minreq::Request::new(method, request.uri().to_string());
+
+        for (key, val) in request.headers().iter() {
+            req = req.with_header(
+                key.as_str(),
+                val.to_str()
+                    .context("Invalid header value")
+                    .map_err(HttpError::user)?,
+            );
         }
 
-        for (key, val) in request.headers.into_iter() {
-            req = req.with_header(key, val);
-        }
+        req = match request.into_body() {
+            Body::Json(v) => req
+                .with_json(&v)
+                .context("Invalid json body")
+                .map_err(HttpError::user)?,
+            Body::Raw(v) => req.with_body(v),
+        };
 
         let resp = req
             .send()
-            .map_err(|err| HttpError::Generic(err.to_string()))?;
-        Ok(Response {
-            status_code: resp.status_code,
-            body: resp.into_bytes(),
-        })
-    }
+            .context("HTTP request failed")
+            .map_err(HttpError::io)?;
+        let mut builder = http::Response::builder().status(resp.status_code as u16);
 
-    fn put(&self, request: Request) -> HttpResult {
-        let url = format!("{}{}", self.base_url, request.url);
-        let mut req = minreq::put(url);
-        if let Some(json) = request.json {
-            req = req
-                .with_json(&json)
-                .map_err(|err| HttpError::Generic(err.to_string()))?;
+        for (k, v) in resp.headers.iter() {
+            builder = builder.header(k, v);
         }
 
-        for (key, val) in request.headers.into_iter() {
-            req = req.with_header(key, val);
-        }
-
-        let resp = req
-            .send()
-            .map_err(|err| HttpError::Generic(err.to_string()))?;
-        Ok(Response {
-            status_code: resp.status_code,
-            body: resp.into_bytes(),
-        })
+        builder
+            .body(resp.into_bytes())
+            .context("Cant build HTTP responce")
+            .map_err(HttpError::other)
     }
 }
