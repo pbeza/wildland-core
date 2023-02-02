@@ -25,8 +25,8 @@ use std::rc::Rc;
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::close_on_drop_descriptor::CloseOnDropDescriptor;
 use wildland_dfs::storage_backends::{
-    CloseError, GetattrResponse, OpenResponse, OpenedFileDescriptor, ReaddirResponse,
-    StorageBackend, StorageBackendError, StorageBackendFactory,
+    CloseError, CreateDirResponse, GetattrResponse, OpenResponse, OpenedFileDescriptor,
+    ReaddirResponse, RemoveDirResponse, StorageBackend, StorageBackendError, StorageBackendFactory,
 };
 use wildland_dfs::{NodeType, Stat, Storage, UnixTimestamp};
 
@@ -121,6 +121,20 @@ impl StorageBackend for LocalFilesystemStorage {
         &self,
         path: &Path,
     ) -> Result<wildland_dfs::storage_backends::CreateDirResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        match std::fs::create_dir(path) {
+            Ok(()) => Ok(CreateDirResponse::Created),
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => Ok(CreateDirResponse::ParentDoesNotExist),
+                std::io::ErrorKind::AlreadyExists => Ok(CreateDirResponse::PathAlreadyExists),
+                _ => Err(StorageBackendError::Generic(e.into())),
+            },
+        }
+    }
+
+    fn remove_dir(&self, path: &Path) -> Result<RemoveDirResponse, StorageBackendError> {
         todo!() // TODO do it
     }
 }

@@ -34,7 +34,7 @@ use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
-use self::utils::{fetch_data_from_container, fetch_data_from_containers, get_related_nodes};
+use self::utils::{execute_container_operation, fetch_data_from_containers, get_related_nodes};
 use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 use crate::storage_backends::{
     CloseError, CreateDirResponse, OpenResponse, OpenedFileDescriptor, StorageBackend,
@@ -281,24 +281,47 @@ impl DfsFrontend for UnencryptedDfs {
 
         match nodes.len() {
             0 => Err(DfsFrontendError::ParentDoesNotExist),
-            1 => {
-                let node = nodes.pop().unwrap();
-                match node {
-                    NodeDescriptor::Physical {
-                        storages,
-                        absolute_path,
-                    } => fetch_data_from_container(self, &storages, |backend, path| {
+            1 => match nodes.pop().unwrap() {
+                NodeDescriptor::Physical { storages, .. } => {
+                    execute_container_operation(self, &storages, |backend, path| {
                         backend.create_dir(path)
                     })
                     .ok_or(DfsFrontendError::StorageNotResponsive)
                     .and_then(|resp| match resp {
                         CreateDirResponse::Created => Ok(()),
-                        CreateDirResponse::ParentDoesNotExist => todo!(),
-                        CreateDirResponse::PathAlreadyExists => todo!(),
-                    }),
-                    NodeDescriptor::Virtual { absolute_path } => todo!(),
+                        CreateDirResponse::ParentDoesNotExist => {
+                            Err(DfsFrontendError::ParentDoesNotExist)
+                        }
+                        CreateDirResponse::PathAlreadyExists => {
+                            Err(DfsFrontendError::PathAlreadyExists)
+                        }
+                    })
                 }
-            }
+                NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::PathAlreadyExists),
+            },
+            _ => Err(DfsFrontendError::ReadOnlyPath), // We treat folders that are merge of content from many containers are read-only
+        }
+    }
+
+    fn remove_dir(&mut self, requested_path: String) -> Result<(), DfsFrontendError> {
+        let requested_path = PathBuf::from_str(&requested_path).unwrap();
+        let mut nodes = get_related_nodes(self, &requested_path)?;
+
+        match nodes.len() {
+            0 => Err(DfsFrontendError::NoSuchPath),
+            1 => match nodes.pop().unwrap() {
+                NodeDescriptor::Physical {
+                    storages,
+                    absolute_path,
+                } => execute_container_operation(self, &storages, |backend, path| {
+                    backend.remove_dir(path)
+                })
+                .ok_or(DfsFrontendError::StorageNotResponsive)
+                .and_then(|resp| match resp {
+                    _ => todo!(),
+                }),
+                NodeDescriptor::Virtual { absolute_path } => Err(DfsFrontendError::ReadOnlyPath),
+            },
             _ => todo!(),
         }
     }

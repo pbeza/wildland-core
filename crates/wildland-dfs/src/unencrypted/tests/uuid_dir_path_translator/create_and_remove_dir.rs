@@ -16,10 +16,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use mockall::predicate;
-use rsfs::GenFS;
 use rstest::rstest;
 use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError};
@@ -40,8 +39,8 @@ fn test_create_dir_in_path_without_containers() {
     let path_resolver = Box::new(path_resolver);
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
-    let stat = dfs.create_dir("/dir".to_string()).unwrap_err();
-    assert_eq!(stat, DfsFrontendError::ParentDoesNotExist);
+    let err = dfs.create_dir("/dir".to_string()).unwrap_err();
+    assert_eq!(err, DfsFrontendError::ParentDoesNotExist);
 }
 
 #[rstest]
@@ -67,6 +66,91 @@ fn test_create_dir_in_path_without_parent() {
     let path_resolver = Box::new(path_resolver);
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
-    let stat = dfs.create_dir("/a/dir".to_string()).unwrap_err();
-    assert_eq!(stat, DfsFrontendError::ParentDoesNotExist);
+    let err = dfs.create_dir("/a/dir".to_string()).unwrap_err();
+    assert_eq!(err, DfsFrontendError::ParentDoesNotExist);
+}
+
+#[rstest]
+fn test_create_dir_in_root_succeeds() {
+    let mut path_resolver = MockPathResolver::new();
+    let mufs_storage = new_mufs_storage("/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/dir")))
+        .times(1)
+        .returning({
+            let storage = mufs_storage;
+            move |_path| {
+                Ok(HashSet::from([ResolvedPath::PathWithStorages {
+                    path_within_storage: "/dir".into(),
+                    storages_id: Uuid::from_u128(1),
+                    storages: vec![storage.clone()],
+                }]))
+            }
+        });
+
+    let path_resolver = Box::new(path_resolver);
+    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+
+    dfs.create_dir("/dir".to_string()).unwrap();
+}
+
+#[rstest]
+fn test_create_dir_conflicting_with_virtual_node() {
+    let mut path_resolver = MockPathResolver::new();
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/virtual_dir")))
+        .times(1)
+        .returning(move |_path| {
+            Ok(HashSet::from([ResolvedPath::VirtualPath(PathBuf::from(
+                "/virtual_dir/end_of_path",
+            ))]))
+        });
+
+    let path_resolver = Box::new(path_resolver);
+    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+
+    let err = dfs.create_dir("//virtual_dir".to_string()).unwrap_err();
+    assert_eq!(err, DfsFrontendError::PathAlreadyExists);
+}
+
+#[rstest]
+fn test_create_dir_in_ambiguous_location() {
+    let mut path_resolver = MockPathResolver::new();
+
+    // each container has its own subfolder
+    let storage1 = new_mufs_storage("/storage1/");
+    let storage2 = new_mufs_storage("/storage2/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b/new_dir")))
+        .times(1)
+        .returning({
+            let storage1 = storage1;
+            let storage2 = storage2;
+            move |_path| {
+                Ok(HashSet::from([
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/b/new_dir".into(), // returned by the container claiming path `/a/`
+                        storages_id: Uuid::from_u128(1),
+                        storages: vec![storage1.clone()],
+                    },
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/new_dir".into(), // returned by the container claiming path `/a/b/`
+                        storages_id: Uuid::from_u128(2),
+                        storages: vec![storage2.clone()],
+                    },
+                ]))
+            }
+        });
+
+    let path_resolver = Box::new(path_resolver);
+    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+
+    let err = dfs.create_dir("/a/b/new_dir".to_string()).unwrap_err();
+    assert_eq!(err, DfsFrontendError::ReadOnlyPath);
 }

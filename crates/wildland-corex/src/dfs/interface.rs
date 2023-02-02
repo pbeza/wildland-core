@@ -103,6 +103,8 @@ pub enum DfsFrontendError {
     ParentDoesNotExist,
     #[error("Storages didn't respond")]
     StorageNotResponsive,
+    #[error("Operation could not modify read-only path")]
+    ReadOnlyPath,
 }
 
 /// Interface that DFS should expose towards frontends
@@ -121,4 +123,7 @@ pub trait DfsFrontend {
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
 
     fn create_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
+
+    /// Succeeds if the directory exists and is empty
+    fn remove_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
 }

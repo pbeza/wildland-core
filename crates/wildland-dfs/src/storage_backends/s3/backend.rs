@@ -40,8 +40,15 @@ impl StorageBackend for S3Backend {
 
     fn create_dir(
         &self,
-        path: &Path,
+        _path: &Path,
     ) -> Result<crate::storage_backends::CreateDirResponse, StorageBackendError> {
-        todo!() // TODO do it
+        todo!() // TODO ticket number
+    }
+
+    fn remove_dir(
+        &self,
+        _path: &Path,
+    ) -> Result<crate::storage_backends::RemoveDirResponse, StorageBackendError> {
+        todo!() // TODO ticket number
     }
 }
