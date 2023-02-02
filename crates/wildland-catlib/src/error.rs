@@ -16,3 +16,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub(crate) use wildland_corex::catlib_service::error::{CatlibError, CatlibResult};
+
+pub(crate) fn redis_to_catlib_err(err: redis::RedisError) -> CatlibError {
+    CatlibError::Generic(format!("Redis error: {err}"))
+}
+
+pub(crate) fn r2d2_to_catlib_err(err: r2d2::Error) -> CatlibError {
+    CatlibError::Generic(format!("R2D2 error: {err}"))
+}

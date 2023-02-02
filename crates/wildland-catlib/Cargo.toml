@@ -14,7 +14,7 @@ derivative     = { version = "2.2" }
 directories    = { version = "4.0" }
 hex            = { version = "0.4" }
 r2d2           = { version = "0.8.10" }
-redis          = { version = "0.22.3", features = ["r2d2", "tokio-comp"] }
+redis          = { version = "0.22.3", features = ["r2d2"] }
 ron            = { version = "0.8" }
 serde          = { version = "1.0", features = ["derive"] }
 serde_json     = { version = "1.0" }
@@ -26,7 +26,7 @@ wildland-corex = { version = "0.40.0", path = "../wildland-corex" }
 
 
 [dev-dependencies]
-futures = "0.3.26"
-rand   = { version = "0.8" }
-rstest = { version = "0.16" }
-tokio = { version = "1.25.0", features = ["time", "rt", "rt-multi-thread"] }
+futures = { version = "0.3.26" }
+rand    = { version = "0.8" }
+rstest  = { version = "0.16" }
+tokio   = { version = "1.25.0", features = ["rt", "rt-multi-thread"] }

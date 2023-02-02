@@ -36,8 +36,8 @@ use crate::storage::StorageData;
 
 #[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn db_conn(connection_string: String) -> CatlibResult<DbClient> {
-    let client = redis::Client::open(connection_string)?;
-    let pool = r2d2::Pool::new(client)?;
+    let client = redis::Client::open(connection_string).map_err(redis_to_catlib_err)?;
+    let pool = r2d2::Pool::new(client).map_err(r2d2_to_catlib_err)?;
 
     Ok(pool)
 }

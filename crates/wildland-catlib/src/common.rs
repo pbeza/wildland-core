@@ -17,7 +17,6 @@
 
 use wildland_corex::catlib_service::error::CatlibResult;
 
-// pub(crate) type DbClient = Rc<RefCell<Connection>>;
 pub(crate) type DbClient = r2d2::Pool<redis::Client>;
 
 #[derive(Clone)]
