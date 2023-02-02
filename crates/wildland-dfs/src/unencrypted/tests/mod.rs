@@ -32,8 +32,9 @@ use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat, UnixTimes
 use wildland_corex::{MockPathResolver, Storage};
 
 use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
-use crate::storage_backend::{
+use crate::storage_backends::{
     CloseError,
+    GetattrResponse,
     OpenResponse,
     OpenedFileDescriptor,
     ReaddirResponse,
@@ -102,7 +103,6 @@ impl StorageBackend for Mufs {
         Ok(ReaddirResponse::Entries(
             self.fs
                 .read_dir(path)?
-                .into_iter()
                 .map(|entry| {
                     Ok(Path::new("/").join(entry?.path().strip_prefix(&self.base_dir).unwrap()))
                 })
@@ -110,30 +110,31 @@ impl StorageBackend for Mufs {
         ))
     }
 
-    fn getattr(&self, path: &Path) -> Result<Option<Stat>, StorageBackendError> {
+    fn getattr(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError> {
         let relative_path = strip_root(path);
-        Ok(self
-            .fs
-            .metadata(self.base_dir.join(relative_path))
-            .map(|metadata| {
-                let file_type = metadata.file_type();
-                Some(Stat {
-                    node_type: if file_type.is_file() {
-                        NodeType::File
-                    } else if file_type.is_dir() {
-                        NodeType::Dir
-                    } else if file_type.is_symlink() {
-                        NodeType::Symlink
-                    } else {
-                        return None;
-                    },
-                    size: metadata.len(),
-                    access_time: metadata.accessed().ok().map(systime_to_unix),
-                    modification_time: metadata.modified().ok().map(systime_to_unix),
-                    // NOTE: Mufs does not support ctime, for tests sake let's use creation time
-                    change_time: metadata.created().ok().map(systime_to_unix),
-                })
-            })?)
+        Ok(GetattrResponse::Found(
+            self.fs
+                .metadata(self.base_dir.join(relative_path))
+                .map(|metadata| {
+                    let file_type = metadata.file_type();
+                    Stat {
+                        node_type: if file_type.is_file() {
+                            NodeType::File
+                        } else if file_type.is_dir() {
+                            NodeType::Dir
+                        } else if file_type.is_symlink() {
+                            NodeType::Symlink
+                        } else {
+                            NodeType::Other
+                        },
+                        size: metadata.len(),
+                        access_time: metadata.accessed().ok().map(systime_to_unix),
+                        modification_time: metadata.modified().ok().map(systime_to_unix),
+                        // NOTE: Mufs does not support ctime, for tests sake let's use creation time
+                        change_time: metadata.created().ok().map(systime_to_unix),
+                    }
+                })?,
+        ))
     }
 
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError> {
@@ -206,10 +207,10 @@ impl MufsFactory {
     }
 }
 impl StorageBackendFactory for MufsFactory {
-    fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error> {
+    fn init_backend(&self, storage: Storage) -> anyhow::Result<Rc<dyn StorageBackend>> {
         Ok(Rc::new(Mufs::new(
             self.fs.clone(),
-            serde_json::from_value::<String>(storage.data().clone())?,
+            serde_json::from_value::<String>(storage.data())?,
         )))
     }
 }

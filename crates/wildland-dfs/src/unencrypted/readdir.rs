@@ -25,7 +25,7 @@ use wildland_corex::{ResolvedPath, Storage};
 
 use super::utils::{execute_backend_op_with_policy, ExecutionPolicy};
 use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
-use crate::storage_backend::ReaddirResponse;
+use crate::storage_backends::ReaddirResponse;
 
 pub fn readdir(
     dfs_front: &mut UnencryptedDfs,

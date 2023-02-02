@@ -58,6 +58,7 @@ pub enum NodeType {
     File,
     Dir,
     Symlink,
+    Other,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

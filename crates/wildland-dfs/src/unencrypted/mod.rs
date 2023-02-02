@@ -35,12 +35,13 @@ use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{fetch_data_from_containers, get_related_nodes};
 use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
-use crate::storage_backend::{
+use crate::storage_backends::{
     CloseError,
     OpenResponse,
     OpenedFileDescriptor,
     SeekFrom,
     StorageBackend,
+    StorageBackendFactory,
 };
 use crate::unencrypted::utils::find_node_matching_requested_path;
 
@@ -101,10 +102,6 @@ impl NodeStorages {
     pub fn path_within_storage(&self) -> &Path {
         &self.path_within_storage
     }
-}
-
-pub trait StorageBackendFactory {
-    fn init_backend(&self, storage: Storage) -> Result<Rc<dyn StorageBackend>, anyhow::Error>;
 }
 
 // TODO WILX-387 Current DFS implementation uses some kind of mapping paths into another ones in order to

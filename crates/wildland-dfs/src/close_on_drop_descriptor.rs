@@ -17,7 +17,7 @@
 
 use wildland_corex::dfs::interface::DfsFrontendError;
 
-use crate::storage_backend::{CloseError, OpenedFileDescriptor};
+use crate::storage_backends::{CloseError, OpenedFileDescriptor, SeekFrom};
 
 /// Wrapper ensuring that close is always called on `OpenedFileDescriptor`
 #[derive(Debug)]
@@ -50,10 +50,7 @@ impl OpenedFileDescriptor for CloseOnDropDescriptor {
         self.inner.write(buf)
     }
 
-    fn seek(
-        &mut self,
-        seek_from: crate::storage_backend::SeekFrom,
-    ) -> Result<u64, DfsFrontendError> {
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError> {
         self.inner.seek(seek_from)
     }
 }

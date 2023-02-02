@@ -21,6 +21,7 @@ use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat};
 
 use super::utils::*;
 use super::{NodeDescriptor, UnencryptedDfs};
+use crate::storage_backends::GetattrResponse;
 
 pub fn getattr(
     dfs_front: &mut UnencryptedDfs,
@@ -32,7 +33,10 @@ pub fn getattr(
 
     let mut stats: Vec<(&NodeDescriptor, Stat)> =
         fetch_data_from_containers(&nodes, dfs_front, |backend, path| backend.getattr(path))
-            .filter_map(|(node, opt_result)| opt_result.map(|result| (node, result)))
+            .filter_map(|(node, opt_result)| match opt_result {
+                GetattrResponse::Found(stat) => Some((node, stat)),
+                GetattrResponse::NotFound => None,
+            })
             .chain(nodes.iter().filter_map(|node| {
                 if node.is_virtual() {
                     Some((

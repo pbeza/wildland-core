@@ -178,6 +178,8 @@ All devices:
 mod tests {
     use std::str::FromStr;
 
+    use base64::engine::general_purpose::STANDARD;
+    use base64::Engine;
     use mockito::Matcher;
     use pretty_assertions::assert_eq;
     use rstest::*;
@@ -262,7 +264,7 @@ mod tests {
             .create();
 
         let response_json_str = r#"{"id": "00000000-0000-0000-0000-000000000001", "credentialID": "cred_id", "credentialSecret": "cred_secret"}"#;
-        let response_base64 = base64::encode(response_json_str);
+        let response_base64 = STANDARD.encode(response_json_str);
         let credentials_response = format!("{{ \"credentials\": \"{response_base64}\" }}");
         let storage_req_mock_2 = mockito::mock("PUT", "/get_storage")
             .with_status(200)

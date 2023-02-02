@@ -6,3 +6,7 @@ members = ["crates/*"]
 # that occures while compiling rust library to `wasm32-unknown-emscripten` target.
 [patch.crates-io]
 instant = { git = "https://github.com/hoodmane/instant.git", branch = "emscripten-no-leading-underscore" }
+
+
+[profile.dev.package.aws-sdk-s3] # FIX local count too large error when compiled for wasm
+opt-level = 1

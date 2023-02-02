@@ -19,18 +19,18 @@ use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
-use crate::cross_platform_http_client::{CurrentPlatformClient, HttpClient, Request};
+use crate::cross_platform_http_client::{Body, CurrentPlatformClient, HttpClient};
 use crate::error::WildlandHttpClientError;
 use crate::response_handler::check_status_code;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConfirmTokenReq {
     pub session_id: String,
     pub email: String,
     pub verification_token: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetStorageReq {
     pub session_id: Option<String>,
     pub email: String,
@@ -44,23 +44,26 @@ pub struct GetStorageRes {
 
 #[derive(Clone)]
 pub struct EvsClient {
-    pub(crate) http_client: Rc<dyn HttpClient>,
+    http_client: Rc<dyn HttpClient>,
+    base_url: String,
 }
 
 impl EvsClient {
     #[tracing::instrument(level = "debug", skip_all)]
-    pub fn new(base_url: &str) -> Self {
-        let http_client = Rc::new(CurrentPlatformClient {
-            base_url: base_url.into(),
-        });
+    pub fn new(base_url: String) -> Self {
+        let http_client = Rc::new(CurrentPlatformClient {});
 
-        Self { http_client }
+        Self {
+            http_client,
+            base_url,
+        }
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn confirm_token(&self, request: ConfirmTokenReq) -> Result<(), WildlandHttpClientError> {
-        let request = Request::new("/confirm_token").with_json(&request);
-        let response = self.http_client.put(request)?;
+        let request = http::Request::put(format!("{}/confirm_token", self.base_url))
+            .body(Body::json(request))?;
+        let response = self.http_client.send(request)?;
         check_status_code(response)?;
         Ok(())
     }
@@ -70,21 +73,21 @@ impl EvsClient {
         &self,
         request: GetStorageReq,
     ) -> Result<GetStorageRes, WildlandHttpClientError> {
-        let request = Request::new("/get_storage").with_json(&request);
-        let response = self.http_client.put(request)?;
-        let response = check_status_code(response)?;
-        let json = response.deserialize()?;
-        Ok(json)
+        let request = http::Request::put(format!("{}/get_storage", self.base_url))
+            .body(Body::json(request))?;
+
+        let response = self.http_client.send(request)?;
+        check_status_code(response)?
+            .map(|body| serde_json::from_slice(&body))
+            .into_body()
+            .map_err(Into::into)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use mockall::predicate::eq;
-    use serde_json::json;
-
     use super::*;
-    use crate::cross_platform_http_client::{MockHttpClient, Response};
+    use crate::cross_platform_http_client::MockHttpClient;
     use crate::evs::constants::test_utilities::{CREDENTIALS, EMAIL, VERIFICATION_TOKEN};
 
     #[test]
@@ -97,22 +100,30 @@ mod tests {
             session_id: "some uuid".to_string(),
         };
 
-        let http_request = Request::new("/confirm_token").with_json(&request);
+        let http_request = http::Request::put("/confirm_token")
+            .body(Body::json(request.clone()))
+            .unwrap();
 
         http_client
             .as_mut()
-            .expect_put()
-            .with(eq(http_request))
+            .expect_send()
+            .withf(move |request| {
+                request.method() == http_request.method()
+                    && request.uri() == http_request.uri()
+                    && request.headers() == http_request.headers()
+                    && request.body() == http_request.body()
+            })
             .times(1)
             .returning(|_| {
-                Ok(Response {
-                    status_code: 200,
-                    body: vec![],
-                })
+                Ok(http::Response::builder()
+                    .status(200)
+                    .body(Vec::default())
+                    .unwrap())
             });
 
         let response = EvsClient {
-            http_client: Rc::from(http_client as Box<dyn HttpClient>),
+            http_client: Rc::from(http_client as Box<_>),
+            base_url: "".into(),
         }
         .confirm_token(request);
 
@@ -128,22 +139,33 @@ mod tests {
             session_id: Some("some uuid".to_string()),
         };
 
-        let http_request = Request::new("/get_storage").with_json(&request);
+        let http_request = http::Request::put("/get_storage")
+            .body(Body::json(request.clone()))
+            .unwrap();
 
         http_client
             .as_mut()
-            .expect_put()
-            .with(eq(http_request))
+            .expect_send()
+            .withf(move |request| {
+                request.method() == http_request.method()
+                    && request.uri() == http_request.uri()
+                    && request.headers() == http_request.headers()
+                    && request.body() == http_request.body()
+            })
             .times(1)
             .returning(|_| {
-                Ok(Response {
-                    status_code: 200,
-                    body: serde_json::to_vec(&json!({ "credentials": CREDENTIALS })).unwrap(),
-                })
+                Ok(http::Response::builder()
+                    .status(200)
+                    .body(
+                        serde_json::to_vec(&serde_json::json!({ "credentials": CREDENTIALS }))
+                            .unwrap(),
+                    )
+                    .unwrap())
             });
 
         let response = EvsClient {
-            http_client: Rc::from(http_client as Box<dyn HttpClient>),
+            http_client: Rc::from(http_client as Box<_>),
+            base_url: "".into(),
         }
         .get_storage(request)
         .unwrap();

@@ -7,7 +7,7 @@ use wildland_corex::dfs::interface::DfsFrontendError;
 use wildland_corex::{ResolvedPath, Storage};
 
 use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
-use crate::storage_backend::{StorageBackend, StorageBackendError};
+use crate::storage_backends::{StorageBackend, StorageBackendError};
 
 type BackendOp<T> = fn(Rc<dyn StorageBackend>, path: &Path) -> Result<T, StorageBackendError>;
 pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
