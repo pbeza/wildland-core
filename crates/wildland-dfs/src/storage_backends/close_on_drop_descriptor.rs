@@ -15,7 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::storage_backends::{CloseError, OpenedFileDescriptor};
+use wildland_corex::dfs::interface::DfsFrontendError;
+
+use crate::storage_backends::{CloseError, OpenedFileDescriptor, SeekFrom};
 
 /// Wrapper ensuring that close is always called on `OpenedFileDescriptor`
 #[derive(Debug)]
@@ -38,5 +40,17 @@ impl Drop for CloseOnDropDescriptor {
 impl OpenedFileDescriptor for CloseOnDropDescriptor {
     fn close(&self) -> Result<(), CloseError> {
         self.inner.close()
+    }
+
+    fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
+        self.inner.read(count)
+    }
+
+    fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError> {
+        self.inner.write(buf)
+    }
+
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError> {
+        self.inner.seek(seek_from)
     }
 }
