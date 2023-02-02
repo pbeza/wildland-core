@@ -186,15 +186,7 @@ impl OpenedFileDescriptor for MufsOpenedFile {
     }
 
     fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError> {
-        Ok(self.inner.seek(seek_from_to_std(seek_from))?)
-    }
-}
-
-fn seek_from_to_std(seek_from: SeekFrom) -> std::io::SeekFrom {
-    match seek_from {
-        SeekFrom::Start(p) => std::io::SeekFrom::Start(p),
-        SeekFrom::End(p) => std::io::SeekFrom::End(p),
-        SeekFrom::Current(p) => std::io::SeekFrom::Current(p),
+        Ok(self.inner.seek(seek_from.to_std())?)
     }
 }
 

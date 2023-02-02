@@ -112,9 +112,11 @@ mod ffi_binding {
         DeserializationError(_),
     }
     enum DfsFrontendError {
+        NotAFile,
         NoSuchPath,
         PathResolutionError(_),
         Generic(_),
+        FileAlreadyClosed,
     }
 
     enum NodeType {

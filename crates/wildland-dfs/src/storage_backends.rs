@@ -48,6 +48,16 @@ pub enum SeekFrom {
     Current(i64),
 }
 
+impl SeekFrom {
+    pub fn to_std(self) -> std::io::SeekFrom {
+        match self {
+            SeekFrom::Start(p) => std::io::SeekFrom::Start(p),
+            SeekFrom::End(p) => std::io::SeekFrom::End(p),
+            SeekFrom::Current(p) => std::io::SeekFrom::Current(p),
+        }
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum CloseError {
     #[error("File has been already closed")]
