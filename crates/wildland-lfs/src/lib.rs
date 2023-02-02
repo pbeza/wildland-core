@@ -25,14 +25,8 @@ use std::rc::Rc;
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::close_on_drop_descriptor::CloseOnDropDescriptor;
 use wildland_dfs::storage_backends::{
-    CloseError,
-    GetattrResponse,
-    OpenResponse,
-    OpenedFileDescriptor,
-    ReaddirResponse,
-    StorageBackend,
-    StorageBackendError,
-    StorageBackendFactory,
+    CloseError, GetattrResponse, OpenResponse, OpenedFileDescriptor, ReaddirResponse,
+    StorageBackend, StorageBackendError, StorageBackendFactory,
 };
 use wildland_dfs::{NodeType, Stat, Storage, UnixTimestamp};
 
@@ -121,6 +115,13 @@ impl StorageBackend for LocalFilesystemStorage {
                 opened_file,
             ))))
         }
+    }
+
+    fn create_dir(
+        &self,
+        path: &Path,
+    ) -> Result<wildland_dfs::storage_backends::CreateDirResponse, StorageBackendError> {
+        todo!() // TODO do it
     }
 }
 

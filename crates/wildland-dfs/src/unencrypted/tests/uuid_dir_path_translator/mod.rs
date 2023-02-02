@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+mod create_and_remove_dir;
 mod getattr;
-mod mkdir_rmdir;
 mod open_close;
 mod readdir;
