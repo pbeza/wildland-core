@@ -109,6 +109,10 @@ impl StorageManifest for StorageEntity {
     fn uuid(&self) -> Uuid {
         self.data.uuid
     }
+
+    fn template_uuid(&self) -> Option<Uuid> {
+        self.data.template_uuid
+    }
 }
 
 impl Model for StorageEntity {
