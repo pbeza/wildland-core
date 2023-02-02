@@ -32,12 +32,8 @@ use wildland_corex::{MockPathResolver, Storage};
 
 use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 use crate::storage_backends::{
-    CloseError,
-    GetattrResponse,
-    OpenResponse,
-    OpenedFileDescriptor,
-    ReaddirResponse,
-    StorageBackendError,
+    CloseError, CreateDirResponse, GetattrResponse, OpenResponse, OpenedFileDescriptor,
+    ReaddirResponse, StorageBackendError,
 };
 use crate::unencrypted::{StorageBackend, StorageBackendFactory, UnencryptedDfs};
 
@@ -150,6 +146,20 @@ impl StorageBackend for Mufs {
         Ok(OpenResponse::Found(CloseOnDropDescriptor::new(Box::new(
             opened_file,
         ))))
+    }
+
+    fn create_dir(&self, path: &Path) -> Result<CreateDirResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        match self.fs.create_dir(path) {
+            Ok(()) => Ok(CreateDirResponse::Created),
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => Ok(CreateDirResponse::ParentDoesNotExist),
+                std::io::ErrorKind::AlreadyExists => Ok(CreateDirResponse::PathAlreadyExists),
+                _ => Err(StorageBackendError::Generic(e.into())),
+            },
+        }
     }
 }
 

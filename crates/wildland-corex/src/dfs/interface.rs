@@ -97,6 +97,12 @@ pub enum DfsFrontendError {
     Generic(String),
     #[error("This file handle has been already closed")]
     FileAlreadyClosed,
+    #[error("Path already exists")]
+    PathAlreadyExists,
+    #[error("Parent of the provided path does not exist")]
+    ParentDoesNotExist,
+    #[error("Storages didn't respond")]
+    StorageNotResponsive,
 }
 
 /// Interface that DFS should expose towards frontends
@@ -113,4 +119,6 @@ pub trait DfsFrontend {
     fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
 
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
+
+    fn create_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
 }

@@ -22,7 +22,7 @@ pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
     })
 }
 
-fn fetch_data_from_container<T: Debug>(
+pub fn fetch_data_from_container<T: Debug>(
     dfs_front: &mut UnencryptedDfs,
     node_storages: &NodeStorages,
     backend_op: BackendOp<T>,

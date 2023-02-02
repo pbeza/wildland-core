@@ -16,5 +16,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 mod getattr;
+mod mkdir_rmdir;
 mod open_close;
 mod readdir;

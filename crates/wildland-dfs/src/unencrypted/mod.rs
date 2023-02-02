@@ -26,6 +26,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::str::FromStr;
 
 use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, FileHandle, Stat};
@@ -33,13 +34,10 @@ use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
-use self::utils::{fetch_data_from_containers, get_related_nodes};
+use self::utils::{fetch_data_from_container, fetch_data_from_containers, get_related_nodes};
 use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 use crate::storage_backends::{
-    CloseError,
-    OpenResponse,
-    OpenedFileDescriptor,
-    StorageBackend,
+    CloseError, CreateDirResponse, OpenResponse, OpenedFileDescriptor, StorageBackend,
     StorageBackendFactory,
 };
 use crate::unencrypted::utils::find_node_matching_requested_path;
@@ -274,6 +272,34 @@ impl DfsFrontend for UnencryptedDfs {
             })
         } else {
             Err(DfsFrontendError::FileAlreadyClosed)
+        }
+    }
+
+    fn create_dir(&mut self, requested_path: String) -> Result<(), DfsFrontendError> {
+        let requested_path = PathBuf::from_str(&requested_path).unwrap();
+        let mut nodes = get_related_nodes(self, &requested_path)?;
+
+        match nodes.len() {
+            0 => Err(DfsFrontendError::ParentDoesNotExist),
+            1 => {
+                let node = nodes.pop().unwrap();
+                match node {
+                    NodeDescriptor::Physical {
+                        storages,
+                        absolute_path,
+                    } => fetch_data_from_container(self, &storages, |backend, path| {
+                        backend.create_dir(path)
+                    })
+                    .ok_or(DfsFrontendError::StorageNotResponsive)
+                    .and_then(|resp| match resp {
+                        CreateDirResponse::Created => Ok(()),
+                        CreateDirResponse::ParentDoesNotExist => todo!(),
+                        CreateDirResponse::PathAlreadyExists => todo!(),
+                    }),
+                    NodeDescriptor::Virtual { absolute_path } => todo!(),
+                }
+            }
+            _ => todo!(),
         }
     }
 }

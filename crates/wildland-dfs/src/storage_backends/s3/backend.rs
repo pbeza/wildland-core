@@ -2,11 +2,7 @@ use std::path::Path;
 
 use super::client::S3Client;
 use crate::storage_backends::{
-    GetattrResponse,
-    OpenResponse,
-    ReaddirResponse,
-    StorageBackend,
-    StorageBackendError,
+    GetattrResponse, OpenResponse, ReaddirResponse, StorageBackend, StorageBackendError,
 };
 
 pub struct S3Backend {
@@ -39,6 +35,13 @@ impl StorageBackend for S3Backend {
     }
 
     fn open(&self, _path: &Path) -> Result<OpenResponse, StorageBackendError> {
+        todo!()
+    }
+
+    fn create_dir(
+        &self,
+        path: &Path,
+    ) -> Result<crate::storage_backends::CreateDirResponse, StorageBackendError> {
         todo!()
     }
 }
