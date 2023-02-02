@@ -30,7 +30,7 @@ use super::models::{
     SignatureRequestReq,
     SignatureRequestRes,
 };
-use crate::cross_platform_http_client::{CurrentPlatformClient, HttpClient, Request};
+use crate::cross_platform_http_client::{Body, CurrentPlatformClient, HttpClient};
 use crate::error::WildlandHttpClientError;
 use crate::response_handler::check_status_code;
 
@@ -46,28 +46,32 @@ pub struct StorageControllerClient {
     pub credential_id: String,
     pub credential_secret: String,
     http_client: Rc<dyn HttpClient>,
+    base_url: String,
 }
 
 impl StorageControllerClient {
     #[tracing::instrument(level = "debug", skip_all)]
-    pub fn new(base_url: &str) -> Self {
-        let http_client = Rc::new(CurrentPlatformClient {
-            base_url: base_url.into(),
-        });
+    pub fn new(base_url: String) -> Self {
+        let http_client = Rc::new(CurrentPlatformClient {});
 
         Self {
             credential_id: String::default(),
             credential_secret: String::default(),
             http_client,
+            base_url,
         }
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_storage(&self) -> Result<CreateStorageRes, WildlandHttpClientError> {
-        let request = Request::new("/storage/create");
-        let response = self.http_client.post(request)?;
-        let response = check_status_code(response)?;
-        Ok(response.deserialize()?)
+        let request =
+            http::Request::post(format!("{}/storage/create", self.base_url)).body(Body::empty())?;
+
+        let response = self.http_client.send(request)?;
+        check_status_code(response)?
+            .map(|body| serde_json::from_slice(&body))
+            .into_body()
+            .map_err(Into::into)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
@@ -76,12 +80,15 @@ impl StorageControllerClient {
         request: CreateCredentialsReq,
     ) -> Result<CreateCredentialsRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
-        let http_request = Request::new("/credential/create")
-            .with_json(&request)
-            .with_header(WILDLAND_SIGNATURE_HEADER, signature);
-        let response = self.http_client.post(http_request)?;
-        let response = check_status_code(response)?;
-        Ok(response.deserialize()?)
+        let request = http::Request::post(format!("{}/credential/create", self.base_url))
+            .header(WILDLAND_SIGNATURE_HEADER, signature)
+            .body(Body::json(request))?;
+
+        let response = self.http_client.send(request)?;
+        check_status_code(response)?
+            .map(|body| serde_json::from_slice(&body))
+            .into_body()
+            .map_err(Into::into)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
@@ -90,12 +97,15 @@ impl StorageControllerClient {
         request: SignatureRequestReq,
     ) -> Result<SignatureRequestRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
-        let http_request = Request::new("/signature/request")
-            .with_json(&request)
-            .with_header(WILDLAND_SIGNATURE_HEADER, signature);
-        let response = self.http_client.post(http_request)?;
-        let response = check_status_code(response)?;
-        Ok(response.deserialize()?)
+        let request = http::Request::post(format!("{}/signature/request", self.base_url))
+            .header(WILDLAND_SIGNATURE_HEADER, signature)
+            .body(Body::json(request))?;
+
+        let response = self.http_client.send(request)?;
+        check_status_code(response)?
+            .map(|body| serde_json::from_slice(&body))
+            .into_body()
+            .map_err(Into::into)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
@@ -104,12 +114,15 @@ impl StorageControllerClient {
         request: RequestMetricsReq,
     ) -> Result<RequestMetricsRes, WildlandHttpClientError> {
         let signature = self.sign_request(&request)?;
-        let http_request = Request::new("/metrics")
-            .with_json(&request)
-            .with_header(WILDLAND_SIGNATURE_HEADER, signature);
-        let response = self.http_client.post(http_request)?;
-        let response = check_status_code(response)?;
-        Ok(response.deserialize()?)
+        let request = http::Request::post(format!("{}/metrics", self.base_url))
+            .header(WILDLAND_SIGNATURE_HEADER, signature)
+            .body(Body::json(request))?;
+
+        let response = self.http_client.send(request)?;
+        check_status_code(response)?
+            .map(|body| serde_json::from_slice(&body))
+            .into_body()
+            .map_err(Into::into)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
@@ -127,7 +140,7 @@ impl StorageControllerClient {
     where
         T: Serialize,
     {
-        let message = serde_json::to_vec(request).map_err(Rc::new)?;
+        let message = serde_json::to_vec(request)?;
         let keypair =
             SigningKeypair::try_from_str(self.get_credential_id(), self.get_credential_secret())?;
         let signature = keypair.sign(&message);

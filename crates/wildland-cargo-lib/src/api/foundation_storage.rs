@@ -15,6 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::rc::Rc;
+
+use anyhow::anyhow;
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -67,7 +72,7 @@ pub struct FoundationStorageApi {
 impl FoundationStorageApi {
     pub fn new(config: &FoundationStorageApiConfig) -> Self {
         Self {
-            evs_client: EvsClient::new(&config.evs_url),
+            evs_client: EvsClient::new(config.evs_url.clone()),
             sc_url: config.sc_url.clone(),
         }
     }
@@ -134,7 +139,7 @@ impl FreeTierProcessHandle {
             .map_err(FsaError::EvsError)
             .and_then(|resp| match resp.credentials {
                 Some(payload) => {
-                    let decoded = base64::decode(payload).map_err(|e| {
+                    let decoded = STANDARD.decode(payload).map_err(|e| {
                         FsaError::Generic(format!(
                             "EVS returned incorrectly formatted base64 credentials: {e}"
                         ))
@@ -152,9 +157,11 @@ impl FreeTierProcessHandle {
 
                     Ok(storage_template)
                 }
-                None => Err(FsaError::EvsError(WildlandHttpClientError::HttpError(
-                    "No body with credentials".into(),
-                ))),
+                None => Err(FsaError::EvsError(
+                    WildlandHttpClientError::ApplicationHttpError(Rc::new(anyhow!(
+                        "No body with credentials"
+                    ))),
+                )),
             })
     }
 }

@@ -25,12 +25,22 @@ use crate::cross_platform_http_client::HttpError;
 #[derive(Error, Debug, Clone)]
 #[repr(C)]
 pub enum WildlandHttpClientError {
-    #[error("{0}")]
-    HttpError(String),
-    #[error("Cannot serialize request - source: {0}")]
-    CannotSerializeRequestError(#[from] Rc<serde_json::Error>),
+    #[error("Application HTTP Error: {0}")]
+    ApplicationHttpError(Rc<anyhow::Error>),
+    #[error("Client HTTP Error: {0}")]
+    ClientHttpError(#[from] HttpError),
     #[error(transparent)]
     CommonLibError(#[from] CryptoError),
-    #[error(transparent)]
-    HttpLibError(#[from] HttpError),
+}
+
+impl From<http::Error> for WildlandHttpClientError {
+    fn from(value: http::Error) -> Self {
+        Self::ApplicationHttpError(Rc::new(value.into()))
+    }
+}
+
+impl From<serde_json::Error> for WildlandHttpClientError {
+    fn from(value: serde_json::Error) -> Self {
+        Self::ApplicationHttpError(Rc::new(value.into()))
+    }
 }

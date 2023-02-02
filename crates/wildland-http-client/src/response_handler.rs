@@ -15,22 +15,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::rc::Rc;
+
+use anyhow::anyhow;
 use http::StatusCode;
 
 use super::cross_platform_http_client::Response;
 use crate::error::WildlandHttpClientError;
 
 pub(crate) fn check_status_code(response: Response) -> Result<Response, WildlandHttpClientError> {
-    match StatusCode::from_u16(response.status_code as u16)
-        .map_err(|e| WildlandHttpClientError::HttpError(e.to_string()))?
-    {
+    match response.status() {
         StatusCode::OK | StatusCode::CREATED | StatusCode::ACCEPTED | StatusCode::NO_CONTENT => {
             Ok(response)
         }
-        _ => Err(WildlandHttpClientError::HttpError(format!(
-            "HTTP response code: {}; {}",
-            response.status_code,
-            response.to_string()?,
+        v => Err(WildlandHttpClientError::ApplicationHttpError(Rc::new(
+            anyhow!(
+                "HTTP response code: {v}; payload: {}",
+                String::from_utf8_lossy(response.body())
+            ),
         ))),
     }
 }

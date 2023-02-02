@@ -1,7 +1,6 @@
-use std::collections::HashMap;
 use std::rc::Rc;
 
-use serde::Deserialize;
+use serde::Serialize;
 use serde_json::json;
 use thiserror::Error;
 
@@ -9,84 +8,77 @@ use thiserror::Error;
 mod emscripten_http_client;
 
 #[cfg(target_os = "emscripten")]
-pub(crate) use emscripten_http_client::EmscriptenHttpClient as CurrentPlatformClient;
+pub use emscripten_http_client::EmscriptenHttpClient as CurrentPlatformClient;
 
 #[cfg(not(target_os = "emscripten"))]
 mod minreq_http_client;
 
 #[cfg(not(target_os = "emscripten"))]
-pub(crate) use minreq_http_client::MinreqHttpClient as CurrentPlatformClient;
+pub use minreq_http_client::MinreqHttpClient as CurrentPlatformClient;
 
 #[derive(Error, Debug, Clone)]
+#[repr(C)]
 pub enum HttpError {
-    #[error("{0}")]
-    Generic(String),
-    #[error("{0}")]
-    InvalidResponseUTF8Body(#[from] std::string::FromUtf8Error),
-    #[error("{0}")]
-    InvalidResponseJsonBody(#[from] Rc<serde_json::Error>),
+    #[error("User error: {0}")]
+    User(Rc<anyhow::Error>),
+    #[error("Io error: {0}")]
+    Io(Rc<anyhow::Error>),
+    #[error("Other error: {0}")]
+    Other(Rc<anyhow::Error>),
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct Response {
-    pub(crate) status_code: i32,
-    pub(crate) body: Vec<u8>,
-}
-
-impl Response {
-    pub fn to_string(&self) -> Result<String, HttpError> {
-        Ok(String::from_utf8(self.body.clone())?)
-    }
-
-    pub fn deserialize<'a, T>(&'a self) -> Result<T, HttpError>
+impl HttpError {
+    pub fn user<T>(err: T) -> Self
     where
-        T: Deserialize<'a>,
+        T: Into<anyhow::Error>,
     {
-        Ok(serde_json::from_slice(&self.body).map_err(Rc::new)?)
+        Self::User(Rc::new(err.into()))
+    }
+
+    pub fn io<T>(err: T) -> Self
+    where
+        T: Into<anyhow::Error>,
+    {
+        Self::Io(Rc::new(err.into()))
+    }
+
+    pub fn other<T>(err: T) -> Self
+    where
+        T: Into<anyhow::Error>,
+    {
+        Self::Other(Rc::new(err.into()))
     }
 }
-
-pub(crate) type HttpResult = Result<Response, HttpError>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct Request {
-    url: String,
-    json: Option<serde_json::Value>,
-    headers: HashMap<String, String>,
+pub enum Body {
+    Json(serde_json::Value),
+    Raw(Vec<u8>),
 }
 
-impl Request {
-    pub fn new<T>(url: T) -> Self
+impl Body {
+    pub fn json<T>(val: T) -> Self
     where
-        T: Into<String>,
+        T: Serialize,
     {
-        Request {
-            url: url.into(),
-            json: None,
-            headers: HashMap::default(),
-        }
+        Self::Json(json!(val))
     }
 
-    pub fn with_json<T>(mut self, json: &T) -> Self
-    where
-        T: serde::Serialize,
-    {
-        self.json = Some(json!(json));
-        self
+    pub fn raw(val: Vec<u8>) -> Self {
+        Self::Raw(val)
     }
 
-    pub fn with_header<T, U>(mut self, key: T, val: U) -> Self
-    where
-        T: Into<String>,
-        U: Into<String>,
-    {
-        self.headers.insert(key.into(), val.into());
-        self
+    pub fn empty() -> Self {
+        Self::raw(Vec::new())
     }
 }
+
+pub type Request = http::Request<Body>;
+pub type Response = http::Response<Vec<u8>>;
+
+pub type HttpResult = Result<Response, HttpError>;
 
 #[cfg_attr(test, mockall::automock)]
-pub(crate) trait HttpClient {
-    fn post(&self, request: Request) -> HttpResult;
-    fn put(&self, request: Request) -> HttpResult;
+pub trait HttpClient {
+    fn send(&self, request: Request) -> HttpResult;
 }
