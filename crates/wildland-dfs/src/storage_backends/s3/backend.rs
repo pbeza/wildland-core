@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::client::S3Client;
+use super::descriptor::S3Descriptor;
 use crate::storage_backends::{
     GetattrResponse,
     OpenResponse,
@@ -39,6 +40,6 @@ impl StorageBackend for S3Backend {
     }
 
     fn open(&self, _path: &Path) -> Result<OpenResponse, StorageBackendError> {
-        todo!()
+        Ok(OpenResponse::found(S3Descriptor {}))
     }
 }
