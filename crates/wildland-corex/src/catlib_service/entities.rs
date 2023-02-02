@@ -227,6 +227,9 @@ pub trait StorageManifest: std::fmt::Debug {
 
     /// Retrieve Storage UUID
     fn uuid(&self) -> Uuid;
+
+    /// Retrieve StorageTemplate UUID that was used to create the Storage
+    fn template_uuid(&self) -> Option<Uuid>;
 }
 
 #[cfg_attr(test, mockall::automock)]
