@@ -22,7 +22,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 pub use close_on_drop_descriptor::CloseOnDropDescriptor;
-use wildland_corex::dfs::interface::Stat;
+use wildland_corex::dfs::interface::{DfsFrontendError, Stat};
 use wildland_corex::Storage;
 
 #[derive(thiserror::Error, Debug)]
@@ -43,6 +43,22 @@ impl From<std::path::StripPrefixError> for StorageBackendError {
     }
 }
 
+pub enum SeekFrom {
+    Start(u64),
+    End(i64),
+    Current(i64),
+}
+
+impl SeekFrom {
+    pub fn to_std(self) -> std::io::SeekFrom {
+        match self {
+            SeekFrom::Start(p) => std::io::SeekFrom::Start(p),
+            SeekFrom::End(p) => std::io::SeekFrom::End(p),
+            SeekFrom::Current(p) => std::io::SeekFrom::Current(p),
+        }
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum CloseError {
     #[error("File has been already closed")]
@@ -54,6 +70,17 @@ pub enum CloseError {
 /// on the backend's type) and e.g. seek operation may be implemented differently.
 pub trait OpenedFileDescriptor: std::fmt::Debug {
     fn close(&self) -> Result<(), CloseError>;
+    /// Reads number of bytes specified by the `count` parameter and advances inner cursor of the
+    /// opened file.
+    ///
+    /// Returns vector of bytes which can have length smaller than requested.
+    fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
+
+    /// Writes bytes at the current cursor position and returns number of written bytes.
+    fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError>;
+
+    /// Changes inner cursor position.
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError>;
 }
 
 #[derive(Debug)]
