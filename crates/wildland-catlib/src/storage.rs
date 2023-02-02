@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::rc::Rc;
-
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use wildland_corex::catlib_service::entities::{ContainerManifest, StorageManifest};
@@ -37,13 +35,19 @@ impl From<&str> for StorageData {
     }
 }
 
+impl From<&StorageEntity> for String {
+    fn from(value: &StorageEntity) -> Self {
+        ron::to_string(&value.storage_data).unwrap()
+    }
+}
+
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub(crate) struct StorageEntity {
-    pub(crate) data: StorageData,
+    pub(crate) storage_data: StorageData,
 
     #[derivative(Debug = "ignore")]
-    pub(crate) db: Rc<StoreDb>,
+    pub(crate) db: RedisDb,
 }
 
 impl StorageEntity {
@@ -51,23 +55,30 @@ impl StorageEntity {
         container_uuid: Uuid,
         template_uuid: Option<Uuid>,
         data: Vec<u8>,
-        db: Rc<StoreDb>,
+        db: &RedisDb,
     ) -> Self {
         Self {
-            data: StorageData {
+            storage_data: StorageData {
                 uuid: Uuid::new_v4(),
                 container_uuid,
                 template_uuid,
                 data,
             },
-            db,
+            db: db.clone(),
+        }
+    }
+
+    pub fn from_storage_data(storage_data: StorageData, db: &RedisDb) -> Self {
+        Self {
+            storage_data,
+            db: db.clone(),
         }
     }
 }
 
 impl AsRef<StorageData> for StorageEntity {
     fn as_ref(&self) -> &StorageData {
-        &self.data
+        &self.storage_data
     }
 }
 
@@ -76,9 +87,9 @@ impl StorageManifest for StorageEntity {
     ///
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Container`] was found.
-    /// - Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     fn container(&self) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
-        fetch_container_by_uuid(self.db.clone(), &self.data.container_uuid)
+        fetch_container_by_uuid(&self.db, &self.storage_data.container_uuid)
     }
 
     /// ## Errors
@@ -86,51 +97,56 @@ impl StorageManifest for StorageEntity {
     /// Retrieves Storage data
     fn data(&mut self) -> CatlibResult<Vec<u8>> {
         self.sync()?;
-        Ok(self.data.data.clone())
+        Ok(self.storage_data.data.clone())
     }
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     fn update(&mut self, data: Vec<u8>) -> CatlibResult<()> {
-        self.data.data = data;
+        self.storage_data.data = data;
         self.save()?;
         Ok(())
     }
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     fn remove(&mut self) -> CatlibResult<bool> {
         Model::delete(self)?;
         Ok(true)
     }
 
     fn uuid(&self) -> Uuid {
-        self.data.uuid
+        self.storage_data.uuid
+    }
+
+    fn serialise(&self) -> String {
+        self.into()
     }
 
     fn template_uuid(&self) -> Option<Uuid> {
-        self.data.template_uuid
+        self.storage_data.template_uuid
     }
 }
 
 impl Model for StorageEntity {
     fn save(&self) -> CatlibResult<()> {
-        save_model(
-            self.db.clone(),
-            format!("storage-{}", self.data.uuid),
-            ron::to_string(&self.data).unwrap(),
+        db::commands::set(
+            &self.db,
+            format!("storage-{}", self.uuid()),
+            self.serialise(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("storage-{}", self.data.uuid))
+        db::commands::delete(&self.db, format!("storage-{}", self.uuid()))
     }
 
     fn sync(&mut self) -> CatlibResult<()> {
-        let data = fetch_storage_data_by_uuid(self.db.clone(), &self.data.uuid)?;
-        self.data = data;
+        let storage = db::fetch_storage_by_uuid(&self.db, &self.uuid())?;
+        let storage_lock = storage.lock().expect("Poisoned Mutex");
+        self.storage_data = StorageData::from(storage_lock.serialise().as_str());
         Ok(())
     }
 }

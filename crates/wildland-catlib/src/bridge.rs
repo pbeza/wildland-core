@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::rc::Rc;
-
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use wildland_corex::catlib_service::entities::{ContainerPath, ForestManifest};
@@ -38,25 +36,38 @@ impl From<&str> for BridgeData {
     }
 }
 
+impl From<&Bridge> for String {
+    fn from(value: &Bridge) -> Self {
+        ron::to_string(&value.bridge_data).unwrap()
+    }
+}
+
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub(crate) struct Bridge {
-    pub(crate) data: BridgeData,
+    pub(crate) bridge_data: BridgeData,
 
     #[derivative(Debug = "ignore")]
-    pub(crate) db: Rc<StoreDb>,
+    pub(crate) db: RedisDb,
 }
 
 impl Bridge {
-    pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>, db: Rc<StoreDb>) -> Self {
+    pub fn new(forest_uuid: Uuid, path: ContainerPath, link: Vec<u8>, db: &RedisDb) -> Self {
         Self {
-            data: BridgeData {
+            bridge_data: BridgeData {
                 uuid: Uuid::new_v4(),
                 forest_uuid,
                 path,
                 link,
             },
-            db,
+            db: db.clone(),
+        }
+    }
+
+    pub fn from_bridge_data(bridge_data: BridgeData, db: &RedisDb) -> Self {
+        Self {
+            bridge_data,
+            db: db.clone(),
         }
     }
 }
@@ -67,49 +78,60 @@ impl BridgeManifest for Bridge {
     /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
     fn forest(&self) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
-        fetch_forest_by_uuid(self.db.clone(), &self.data.forest_uuid)
+        fetch_forest_by_uuid(&self.db, &self.bridge_data.forest_uuid)
     }
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     fn update(&mut self, link: Vec<u8>) -> CatlibResult<()> {
-        self.data.link = link;
+        self.bridge_data.link = link;
         self.save()?;
         Ok(())
     }
 
     /// ## Errors
     ///
-    /// Returns `RustbreakError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     fn remove(&mut self) -> CatlibResult<bool> {
         Model::delete(self)?;
         Ok(true)
     }
 
     /// ## Errors
+    ///
+    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to read from the database.
     fn path(&mut self) -> CatlibResult<String> {
         self.sync()?;
-        Ok(self.data.path.to_string_lossy().to_string())
+        Ok(self.bridge_data.path.to_string_lossy().to_string())
+    }
+
+    fn uuid(&self) -> Uuid {
+        self.bridge_data.uuid
+    }
+
+    fn serialise(&self) -> String {
+        self.into()
     }
 }
 
 impl Model for Bridge {
     fn save(&self) -> CatlibResult<()> {
-        save_model(
-            self.db.clone(),
-            format!("bridge-{}", self.data.uuid),
-            ron::to_string(&self.data).unwrap(),
+        db::commands::set(
+            &self.db,
+            format!("bridge-{}", self.uuid()),
+            self.serialise(),
         )
     }
 
     fn delete(&mut self) -> CatlibResult<()> {
-        delete_model(self.db.clone(), format!("bridge-{}", self.data.uuid))
+        db::commands::delete(&self.db, format!("bridge-{}", self.uuid()))
     }
 
     fn sync(&mut self) -> CatlibResult<()> {
-        let data = fetch_bridge_data_by_uuid(self.db.clone(), &self.data.uuid)?;
-        self.data = data;
+        let bridge = db::fetch_bridge_by_uuid(&self.db, &self.uuid())?;
+        let bridge_lock = bridge.lock().expect("Poisoned Mutex");
+        self.bridge_data = BridgeData::from(bridge_lock.serialise().as_str());
         Ok(())
     }
 }

@@ -141,6 +141,10 @@ pub trait ForestManifest: std::fmt::Debug {
     /// Retrieve Forests's signers
     ///
     fn signers(&mut self) -> Result<Signers, CatlibError>;
+
+    /// Serialise Forest object into a string
+    ///
+    fn serialise(&self) -> String;
 }
 
 /// `ContainerManifest` trait is an API providing methods needed to manipulate container's
@@ -209,6 +213,10 @@ pub trait ContainerManifest: std::fmt::Debug {
     /// Retrieve Forest's owner identity
     ///
     fn owner(&self) -> Result<Identity, CatlibError>;
+
+    /// Serialise Container object into a string
+    ///
+    fn serialise(&self) -> String;
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -230,6 +238,10 @@ pub trait StorageManifest: std::fmt::Debug {
 
     /// Retrieve StorageTemplate UUID that was used to create the Storage
     fn template_uuid(&self) -> Option<Uuid>;
+
+    /// Serialise Storage object into a string
+    ///
+    fn serialise(&self) -> String;
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -245,4 +257,11 @@ pub trait BridgeManifest: std::fmt::Debug {
 
     /// Retrieve Bridge path
     fn path(&mut self) -> CatlibResult<String>; // Returned as String instead of PathBuf due to the ffi limitation
+
+    /// Retrieve Bridge UUID
+    fn uuid(&self) -> Uuid;
+
+    /// Serialise Bridge object into a string
+    ///
+    fn serialise(&self) -> String;
 }

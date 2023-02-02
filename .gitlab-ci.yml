@@ -82,6 +82,7 @@ cargo test:
     - master
     - merge_requests
   script:
+    - redis-server --daemonize yes
     - cargo make test
 
 cargo clippy (lint):
@@ -243,6 +244,7 @@ csharp x86_64 linux:
   script:
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
+    - redis-server --daemonize yes
     - bash docker/scripts/bindings_csharp-x64-86-linux.bash
     - mv /out ${CI_PROJECT_DIR}/build
   artifacts:
@@ -265,31 +267,36 @@ csharp x86_64 linux:
     - master
     - merge_requests
 
-webassembly emscripten linux:
-  stage: Bindings
-  needs: ["cargo test", "x86_64 linux build"]
-  script:
-    - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
-    - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
-    - mv /out ${CI_PROJECT_DIR}/build
-  artifacts:
-    expose_as: "wasm"
-    name: wasm
-    paths:
-      - build/
-    expire_in: 1 week
-  tags:
-    - docker
-    - linux
-    - metal
-  only:
-    - master
-    - merge_requests
+# DISABLED after implementing Redis Backend.
+# TBD whether this target will even persist, and if it does, see COR-65
+#
+# webassembly emscripten linux:
+#   stage: Bindings
+#   needs: ["cargo test", "x86_64 linux build"]
+#   script:
+#     - BUILD_TARGET=wasm32-unknown-emscripten PROJECT_DIR=${CI_PROJECT_DIR} bash docker/build.sh
+#     - PROJECT_DIR=${CI_PROJECT_DIR} bash docker/scripts/bindings_wasm.bash
+#     - mv /out ${CI_PROJECT_DIR}/build
+#   artifacts:
+#     expose_as: "wasm"
+#     name: wasm
+#     paths:
+#       - build/
+#     expire_in: 1 week
+#   tags:
+#     - docker
+#     - linux
+#     - metal
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "master" || $CI_PIPELINE_SOURCE == "merge_request_event"
+#       allow_failure: true
+#     - when: never
 
 swift x86_64 linux:
   stage: Bindings
   needs: ["x86_64_linux ffi"]
   script:
+    - redis-server --daemonize yes
     - rm -r /ffi_build && mv ${CI_PROJECT_DIR}/ffi_build /ffi_build
     - rm -r /ffi_tests && mv ${CI_PROJECT_DIR}/ffi_tests /ffi_tests
     - bash docker/scripts/bindings_swift-x64-86-linux.bash
