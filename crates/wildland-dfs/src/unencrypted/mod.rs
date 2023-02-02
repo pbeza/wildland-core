@@ -323,6 +323,6 @@ impl DfsFrontend for UnencryptedDfs {
         file: &FileHandle,
         pos_from_end: i64,
     ) -> Result<usize, DfsFrontendError> {
-        self.seek(file, SeekFrom::Current(pos_from_end))
+        self.seek(file, SeekFrom::End(pos_from_end))
     }
 }
