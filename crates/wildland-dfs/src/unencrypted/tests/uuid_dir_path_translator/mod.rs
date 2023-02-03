@@ -18,4 +18,5 @@
 mod create_and_remove_dir;
 mod getattr;
 mod open_close;
+mod read_write_seek;
 mod readdir;

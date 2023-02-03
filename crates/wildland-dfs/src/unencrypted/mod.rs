@@ -35,11 +35,12 @@ use wildland_corex::{PathResolver, Storage};
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{fetch_data_from_containers, get_related_nodes};
-use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 use crate::storage_backends::{
     CloseError,
+    CloseOnDropDescriptor,
     OpenResponse,
     OpenedFileDescriptor,
+    SeekFrom,
     StorageBackend,
     StorageBackendFactory,
 };
@@ -197,6 +198,14 @@ impl UnencryptedDfs {
             }
         })
     }
+
+    fn seek(&mut self, file: &FileHandle, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
+        if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
+            opened_file.seek(seek_from).map(|p| p as usize)
+        } else {
+            Err(DfsFrontendError::FileAlreadyClosed)
+        }
+    }
 }
 
 impl DfsFrontend for UnencryptedDfs {
@@ -284,5 +293,45 @@ impl DfsFrontend for UnencryptedDfs {
 
     fn remove_dir(&mut self, requested_path: String) -> Result<(), DfsFrontendError> {
         create_remove_dir::remove_dir(self, requested_path)
+    }
+
+    fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
+        if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
+            opened_file.read(count)
+        } else {
+            Err(DfsFrontendError::FileAlreadyClosed)
+        }
+    }
+
+    fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError> {
+        if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
+            opened_file.write(&buf)
+        } else {
+            Err(DfsFrontendError::FileAlreadyClosed)
+        }
+    }
+
+    fn seek_from_start(
+        &mut self,
+        file: &FileHandle,
+        pos_from_start: usize,
+    ) -> Result<usize, DfsFrontendError> {
+        self.seek(file, SeekFrom::Start(pos_from_start as u64))
+    }
+
+    fn seek_from_current(
+        &mut self,
+        file: &FileHandle,
+        pos_from_current: i64,
+    ) -> Result<usize, DfsFrontendError> {
+        self.seek(file, SeekFrom::Current(pos_from_current))
+    }
+
+    fn seek_from_end(
+        &mut self,
+        file: &FileHandle,
+        pos_from_end: i64,
+    ) -> Result<usize, DfsFrontendError> {
+        self.seek(file, SeekFrom::End(pos_from_end))
     }
 }

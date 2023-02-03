@@ -111,6 +111,12 @@ pub enum DfsFrontendError {
     DirNotEmpty,
 }
 
+impl From<std::io::Error> for DfsFrontendError {
+    fn from(err: std::io::Error) -> Self {
+        DfsFrontendError::Generic(err.to_string())
+    }
+}
+
 /// Interface that DFS should expose towards frontends
 pub trait DfsFrontend {
     // Error probably will be eventually shown to a user as a text
@@ -123,11 +129,28 @@ pub trait DfsFrontend {
     ///
     /// Returns an error in case of file absence.
     fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
-
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
 
     fn create_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
 
     /// Succeeds if the directory exists and is empty
     fn remove_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
+
+    fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
+    fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError>;
+    fn seek_from_start(
+        &mut self,
+        file: &FileHandle,
+        pos_from_start: usize,
+    ) -> Result<usize, DfsFrontendError>;
+    fn seek_from_current(
+        &mut self,
+        file: &FileHandle,
+        pos_from_current: i64,
+    ) -> Result<usize, DfsFrontendError>;
+    fn seek_from_end(
+        &mut self,
+        file: &FileHandle,
+        pos_from_end: i64,
+    ) -> Result<usize, DfsFrontendError>;
 }

@@ -1,209 +1,57 @@
-# Forests and Containers API
-This document describes Forests and Containers concepts in terms of software design and API.
+# Forests and Containers
+This document describes Forests and Containers concepts in terms of software design and procedures.
 
 
 ## Design
-Model diagrams and flow charts related to Containers and Forests from the Wildland-Core perspective.
-
-
-### Forest and container model in Wildland Core
-The following model should be treated as a logical representation of the Container and Forest in the Wildland Core. It is not an exact representation of the data model used in any database. This model can be optimised per the database type to achieve the best performance and security.
-
-```mermaid
-classDiagram
-ForestEntity --> ContainerEntity
-ContainerManager --> ContainerEntity
-ContainerEntity : Uuid uuid
-ContainerEntity : Uuid forest_uuid
-ContainerEntity : String name
-ContainerEntity : Vec<String> paths
-
-ForestEntity : Uuid uuid
-ForestEntity : Identity owner
-ForestEntity : Vec< Signer > signers
-ForestEntity : Vec< u8 > data
-ForestEntity : HashMap< Uuid, ContainerEntity > containers
-ForestEntity : HashMap< Uuid, BridgeEntity > bridges
-
-ContainerManager : HashSet< Uuid > mounted_containers
-```
-
-
-### Example Rust structure for Forest data model in CatLib
-```rust
-pub struct ForestEntity {
-    /// Unique at CatLib application level.
-    /// 
-    uuid: Uuid,
-
-    /// There's only one owner (one public key per forest).
-    /// 
-    owner: Identity,
-
-    /// For multi-device purpose (and optionally for the forest sharing mechanism).
-    /// Each device has to sign the manifest.
-    /// 
-    signers: Vec<Signer>,
-
-    /// Arbitrary CatLib-indepenend data. For instance Storage backends (serialized to json) etc.
-    /// 
-    data: Vec<u8>,
-
-    /// Collection of containers that builds the forest.
-    /// 
-    containers: HashMap<Uuid, ContainerEntity>,
-
-    /// Collection of bridges that links the forest to other forests.
-    /// Bridge works as a link between forests - instead of StorageBackend
-    /// contains some sort of a link to another container.
-    /// 
-    bridges: HashMap<Uuid, BridgeEntity>,
-}
-
-/// `ForestEntity` from CatLib should conform to trait `ForestManifest` from CoreX.
-/// 
-impl ForestManifest for ForestEntity { 
-    // ...
-}
-```
-
-
-### Example Rust structure for Container data model in CatLib
-```rust
-pub struct ContainerEntity { 
-    /// Container unique UUID.
-    /// 
-    uuid: Uuid,
-
-    /// Uuid (Each container has exactly one forest and one forest has many containers).
-    /// 
-    forest_uuid: Uuid,
-    
-    /// User defined container name.
-    /// 
-    name: String,
-
-    /// Container claims paths within the given forest. Given directory in a
-    /// file tree consists of files from different mounted containers.
-    /// 
-    paths: Vec<ContainerPath>
-}
-
-/// `ContainerEntity` from CatLib should conform to trait `ContainerManifest` from CoreX.
-/// 
-impl ContainerManifest for ContainerEntity { 
-    // ...
-}
-```
-
-
-### Example Rust structure for Container Management data model in CoreX
-```rust
-/// This structure preserve local state of the containers (application-wise).
-/// 
-pub struct ContainersState {
-    /// Collection of containers locally mounted in the File Tree.
-    /// 
-    mounted_containers: HashSet<Uuid>,
-}
-
-impl ContainersManager for ContainersState {
-    // ...
-}
-```
+Model diagrams related to Containers and Forests from the Wildland-Core perspective.
 
 
 ### Crates dependencies
+Concepts of Container and Forest are spread along the core's crates. Those notions are used in a different context within `Cargolib`, `CoreX` and `Catlib`:
+
 ```mermaid
 classDiagram
-CargoLib --> CatLib: Creates Cat-Lib instances.
-CargoLib --> CoreX: Provides CoreX with Cat-Lib instances.
-CatLib --> CoreX: Implements tratis of Containers and Forests.
-CargoLib : Entrypoint for the CargoLib application.
-CoreX : Forest and container API.
-CatLib : Data model.
+Cargolib --> Catlib: Creates Catlib instances.
+Cargolib --> CoreX: Provides Catlib instances. Gets Containers and Forests from CoreX.
+Catlib --> CoreX: Implements ContainerManifest and ForestManifest traits.
+Cargolib : Entrypoint for the Cargo Application.
+CoreX : Forests, Containers, ContainerManager
+Catlib : Data model.
 ```
 
-
-## CoreX Forest API.
-It is recommended that `ForestManifest` trait implementation should synchronize with the database on every method call in order to keep the state up-to-date.
-
-** TODO (tkulik) WILX-352: Add description instead of raw rust traits. **
-
-## CoreX Container API for Cat-Lib implementation.
-It is recommended that `ContainerManifest` trait implementation should synchronize with the database on every method call in order to keep the state up-to-date.
-
-** TODO (tkulik) WILX-352: Add description instead of raw rust traits. **
+* `Catlib` is a bridge between the Wildland and different databases. 
+* `CoreX` uses Catlib to store, sync and load the state of the _ForestManifests_ and _ContainerManifests_, that are shared between multiple devices. It also provides other components with actual notions of _Container_ and _Forest_. The second role of `CoreX` is to keep the local (current device) state of mounted and unmounted containers in the _ContainerManager_ instance.
+* `Cargolib` uses `Corex` to provide application with more user friendly interface of _Wildland_. It plays a role of a facade for the complexity of the Core's internals and provides application with other features that are not directly related to _Containers_ and _Forests_.
 
 
-## CoreX Container API for mount procedure.
-```rust
-/// This trait should be implemented in CoreX or other special crate that is responsible
-/// for mounting the container within the File Tree. Container Manager is an API for the
-/// object representing the local (device) state of the forest and containers. It keeps
-/// the information about containers mounted locally.
-/// 
-pub trait ContainersManager {
-    /// Mount creates locally the representation of the container (files/directories structures).
-    /// The procedure updates only the file tree, it doesn't sync the container data itself.
-    ///
-    /// This procedure is considered to work in background.
-    /// 
-    fn mount(&mut self, container: &dyn ContainerManifest) -> Result<(), ContainerManagerError>;
+### Forest and Container model in Wildland-Core
+The following model should be treated as a logical representation of the Container and Forest in the Wildland Core. It is not an exact representation of the data model used in any database. This model can be optimized per each database type to achieve the best performance and security.
 
-    /// The operation oposit to mount. It removes the container from the file tree representation.
-    /// 
-    /// This procedure is considered to work in background.
-    /// 
-    fn unmount(&mut self, container: &dyn ContainerManifest) -> Result<(), ContainerManagerError>;
+```mermaid
+classDiagram
+CargoUser --> Forest
+CargoUser --> ContainerManager
+CargoUser --> Container
+Forest --> Container
+ContainerManager --> Container
 
-    /// Checks whether the given container was mounted in the file tree.
-    /// 
-    fn is_mounted(&self, container: &dyn ContainerManifest) -> bool;
-}
+Container : Uuid uuid
+Container : Uuid forest_uuid
+Container : String name
+Container : Collection< String > paths
+Container : Collection< Storage > storages
+
+Forest : Uuid uuid
+Forest : Identity owner
+Forest : Collection< Signer > signers
+Forest : RawBytes data
+Forest : Collection< Container > containers
+
+ContainerManager : Map< Container, Collection< Path > > mounted_containers
+
+CargoUser : Forest forest
+CargoUser : ContainerManager container_manager
 ```
 
-
-## CargoLib API
-`ContainerManager`, `ForestManifest` and `ContainerManifest` are provided by `CargoUser` object. This API requires rusty-bind to provide users with `Box` type support.
-
-```rust
-mod ffi {
-    //
-    // ContainerManager
-    //
-    fn mount(self: &mut ContainersManager, container: &dyn ContainerManifest) -> Result<(), ContainerMountError>;
-    fn unmount(self: &mut ContainersManager, container: &dyn ContainerManifest) -> Result<(), ContainerUnmountError>;
-    fn is_mounted(self: &mut ContainersManager, container: &dyn ContainerManifest) -> bool;
-
-    //
-    // ForestManifest
-    //
-    fn is_deleted(self: &Arc<Mutex<ForestManifest>>) -> bool;
-    fn stringify(self: &Arc<Mutex<ForestManifest>>) -> String;
-    fn delete(self: &Arc<Mutex<ForestManifest>>, catlib_service: &CatLibService) -> Result<(), CatlibError>;
-    fn uuid(self: &Arc<Mutex<ForestManifest>>) -> Uuid;
-    fn add_path(self: &Arc<Mutex<ForestManifest>>, path: String) -> Result<bool, CatlibError>;
-    fn delete_path(self: &Arc<Mutex<ForestManifest>>, path: String) -> Result<bool, CatlibError>;
-    fn get_paths(self: &Arc<Mutex<ForestManifest>>) -> Result<Vec<String>, CatlibError>;
-    fn get_name(self: &Arc<Mutex<ForestManifest>>) -> String;
-    fn set_name(self: &Arc<Mutex<ForestManifest>>, new_name: String) -> Result<(), ContainerError>;
-
-    //
-    // ContainerManifest
-    //
-    fn add_signer(self: &Arc<Mutex<ContainerManifest>>, signer: Identity) -> Result<bool, CatlibError>;
-    fn del_signer(self: &Arc<Mutex<ContainerManifest>>, signer: Identity) -> Result<bool, CatlibError>;
-    fn containers(self: &Arc<Mutex<ContainerManifest>>) -> Result<Vec<Box<dyn Container>>, CatlibError>;
-    fn update(self: &Arc<Mutex<ContainerManifest>>, data: Vec<u8>) -> Result<&mut dyn Forest, CatlibError>;
-    fn delete(self: &Arc<Mutex<ContainerManifest>>) -> Result<bool, CatlibError>;
-    fn create_container(self: &Arc<Mutex<ContainerManifest>>, name: String) -> Result<Box<dyn Container>, CatlibError>;
-    fn find_bridge(self: &Arc<Mutex<ContainerManifest>>, path: ContainerPath) -> Result<Box<dyn Bridge>, CatlibError>;
-    fn find_containers(
-        self: &Arc<Mutex<ContainerManifest>>,
-        paths: Vec<ContainerPath>,
-        include_subdirs: bool,
-    ) -> Result<Vec<Box<dyn Container>>, CatlibError>;
-
-}
-```
+### Cargolib interface - CargoUser
+In `Cargolib` the notion of the _Forest_ and _ContainerManager_ is hidden behind an instance of _CargoUser_. From the application point of view, this component handles the multi-device state of the user's forest and containers as well as the local state of mounted containers. Instance of this component is a result of the "User onboarding procedure". Instance of _CargoUser_ can be recreated for the already registered user after application restart.

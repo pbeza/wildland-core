@@ -21,16 +21,16 @@
 mod uuid_dir_path_translator;
 
 use std::collections::HashMap;
+use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::SystemTime;
 
 use rsfs::mem::{File, FS};
 use rsfs::{DirEntry, FileType, GenFS, Metadata, OpenOptions};
-use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
+use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat, UnixTimestamp};
 use wildland_corex::{MockPathResolver, Storage};
 
-use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 use crate::storage_backends::{
     CloseError,
     CreateDirResponse,
@@ -39,6 +39,7 @@ use crate::storage_backends::{
     OpenedFileDescriptor,
     ReaddirResponse,
     RemoveDirResponse,
+    SeekFrom,
     StorageBackendError,
 };
 use crate::unencrypted::{StorageBackend, StorageBackendFactory, UnencryptedDfs};
@@ -149,9 +150,7 @@ impl StorageBackend for Mufs {
 
         let opened_file = MufsOpenedFile::new(file);
 
-        Ok(OpenResponse::Found(CloseOnDropDescriptor::new(Box::new(
-            opened_file,
-        ))))
+        Ok(OpenResponse::found(opened_file))
     }
 
     fn create_dir(&self, path: &Path) -> Result<CreateDirResponse, StorageBackendError> {
@@ -194,12 +193,12 @@ impl StorageBackend for Mufs {
 
 #[derive(Debug)]
 pub struct MufsOpenedFile {
-    _inner: File,
+    inner: File,
 }
 
 impl MufsOpenedFile {
     fn new(inner: File) -> Self {
-        Self { _inner: inner }
+        Self { inner }
     }
 }
 
@@ -207,6 +206,23 @@ impl OpenedFileDescriptor for MufsOpenedFile {
     fn close(&self) -> Result<(), CloseError> {
         // rsfs File is closed when going out of scope, so there is nothing to do here
         Ok(())
+    }
+
+    fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
+        let mut buffer = vec![0; count];
+        let read_count = self.inner.read(&mut buffer)?;
+        if read_count < buffer.len() {
+            buffer.truncate(read_count);
+        }
+        Ok(buffer)
+    }
+
+    fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError> {
+        Ok(self.inner.write(buf)?)
+    }
+
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError> {
+        Ok(self.inner.seek(seek_from.to_std())?)
     }
 }
 
