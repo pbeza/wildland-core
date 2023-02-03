@@ -56,7 +56,7 @@ impl Container {
     /// let forest = Forest::new(forest);
     /// let storage_template = StorageTemplate::try_new(
     ///     "FoundationStorage",
-    ///     HashMap::from([
+    ///     &HashMap::from([
     ///             (
     ///                 "field1".to_owned(),
     ///                 "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
@@ -103,7 +103,7 @@ impl Container {
     /// let forest = Forest::new(forest);
     /// let storage_template = StorageTemplate::try_new(
     ///     "FoundationStorage",
-    ///     HashMap::from([
+    ///     &HashMap::from([
     ///             (
     ///                 "field1".to_owned(),
     ///                 "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
@@ -289,7 +289,7 @@ mod tests {
             .returning(move || Ok(Identity([1; 32])));
         let storage_template = StorageTemplate::try_new(
             "FoundationStorage",
-            HashMap::from([
+            &HashMap::from([
                 (
                     "field1".to_owned(),
                     "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),

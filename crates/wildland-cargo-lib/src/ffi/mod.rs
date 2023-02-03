@@ -31,6 +31,7 @@ pub use wildland_corex::{
     LocalSecureStorage,
     LssError,
     StorageTemplate,
+    StorageTemplateError,
 };
 
 use crate::api::cargo_lib::*;
@@ -41,6 +42,24 @@ use crate::api::user::*;
 use crate::errors::storage::*;
 use crate::errors::user::*;
 use crate::errors::ExceptionTrait;
+
+mod wrapper {
+    use wildland_corex::{StorageTemplate, StorageTemplateError};
+
+    pub(crate) fn storage_template_from_json(
+        content: Vec<u8>,
+    ) -> Result<StorageTemplate, StorageTemplateError> {
+        StorageTemplate::from_json(content)
+    }
+
+    pub(crate) fn storage_template_from_yaml(
+        content: Vec<u8>,
+    ) -> Result<StorageTemplate, StorageTemplateError> {
+        StorageTemplate::from_yaml(content)
+    }
+}
+
+use self::wrapper::{storage_template_from_json, storage_template_from_yaml};
 
 type VoidType = ();
 
@@ -81,6 +100,10 @@ mod ffi_binding {
         StorageTemplateError(_),
         Generic(_),
     }
+    enum StorageTemplateError {
+        SerdeErr(_),
+        TemplateEngineErr(_),
+    }
     enum LssError {
         Error(_),
     }
@@ -118,7 +141,6 @@ mod ffi_binding {
         Generic(_),
         FileAlreadyClosed,
     }
-
     enum NodeType {
         File,
         Dir,
@@ -234,6 +256,10 @@ mod ffi_binding {
         fn get_storage_templates(
             self: &CargoUser,
         ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
+        fn save_storage_template(
+            self: &CargoUser,
+            tpl: &StorageTemplate,
+        ) -> Result<String, CatlibError>;
         fn mount(
             self: &CargoUser,
             container: &Container,
@@ -297,6 +323,22 @@ mod ffi_binding {
         //
         // StorageTemplate
         //
+        fn storage_template_from_json(
+            content: Vec<u8>,
+        ) -> Result<StorageTemplate, StorageTemplateError>;
+        fn storage_template_from_yaml(
+            content: Vec<u8>,
+        ) -> Result<StorageTemplate, StorageTemplateError>;
+
+        fn to_json(self: &StorageTemplate) -> Result<String, StorageTemplateError>;
+        fn to_yaml(self: &StorageTemplate) -> Result<String, StorageTemplateError>;
+
+        fn set_name(self: &StorageTemplate, name: String) -> VoidType;
+
+        fn uuid_str(self: &StorageTemplate) -> String;
+        fn backend_type(self: &StorageTemplate) -> String;
+        fn name(self: &StorageTemplate) -> Option<String>;
+
         fn stringify(self: &StorageTemplate) -> String;
 
         //
