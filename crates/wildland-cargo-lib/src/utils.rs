@@ -13,9 +13,9 @@ pub(crate) mod test {
     #[fixture]
     pub(crate) fn catlib_service() -> CatLibService {
         let uuid = uuid::Builder::from_random_bytes(rand::random::<Bytes>()).into_uuid();
-        let dir = tempfile::tempdir().unwrap().into_path();
-        let path = dir.join(format!("{uuid}-db.ron"));
-        let catlib = Rc::new(CatLib::new(path));
+        let redis_url =
+            std::env::var("CARGO_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/0".into());
+        let catlib = Rc::new(CatLib::new(redis_url, uuid.to_string()));
         CatLibService::new(catlib)
     }
 
