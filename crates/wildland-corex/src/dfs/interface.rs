@@ -89,6 +89,8 @@ pub struct FileHandle {
 pub enum DfsFrontendError {
     #[error("Operation not permitted on other nodes than files")]
     NotAFile,
+    #[error("Operation not permitted on other nodes than directories")]
+    NotADirectory,
     #[error("Path does not exist")]
     NoSuchPath,
     #[error(transparent)]
@@ -105,6 +107,8 @@ pub enum DfsFrontendError {
     StorageNotResponsive,
     #[error("Operation could not modify read-only path")]
     ReadOnlyPath,
+    #[error("Directory is not empty")]
+    DirNotEmpty,
 }
 
 /// Interface that DFS should expose towards frontends

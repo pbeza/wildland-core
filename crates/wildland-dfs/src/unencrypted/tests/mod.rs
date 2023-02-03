@@ -32,8 +32,14 @@ use wildland_corex::{MockPathResolver, Storage};
 
 use crate::close_on_drop_descriptor::CloseOnDropDescriptor;
 use crate::storage_backends::{
-    CloseError, CreateDirResponse, GetattrResponse, OpenResponse, OpenedFileDescriptor,
-    ReaddirResponse, RemoveDirResponse, StorageBackendError,
+    CloseError,
+    CreateDirResponse,
+    GetattrResponse,
+    OpenResponse,
+    OpenedFileDescriptor,
+    ReaddirResponse,
+    RemoveDirResponse,
+    StorageBackendError,
 };
 use crate::unencrypted::{StorageBackend, StorageBackendFactory, UnencryptedDfs};
 
@@ -90,7 +96,7 @@ impl StorageBackend for Mufs {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
         let file_type = self.fs.metadata(&path)?.file_type();
-        if file_type.is_file() || file_type.is_symlink() {
+        if !file_type.is_dir() {
             return Ok(ReaddirResponse::NotADirectory);
         }
 
@@ -166,11 +172,22 @@ impl StorageBackend for Mufs {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
-        match self.fs.remove_dir(path) {
-            Ok(()) => Ok(RemoveDirResponse::Removed),
-            Err(e) => match e.kind() {
-                _ => todo!(),
-            },
+        if let Ok(metadata) = self.fs.metadata(&path) {
+            let file_type = metadata.file_type();
+            if !file_type.is_dir() {
+                return Ok(RemoveDirResponse::NotADirectory);
+            }
+
+            if self.fs.read_dir(&path).unwrap().next().is_some() {
+                return Ok(RemoveDirResponse::DirNotEmpty);
+            }
+
+            Ok(self
+                .fs
+                .remove_dir(path)
+                .map(|_| RemoveDirResponse::Removed)?)
+        } else {
+            Ok(RemoveDirResponse::NotFound)
         }
     }
 }

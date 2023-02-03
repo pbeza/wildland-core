@@ -25,8 +25,16 @@ use std::rc::Rc;
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::close_on_drop_descriptor::CloseOnDropDescriptor;
 use wildland_dfs::storage_backends::{
-    CloseError, CreateDirResponse, GetattrResponse, OpenResponse, OpenedFileDescriptor,
-    ReaddirResponse, RemoveDirResponse, StorageBackend, StorageBackendError, StorageBackendFactory,
+    CloseError,
+    CreateDirResponse,
+    GetattrResponse,
+    OpenResponse,
+    OpenedFileDescriptor,
+    ReaddirResponse,
+    RemoveDirResponse,
+    StorageBackend,
+    StorageBackendError,
+    StorageBackendFactory,
 };
 use wildland_dfs::{NodeType, Stat, Storage, UnixTimestamp};
 
@@ -48,7 +56,7 @@ impl StorageBackend for LocalFilesystemStorage {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
-        if path.is_file() || path.is_symlink() {
+        if !path.is_dir() {
             Ok(ReaddirResponse::NotADirectory)
         } else {
             Ok(ReaddirResponse::Entries(
@@ -135,7 +143,23 @@ impl StorageBackend for LocalFilesystemStorage {
     }
 
     fn remove_dir(&self, path: &Path) -> Result<RemoveDirResponse, StorageBackendError> {
-        todo!() // TODO do it
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        if let Ok(metadata) = std::fs::metadata(&path) {
+            let file_type = metadata.file_type();
+            if !file_type.is_dir() {
+                return Ok(RemoveDirResponse::NotADirectory);
+            }
+
+            if path.read_dir().unwrap().next().is_some() {
+                return Ok(RemoveDirResponse::DirNotEmpty);
+            }
+
+            Ok(std::fs::remove_dir(&path).map(|_| RemoveDirResponse::Removed)?)
+        } else {
+            Ok(RemoveDirResponse::NotFound)
+        }
     }
 }
 

@@ -2,7 +2,11 @@ use std::path::Path;
 
 use super::client::S3Client;
 use crate::storage_backends::{
-    GetattrResponse, OpenResponse, ReaddirResponse, StorageBackend, StorageBackendError,
+    GetattrResponse,
+    OpenResponse,
+    ReaddirResponse,
+    StorageBackend,
+    StorageBackendError,
 };
 
 pub struct S3Backend {

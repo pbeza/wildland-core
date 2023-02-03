@@ -9,7 +9,7 @@ use wildland_corex::{ResolvedPath, Storage};
 use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
 use crate::storage_backends::{StorageBackend, StorageBackendError};
 
-type BackendOp<T> = fn(Rc<dyn StorageBackend>, path: &Path) -> Result<T, StorageBackendError>;
+pub type BackendOp<T> = fn(Rc<dyn StorageBackend>, path: &Path) -> Result<T, StorageBackendError>;
 pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
     nodes: &'a [NodeDescriptor],
     dfs_front: &'b mut UnencryptedDfs,

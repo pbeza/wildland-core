@@ -112,9 +112,17 @@ mod ffi_binding {
         DeserializationError(_),
     }
     enum DfsFrontendError {
+        NotAFile,
+        NotADirectory,
         NoSuchPath,
         PathResolutionError(_),
         Generic(_),
+        FileAlreadyClosed,
+        PathAlreadyExists,
+        ParentDoesNotExist,
+        StorageNotResponsive,
+        ReadOnlyPath,
+        DirNotEmpty,
     }
 
     enum NodeType {
@@ -312,6 +320,14 @@ mod ffi_binding {
         fn close(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             file_handle: &FileHandle,
+        ) -> Result<VoidType, DfsFrontendError>;
+        fn create_dir(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            requested_path: String,
+        ) -> Result<VoidType, DfsFrontendError>;
+        fn remove_dir(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            requested_path: String,
         ) -> Result<VoidType, DfsFrontendError>;
 
         //
