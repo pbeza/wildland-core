@@ -35,12 +35,10 @@ use wildland_corex::{PathResolver, Storage};
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{fetch_data_from_containers, get_related_nodes};
+use crate::storage_backends::models::{CloseError, OpenResponse, SeekFrom};
 use crate::storage_backends::{
-    CloseError,
     CloseOnDropDescriptor,
-    OpenResponse,
     OpenedFileDescriptor,
-    SeekFrom,
     StorageBackend,
     StorageBackendFactory,
 };
@@ -201,7 +199,7 @@ impl UnencryptedDfs {
 
     fn seek(&mut self, file: &FileHandle, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
         if let Some(opened_file) = self.open_files.get_mut(&file.descriptor_uuid) {
-            opened_file.seek(seek_from).map(|p| p as usize)
+            opened_file.seek(seek_from)
         } else {
             Err(DfsFrontendError::FileAlreadyClosed)
         }
@@ -316,22 +314,37 @@ impl DfsFrontend for UnencryptedDfs {
         file: &FileHandle,
         pos_from_start: usize,
     ) -> Result<usize, DfsFrontendError> {
-        self.seek(file, SeekFrom::Start(pos_from_start as u64))
+        self.seek(
+            file,
+            SeekFrom::Start {
+                position: pos_from_start,
+            },
+        )
     }
 
     fn seek_from_current(
         &mut self,
         file: &FileHandle,
-        pos_from_current: i64,
+        pos_from_current: isize,
     ) -> Result<usize, DfsFrontendError> {
-        self.seek(file, SeekFrom::Current(pos_from_current))
+        self.seek(
+            file,
+            SeekFrom::Current {
+                offset: pos_from_current,
+            },
+        )
     }
 
     fn seek_from_end(
         &mut self,
         file: &FileHandle,
-        pos_from_end: i64,
+        pos_from_end: usize,
     ) -> Result<usize, DfsFrontendError> {
-        self.seek(file, SeekFrom::End(pos_from_end))
+        self.seek(
+            file,
+            SeekFrom::End {
+                remaining: pos_from_end,
+            },
+        )
     }
 }

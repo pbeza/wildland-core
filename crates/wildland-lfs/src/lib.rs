@@ -24,19 +24,17 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use template::LocalFilesystemStorageTemplate;
-use wildland_dfs::storage_backends::{
+use wildland_dfs::storage_backends::models::{
     CloseError,
     CreateDirResponse,
     GetattrResponse,
     OpenResponse,
-    OpenedFileDescriptor,
     ReaddirResponse,
     RemoveDirResponse,
     SeekFrom,
-    StorageBackend,
     StorageBackendError,
-    StorageBackendFactory,
 };
+use wildland_dfs::storage_backends::{OpenedFileDescriptor, StorageBackend, StorageBackendFactory};
 use wildland_dfs::{DfsFrontendError, NodeType, Stat, Storage, UnixTimestamp};
 
 #[derive(Debug)]
@@ -90,7 +88,7 @@ impl StorageBackend for LocalFilesystemStorage {
                 } else {
                     NodeType::Other
                 },
-                size: metadata.len(),
+                size: metadata.len() as _,
                 access_time: Some(UnixTimestamp {
                     sec: metadata.atime() as u64,
                     nano_sec: metadata.atime_nsec() as u32,
@@ -192,8 +190,8 @@ impl OpenedFileDescriptor for StdFsOpenedFile {
         Ok(self.inner.write(buf)?)
     }
 
-    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError> {
-        Ok(self.inner.seek(seek_from.to_std())?)
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
+        Ok(self.inner.seek(seek_from.to_std())? as _)
     }
 }
 

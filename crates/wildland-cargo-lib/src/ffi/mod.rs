@@ -123,6 +123,7 @@ mod ffi_binding {
         StorageNotResponsive,
         ReadOnlyPath,
         DirNotEmpty,
+        SeekError,
     }
 
     enum NodeType {
@@ -350,12 +351,12 @@ mod ffi_binding {
         fn seek_from_current(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             file: &FileHandle,
-            pos_from_current: i64,
+            pos_from_current: isize,
         ) -> Result<usize, DfsFrontendError>;
         fn seek_from_end(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             file: &FileHandle,
-            pos_from_end: i64,
+            pos_from_end: usize,
         ) -> Result<usize, DfsFrontendError>;
 
         //
@@ -367,7 +368,7 @@ mod ffi_binding {
         // Stat
         //
         fn node_type(self: &Stat) -> NodeType;
-        fn size(self: &Stat) -> u64;
+        fn size(self: &Stat) -> usize;
         fn access_time(self: &Stat) -> Option<UnixTimestamp>;
         fn modification_time(self: &Stat) -> Option<UnixTimestamp>;
         fn change_time(self: &Stat) -> Option<UnixTimestamp>;

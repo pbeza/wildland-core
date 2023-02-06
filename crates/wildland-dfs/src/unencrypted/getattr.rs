@@ -21,7 +21,7 @@ use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat};
 
 use super::utils::*;
 use super::{NodeDescriptor, UnencryptedDfs};
-use crate::storage_backends::GetattrResponse;
+use crate::storage_backends::models::GetattrResponse;
 
 pub fn getattr(
     dfs_front: &mut UnencryptedDfs,

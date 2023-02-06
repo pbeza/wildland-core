@@ -17,7 +17,25 @@
 
 use wildland_corex::dfs::interface::DfsFrontendError;
 
-use crate::storage_backends::{CloseError, OpenedFileDescriptor, SeekFrom};
+use super::models::{CloseError, SeekFrom};
+
+/// FileDescriptor contains state of opened file and definition of how it is stored, therefore
+/// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
+/// on the backend's type) and e.g. seek operation may be implemented differently.
+pub trait OpenedFileDescriptor: std::fmt::Debug {
+    fn close(&self) -> Result<(), CloseError>;
+    /// Reads number of bytes specified by the `count` parameter and advances inner cursor of the
+    /// opened file.
+    ///
+    /// Returns vector of bytes which can have length smaller than requested.
+    fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
+
+    /// Writes bytes at the current cursor position and returns number of written bytes.
+    fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError>;
+
+    /// Changes inner cursor position.
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<usize, DfsFrontendError>;
+}
 
 /// Wrapper ensuring that close is always called on `OpenedFileDescriptor`
 #[derive(Debug)]
@@ -50,7 +68,7 @@ impl OpenedFileDescriptor for CloseOnDropDescriptor {
         self.inner.write(buf)
     }
 
-    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError> {
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
         self.inner.seek(seek_from)
     }
 }
