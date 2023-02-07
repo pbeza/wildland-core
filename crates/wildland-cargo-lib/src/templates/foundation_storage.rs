@@ -72,7 +72,7 @@ impl FoundationStorageTemplate {
 impl TryFrom<FoundationStorageTemplate> for StorageTemplate {
     type Error = StorageTemplateError;
     fn try_from(fst: FoundationStorageTemplate) -> Result<Self, Self::Error> {
-        StorageTemplate::try_new("FoundationStorage", fst)
+        StorageTemplate::try_new("FoundationStorage", &fst)
     }
 }
 
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn serialize_foundation_storage_template_as_json() {
-        let fst: StorageTemplate = FoundationStorageTemplate::new(
+        let mut fst: StorageTemplate = FoundationStorageTemplate::new(
             Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
@@ -96,7 +96,7 @@ mod tests {
         )
         .try_into()
         .unwrap();
-        let fst = fst.with_name("name");
+        fst.set_name("name".into());
         let uuid = fst.uuid();
 
         let expected = serde_json::json!(
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn serialize_foundation_storage_template_as_yaml() {
-        let fst: StorageTemplate = FoundationStorageTemplate::new(
+        let mut fst: StorageTemplate = FoundationStorageTemplate::new(
             Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
@@ -127,7 +127,7 @@ mod tests {
         )
         .try_into()
         .unwrap();
-        let fst = fst.with_name("name");
+        fst.set_name("name".into());
         let uuid = fst.uuid();
 
         let expected = format!(
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn deserialize_foundation_storage_template_from_yaml() {
-        let expected_template: StorageTemplate = FoundationStorageTemplate::new(
+        let mut expected_template: StorageTemplate = FoundationStorageTemplate::new(
             Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
@@ -160,7 +160,7 @@ mod tests {
         )
         .try_into()
         .unwrap();
-        let expected_template = expected_template.with_name("name");
+        expected_template.set_name("name".into());
         let uuid = expected_template.uuid();
 
         let yaml_template = format!(
