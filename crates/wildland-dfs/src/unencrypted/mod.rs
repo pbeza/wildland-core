@@ -36,14 +36,8 @@ use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{execute_container_operation, fetch_data_from_containers, get_related_nodes};
 use crate::storage_backends::{
-    CloseError,
-    CloseOnDropDescriptor,
-    OpenResponse,
-    OpenedFileDescriptor,
-    RemoveFileResponse,
-    SeekFrom,
-    StorageBackend,
-    StorageBackendFactory,
+    CloseError, CloseOnDropDescriptor, OpenResponse, OpenedFileDescriptor, RemoveFileResponse,
+    SeekFrom, StorageBackend, StorageBackendFactory,
 };
 use crate::unencrypted::utils::find_node_matching_requested_path;
 

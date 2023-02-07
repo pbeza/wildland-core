@@ -3,11 +3,7 @@ use std::path::Path;
 use super::client::S3Client;
 use super::descriptor::S3Descriptor;
 use crate::storage_backends::{
-    GetattrResponse,
-    OpenResponse,
-    ReaddirResponse,
-    RemoveFileResponse,
-    StorageBackend,
+    GetattrResponse, OpenResponse, ReaddirResponse, RemoveFileResponse, StorageBackend,
     StorageBackendError,
 };
 

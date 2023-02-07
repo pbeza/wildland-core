@@ -29,3 +29,14 @@ full constructor can be used, i.e.
 ```
 
 The same file does contain rust code examples in tests if required.
+
+## Catlib backend
+
+Running Wildland Core requires Redis server to be accessible from local or remote network. The
+server must be accessible at all times even if one does not interact with Catalog backend.
+
+The default connection string is `redis://127.0.0.1:6379/0` where `/0` denotes database with id `0`.
+The default connection string can be overriden by specifying it in a `CARGO_REDIS_URL` environment
+variable.
+
+_note: this solution is temporary and will be shortly replaced by a cargo configuration entry_
