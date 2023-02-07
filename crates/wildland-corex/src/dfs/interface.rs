@@ -89,6 +89,8 @@ pub struct FileHandle {
 pub enum DfsFrontendError {
     #[error("Operation not permitted on other nodes than files")]
     NotAFile,
+    #[error("Operation not permitted on other nodes than directories")]
+    NotADirectory,
     #[error("Path does not exist")]
     NoSuchPath,
     #[error(transparent)]
@@ -97,6 +99,16 @@ pub enum DfsFrontendError {
     Generic(String),
     #[error("This file handle has been already closed")]
     FileAlreadyClosed,
+    #[error("Path already exists")]
+    PathAlreadyExists,
+    #[error("Parent of the provided path does not exist")]
+    ParentDoesNotExist,
+    #[error("Storages didn't respond")]
+    StorageNotResponsive,
+    #[error("Operation could not modify read-only path")]
+    ReadOnlyPath,
+    #[error("Directory is not empty")]
+    DirNotEmpty,
 }
 
 impl From<std::io::Error> for DfsFrontendError {
@@ -118,6 +130,12 @@ pub trait DfsFrontend {
     /// Returns an error in case of file absence.
     fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
+
+    fn create_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
+
+    /// Succeeds if the directory exists and is empty
+    fn remove_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
+
     fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
     fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError>;
     fn seek_from_start(

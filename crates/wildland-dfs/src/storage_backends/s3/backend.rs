@@ -42,4 +42,18 @@ impl StorageBackend for S3Backend {
     fn open(&self, _path: &Path) -> Result<OpenResponse, StorageBackendError> {
         Ok(OpenResponse::found(S3Descriptor {}))
     }
+
+    fn create_dir(
+        &self,
+        _path: &Path,
+    ) -> Result<crate::storage_backends::CreateDirResponse, StorageBackendError> {
+        todo!() // TODO COR-70
+    }
+
+    fn remove_dir(
+        &self,
+        _path: &Path,
+    ) -> Result<crate::storage_backends::RemoveDirResponse, StorageBackendError> {
+        todo!() // TODO COR-70
+    }
 }

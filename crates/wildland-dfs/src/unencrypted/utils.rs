@@ -9,7 +9,7 @@ use wildland_corex::{ResolvedPath, Storage};
 use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
 use crate::storage_backends::{StorageBackend, StorageBackendError};
 
-type BackendOp<T> = fn(Rc<dyn StorageBackend>, path: &Path) -> Result<T, StorageBackendError>;
+pub type BackendOp<T> = fn(Rc<dyn StorageBackend>, path: &Path) -> Result<T, StorageBackendError>;
 pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
     nodes: &'a [NodeDescriptor],
     dfs_front: &'b mut UnencryptedDfs,
@@ -17,12 +17,12 @@ pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
 ) -> impl Iterator<Item = (&'a NodeDescriptor, T)> + 'b {
     nodes.iter().filter_map(move |node| {
         node.storages()
-            .and_then(|storages| fetch_data_from_container(dfs_front, storages, backend_op))
+            .and_then(|storages| execute_container_operation(dfs_front, storages, backend_op))
             .map(|result| (node, result))
     })
 }
 
-fn fetch_data_from_container<T: Debug>(
+pub fn execute_container_operation<T: Debug>(
     dfs_front: &mut UnencryptedDfs,
     node_storages: &NodeStorages,
     backend_op: BackendOp<T>,
