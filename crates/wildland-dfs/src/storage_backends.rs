@@ -108,6 +108,21 @@ pub enum GetattrResponse {
     NotFound,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum CreateDirResponse {
+    Created,
+    ParentDoesNotExist,
+    PathAlreadyExists,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum RemoveDirResponse {
+    Removed,
+    DirNotEmpty,
+    NotFound,
+    NotADirectory,
+}
+
 /// Error represents scenario when data could not be retrieved from the StorageBackend, e.g. some
 /// network error. This mean that operation can be called again later of data can still be successfully
 /// retrieved from another equivalent backend.
@@ -118,6 +133,8 @@ pub trait StorageBackend {
     fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError>;
     fn getattr(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError>;
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError>;
+    fn create_dir(&self, path: &Path) -> Result<CreateDirResponse, StorageBackendError>;
+    fn remove_dir(&self, path: &Path) -> Result<RemoveDirResponse, StorageBackendError>;
 }
 
 pub trait StorageBackendFactory {

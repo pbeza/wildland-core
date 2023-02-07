@@ -33,10 +33,12 @@ use wildland_corex::{MockPathResolver, Storage};
 
 use crate::storage_backends::{
     CloseError,
+    CreateDirResponse,
     GetattrResponse,
     OpenResponse,
     OpenedFileDescriptor,
     ReaddirResponse,
+    RemoveDirResponse,
     SeekFrom,
     StorageBackendError,
 };
@@ -95,7 +97,7 @@ impl StorageBackend for Mufs {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
         let file_type = self.fs.metadata(&path)?.file_type();
-        if file_type.is_file() || file_type.is_symlink() {
+        if !file_type.is_dir() {
             return Ok(ReaddirResponse::NotADirectory);
         }
 
@@ -149,6 +151,43 @@ impl StorageBackend for Mufs {
         let opened_file = MufsOpenedFile::new(file);
 
         Ok(OpenResponse::found(opened_file))
+    }
+
+    fn create_dir(&self, path: &Path) -> Result<CreateDirResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        match self.fs.create_dir(path) {
+            Ok(()) => Ok(CreateDirResponse::Created),
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => Ok(CreateDirResponse::ParentDoesNotExist),
+                std::io::ErrorKind::AlreadyExists => Ok(CreateDirResponse::PathAlreadyExists),
+                _ => Err(StorageBackendError::Generic(e.into())),
+            },
+        }
+    }
+
+    fn remove_dir(&self, path: &Path) -> Result<RemoveDirResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        if let Ok(metadata) = self.fs.metadata(&path) {
+            let file_type = metadata.file_type();
+            if !file_type.is_dir() {
+                return Ok(RemoveDirResponse::NotADirectory);
+            }
+
+            if self.fs.read_dir(&path).unwrap().next().is_some() {
+                return Ok(RemoveDirResponse::DirNotEmpty);
+            }
+
+            Ok(self
+                .fs
+                .remove_dir(path)
+                .map(|_| RemoveDirResponse::Removed)?)
+        } else {
+            Ok(RemoveDirResponse::NotFound)
+        }
     }
 }
 
