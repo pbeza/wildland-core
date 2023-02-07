@@ -124,6 +124,7 @@ mod ffi_binding {
         ReadOnlyPath,
         DirNotEmpty,
         SeekError,
+        ConcurrentIssue,
     }
 
     enum NodeType {
