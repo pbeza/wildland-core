@@ -41,7 +41,7 @@ use std::str::FromStr;
 
 use derivative::Derivative;
 use serde::de::{Error, Unexpected};
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 use tracing::Level;
 
@@ -99,7 +99,7 @@ pub enum ParseConfigError {
     Error(String),
 }
 
-#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default(new = "true"))]
 pub struct FoundationStorageApiConfig {
     #[serde(default = "default_evs_url")]
@@ -178,6 +178,7 @@ pub struct LoggerConfig {
 
     /// Minimum level of messages to get logged
     #[serde(deserialize_with = "log_level_deserialize")]
+    #[serde(serialize_with = "log_level_serialize")]
     #[derivative(Default(value = "Level::INFO"))]
     pub log_level: Level,
 
@@ -274,6 +275,23 @@ where
     Level::from_str(s.as_ref()).map_err(|_e| {
         Error::invalid_value(Unexpected::Str(&s), &"trace | debug | info | warn | error")
     })
+}
+
+/// Helper function for handling serializing `log_level` field
+/// its not provieded by tracing for some reason
+#[allow(dead_code)] // not really a dead code
+fn log_level_serialize<S: Serializer>(
+    level: &mut tracing::Level,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    // 3 is the number of fields in the struct.
+    match *level {
+        Level::TRACE => serializer.serialize_unit_variant("LevelInner", 0, "Trace"),
+        Level::DEBUG => serializer.serialize_unit_variant("LevelInner", 1, "Debug"),
+        Level::INFO => serializer.serialize_unit_variant("LevelInner", 2, "Info"),
+        Level::WARN => serializer.serialize_unit_variant("LevelInner", 3, "Warn"),
+        Level::ERROR => serializer.serialize_unit_variant("LevelInner", 4, "Error"),
+    }
 }
 
 /// Structure representing configuration for [`super::CargoLib`] initialization.
