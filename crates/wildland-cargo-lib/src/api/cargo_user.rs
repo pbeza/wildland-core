@@ -125,6 +125,15 @@ All devices:
             .collect()
     }
 
+    /// Save StorageTemplate data in CatLib.
+    ///
+    #[tracing::instrument(level = "debug", skip_all)]
+    pub fn save_storage_template(&self, tpl: &StorageTemplate) -> Result<String, CatlibError> {
+        self.catlib_service.save_storage_template(tpl)?;
+
+        Ok(tpl.uuid().to_string())
+    }
+
     /// Starts process of granting Free Tier Foundation Storage.
     ///
     /// `CargoUser` encapsulates `FoundationStorageApi` functionalities in order to avoid requesting
