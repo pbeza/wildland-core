@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+mod create_remove_dir;
 mod getattr;
 mod path_translator;
 mod readdir;
@@ -284,6 +285,14 @@ impl DfsFrontend for UnencryptedDfs {
         } else {
             Err(DfsFrontendError::FileAlreadyClosed)
         }
+    }
+
+    fn create_dir(&mut self, requested_path: String) -> Result<(), DfsFrontendError> {
+        create_remove_dir::create_dir(self, requested_path)
+    }
+
+    fn remove_dir(&mut self, requested_path: String) -> Result<(), DfsFrontendError> {
+        create_remove_dir::remove_dir(self, requested_path)
     }
 
     fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError> {

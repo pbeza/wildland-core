@@ -26,10 +26,12 @@ use std::rc::Rc;
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::storage_backends::{
     CloseError,
+    CreateDirResponse,
     GetattrResponse,
     OpenResponse,
     OpenedFileDescriptor,
     ReaddirResponse,
+    RemoveDirResponse,
     SeekFrom,
     StorageBackend,
     StorageBackendError,
@@ -55,7 +57,7 @@ impl StorageBackend for LocalFilesystemStorage {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
-        if path.is_file() || path.is_symlink() {
+        if !path.is_dir() {
             Ok(ReaddirResponse::NotADirectory)
         } else {
             Ok(ReaddirResponse::Entries(
@@ -119,6 +121,43 @@ impl StorageBackend for LocalFilesystemStorage {
             let opened_file = StdFsOpenedFile::new(file);
 
             Ok(OpenResponse::found(opened_file))
+        }
+    }
+
+    fn create_dir(
+        &self,
+        path: &Path,
+    ) -> Result<wildland_dfs::storage_backends::CreateDirResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        match std::fs::create_dir(path) {
+            Ok(()) => Ok(CreateDirResponse::Created),
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => Ok(CreateDirResponse::ParentDoesNotExist),
+                std::io::ErrorKind::AlreadyExists => Ok(CreateDirResponse::PathAlreadyExists),
+                _ => Err(StorageBackendError::Generic(e.into())),
+            },
+        }
+    }
+
+    fn remove_dir(&self, path: &Path) -> Result<RemoveDirResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        if let Ok(metadata) = std::fs::metadata(&path) {
+            let file_type = metadata.file_type();
+            if !file_type.is_dir() {
+                return Ok(RemoveDirResponse::NotADirectory);
+            }
+
+            if path.read_dir().unwrap().next().is_some() {
+                return Ok(RemoveDirResponse::DirNotEmpty);
+            }
+
+            Ok(std::fs::remove_dir(&path).map(|_| RemoveDirResponse::Removed)?)
+        } else {
+            Ok(RemoveDirResponse::NotFound)
         }
     }
 }

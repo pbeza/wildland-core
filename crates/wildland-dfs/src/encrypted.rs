@@ -59,6 +59,16 @@ impl DfsFrontend for EncryptedDfs {
         self.inner.close(file)
     }
 
+    fn create_dir(&mut self, path: String) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.create_dir(path)
+    }
+
+    fn remove_dir(&mut self, path: String) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.remove_dir(path)
+    }
+
     fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.read(file, count)
