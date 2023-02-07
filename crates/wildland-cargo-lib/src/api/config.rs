@@ -362,7 +362,6 @@ pub fn collect_config(
 pub fn parse_config(raw_content: Vec<u8>) -> Result<CargoConfig, ParseConfigError> {
     let parsed: CargoConfig =
         serde_json::from_slice(&raw_content).map_err(|e| ParseConfigError::Error(e.to_string()))?;
-    println!("Parsed config: {parsed:?}");
     Ok(parsed)
 }
 
