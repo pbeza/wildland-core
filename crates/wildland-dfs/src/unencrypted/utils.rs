@@ -10,6 +10,7 @@ use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
 use crate::storage_backends::{StorageBackend, StorageBackendError};
 
 pub type BackendOp<T> = fn(Rc<dyn StorageBackend>, path: &Path) -> Result<T, StorageBackendError>;
+/// Ignores virtual nodes
 pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
     nodes: &'a [NodeDescriptor],
     dfs_front: &'b mut UnencryptedDfs,

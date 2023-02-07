@@ -51,7 +51,7 @@ pub fn create_dir(
             }
             NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::PathAlreadyExists),
         },
-        _ => Err(DfsFrontendError::ReadOnlyPath), // We treat folders that are merge of content from many containers are read-only
+        _ => Err(DfsFrontendError::ReadOnlyPath), // We treat folders that are merge of content from many containers as read-only
     }
 }
 
@@ -79,6 +79,6 @@ pub fn remove_dir(
             }
             NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::ReadOnlyPath),
         },
-        _ => Err(DfsFrontendError::ReadOnlyPath), // We treat folders that are merge of content from many containers are read-only
+        _ => Err(DfsFrontendError::ReadOnlyPath), // We treat folders that are merge of content from many containers as read-only
     }
 }

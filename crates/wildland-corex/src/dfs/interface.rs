@@ -120,8 +120,8 @@ impl From<std::io::Error> for DfsFrontendError {
 /// Interface that DFS should expose towards frontends
 pub trait DfsFrontend {
     // Error probably will be eventually shown to a user as a text
-    fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
-    fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
+    fn read_dir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
+    fn metadata(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
 
     /// Opens a file.
     ///
@@ -130,6 +130,8 @@ pub trait DfsFrontend {
     /// Returns an error in case of file absence.
     fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
+
+    fn remove_file(&mut self, path: String) -> Result<(), DfsFrontendError>;
 
     fn create_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
 

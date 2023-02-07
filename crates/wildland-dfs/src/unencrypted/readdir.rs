@@ -121,7 +121,7 @@ fn map_physical_path_to_node_descriptor<'a>(
         let node_storages = node_storages.clone();
         {
             backend
-                .readdir(&path_within_storage)
+                .read_dir(&path_within_storage)
                 .map(|response| match response {
                     ReaddirResponse::Entries(resulting_paths) => {
                         Either::Left(resulting_paths.into_iter().map({

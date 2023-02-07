@@ -34,12 +34,13 @@ use wildland_corex::{PathResolver, Storage};
 
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
-use self::utils::{fetch_data_from_containers, get_related_nodes};
+use self::utils::{execute_container_operation, fetch_data_from_containers, get_related_nodes};
 use crate::storage_backends::{
     CloseError,
     CloseOnDropDescriptor,
     OpenResponse,
     OpenedFileDescriptor,
+    RemoveFileResponse,
     SeekFrom,
     StorageBackend,
     StorageBackendFactory,
@@ -226,12 +227,12 @@ impl DfsFrontend for UnencryptedDfs {
     /// ]
     /// Full path within the user's forest for both nodes is `/a/b/c`. It is up to FS frontend how to
     /// show it to a user (e.g. by prefixing it with some storage-specific tag).
-    fn readdir(&mut self, requested_path: String) -> Result<Vec<String>, DfsFrontendError> {
+    fn read_dir(&mut self, requested_path: String) -> Result<Vec<String>, DfsFrontendError> {
         readdir::readdir(self, requested_path)
     }
 
     // Returns Stat of the file indicated by the provided exposed path
-    fn getattr(&mut self, input_exposed_path: String) -> Result<Stat, DfsFrontendError> {
+    fn metadata(&mut self, input_exposed_path: String) -> Result<Stat, DfsFrontendError> {
         getattr::getattr(self, input_exposed_path)
     }
 
@@ -284,6 +285,48 @@ impl DfsFrontend for UnencryptedDfs {
             })
         } else {
             Err(DfsFrontendError::FileAlreadyClosed)
+        }
+    }
+
+    fn remove_file(&mut self, input_exposed_path: String) -> Result<(), DfsFrontendError> {
+        let input_exposed_path = Path::new(&input_exposed_path);
+
+        let mut nodes = get_related_nodes(self, input_exposed_path)?;
+
+        let remove_from_container = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| {
+            match node {
+                NodeDescriptor::Physical { storages, .. } => {
+                    execute_container_operation(dfs, storages, |backend, path| {
+                        backend.remove_file(path)
+                    })
+                    .ok_or(DfsFrontendError::StorageNotResponsive)
+                    .and_then(|resp| match resp {
+                        RemoveFileResponse::Removed => Ok(()),
+                        RemoveFileResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
+                        RemoveFileResponse::NotAFile => Err(DfsFrontendError::NotAFile),
+                    })
+                }
+                NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::ReadOnlyPath), // Virtual paths are considered as read-only
+            }
+        };
+
+        match nodes.len() {
+            0 => Err(DfsFrontendError::NoSuchPath),
+            1 => remove_from_container(self, &nodes.pop().unwrap()),
+            _ => {
+                let mut existent_paths: Vec<&NodeDescriptor> =
+                    fetch_data_from_containers(&nodes, self, |backend, path| {
+                        backend.path_exists(path)
+                    })
+                    .filter_map(|(node, exists)| if exists { Some(node) } else { None })
+                    .collect();
+
+                match existent_paths.len() {
+                    0 => Err(DfsFrontendError::NoSuchPath),
+                    1 => remove_from_container(self, existent_paths.pop().unwrap()),
+                    _ => Err(DfsFrontendError::ReadOnlyPath), // Ambiguous path are for now read-only
+                }
+            }
         }
     }
 

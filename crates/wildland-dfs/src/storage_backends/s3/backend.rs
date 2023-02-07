@@ -6,6 +6,7 @@ use crate::storage_backends::{
     GetattrResponse,
     OpenResponse,
     ReaddirResponse,
+    RemoveFileResponse,
     StorageBackend,
     StorageBackendError,
 };
@@ -25,14 +26,14 @@ impl S3Backend {
 }
 
 impl StorageBackend for S3Backend {
-    fn readdir(&self, path_within_storage: &Path) -> Result<ReaddirResponse, StorageBackendError> {
+    fn read_dir(&self, path_within_storage: &Path) -> Result<ReaddirResponse, StorageBackendError> {
         Ok(ReaddirResponse::Entries(
             self.client
                 .list_files(path_within_storage, &self.bucket_name)?,
         ))
     }
 
-    fn getattr(&self, path_within_storage: &Path) -> Result<GetattrResponse, StorageBackendError> {
+    fn metadata(&self, path_within_storage: &Path) -> Result<GetattrResponse, StorageBackendError> {
         Ok(GetattrResponse::Found(self.client.get_object_attributes(
             path_within_storage,
             &self.bucket_name,
@@ -55,5 +56,13 @@ impl StorageBackend for S3Backend {
         _path: &Path,
     ) -> Result<crate::storage_backends::RemoveDirResponse, StorageBackendError> {
         todo!() // TODO COR-70
+    }
+
+    fn path_exists(&self, _path: &Path) -> Result<bool, StorageBackendError> {
+        todo!()
+    }
+
+    fn remove_file(&self, _path: &Path) -> Result<RemoveFileResponse, StorageBackendError> {
+        todo!()
     }
 }
