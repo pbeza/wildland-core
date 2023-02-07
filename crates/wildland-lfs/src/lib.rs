@@ -122,10 +122,7 @@ impl StorageBackend for LocalFilesystemStorage {
         }
     }
 
-    fn create_dir(
-        &self,
-        path: &Path,
-    ) -> Result<wildland_dfs::storage_backends::CreateDirResponse, StorageBackendError> {
+    fn create_dir(&self, path: &Path) -> Result<CreateDirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 

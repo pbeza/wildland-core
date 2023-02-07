@@ -5,6 +5,7 @@ use wildland_corex::dfs::interface::Stat;
 
 use super::{CloseOnDropDescriptor, OpenedFileDescriptor};
 
+#[derive(Debug)]
 pub enum SeekFrom {
     Start { position: usize },
     End { remaining: usize },
@@ -72,4 +73,19 @@ pub enum ReaddirResponse {
 pub enum GetattrResponse {
     Found(Stat),
     NotFound,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum CreateDirResponse {
+    Created,
+    ParentDoesNotExist,
+    PathAlreadyExists,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum RemoveDirResponse {
+    Removed,
+    DirNotEmpty,
+    NotFound,
+    NotADirectory,
 }

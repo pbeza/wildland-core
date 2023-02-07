@@ -26,22 +26,14 @@ pub use descriptors::CloseOnDropDescriptor;
 use wildland_corex::Storage;
 
 pub use self::descriptors::OpenedFileDescriptor;
-use self::models::{GetattrResponse, OpenResponse, ReaddirResponse, StorageBackendError};
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum CreateDirResponse {
-    Created,
-    ParentDoesNotExist,
-    PathAlreadyExists,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum RemoveDirResponse {
-    Removed,
-    DirNotEmpty,
-    NotFound,
-    NotADirectory,
-}
+use self::models::{
+    CreateDirResponse,
+    GetattrResponse,
+    OpenResponse,
+    ReaddirResponse,
+    RemoveDirResponse,
+    StorageBackendError,
+};
 
 /// Error represents scenario when data could not be retrieved from the StorageBackend, e.g. some
 /// network error. This mean that operation can be called again later of data can still be successfully
