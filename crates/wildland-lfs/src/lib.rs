@@ -146,6 +146,10 @@ impl StorageBackend for LocalFilesystemStorage {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
+        if path == Path::new("/") {
+            return Ok(RemoveDirResponse::RootRemovalNotAllowed);
+        }
+
         if let Ok(metadata) = std::fs::metadata(&path) {
             let file_type = metadata.file_type();
             if !file_type.is_dir() {

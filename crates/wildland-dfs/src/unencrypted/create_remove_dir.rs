@@ -20,7 +20,7 @@ use std::str::FromStr;
 
 use wildland_corex::dfs::interface::DfsFrontendError;
 
-use super::utils::{execute_container_operation, get_related_nodes};
+use super::utils::{execute_container_operation, fetch_data_from_containers, get_related_nodes};
 use super::{NodeDescriptor, UnencryptedDfs};
 use crate::storage_backends::{CreateDirResponse, RemoveDirResponse};
 
@@ -31,13 +31,9 @@ pub fn create_dir(
     let requested_path = PathBuf::from_str(&requested_path).unwrap();
     let mut nodes = get_related_nodes(dfs, &requested_path)?;
 
-    match nodes.len() {
-        0 => Err(DfsFrontendError::ParentDoesNotExist),
-        1 => match nodes.pop().unwrap() {
-            NodeDescriptor::Physical { storages, .. } => {
-                execute_container_operation(dfs, &storages, |backend, path| {
-                    backend.create_dir(path)
-                })
+    let create_dir_in_container = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
+        NodeDescriptor::Physical { storages, .. } => {
+            execute_container_operation(dfs, storages, |backend, path| backend.create_dir(path))
                 .ok_or(DfsFrontendError::StorageNotResponsive)
                 .and_then(|resp| match resp {
                     CreateDirResponse::Created => Ok(()),
@@ -48,10 +44,43 @@ pub fn create_dir(
                         Err(DfsFrontendError::PathAlreadyExists)
                     }
                 })
+        }
+        NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::PathAlreadyExists),
+    };
+
+    match nodes.len() {
+        0 => Err(DfsFrontendError::ParentDoesNotExist),
+        1 => create_dir_in_container(dfs, &nodes.pop().unwrap()),
+        _ => {
+            let mut nodes_that_have_parent: Vec<&NodeDescriptor> = nodes
+                .iter()
+                .filter_map(|node| {
+                    let parent = node.parent()?;
+
+                    match parent {
+                        NodeDescriptor::Physical { storages, .. } => {
+                            let exists =
+                                execute_container_operation(dfs, &storages, |backend, path| {
+                                    backend.path_exists(path)
+                                })
+                                .ok_or(DfsFrontendError::StorageNotResponsive);
+                            match exists {
+                                Ok(true) => Some(Ok(node)),
+                                Ok(false) => None,
+                                Err(e) => Some(Err(e)),
+                            }
+                        }
+                        NodeDescriptor::Virtual { .. } => None,
+                    }
+                })
+                .collect::<Result<_, DfsFrontendError>>()?;
+
+            match nodes_that_have_parent.len() {
+                0 => Err(DfsFrontendError::ParentDoesNotExist),
+                1 => create_dir_in_container(dfs, nodes_that_have_parent.pop().unwrap()),
+                _ => Err(DfsFrontendError::ReadOnlyPath), // Ambiguous path are for now read-only
             }
-            NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::PathAlreadyExists),
-        },
-        _ => Err(DfsFrontendError::ReadOnlyPath), // We treat folders that are merge of content from many containers as read-only
+        }
     }
 }
 
@@ -62,23 +91,35 @@ pub fn remove_dir(
     let requested_path = PathBuf::from_str(&requested_path).unwrap();
     let mut nodes = get_related_nodes(dfs, &requested_path)?;
 
-    match nodes.len() {
-        0 => Err(DfsFrontendError::NoSuchPath),
-        1 => match nodes.pop().unwrap() {
-            NodeDescriptor::Physical { storages, .. } => {
-                execute_container_operation(dfs, &storages, |backend, path| {
-                    backend.remove_dir(path)
-                })
+    let remove_dir_from_container = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
+        NodeDescriptor::Physical { storages, .. } => {
+            execute_container_operation(dfs, storages, |backend, path| backend.remove_dir(path))
                 .ok_or(DfsFrontendError::StorageNotResponsive)
                 .and_then(|resp| match resp {
                     RemoveDirResponse::Removed => Ok(()),
                     RemoveDirResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
                     RemoveDirResponse::NotADirectory => Err(DfsFrontendError::NotADirectory),
                     RemoveDirResponse::DirNotEmpty => Err(DfsFrontendError::DirNotEmpty),
+                    RemoveDirResponse::RootRemovalNotAllowed => Err(DfsFrontendError::ReadOnlyPath),
                 })
+        }
+        NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::ReadOnlyPath),
+    };
+
+    match nodes.len() {
+        0 => Err(DfsFrontendError::NoSuchPath),
+        1 => remove_dir_from_container(dfs, &nodes.pop().unwrap()),
+        _ => {
+            let mut existent_paths: Vec<&NodeDescriptor> =
+                fetch_data_from_containers(&nodes, dfs, |backend, path| backend.path_exists(path))
+                    .filter_map(|(node, exists)| if exists { Some(node) } else { None })
+                    .collect();
+
+            match existent_paths.len() {
+                0 => Err(DfsFrontendError::NoSuchPath),
+                1 => remove_dir_from_container(dfs, existent_paths.pop().unwrap()),
+                _ => Err(DfsFrontendError::ReadOnlyPath), // Ambiguous path are for now read-only
             }
-            NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::ReadOnlyPath),
-        },
-        _ => Err(DfsFrontendError::ReadOnlyPath), // We treat folders that are merge of content from many containers as read-only
+        }
     }
 }

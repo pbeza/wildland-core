@@ -25,7 +25,7 @@ mod utils;
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::rc::Rc;
 
 use uuid::Uuid;
@@ -36,8 +36,14 @@ use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{execute_container_operation, fetch_data_from_containers, get_related_nodes};
 use crate::storage_backends::{
-    CloseError, CloseOnDropDescriptor, OpenResponse, OpenedFileDescriptor, RemoveFileResponse,
-    SeekFrom, StorageBackend, StorageBackendFactory,
+    CloseError,
+    CloseOnDropDescriptor,
+    OpenResponse,
+    OpenedFileDescriptor,
+    RemoveFileResponse,
+    SeekFrom,
+    StorageBackend,
+    StorageBackendFactory,
 };
 use crate::unencrypted::utils::find_node_matching_requested_path;
 
@@ -75,6 +81,33 @@ impl NodeDescriptor {
         match self {
             NodeDescriptor::Physical { storages, .. } => Some(storages),
             NodeDescriptor::Virtual { .. } => None,
+        }
+    }
+
+    pub fn parent(&self) -> Option<Self> {
+        match self {
+            NodeDescriptor::Physical {
+                absolute_path,
+                storages: node_storages,
+            } => match node_storages.path_within_storage.components().last()? {
+                Component::Normal(_) => Some(Self::Physical {
+                    storages: NodeStorages {
+                        storages: node_storages.storages.clone(),
+                        path_within_storage: node_storages
+                            .path_within_storage
+                            .parent()
+                            .map(|p| p.into())?,
+                        uuid: node_storages.uuid,
+                    },
+                    absolute_path: absolute_path.parent().map(|p| p.into())?,
+                }),
+                _ => None,
+            },
+            NodeDescriptor::Virtual { absolute_path } => {
+                absolute_path.parent().map(|p| Self::Virtual {
+                    absolute_path: p.into(),
+                })
+            }
         }
     }
 }

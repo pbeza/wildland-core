@@ -121,6 +121,7 @@ pub enum RemoveDirResponse {
     DirNotEmpty,
     NotFound,
     NotADirectory,
+    RootRemovalNotAllowed,
 }
 
 #[derive(Debug, PartialEq, Eq)]
