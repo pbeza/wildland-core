@@ -43,8 +43,8 @@ use self::models::{
 /// All logical errors, e.g. trying opening directory, should be reflected in the inner type, like OpenResponse.
 /// Those variants are hidden inside Ok value because they should not trigger retrying operation.
 pub trait StorageBackend {
-    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError>;
-    fn getattr(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError>;
+    fn read_dir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError>;
+    fn metadata(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError>;
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError>;
     fn create_dir(&self, path: &Path) -> Result<CreateDirResponse, StorageBackendError>;
     fn remove_dir(&self, path: &Path) -> Result<RemoveDirResponse, StorageBackendError>;

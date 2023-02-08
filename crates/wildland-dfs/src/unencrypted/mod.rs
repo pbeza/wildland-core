@@ -167,12 +167,12 @@ impl DfsFrontend for UnencryptedDfs {
     /// ]
     /// Full path within the user's forest for both nodes is `/a/b/c`. It is up to FS frontend how to
     /// show it to a user (e.g. by prefixing it with some storage-specific tag).
-    fn readdir(&mut self, requested_path: String) -> Result<Vec<String>, DfsFrontendError> {
+    fn read_dir(&mut self, requested_path: String) -> Result<Vec<String>, DfsFrontendError> {
         readdir::readdir(self, requested_path)
     }
 
     // Returns Stat of the file indicated by the provided exposed path
-    fn getattr(&mut self, input_exposed_path: String) -> Result<Stat, DfsFrontendError> {
+    fn metadata(&mut self, input_exposed_path: String) -> Result<Stat, DfsFrontendError> {
         getattr::getattr(self, input_exposed_path)
     }
 

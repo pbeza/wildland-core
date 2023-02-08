@@ -52,7 +52,7 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for LocalFilesystemStorage {
-    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
+    fn read_dir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
@@ -74,7 +74,7 @@ impl StorageBackend for LocalFilesystemStorage {
         }
     }
 
-    fn getattr(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError> {
+    fn metadata(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
@@ -269,7 +269,7 @@ mod tests {
         create_dir(tmpdir.path().join("books")).unwrap(); // container dir
         let _ = File::create(tmpdir.path().join("books/file1")).unwrap();
 
-        let files = backend.readdir(Path::new("/")).unwrap();
+        let files = backend.read_dir(Path::new("/")).unwrap();
 
         assert_eq!(
             files,
@@ -294,7 +294,7 @@ mod tests {
         create_dir(tmpdir.path().join("books").join("dir")).unwrap(); // container subdir
         let _ = File::create(tmpdir.path().join("books/dir/file1")).unwrap();
 
-        let files = backend.readdir(Path::new("/dir")).unwrap();
+        let files = backend.read_dir(Path::new("/dir")).unwrap();
 
         assert_eq!(
             files,

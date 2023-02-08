@@ -94,7 +94,7 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for Mufs {
-    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
+    fn read_dir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
         let file_type = match self.fs.metadata(&path) {
@@ -116,7 +116,7 @@ impl StorageBackend for Mufs {
         ))
     }
 
-    fn getattr(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError> {
+    fn metadata(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         Ok(GetattrResponse::Found(
             self.fs

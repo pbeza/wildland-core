@@ -352,11 +352,11 @@ mod ffi_binding {
         //
         // DFS Frontend
         //
-        fn readdir(
+        fn read_dir(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
         ) -> Result<Vec<String>, DfsFrontendError>;
-        fn getattr(
+        fn metadata(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
         ) -> Result<Stat, DfsFrontendError>;

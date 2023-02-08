@@ -28,7 +28,7 @@ impl S3Backend {
 }
 
 impl StorageBackend for S3Backend {
-    fn readdir(&self, path_within_storage: &Path) -> Result<ReaddirResponse, StorageBackendError> {
+    fn read_dir(&self, path_within_storage: &Path) -> Result<ReaddirResponse, StorageBackendError> {
         match self
             .client
             .list_files(path_within_storage, &self.bucket_name)
@@ -42,7 +42,7 @@ impl StorageBackend for S3Backend {
         }
     }
 
-    fn getattr(&self, path_within_storage: &Path) -> Result<GetattrResponse, StorageBackendError> {
+    fn metadata(&self, path_within_storage: &Path) -> Result<GetattrResponse, StorageBackendError> {
         match self
             .client
             .get_object_attributes(path_within_storage, &self.bucket_name)

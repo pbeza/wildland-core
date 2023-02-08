@@ -50,7 +50,7 @@ fn test_listing_files_from_nonexistent_directory() {
     let path_resolver = Box::new(path_resolver);
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
-    let err = dfs.readdir("/dir".to_string()).unwrap_err();
+    let err = dfs.read_dir("/dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::NoSuchPath);
 }
 
@@ -77,7 +77,7 @@ fn test_listing_files_from_root_of_one_container() {
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     let files = dfs
-        .readdir("/a/b/".to_string())
+        .read_dir("/a/b/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -85,7 +85,7 @@ fn test_listing_files_from_root_of_one_container() {
 
     fs.create_file("/file_in_root").unwrap();
     let files = dfs
-        .readdir("/a/b/".to_string())
+        .read_dir("/a/b/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -118,7 +118,7 @@ fn test_listing_files_from_nested_dir_of_one_container() {
     fs.create_file("/dir/nested_file_2").unwrap();
 
     let files = dfs
-        .readdir("/a/b/dir".to_string())
+        .read_dir("/a/b/dir".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -153,7 +153,7 @@ fn test_listing_dirs_from_one_container() {
     let (mut dfs, fs) = dfs_with_fs(path_resolver);
 
     let files = dfs
-        .readdir("/".to_string())
+        .read_dir("/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -163,7 +163,7 @@ fn test_listing_dirs_from_one_container() {
     fs.create_dir("/dir_b").unwrap();
 
     let files = dfs
-        .readdir("/".to_string())
+        .read_dir("/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -210,7 +210,7 @@ fn test_listing_files_and_dirs_from_two_containers() {
     fs.create_dir("/storage2/c/dir/").unwrap();
 
     let files = dfs
-        .readdir("/a/b/c/dir".to_string())
+        .read_dir("/a/b/c/dir".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -223,7 +223,7 @@ fn test_listing_files_and_dirs_from_two_containers() {
         .unwrap();
 
     let files = dfs
-        .readdir("/a/b/c/dir".to_string())
+        .read_dir("/a/b/c/dir".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -265,14 +265,14 @@ fn test_getting_one_file_from_container_with_multiple_storages() {
     fs.create_dir("/storage2/").unwrap();
     fs.create_dir("/storage2/a").unwrap();
 
-    let files = dfs.readdir("/a".to_string()).unwrap();
+    let files = dfs.read_dir("/a".to_string()).unwrap();
     assert_eq!(files, Vec::<String>::new());
 
     fs.create_file("/storage1/a/b").unwrap();
     fs.create_file("/storage2/a/b").unwrap();
 
     let files = dfs
-        .readdir("/a".to_string())
+        .read_dir("/a".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -315,7 +315,7 @@ fn test_more_than_one_file_claim_the_same_full_path() {
     fs.create_dir("/storage2/").unwrap();
 
     let files = dfs
-        .readdir("/a/b/".to_string())
+        .read_dir("/a/b/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -325,7 +325,7 @@ fn test_more_than_one_file_claim_the_same_full_path() {
     fs.create_file("/storage2/c").unwrap();
 
     let files = dfs
-        .readdir("/a/b".to_string())
+        .read_dir("/a/b".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -371,7 +371,7 @@ fn test_listing_virtual_node() {
     fs.create_file("storage_c1/dir/file_in_nested_dir").unwrap(); // it should not be present in result
 
     let files = dfs
-        .readdir("/a".to_string())
+        .read_dir("/a".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -432,7 +432,7 @@ fn test_file_colliding_with_virtual_node() {
     fs.create_file("/storage1/b").unwrap();
 
     let files = dfs
-        .readdir("/a/".to_string())
+        .read_dir("/a/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -442,7 +442,7 @@ fn test_file_colliding_with_virtual_node() {
     assert_eq!(files, HashSet::from(["/a/b/".to_string(),]));
 
     let files = dfs
-        .readdir("/a/b/".to_string())
+        .read_dir("/a/b/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -503,7 +503,7 @@ fn test_dir_colliding_with_virtual_node() {
     fs.create_file("/storage1/b/c").unwrap();
 
     let files = dfs
-        .readdir("/a/".to_string())
+        .read_dir("/a/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -512,7 +512,7 @@ fn test_dir_colliding_with_virtual_node() {
     assert_eq!(files, HashSet::from(["/a/b/".to_string(),]));
 
     let files = dfs
-        .readdir("/a/b/".to_string())
+        .read_dir("/a/b/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -548,13 +548,13 @@ fn test_readdir_on_file() {
     fs.create_file("/storage1/a").unwrap();
 
     let files = dfs
-        .readdir("/a/".to_string())
+        .read_dir("/a/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
     assert_eq!(files, HashSet::from([]));
     let files = dfs
-        .readdir("/a".to_string())
+        .read_dir("/a".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();
@@ -580,7 +580,7 @@ fn test_readdir_on_virtual_node_only() {
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
     let files = dfs
-        .readdir("/a/".to_string())
+        .read_dir("/a/".to_string())
         .unwrap()
         .into_iter()
         .collect::<HashSet<_>>();

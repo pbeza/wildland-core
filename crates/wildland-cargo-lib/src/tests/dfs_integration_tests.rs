@@ -77,8 +77,8 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     let dfs = cargo_lib.dfs_api();
     let mut dfs = dfs.lock().unwrap();
 
-    let entries = dfs.readdir("/some/path/".to_string()).unwrap_err();
-    assert_eq!(entries, DfsFrontendError::NoSuchPath);
+    let err = dfs.read_dir("/some/path/".to_string()).unwrap_err();
+    assert_eq!(err, DfsFrontendError::NoSuchPath);
 
     //
     // When containers are mounted
@@ -91,7 +91,7 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     // Then data is accessible via DFS
     //
     let entries: HashSet<String> = dfs
-        .readdir("/some/path/dir".to_string())
+        .read_dir("/some/path/dir".to_string())
         .unwrap()
         .into_iter()
         .collect();
@@ -103,7 +103,7 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
         ])
     );
     let entries: HashSet<String> = dfs
-        .readdir("/some/path/".to_string())
+        .read_dir("/some/path/".to_string())
         .unwrap()
         .into_iter()
         .collect();
@@ -114,9 +114,9 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
             "/some/path/other_dir".to_owned()
         ])
     );
-    let c1_file_stat = dfs.getattr("/some/path/dir/c1_file".to_owned()).unwrap();
+    let c1_file_stat = dfs.metadata("/some/path/dir/c1_file".to_owned()).unwrap();
     assert_eq!(c1_file_stat.node_type, NodeType::File);
-    let c1_file_stat = dfs.getattr("/some/path/dir/".to_owned()).unwrap();
+    let c1_file_stat = dfs.metadata("/some/path/dir/".to_owned()).unwrap();
     assert_eq!(c1_file_stat.node_type, NodeType::Dir);
 
     let file = dfs.open("/some/path/dir/c1_file".to_owned()).unwrap();
@@ -137,7 +137,7 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     // Then its data is inaccessible
     //
     let entries: HashSet<String> = dfs
-        .readdir("/some/path/dir".to_string())
+        .read_dir("/some/path/dir".to_string())
         .unwrap()
         .into_iter()
         .collect();
@@ -146,7 +146,7 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
         HashSet::from(["/some/path/dir/c2_file".to_owned(),])
     );
     let c1_file_stat_err = dfs
-        .getattr("/some/path/dir/c1_file".to_owned())
+        .metadata("/some/path/dir/c1_file".to_owned())
         .unwrap_err();
     assert_eq!(c1_file_stat_err, DfsFrontendError::NoSuchPath);
 }
