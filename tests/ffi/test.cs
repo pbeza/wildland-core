@@ -129,6 +129,46 @@ namespace Main
 
             var user = user_api.get_user();
             Console.WriteLine("User: " + user.stringify().to_string());
+
+            // -------------- TEMPLATES ----------------
+
+            Console.WriteLine("TEST: Create and save storage template from json");
+            var tpl_str = @"{""access"":[{""user"":""*""}],""credentials"":{""access-key"":""NOT_SO_SECRET"",""secret-key"":""VERY_SECRET""},""manifest-pattern"":{""path"":""/{path}.yaml"",""type"":""glob""},""read-only"":true,""s3_url"":""s3://michal-afc03a81-307c-4b41-b9dd-771835617900/{{ CONTAINER_UUID  }}"",""backend_type"":""s3"",""with-index"":false}";
+            var json_tpl = new Vecu8();
+
+            foreach(byte b in System.Text.Encoding.UTF8.GetBytes(tpl_str)) { json_tpl.push(b); }
+
+            var tpl = wildland.storage_template_from_json(json_tpl);
+            tpl.set_name(new RustString("Some JSON template"));
+            var tpl_uuid = user.save_storage_template(tpl);
+            Console.WriteLine($"[OK] Storage Template saved with uuid: {tpl_uuid.to_string()}");
+            Console.WriteLine($"Serialized Template: {tpl.to_json().to_string()}");
+
+            Console.WriteLine("TEST: Create and save storage template from yaml");
+            tpl_str = @"---
+access:
+- user: '*'
+credentials:
+  access-key: NOT_SO_SECRET
+  secret-key: VERY_SECRET
+manifest-pattern:
+  path: /{path}.yaml
+  type: glob
+read-only: true
+s3_url: s3://michal-afc03a81-307c-4b41-b9dd-771835617900/{{ CONTAINER_UUID  }}
+backend_type: s3
+with-index: false
+";
+
+            var yaml_tpl = new Vecu8();
+
+            foreach(byte b in System.Text.Encoding.UTF8.GetBytes(tpl_str)) { yaml_tpl.push(b); }
+
+            tpl = wildland.storage_template_from_yaml(yaml_tpl);
+            tpl.set_name(new RustString("Some YAML template"));
+            tpl_uuid = user.save_storage_template(tpl);
+            Console.WriteLine($"[OK] Storage Template saved with uuid: {tpl_uuid.to_string()}");
+            Console.WriteLine($"Serialized Template: {tpl.to_yaml().to_string()}");
         }
     }
 }

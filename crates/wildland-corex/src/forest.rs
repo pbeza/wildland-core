@@ -44,7 +44,7 @@ impl Forest {
     /// let forest = Forest::new(forest);
     /// let storage_template = StorageTemplate::try_new(
     ///     "FoundationStorage",
-    ///     HashMap::from([
+    ///     &HashMap::from([
     ///             (
     ///                 "field1".to_owned(),
     ///                 "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),

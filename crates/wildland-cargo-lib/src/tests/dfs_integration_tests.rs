@@ -45,21 +45,21 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     let container1 = user
         .create_container(
             "C1".to_owned(),
-            &StorageTemplate::try_new("LocalFilesystem", template.clone()).unwrap(),
+            &StorageTemplate::try_new("LocalFilesystem", &template).unwrap(),
             "/some/path/".to_owned(),
         )
         .unwrap();
     let container2 = user
         .create_container(
             "C2".to_owned(),
-            &StorageTemplate::try_new("LocalFilesystem", template.clone()).unwrap(),
+            &StorageTemplate::try_new("LocalFilesystem", &template).unwrap(),
             "/some/path/dir".to_owned(),
         )
         .unwrap();
     let container3 = user
         .create_container(
             "C3".to_owned(),
-            &StorageTemplate::try_new("LocalFilesystem", template).unwrap(),
+            &StorageTemplate::try_new("LocalFilesystem", &template).unwrap(),
             "/some/path/other_dir".to_owned(),
         )
         .unwrap();

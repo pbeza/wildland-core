@@ -45,7 +45,7 @@ impl LocalFilesystemStorageTemplate {
 impl TryFrom<LocalFilesystemStorageTemplate> for StorageTemplate {
     type Error = StorageTemplateError;
     fn try_from(lfst: LocalFilesystemStorageTemplate) -> Result<Self, Self::Error> {
-        StorageTemplate::try_new("LocalFilesystem", lfst)
+        StorageTemplate::try_new("LocalFilesystem", &lfst)
     }
 }
 

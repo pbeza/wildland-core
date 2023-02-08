@@ -46,6 +46,7 @@ pub struct TemplateContext {
 }
 
 #[derive(Debug, Error, Clone)]
+#[repr(C)]
 pub enum StorageTemplateError {
     #[error("Ser/deserialization error: {0}")]
     SerdeErr(String),
@@ -64,24 +65,81 @@ pub struct StorageTemplate {
 impl StorageTemplate {
     pub fn try_new(
         backend_type: impl ToString,
-        template: impl Serialize,
+        template: &impl Serialize,
     ) -> Result<Self, StorageTemplateError> {
         Ok(Self {
             name: None,
             uuid: Uuid::new_v4(),
             backend_type: backend_type.to_string(),
-            template: serde_json::to_value(&template)
+            template: serde_json::to_value(template)
                 .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?,
         })
     }
 
-    pub fn with_name(mut self, name: impl ToString) -> Self {
-        self.name = Some(name.to_string());
-        self
+    pub fn name(&self) -> Option<String> {
+        self.name.clone()
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = Some(name);
     }
 
     pub fn stringify(&self) -> String {
         format!("{:?}", &self)
+    }
+
+    pub fn from_json(content: Vec<u8>) -> Result<StorageTemplate, StorageTemplateError> {
+        let storage_data: serde_json::Value = serde_json::from_slice(content.as_slice())
+            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
+
+        let backend_type = storage_data.get("backend_type").map_or(
+            Err(StorageTemplateError::SerdeErr(
+                "Missing backend_type key".into(),
+            )),
+            |b| {
+                if b.is_string() {
+                    Ok(b.as_str().unwrap())
+                } else {
+                    Err(StorageTemplateError::SerdeErr(
+                        "Invalid backend_type value".into(),
+                    ))
+                }
+            },
+        )?;
+
+        Self::try_new(backend_type, &storage_data)
+    }
+
+    pub fn from_yaml(content: Vec<u8>) -> Result<StorageTemplate, StorageTemplateError> {
+        let storage_data: serde_yaml::Value = serde_yaml::from_slice(content.as_slice())
+            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
+
+        let backend_type = storage_data.get("backend_type").map_or(
+            Err(StorageTemplateError::SerdeErr(
+                "Missing backend_type key".into(),
+            )),
+            |b| {
+                if b.is_string() {
+                    Ok(b.as_str().unwrap())
+                } else {
+                    Err(StorageTemplateError::SerdeErr(
+                        "Invalid backend_type value".into(),
+                    ))
+                }
+            },
+        )?;
+
+        Self::try_new(backend_type, &storage_data)
+    }
+
+    pub fn to_json(&self) -> Result<String, StorageTemplateError> {
+        serde_json::to_string(&self.template)
+            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))
+    }
+
+    pub fn to_yaml(&self) -> Result<String, StorageTemplateError> {
+        serde_yaml::to_string(&self.template)
+            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))
     }
 
     pub fn backend_type(&self) -> String {
@@ -90,6 +148,10 @@ impl StorageTemplate {
 
     pub fn uuid(&self) -> Uuid {
         self.uuid
+    }
+
+    pub fn uuid_str(&self) -> String {
+        self.uuid.to_string()
     }
 
     pub fn render(&self, params: TemplateContext) -> Result<Storage, StorageTemplateError> {
@@ -123,10 +185,45 @@ mod tests {
     use crate::{StorageTemplate, TemplateContext};
 
     #[test]
+    fn parse_generic_json_template() {
+        let json_str = serde_json::json!({
+            "access":
+            [
+                {
+                    "user": "*"
+                }
+            ],
+            "credentials":
+            {
+                "access-key": "NOT_SO_SECRET",
+                "secret-key": "VERY_SECRET"
+            },
+            "manifest-pattern":
+            {
+                "path": "/{path}.yaml",
+                "type": "glob"
+            },
+            "read-only": true,
+            "s3_url": "s3://michal-afc03a81-307c-4b41-b9dd-771835617900/{{ CONTAINER_UUID  }}",
+            "backend_type": "s3",
+            "with-index": false
+        })
+        .to_string();
+
+        let mut tpl = StorageTemplate::from_json(json_str.as_bytes().to_vec()).unwrap();
+
+        assert_eq!(tpl.name(), None);
+
+        tpl.set_name("random name".to_string());
+
+        assert_eq!(tpl.name(), Some("random name".to_string()));
+    }
+
+    #[test]
     fn test_rendering_template() {
         let storage_template = StorageTemplate::try_new(
             "FoundationStorage",
-            HashMap::from([
+            &HashMap::from([
                 (
                     "field1".to_owned(),
                     "Some value with container name: {{ CONTAINER_NAME }}".to_owned(),
