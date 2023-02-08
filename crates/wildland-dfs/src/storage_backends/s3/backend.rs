@@ -8,6 +8,7 @@ use crate::storage_backends::models::{
     GetattrResponse,
     OpenResponse,
     ReaddirResponse,
+    RemoveFileResponse,
     StorageBackendError,
 };
 use crate::storage_backends::StorageBackend;
@@ -82,5 +83,13 @@ impl StorageBackend for S3Backend {
         _path: &Path,
     ) -> Result<crate::storage_backends::RemoveDirResponse, StorageBackendError> {
         todo!() // TODO COR-70
+    }
+
+    fn path_exists(&self, _path: &Path) -> Result<bool, StorageBackendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn remove_file(&self, _path: &Path) -> Result<RemoveFileResponse, StorageBackendError> {
+        todo!() // TODO COR-87
     }
 }

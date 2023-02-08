@@ -32,6 +32,7 @@ use self::models::{
     OpenResponse,
     ReaddirResponse,
     RemoveDirResponse,
+    RemoveFileResponse,
     StorageBackendError,
 };
 
@@ -47,6 +48,8 @@ pub trait StorageBackend {
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError>;
     fn create_dir(&self, path: &Path) -> Result<CreateDirResponse, StorageBackendError>;
     fn remove_dir(&self, path: &Path) -> Result<RemoveDirResponse, StorageBackendError>;
+    fn path_exists(&self, path: &Path) -> Result<bool, StorageBackendError>;
+    fn remove_file(&self, path: &Path) -> Result<RemoveFileResponse, StorageBackendError>;
 }
 
 pub trait StorageBackendFactory {

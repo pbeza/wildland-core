@@ -141,6 +141,8 @@ pub trait DfsFrontend {
     fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
 
+    fn remove_file(&mut self, path: String) -> Result<(), DfsFrontendError>;
+
     fn create_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
 
     /// Succeeds if the directory exists and is empty
