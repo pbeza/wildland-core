@@ -350,11 +350,11 @@ mod ffi_binding {
         //
         // DFS Frontend
         //
-        fn readdir(
+        fn read_dir(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
         ) -> Result<Vec<String>, DfsFrontendError>;
-        fn getattr(
+        fn metadata(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
         ) -> Result<Stat, DfsFrontendError>;
@@ -365,6 +365,10 @@ mod ffi_binding {
         fn close(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             file_handle: &FileHandle,
+        ) -> Result<VoidType, DfsFrontendError>;
+        fn remove_file(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            path: String,
         ) -> Result<VoidType, DfsFrontendError>;
         fn create_dir(
             self: &Arc<Mutex<dyn DfsFrontend>>,

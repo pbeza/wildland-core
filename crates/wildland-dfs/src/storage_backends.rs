@@ -121,6 +121,14 @@ pub enum RemoveDirResponse {
     DirNotEmpty,
     NotFound,
     NotADirectory,
+    RootRemovalNotAllowed,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum RemoveFileResponse {
+    Removed,
+    NotFound,
+    NotAFile,
 }
 
 /// Error represents scenario when data could not be retrieved from the StorageBackend, e.g. some
@@ -130,11 +138,13 @@ pub enum RemoveDirResponse {
 /// All logical errors, e.g. trying opening directory, should be reflected in the inner type, like OpenResponse.
 /// Those variants are hidden inside Ok value because they should not trigger retrying operation.
 pub trait StorageBackend {
-    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError>;
-    fn getattr(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError>;
+    fn read_dir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError>;
+    fn metadata(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError>;
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError>;
     fn create_dir(&self, path: &Path) -> Result<CreateDirResponse, StorageBackendError>;
     fn remove_dir(&self, path: &Path) -> Result<RemoveDirResponse, StorageBackendError>;
+    fn path_exists(&self, path: &Path) -> Result<bool, StorageBackendError>;
+    fn remove_file(&self, path: &Path) -> Result<RemoveFileResponse, StorageBackendError>;
 }
 
 pub trait StorageBackendFactory {

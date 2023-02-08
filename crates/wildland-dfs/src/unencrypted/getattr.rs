@@ -32,7 +32,7 @@ pub fn getattr(
     let nodes = get_related_nodes(dfs_front, input_exposed_path)?;
 
     let mut stats: Vec<(&NodeDescriptor, Stat)> =
-        fetch_data_from_containers(&nodes, dfs_front, |backend, path| backend.getattr(path))
+        fetch_data_from_containers(&nodes, dfs_front, |backend, path| backend.metadata(path))
             .filter_map(|(node, opt_result)| match opt_result {
                 GetattrResponse::Found(stat) => Some((node, stat)),
                 GetattrResponse::NotFound => None,

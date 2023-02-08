@@ -6,10 +6,12 @@ use itertools::Itertools;
 use wildland_corex::dfs::interface::DfsFrontendError;
 use wildland_corex::{ResolvedPath, Storage};
 
-use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
+use super::node_descriptor::{NodeDescriptor, NodeStorages};
+use super::UnencryptedDfs;
 use crate::storage_backends::{StorageBackend, StorageBackendError};
 
 pub type BackendOp<T> = fn(Rc<dyn StorageBackend>, path: &Path) -> Result<T, StorageBackendError>;
+/// Ignores virtual nodes
 pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
     nodes: &'a [NodeDescriptor],
     dfs_front: &'b mut UnencryptedDfs,
@@ -27,14 +29,14 @@ pub fn execute_container_operation<T: Debug>(
     node_storages: &NodeStorages,
     backend_op: BackendOp<T>,
 ) -> Option<T> {
-    let backends = dfs_front.get_backends(&node_storages.storages);
+    let backends = dfs_front.get_backends(node_storages.storages());
 
     let backend_ops =
-        backends.map(|backend| backend_op(backend, &node_storages.path_within_storage));
+        backends.map(|backend| backend_op(backend, node_storages.path_within_storage()));
 
     // TODO WILX-362
     execute_backend_op_with_policy(
-        &node_storages.storages,
+        node_storages.storages(),
         backend_ops,
         ExecutionPolicy::SequentiallyToFirstSuccess,
     )
