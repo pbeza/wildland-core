@@ -66,7 +66,9 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
 
     std::fs::create_dir(tmpdir.join("C1")).unwrap();
     std::fs::create_dir(tmpdir.join("C1/dir")).unwrap();
+    std::fs::create_dir(tmpdir.join("C1/dir/next_dir")).unwrap();
     std::fs::File::create(tmpdir.join("C1/dir/c1_file")).unwrap();
+    std::fs::File::create(tmpdir.join("C1/dir/c1_file_2")).unwrap();
 
     std::fs::create_dir(tmpdir.join("C2")).unwrap();
     std::fs::File::create(tmpdir.join("C2/c2_file")).unwrap();
@@ -90,6 +92,9 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     //
     // Then data is accessible via DFS
     //
+    dfs.remove_file("/some/path/dir/c1_file_2".to_owned())
+        .unwrap();
+
     let entries: HashSet<String> = dfs
         .read_dir("/some/path/dir".to_string())
         .unwrap()
@@ -98,6 +103,7 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     assert_eq!(
         entries,
         HashSet::from([
+            "/some/path/dir/next_dir".to_owned(),
             "/some/path/dir/c2_file".to_owned(),
             "/some/path/dir/c1_file".to_owned()
         ])
@@ -127,6 +133,11 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     assert_eq!(read_buf, vec![2, 3, 4]);
 
     dfs.close(&file).unwrap();
+
+    dfs.create_dir("/some/path/dir/next_dir/new_dir".into())
+        .unwrap();
+    dfs.remove_dir("/some/path/dir/next_dir/new_dir".into())
+        .unwrap();
 
     //
     // And when one container is unmounted
