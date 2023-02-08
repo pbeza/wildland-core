@@ -158,6 +158,10 @@ impl CargoLib {
 ///         log_file_path: PathBuf::from("cargo_lib_log"),
 ///         log_file_rotate_directory: PathBuf::from(".".to_owned()),
 ///         log_file_enabled: true,
+///         #[cfg(any(target_os = "macos", target_os = "ios"))]
+///         oslog_category: None,
+///         #[cfg(any(target_os = "macos", target_os = "ios"))]
+///         oslog_subsystem: None,
 ///     },
 ///     fsa_config: FoundationStorageApiConfig {
 ///         evs_url: "some_url".to_owned(),

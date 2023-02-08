@@ -401,6 +401,10 @@ mod tests {
                     log_file_path: PathBuf::from("cargo_lib_log"),
                     log_file_rotate_directory: PathBuf::from("."),
                     log_file_enabled: true,
+                    #[cfg(any(target_os = "macos", target_os = "ios"))]
+                    oslog_category: None,
+                    #[cfg(any(target_os = "macos", target_os = "ios"))]
+                    oslog_subsystem: None,
                 }
             }
         )
@@ -430,6 +434,10 @@ mod tests {
                     log_file_path: LoggerConfig::default().log_file_path,
                     log_file_rotate_directory: LoggerConfig::default().log_file_rotate_directory,
                     log_file_enabled: false,
+                    #[cfg(any(target_os = "macos", target_os = "ios"))]
+                    oslog_category: None,
+                    #[cfg(any(target_os = "macos", target_os = "ios"))]
+                    oslog_subsystem: None,
                 }
             }
         )
