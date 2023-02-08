@@ -17,7 +17,7 @@
 
 use std::path::{Path, PathBuf};
 
-use super::NodeDescriptor;
+use super::node_descriptor::NodeDescriptor;
 
 pub mod uuid_in_dir;
 

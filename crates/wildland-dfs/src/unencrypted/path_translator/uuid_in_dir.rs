@@ -53,7 +53,7 @@ impl PathConflictResolver for UuidInDirTranslator {
                 {
                     // then append uuid to avoid conflict
                     let exposed_path = abs_path.join(node.storages().map_or(PathBuf::new(), |s| {
-                        PathBuf::from_str(s.uuid.to_string().as_str()).unwrap()
+                        PathBuf::from_str(s.uuid().to_string().as_str()).unwrap()
                     }));
                     (*node, exposed_path)
                 } else {
@@ -92,8 +92,8 @@ mod unit_tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
+    use crate::unencrypted::node_descriptor::NodeStorages;
     use crate::unencrypted::tests::new_mufs_storage;
-    use crate::unencrypted::NodeStorages;
 
     #[test]
     fn test_pop_uuid_from_path() {
@@ -110,11 +110,7 @@ mod unit_tests {
         let translator = UuidInDirTranslator::new();
 
         let node = NodeDescriptor::Physical {
-            storages: NodeStorages {
-                storages: vec![mufs_storage],
-                path_within_storage: "/file".into(),
-                uuid: Uuid::from_u128(1),
-            },
+            storages: NodeStorages::new(vec![mufs_storage], "/file".into(), Uuid::from_u128(1)),
             absolute_path: "/file".into(),
         };
         let nodes = vec![&node];
@@ -131,19 +127,11 @@ mod unit_tests {
         let translator = UuidInDirTranslator::new();
 
         let node1 = NodeDescriptor::Physical {
-            storages: NodeStorages {
-                storages: vec![storage1],
-                path_within_storage: "/file".into(),
-                uuid: Uuid::from_u128(1),
-            },
+            storages: NodeStorages::new(vec![storage1], "/file".into(), Uuid::from_u128(1)),
             absolute_path: "/file".into(),
         };
         let node2 = NodeDescriptor::Physical {
-            storages: NodeStorages {
-                storages: vec![storage2],
-                path_within_storage: "/file".into(),
-                uuid: Uuid::from_u128(2),
-            },
+            storages: NodeStorages::new(vec![storage2], "/file".into(), Uuid::from_u128(2)),
             absolute_path: "/file".into(),
         };
         let nodes = vec![&node1, &node2];
@@ -165,11 +153,7 @@ mod unit_tests {
         let translator = UuidInDirTranslator::new();
 
         let node1 = NodeDescriptor::Physical {
-            storages: NodeStorages {
-                storages: vec![storage1],
-                path_within_storage: "/a".into(),
-                uuid: Uuid::from_u128(1),
-            },
+            storages: NodeStorages::new(vec![storage1], "/a".into(), Uuid::from_u128(1)),
             absolute_path: "/a".into(),
         };
         let node2 = NodeDescriptor::Virtual {

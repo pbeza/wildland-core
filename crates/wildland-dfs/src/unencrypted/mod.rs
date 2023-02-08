@@ -17,6 +17,7 @@
 
 mod create_remove_dir;
 mod getattr;
+mod node_descriptor;
 mod path_translator;
 mod readdir;
 #[cfg(test)]
@@ -25,13 +26,14 @@ mod utils;
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::path::{Component, Path, PathBuf};
+use std::path::Path;
 use std::rc::Rc;
 
 use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, FileHandle, Stat};
 use wildland_corex::{PathResolver, Storage};
 
+use self::node_descriptor::NodeDescriptor;
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{execute_container_operation, fetch_data_from_containers, get_related_nodes};
@@ -46,92 +48,6 @@ use crate::storage_backends::{
     StorageBackendFactory,
 };
 use crate::unencrypted::utils::find_node_matching_requested_path;
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum NodeDescriptor {
-    Physical {
-        storages: NodeStorages,
-        absolute_path: PathBuf,
-    },
-    Virtual {
-        absolute_path: PathBuf,
-    },
-}
-
-impl NodeDescriptor {
-    pub fn abs_path(&self) -> &Path {
-        match self {
-            NodeDescriptor::Physical { absolute_path, .. }
-            | NodeDescriptor::Virtual { absolute_path } => absolute_path,
-        }
-    }
-
-    pub fn is_physical(&self) -> bool {
-        match self {
-            NodeDescriptor::Virtual { .. } => false,
-            NodeDescriptor::Physical { .. } => true,
-        }
-    }
-
-    pub fn is_virtual(&self) -> bool {
-        !self.is_physical()
-    }
-
-    pub fn storages(&self) -> Option<&NodeStorages> {
-        match self {
-            NodeDescriptor::Physical { storages, .. } => Some(storages),
-            NodeDescriptor::Virtual { .. } => None,
-        }
-    }
-
-    pub fn parent(&self) -> Option<Self> {
-        match self {
-            NodeDescriptor::Physical {
-                absolute_path,
-                storages: node_storages,
-            } => match node_storages.path_within_storage.components().last()? {
-                Component::Normal(_) => Some(Self::Physical {
-                    storages: NodeStorages {
-                        storages: node_storages.storages.clone(),
-                        path_within_storage: node_storages
-                            .path_within_storage
-                            .parent()
-                            .map(|p| p.into())?,
-                        uuid: node_storages.uuid,
-                    },
-                    absolute_path: absolute_path.parent().map(|p| p.into())?,
-                }),
-                _ => None,
-            },
-            NodeDescriptor::Virtual { absolute_path } => {
-                absolute_path.parent().map(|p| Self::Virtual {
-                    absolute_path: p.into(),
-                })
-            }
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct NodeStorages {
-    storages: Vec<Storage>,
-    path_within_storage: PathBuf,
-    uuid: Uuid,
-}
-
-impl NodeStorages {
-    pub fn new(storages: Vec<Storage>, path_within_storage: PathBuf, uuid: Uuid) -> Self {
-        Self {
-            storages,
-            path_within_storage,
-            uuid,
-        }
-    }
-
-    pub fn path_within_storage(&self) -> &Path {
-        &self.path_within_storage
-    }
-}
 
 // TODO WILX-387 Current DFS implementation uses some kind of mapping paths into another ones in order to
 // avoid conflicts. There is always a probability that mapped path will be in conflict with some

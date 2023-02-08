@@ -114,3 +114,28 @@ fn test_remove_file_called_on_directory_path() {
     let stat = dfs.remove_file("/a/dir".to_string()).unwrap_err();
     assert_eq!(stat, DfsFrontendError::NotAFile)
 }
+
+#[rstest]
+fn test_remove_file_should_succeed() {
+    let mut path_resolver = MockPathResolver::new();
+    let storage = new_mufs_storage("/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/file")))
+        .times(1)
+        .returning(move |_path| {
+            Ok(HashSet::from([ResolvedPath::PathWithStorages {
+                path_within_storage: "/file".into(),
+                storages_id: Uuid::from_u128(1),
+                storages: vec![storage.clone()],
+            }]))
+        });
+
+    let path_resolver = Box::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_file("/file").unwrap();
+
+    dfs.remove_file("/a/file".to_string()).unwrap();
+}
