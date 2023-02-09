@@ -24,7 +24,7 @@ use crate::PathResolutionError;
 pub struct Stat {
     pub node_type: NodeType,
     /// size in bytes
-    pub size: u64,
+    pub size: usize,
     /// Some nodes, like virtual ones, may have time properties set to None
     pub access_time: Option<UnixTimestamp>,
     pub modification_time: Option<UnixTimestamp>,
@@ -37,7 +37,7 @@ impl Stat {
         self.node_type
     }
 
-    pub fn size(&self) -> u64 {
+    pub fn size(&self) -> usize {
         self.size
     }
 
@@ -93,12 +93,14 @@ pub enum DfsFrontendError {
     NotADirectory,
     #[error("Path does not exist")]
     NoSuchPath,
-    #[error(transparent)]
-    PathResolutionError(#[from] PathResolutionError),
-    #[error("DFS Error: {0}")]
-    Generic(String),
     #[error("This file handle has been already closed")]
     FileAlreadyClosed,
+    #[error("Seek cannot be performed")]
+    SeekError,
+    #[error("Concurrent issue detected")]
+    ConcurrentIssue,
+    #[error(transparent)]
+    PathResolutionError(#[from] PathResolutionError),
     #[error("Path already exists")]
     PathAlreadyExists,
     #[error("Parent of the provided path does not exist")]
@@ -109,6 +111,8 @@ pub enum DfsFrontendError {
     ReadOnlyPath,
     #[error("Directory is not empty")]
     DirNotEmpty,
+    #[error("DFS Error: {0}")]
+    Generic(String),
 }
 
 impl From<std::io::Error> for DfsFrontendError {
@@ -146,11 +150,11 @@ pub trait DfsFrontend {
     fn seek_from_current(
         &mut self,
         file: &FileHandle,
-        pos_from_current: i64,
+        pos_from_current: isize,
     ) -> Result<usize, DfsFrontendError>;
     fn seek_from_end(
         &mut self,
         file: &FileHandle,
-        pos_from_end: i64,
+        pos_from_end: usize,
     ) -> Result<usize, DfsFrontendError>;
 }

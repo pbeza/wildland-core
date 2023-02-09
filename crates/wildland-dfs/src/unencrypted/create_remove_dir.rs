@@ -22,7 +22,7 @@ use wildland_corex::dfs::interface::DfsFrontendError;
 
 use super::utils::{execute_container_operation, get_related_nodes};
 use super::{NodeDescriptor, UnencryptedDfs};
-use crate::storage_backends::{CreateDirResponse, RemoveDirResponse};
+use crate::storage_backends::models::{CreateDirResponse, RemoveDirResponse};
 
 pub fn create_dir(
     dfs: &mut UnencryptedDfs,
