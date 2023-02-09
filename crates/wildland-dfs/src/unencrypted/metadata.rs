@@ -21,9 +21,9 @@ use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat};
 
 use super::utils::*;
 use super::{NodeDescriptor, UnencryptedDfs};
-use crate::storage_backends::models::GetattrResponse;
+use crate::storage_backends::models::MetadataResponse;
 
-pub fn getattr(
+pub fn metadata(
     dfs_front: &mut UnencryptedDfs,
     input_exposed_path: String,
 ) -> Result<Stat, DfsFrontendError> {
@@ -32,12 +32,12 @@ pub fn getattr(
     let nodes = get_related_nodes(dfs_front, input_exposed_path)?;
 
     let mut stats: Vec<(&NodeDescriptor, Stat)> =
-        fetch_data_from_containers(&nodes, dfs_front, |backend, path| backend.getattr(path))
+        fetch_data_from_containers(&nodes, dfs_front, |backend, path| backend.metadata(path))
             .collect::<Result<Vec<_>, DfsFrontendError>>()?
             .into_iter()
             .filter_map(|(node, opt_result)| match opt_result {
-                GetattrResponse::Found(stat) => Some((node, stat)),
-                GetattrResponse::NotFound => None,
+                MetadataResponse::Found(stat) => Some((node, stat)),
+                MetadataResponse::NotFound => None,
             })
             .chain(nodes.iter().filter_map(|node| {
                 if node.is_virtual() {

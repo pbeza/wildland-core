@@ -129,9 +129,9 @@ pub trait DfsFrontend {
     /// # Errors:
     /// - `NotADirectory` - for paths that don't represent directories
     /// - `NoSuchPath` - requested path does not exist
-    fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
-
-    fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
+    ///
+    fn read_dir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
+    fn metadata(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
 
     /// Opens a file.
     ///
@@ -140,6 +140,8 @@ pub trait DfsFrontend {
     /// Returns an error in case of file absence.
     fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
+
+    fn remove_file(&mut self, path: String) -> Result<(), DfsFrontendError>;
 
     fn create_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
 

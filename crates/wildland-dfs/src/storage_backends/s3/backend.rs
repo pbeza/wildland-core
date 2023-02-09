@@ -5,9 +5,10 @@ use super::client::S3Client;
 use super::descriptor::S3Descriptor;
 use super::error::S3Error;
 use crate::storage_backends::models::{
-    GetattrResponse,
+    MetadataResponse,
     OpenResponse,
-    ReaddirResponse,
+    ReadDirResponse,
+    RemoveFileResponse,
     StorageBackendError,
 };
 use crate::storage_backends::StorageBackend;
@@ -27,27 +28,30 @@ impl S3Backend {
 }
 
 impl StorageBackend for S3Backend {
-    fn readdir(&self, path_within_storage: &Path) -> Result<ReaddirResponse, StorageBackendError> {
+    fn read_dir(&self, path_within_storage: &Path) -> Result<ReadDirResponse, StorageBackendError> {
         match self
             .client
             .list_files(path_within_storage, &self.bucket_name)
         {
             // TODO COR-86 handle NoSuchPath and NotADirectory in different way
-            Ok(vec) => Ok(ReaddirResponse::Entries(vec)),
-            Err(S3Error::NotFound) => Ok(ReaddirResponse::NotADirectory),
+            Ok(vec) => Ok(ReadDirResponse::Entries(vec)),
+            Err(S3Error::NotFound) => Ok(ReadDirResponse::NotADirectory),
             Err(err @ S3Error::ETagMistmach) => Err(StorageBackendError::Generic(err.into())),
             Err(err @ S3Error::NoSuchBucket) => Err(StorageBackendError::Generic(err.into())),
             Err(err @ S3Error::Generic(_)) => Err(StorageBackendError::Generic(err.into())),
         }
     }
 
-    fn getattr(&self, path_within_storage: &Path) -> Result<GetattrResponse, StorageBackendError> {
+    fn metadata(
+        &self,
+        path_within_storage: &Path,
+    ) -> Result<MetadataResponse, StorageBackendError> {
         match self
             .client
             .get_object_attributes(path_within_storage, &self.bucket_name)
         {
-            Ok(v) => Ok(GetattrResponse::Found(v.stat)),
-            Err(S3Error::NotFound) => Ok(GetattrResponse::NotFound),
+            Ok(v) => Ok(MetadataResponse::Found(v.stat)),
+            Err(S3Error::NotFound) => Ok(MetadataResponse::NotFound),
             Err(err @ S3Error::ETagMistmach) => Err(StorageBackendError::Generic(err.into())),
             Err(err @ S3Error::NoSuchBucket) => Err(StorageBackendError::Generic(err.into())),
             Err(err @ S3Error::Generic(_)) => Err(StorageBackendError::Generic(err.into())),
@@ -82,5 +86,13 @@ impl StorageBackend for S3Backend {
         _path: &Path,
     ) -> Result<crate::storage_backends::RemoveDirResponse, StorageBackendError> {
         todo!() // TODO COR-70
+    }
+
+    fn path_exists(&self, _path: &Path) -> Result<bool, StorageBackendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn remove_file(&self, _path: &Path) -> Result<RemoveFileResponse, StorageBackendError> {
+        todo!() // TODO COR-87
     }
 }
