@@ -33,7 +33,7 @@ impl UuidInDirTranslator {
 }
 
 impl PathConflictResolver for UuidInDirTranslator {
-    // Caller must provide all nodes that may collide with each other in context of operation (like `readdir`).
+    // Caller must provide all nodes that may collide with each other in context of operation (like `read_dir`).
     // PathTranslator is not able to retrieve this data, cause PathResolver has no information about files in
     // containers' storages.
     fn solve_conflicts<'a>(

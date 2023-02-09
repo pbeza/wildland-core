@@ -27,9 +27,9 @@ use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::storage_backends::models::{
     CloseError,
     CreateDirResponse,
-    GetattrResponse,
+    MetadataResponse,
     OpenResponse,
-    ReaddirResponse,
+    ReadDirResponse,
     RemoveDirResponse,
     RemoveFileResponse,
     SeekFrom,
@@ -52,19 +52,19 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for LocalFilesystemStorage {
-    fn read_dir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
+    fn read_dir(&self, path: &Path) -> Result<ReadDirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
         let file_type = match std::fs::metadata(&path) {
             Ok(metadata) => metadata.file_type(),
-            Err(_) => return Ok(ReaddirResponse::NoSuchPath),
+            Err(_) => return Ok(ReadDirResponse::NoSuchPath),
         };
 
         if !file_type.is_dir() {
-            Ok(ReaddirResponse::NotADirectory)
+            Ok(ReadDirResponse::NotADirectory)
         } else {
-            Ok(ReaddirResponse::Entries(
+            Ok(ReadDirResponse::Entries(
                 fs::read_dir(path)?
                     .map(|entry_result| {
                         Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
@@ -74,17 +74,17 @@ impl StorageBackend for LocalFilesystemStorage {
         }
     }
 
-    fn metadata(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError> {
+    fn metadata(&self, path: &Path) -> Result<MetadataResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
         if !path.exists() {
-            return Ok(GetattrResponse::NotFound);
+            return Ok(MetadataResponse::NotFound);
         }
 
         Ok(fs::metadata(path).map(|metadata| {
             let file_type = metadata.file_type();
-            GetattrResponse::Found(Stat {
+            MetadataResponse::Found(Stat {
                 node_type: if file_type.is_file() {
                     NodeType::File
                 } else if file_type.is_dir() {
@@ -273,7 +273,7 @@ mod tests {
 
         assert_eq!(
             files,
-            ReaddirResponse::Entries(vec![PathBuf::from_str("/file1").unwrap()])
+            ReadDirResponse::Entries(vec![PathBuf::from_str("/file1").unwrap()])
         );
     }
     #[test]
@@ -298,7 +298,7 @@ mod tests {
 
         assert_eq!(
             files,
-            ReaddirResponse::Entries(vec![PathBuf::from_str("/dir/file1").unwrap()])
+            ReadDirResponse::Entries(vec![PathBuf::from_str("/dir/file1").unwrap()])
         );
     }
 }

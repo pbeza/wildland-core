@@ -34,9 +34,9 @@ use wildland_corex::{MockPathResolver, Storage};
 use crate::storage_backends::models::{
     CloseError,
     CreateDirResponse,
-    GetattrResponse,
+    MetadataResponse,
     OpenResponse,
-    ReaddirResponse,
+    ReadDirResponse,
     RemoveDirResponse,
     RemoveFileResponse,
     SeekFrom,
@@ -94,19 +94,19 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for Mufs {
-    fn read_dir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
+    fn read_dir(&self, path: &Path) -> Result<ReadDirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
         let file_type = match self.fs.metadata(&path) {
             Ok(metadata) => metadata.file_type(),
-            Err(_) => return Ok(ReaddirResponse::NoSuchPath),
+            Err(_) => return Ok(ReadDirResponse::NoSuchPath),
         };
 
         if !file_type.is_dir() {
-            return Ok(ReaddirResponse::NotADirectory);
+            return Ok(ReadDirResponse::NotADirectory);
         }
 
-        Ok(ReaddirResponse::Entries(
+        Ok(ReadDirResponse::Entries(
             self.fs
                 .read_dir(path)?
                 .map(|entry| {
@@ -116,9 +116,9 @@ impl StorageBackend for Mufs {
         ))
     }
 
-    fn metadata(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError> {
+    fn metadata(&self, path: &Path) -> Result<MetadataResponse, StorageBackendError> {
         let relative_path = strip_root(path);
-        Ok(GetattrResponse::Found(
+        Ok(MetadataResponse::Found(
             self.fs
                 .metadata(self.base_dir.join(relative_path))
                 .map(|metadata| {

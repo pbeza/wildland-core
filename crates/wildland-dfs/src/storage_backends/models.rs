@@ -64,14 +64,14 @@ impl OpenResponse {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum ReaddirResponse {
+pub enum ReadDirResponse {
     Entries(Vec<PathBuf>),
     NoSuchPath,
     NotADirectory,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum GetattrResponse {
+pub enum MetadataResponse {
     Found(Stat),
     NotFound,
 }

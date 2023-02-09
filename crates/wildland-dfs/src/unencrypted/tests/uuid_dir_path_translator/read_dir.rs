@@ -520,7 +520,7 @@ fn test_dir_colliding_with_virtual_node() {
 }
 
 #[rstest]
-fn test_readdir_on_file() {
+fn test_read_dir_on_file() {
     let mut path_resolver = MockPathResolver::new();
 
     // each container has its own subfolder
@@ -562,7 +562,7 @@ fn test_readdir_on_file() {
 }
 
 #[rstest]
-fn test_readdir_on_virtual_node_only() {
+fn test_read_dir_on_virtual_node_only() {
     let mut path_resolver = MockPathResolver::new();
 
     path_resolver

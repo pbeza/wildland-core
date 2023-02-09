@@ -29,7 +29,7 @@ use wildland_corex::{MockPathResolver, ResolvedPath};
 use crate::unencrypted::tests::{dfs_with_fs, get_unix_time_of_file, new_mufs_storage, MufsAttrs};
 
 #[rstest]
-fn test_getattr_of_nonexistent_path() {
+fn test_metadata_of_nonexistent_path() {
     let mut path_resolver = MockPathResolver::new();
 
     path_resolver
@@ -46,7 +46,7 @@ fn test_getattr_of_nonexistent_path() {
 }
 
 #[rstest]
-fn test_getattr_of_file_in_container_root() {
+fn test_metadata_of_file_in_container_root() {
     let mut path_resolver = MockPathResolver::new();
     let mufs_storage = new_mufs_storage("/");
 
@@ -90,7 +90,7 @@ fn test_getattr_of_file_in_container_root() {
 }
 
 #[rstest]
-fn test_getattr_of_dir_in_container_root() {
+fn test_metadata_of_dir_in_container_root() {
     let mut path_resolver = MockPathResolver::new();
     let mufs_storage = new_mufs_storage("/");
 
@@ -134,7 +134,7 @@ fn test_getattr_of_dir_in_container_root() {
 }
 
 #[rstest]
-fn test_getattr_of_virtual_dir() {
+fn test_metadata_of_virtual_dir() {
     let mut path_resolver = MockPathResolver::new();
 
     path_resolver
@@ -164,7 +164,7 @@ fn test_getattr_of_virtual_dir() {
 }
 
 #[rstest]
-fn test_getattr_of_conflicting_path_using_container_uuid() {
+fn test_metadata_of_conflicting_path_using_container_uuid() {
     let mut path_resolver = MockPathResolver::new();
 
     // each container has its own subfolder
@@ -223,7 +223,7 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
         }
     );
 
-    // getattr of aggregating dir
+    // metadata of aggregating dir
     let stat = dfs.metadata("/a/b/file_or_dir".to_string()).unwrap();
     assert_eq!(
         stat,
