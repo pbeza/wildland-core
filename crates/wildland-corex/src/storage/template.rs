@@ -54,6 +54,10 @@ pub enum StorageTemplateError {
     TemplateEngineErr(String),
 }
 
+/// Storage Templates provide some general information about storage location. Their only purpose is to be
+/// filled with the container's parameters during container creation and to generate Storage Manifest
+/// (in opposition to a template it points to the storage location assigned to the particular container).
+///
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct StorageTemplate {
     name: Option<String>,

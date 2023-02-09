@@ -21,22 +21,22 @@ pub trait CatLib {
         data: Vec<u8>,
     ) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>>;
 
-    /// Return [`Forest`] object by Forest UUID.
+    /// Return [`crate::Forest`] object by Forest UUID.
     fn get_forest(&self, uuid: &Uuid) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>>;
 
-    /// Return [`Forest`] owned by specified `owner`.
+    /// Return [`crate::Forest`] owned by specified `owner`.
     fn find_forest(&self, owner: &Identity) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>>;
 
-    /// Return [`Container`] object by Container UUID.
+    /// Return [`crate::Container`] object by Container UUID.
     fn get_container(&self, uuid: &Uuid) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>>;
 
-    /// Return [`Storage`]s that were created using given `template_id` UUID.
+    /// Return [`crate::Storage`]s that were created using given `template_id` UUID.
     fn find_storages_with_template(
         &self,
         template_id: &Uuid,
     ) -> CatlibResult<Vec<Arc<Mutex<dyn StorageManifest>>>>;
 
-    /// Return [`Container`]s that were created using given `template_id` UUID.
+    /// Return [`crate::Container`]s that were created using given `template_id` UUID.
     fn find_containers_with_template(
         &self,
         template_id: &Uuid,
