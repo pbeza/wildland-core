@@ -29,7 +29,7 @@ use wildland_corex::{MockPathResolver, ResolvedPath};
 use crate::unencrypted::tests::{dfs_with_fs, get_unix_time_of_file, new_mufs_storage, MufsAttrs};
 
 #[rstest]
-fn test_getattr_of_nonexistent_path() {
+fn test_metadata_of_nonexistent_path() {
     let mut path_resolver = MockPathResolver::new();
 
     path_resolver
@@ -41,12 +41,12 @@ fn test_getattr_of_nonexistent_path() {
     let path_resolver = Box::new(path_resolver);
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
-    let stat = dfs.getattr("/a/file".to_string()).unwrap_err();
+    let stat = dfs.metadata("/a/file".to_string()).unwrap_err();
     assert_eq!(stat, DfsFrontendError::NoSuchPath)
 }
 
 #[rstest]
-fn test_getattr_of_file_in_container_root() {
+fn test_metadata_of_file_in_container_root() {
     let mut path_resolver = MockPathResolver::new();
     let mufs_storage = new_mufs_storage("/");
 
@@ -76,7 +76,7 @@ fn test_getattr_of_file_in_container_root() {
         size,
     } = get_unix_time_of_file("/file", &fs);
 
-    let stat = dfs.getattr("/file".to_string()).unwrap();
+    let stat = dfs.metadata("/file".to_string()).unwrap();
     assert_eq!(
         stat,
         Stat {
@@ -90,7 +90,7 @@ fn test_getattr_of_file_in_container_root() {
 }
 
 #[rstest]
-fn test_getattr_of_dir_in_container_root() {
+fn test_metadata_of_dir_in_container_root() {
     let mut path_resolver = MockPathResolver::new();
     let mufs_storage = new_mufs_storage("/");
 
@@ -120,7 +120,7 @@ fn test_getattr_of_dir_in_container_root() {
         size,
     } = get_unix_time_of_file("/dir", &fs);
 
-    let stat = dfs.getattr("/dir".to_string()).unwrap();
+    let stat = dfs.metadata("/dir".to_string()).unwrap();
     assert_eq!(
         stat,
         Stat {
@@ -134,7 +134,7 @@ fn test_getattr_of_dir_in_container_root() {
 }
 
 #[rstest]
-fn test_getattr_of_virtual_dir() {
+fn test_metadata_of_virtual_dir() {
     let mut path_resolver = MockPathResolver::new();
 
     path_resolver
@@ -150,7 +150,7 @@ fn test_getattr_of_virtual_dir() {
     let path_resolver = Box::new(path_resolver);
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
-    let stat = dfs.getattr("/virtual_dir".to_string()).unwrap();
+    let stat = dfs.metadata("/virtual_dir".to_string()).unwrap();
     assert_eq!(
         stat,
         Stat {
@@ -164,7 +164,7 @@ fn test_getattr_of_virtual_dir() {
 }
 
 #[rstest]
-fn test_getattr_of_conflicting_path_using_container_uuid() {
+fn test_metadata_of_conflicting_path_using_container_uuid() {
     let mut path_resolver = MockPathResolver::new();
 
     // each container has its own subfolder
@@ -204,7 +204,7 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
     fs.create_dir("/storage2/file_or_dir").unwrap();
 
     let stat = dfs
-        .getattr("/a/b/file_or_dir/00000000-0000-0000-0000-000000000001".to_string())
+        .metadata("/a/b/file_or_dir/00000000-0000-0000-0000-000000000001".to_string())
         .unwrap();
     let MufsAttrs {
         access_time,
@@ -223,8 +223,8 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
         }
     );
 
-    // getattr of aggregating dir
-    let stat = dfs.getattr("/a/b/file_or_dir".to_string()).unwrap();
+    // metadata of aggregating dir
+    let stat = dfs.metadata("/a/b/file_or_dir".to_string()).unwrap();
     assert_eq!(
         stat,
         Stat {
@@ -239,7 +239,7 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
     // Directory /a/b/file_or_dir from storage2 can be accessed by appending path with its uuid.
     // It is hard to tell whether it is a bug or a feature, bit if it is a bug it is not trivial to fix.
     let stat = dfs
-        .getattr("/a/b/file_or_dir/00000000-0000-0000-0000-000000000002".to_string())
+        .metadata("/a/b/file_or_dir/00000000-0000-0000-0000-000000000002".to_string())
         .unwrap();
     let MufsAttrs {
         access_time,
@@ -290,7 +290,7 @@ fn test_virtual_path_colliding_with_file() {
     fs.create_file("/storage1/b").unwrap();
 
     // /a/b should be a dir
-    let stat = dfs.getattr("/a/b/".to_string()).unwrap();
+    let stat = dfs.metadata("/a/b/".to_string()).unwrap();
     assert_eq!(
         stat,
         Stat {
@@ -304,7 +304,7 @@ fn test_virtual_path_colliding_with_file() {
 
     // file /b from container claiming /a should be represented with appended container uuid to avoid collision
     let stat = dfs
-        .getattr("/a/b/00000000-0000-0000-0000-000000000001".to_string())
+        .metadata("/a/b/00000000-0000-0000-0000-000000000001".to_string())
         .unwrap();
     let MufsAttrs {
         access_time,
@@ -355,7 +355,7 @@ fn test_virtual_path_colliding_with_dir() {
     fs.create_dir("/storage1/b").unwrap();
 
     // /a/b should be a dir
-    let stat = dfs.getattr("/a/b/".to_string()).unwrap();
+    let stat = dfs.metadata("/a/b/".to_string()).unwrap();
     assert_eq!(
         stat,
         Stat {
@@ -369,7 +369,7 @@ fn test_virtual_path_colliding_with_dir() {
 
     // file /b from container claiming /a should be represented with appended container uuid to avoid collision
     let stat = dfs
-        .getattr("/a/b/00000000-0000-0000-0000-000000000001".to_string())
+        .metadata("/a/b/00000000-0000-0000-0000-000000000001".to_string())
         .unwrap();
     let MufsAttrs {
         access_time,
