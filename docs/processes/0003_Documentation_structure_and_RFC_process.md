@@ -1,9 +1,5 @@
 # Documentation structure and RFC process
 
-````text
-Acceptance in progress
-````
-
 ## Glossary
 
 RFC - Request for Comments
