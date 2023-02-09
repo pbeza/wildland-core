@@ -240,6 +240,8 @@ impl DfsFrontend for UnencryptedDfs {
 
         let mut descriptors: Vec<(&NodeDescriptor, OpenResponse)> =
             fetch_data_from_containers(&nodes, self, |backend, path| backend.open(path))
+                .collect::<Result<Vec<_>, DfsFrontendError>>()?
+                .into_iter()
                 .filter(|(_node, response)| !matches!(response, OpenResponse::NotFound))
                 .collect();
 
