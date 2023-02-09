@@ -32,6 +32,7 @@ impl StorageBackend for S3Backend {
             .client
             .list_files(path_within_storage, &self.bucket_name)
         {
+            // TODO COR-86 handle NoSuchPath and NotADirectory in different way
             Ok(vec) => Ok(ReaddirResponse::Entries(vec)),
             Err(S3Error::NotFound) => Ok(ReaddirResponse::NotADirectory),
             Err(err @ S3Error::ETagMistmach) => Err(StorageBackendError::Generic(err.into())),

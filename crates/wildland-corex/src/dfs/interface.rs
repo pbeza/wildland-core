@@ -121,10 +121,16 @@ impl From<std::io::Error> for DfsFrontendError {
     }
 }
 
-/// Interface that DFS should expose towards frontends
+/// Interface that DFS exposes towards filesystem-like frontend providers
 pub trait DfsFrontend {
-    // Error probably will be eventually shown to a user as a text
+    /// Returns vector of entries found under the provided path.
+    /// It may merge entries from multiple containers.
+    ///
+    /// # Errors:
+    /// - `NotADirectory` - for paths that don't represent directories
+    /// - `NoSuchPath` - requested path does not exist
     fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
+
     fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
 
     /// Opens a file.
