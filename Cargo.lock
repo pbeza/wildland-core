@@ -519,9 +519,9 @@ dependencies = [
 
 [[package]]
 name = "cfg-expr"
-version = "0.12.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bbc13bf6290a6b202cc3efb36f7ec2b739a80634215630c8053a313edf6abef"
+checksum = "a35b255461940a32985c627ce82900867c61db1659764d3675ea81963f72a4c6"
 dependencies = [
  "smallvec 1.10.0",
 ]
@@ -2349,20 +2349,19 @@ dependencies = [
 
 [[package]]
 name = "rusty-bind"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0633584f0e0803628460391cff6222303b79ac8923f1d7c7a2d0a3b612d0943a"
+checksum = "4441542376f04ea921090c60d3a2192f3b1a72e5d5379a3be85ada3ba39aa48a"
 dependencies = [
  "quote",
- "rusty-bind-parser",
  "syn",
 ]
 
 [[package]]
 name = "rusty-bind-build"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e784aa5dcb7411e06daa93a40e04c28dd84ea9cea9ce784771d65aaaacbc00a3"
+checksum = "dc9d177cc1cfde5ec9417067db2a379f9e46413a0d6bbadefe3deb593b0fd2c3"
 dependencies = [
  "anyhow",
  "cfg-expr",
@@ -2372,9 +2371,9 @@ dependencies = [
 
 [[package]]
 name = "rusty-bind-parser"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5da16a7204cc6aa7e1f8a9ef32525c251e119d81728c9e671963faea58647533"
+checksum = "ac7b36f37026ba06e2b547446961dd6194aaae849f9672ad7491264157a66f09"
 dependencies = [
  "anyhow",
  "cfg-expr",
@@ -2500,9 +2499,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.92"
+version = "1.0.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7434af0dc1cbd59268aa98b4c22c131c0584d2232f6fb166efb993e2832e896a"
+checksum = "cad406b69c91885b5107daf2c29572f6c8cdb3c66826821e286c533490c0bc76"
 dependencies = [
  "itoa",
  "ryu",
