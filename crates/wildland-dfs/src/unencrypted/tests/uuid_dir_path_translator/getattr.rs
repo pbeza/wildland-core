@@ -84,7 +84,7 @@ fn test_getattr_of_file_in_container_root() {
             access_time,
             modification_time,
             change_time,
-            size
+            size: size as _
         }
     )
 }
@@ -128,7 +128,7 @@ fn test_getattr_of_dir_in_container_root() {
             access_time,
             modification_time,
             change_time,
-            size
+            size: size as _
         }
     )
 }
@@ -219,7 +219,7 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
             access_time,
             modification_time,
             change_time,
-            size
+            size: size as _
         }
     );
 
@@ -254,7 +254,7 @@ fn test_getattr_of_conflicting_path_using_container_uuid() {
             access_time,
             modification_time,
             change_time,
-            size
+            size: size as _
         }
     );
 }
@@ -319,7 +319,7 @@ fn test_virtual_path_colliding_with_file() {
             access_time,
             modification_time,
             change_time,
-            size
+            size: size as _
         }
     )
 }
@@ -384,7 +384,7 @@ fn test_virtual_path_colliding_with_dir() {
             access_time,
             modification_time,
             change_time,
-            size
+            size: size as _
         }
     )
 }

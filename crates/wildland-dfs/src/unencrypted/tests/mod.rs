@@ -31,17 +31,17 @@ use rsfs::{DirEntry, FileType, GenFS, Metadata, OpenOptions};
 use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat, UnixTimestamp};
 use wildland_corex::{MockPathResolver, Storage};
 
-use crate::storage_backends::{
+use crate::storage_backends::models::{
     CloseError,
     CreateDirResponse,
     GetattrResponse,
     OpenResponse,
-    OpenedFileDescriptor,
     ReaddirResponse,
     RemoveDirResponse,
     SeekFrom,
     StorageBackendError,
 };
+use crate::storage_backends::OpenedFileDescriptor;
 use crate::unencrypted::{StorageBackend, StorageBackendFactory, UnencryptedDfs};
 
 struct MufsAttrs {
@@ -128,7 +128,7 @@ impl StorageBackend for Mufs {
                         } else {
                             NodeType::Other
                         },
-                        size: metadata.len(),
+                        size: metadata.len() as _,
                         access_time: metadata.accessed().ok().map(systime_to_unix),
                         modification_time: metadata.modified().ok().map(systime_to_unix),
                         // NOTE: Mufs does not support ctime, for tests sake let's use creation time
@@ -221,8 +221,8 @@ impl OpenedFileDescriptor for MufsOpenedFile {
         Ok(self.inner.write(buf)?)
     }
 
-    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError> {
-        Ok(self.inner.seek(seek_from.to_std())?)
+    fn seek(&mut self, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
+        Ok(self.inner.seek(seek_from.to_std())? as _)
     }
 }
 

@@ -51,7 +51,7 @@ impl StorageBackendFactory for S3BackendFactory {
         );
 
         let region = Region::new(region);
-        let client = Box::new(WildlandS3Client::new(self.rt.clone(), credentials, region));
+        let client = Rc::new(WildlandS3Client::new(self.rt.clone(), credentials, region));
 
         Ok(Rc::new(S3Backend::new(client, bucket_name)))
     }
