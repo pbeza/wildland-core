@@ -55,7 +55,12 @@ impl StorageBackend for LocalFilesystemStorage {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
-        if !path.is_dir() {
+        let file_type = match std::fs::metadata(&path) {
+            Ok(metadata) => metadata.file_type(),
+            Err(_) => return Ok(ReaddirResponse::NoSuchPath),
+        };
+
+        if !file_type.is_dir() {
             Ok(ReaddirResponse::NotADirectory)
         } else {
             Ok(ReaddirResponse::Entries(

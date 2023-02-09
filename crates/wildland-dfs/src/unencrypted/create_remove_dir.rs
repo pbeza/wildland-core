@@ -38,7 +38,6 @@ pub fn create_dir(
                 execute_container_operation(dfs, &storages, |backend, path| {
                     backend.create_dir(path)
                 })
-                .ok_or(DfsFrontendError::StorageNotResponsive)
                 .and_then(|resp| match resp {
                     CreateDirResponse::Created => Ok(()),
                     CreateDirResponse::ParentDoesNotExist => {
@@ -69,7 +68,6 @@ pub fn remove_dir(
                 execute_container_operation(dfs, &storages, |backend, path| {
                     backend.remove_dir(path)
                 })
-                .ok_or(DfsFrontendError::StorageNotResponsive)
                 .and_then(|resp| match resp {
                     RemoveDirResponse::Removed => Ok(()),
                     RemoveDirResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
