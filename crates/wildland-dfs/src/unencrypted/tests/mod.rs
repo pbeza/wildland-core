@@ -96,7 +96,11 @@ impl StorageBackend for Mufs {
     fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
-        let file_type = self.fs.metadata(&path)?.file_type();
+        let file_type = match self.fs.metadata(&path) {
+            Ok(metadata) => metadata.file_type(),
+            Err(_) => return Ok(ReaddirResponse::NoSuchPath),
+        };
+
         if !file_type.is_dir() {
             return Ok(ReaddirResponse::NotADirectory);
         }

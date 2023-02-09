@@ -14,11 +14,13 @@ pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
     nodes: &'a [NodeDescriptor],
     dfs_front: &'b mut UnencryptedDfs,
     backend_op: BackendOp<T>,
-) -> impl Iterator<Item = (&'a NodeDescriptor, T)> + 'b {
+) -> impl Iterator<Item = Result<(&'a NodeDescriptor, T), DfsFrontendError>> + 'b {
     nodes.iter().filter_map(move |node| {
-        node.storages()
-            .and_then(|storages| execute_container_operation(dfs_front, storages, backend_op))
-            .map(|result| (node, result))
+        // virtual nodes are not processed
+        node.storages().map(|storages| {
+            execute_container_operation(dfs_front, storages, backend_op)
+                .map(|response| (node, response))
+        })
     })
 }
 
@@ -26,7 +28,7 @@ pub fn execute_container_operation<T: Debug>(
     dfs_front: &mut UnencryptedDfs,
     node_storages: &NodeStorages,
     backend_op: BackendOp<T>,
-) -> Option<T> {
+) -> Result<T, DfsFrontendError> {
     let backends = dfs_front.get_backends(&node_storages.storages);
 
     let backend_ops =
@@ -84,7 +86,7 @@ pub fn execute_backend_op_with_policy<T: std::fmt::Debug>(
     storages: &[Storage],
     ops: impl Iterator<Item = Result<T, StorageBackendError>>,
     policy: ExecutionPolicy,
-) -> Option<T> {
+) -> Result<T, DfsFrontendError> {
     match policy {
         ExecutionPolicy::SequentiallyToFirstSuccess => {
             ops.inspect(|result| {
@@ -97,15 +99,17 @@ pub fn execute_backend_op_with_policy<T: std::fmt::Debug>(
                 }
             })
             .find(Result::is_ok)
-            .map(Result::unwrap)
-            .or_else(|| {
-                // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                tracing::error!(
-                    "None of the backends for storages {:?} works",
-                    storages.iter().map(|s| s.backend_type())
-                );
-                None
-            })
+            .map_or_else(
+                || {
+                    // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
+                    tracing::error!(
+                        "None of the backends for storages {:?} works",
+                        storages.iter().map(|s| s.backend_type())
+                    );
+                    Err(DfsFrontendError::StorageNotResponsive)
+                },
+                |r| Ok(r.unwrap()),
+            )
         }
     }
 }

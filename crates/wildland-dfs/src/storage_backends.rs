@@ -99,6 +99,7 @@ impl OpenResponse {
 #[derive(Debug, PartialEq, Eq)]
 pub enum ReaddirResponse {
     Entries(Vec<PathBuf>),
+    NoSuchPath,
     NotADirectory,
 }
 

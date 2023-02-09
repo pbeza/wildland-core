@@ -18,7 +18,7 @@
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use itertools::{Either, Itertools};
+use itertools::Itertools;
 use uuid::Uuid;
 use wildland_corex::dfs::interface::DfsFrontendError;
 use wildland_corex::{ResolvedPath, Storage};
@@ -36,10 +36,22 @@ pub fn readdir(
 
     let nodes = resolved_paths
         .into_iter()
-        .filter_map(|resolved_path| {
-            map_resolved_path_into_node_descriptor(dfs_front, &requested_path, resolved_path)
+        .map(|resolved_path| {
+            map_resolved_path_into_node_descriptors(dfs_front, &requested_path, resolved_path)
         })
-        .flatten()
+        .collect_vec();
+
+    if nodes
+        .iter()
+        .all(|result| matches!(result, Err(DfsFrontendError::NoSuchPath)))
+    {
+        return Err(DfsFrontendError::NoSuchPath);
+    };
+
+    let nodes = nodes
+        .into_iter()
+        .filter_map(|result| if let Ok(r) = result { Some(r) } else { None })
+        .flat_map(|v| v.into_iter())
         .collect_vec();
 
     Ok(dfs_front
@@ -67,27 +79,27 @@ fn filter_exposed_paths(requested_path: &Path, exposed_path: PathBuf) -> Option<
     }
 }
 
-fn map_resolved_path_into_node_descriptor<'a>(
+fn map_resolved_path_into_node_descriptors(
     dfs_front: &mut UnencryptedDfs,
-    requested_path: &'a Path,
+    requested_path: &Path,
     resolved_path: ResolvedPath,
-) -> Option<impl Iterator<Item = NodeDescriptor> + 'a> {
+) -> Result<Vec<NodeDescriptor>, DfsFrontendError> {
     match resolved_path {
-        ResolvedPath::VirtualPath(virtual_path) => Some(Either::Left(std::iter::once(
-            map_virtual_path_to_node_descriptor(requested_path, &virtual_path),
-        ))),
+        ResolvedPath::VirtualPath(virtual_path) => Ok(vec![map_virtual_path_to_node_descriptor(
+            requested_path,
+            &virtual_path,
+        )]),
         ResolvedPath::PathWithStorages {
             path_within_storage,
             storages_id,
             storages,
-        } => map_physical_path_to_node_descriptor(
+        } => map_physical_path_to_node_descriptors(
             dfs_front,
             requested_path,
             storages_id,
             storages,
             path_within_storage,
-        )
-        .map(Either::Right),
+        ),
     }
 }
 
@@ -108,13 +120,13 @@ fn map_virtual_path_to_node_descriptor(
     NodeDescriptor::Virtual { absolute_path }
 }
 
-fn map_physical_path_to_node_descriptor<'a>(
+fn map_physical_path_to_node_descriptors(
     dfs_front: &mut UnencryptedDfs,
-    requested_path: &'a Path,
+    requested_path: &Path,
     storages_id: Uuid,
     node_storages: Vec<Storage>,
     path_within_storage: PathBuf,
-) -> Option<impl Iterator<Item = NodeDescriptor> + 'a> {
+) -> Result<Vec<NodeDescriptor>, DfsFrontendError> {
     let backends = dfs_front.get_backends(&node_storages);
 
     let operations_on_backends = backends.map(|backend| {
@@ -123,8 +135,9 @@ fn map_physical_path_to_node_descriptor<'a>(
             backend
                 .readdir(&path_within_storage)
                 .map(|response| match response {
-                    ReaddirResponse::Entries(resulting_paths) => {
-                        Either::Left(resulting_paths.into_iter().map({
+                    ReaddirResponse::Entries(resulting_paths) => Ok(resulting_paths
+                        .into_iter()
+                        .map({
                             let node_storages = node_storages.clone();
                             move |entry_path| NodeDescriptor::Physical {
                                 storages: NodeStorages::new(
@@ -134,18 +147,17 @@ fn map_physical_path_to_node_descriptor<'a>(
                                 ),
                                 absolute_path: requested_path.join(entry_path.file_name().unwrap()),
                             }
-                        }))
-                    }
-                    ReaddirResponse::NotADirectory => {
-                        Either::Right(std::iter::once(NodeDescriptor::Physical {
-                            storages: NodeStorages::new(
-                                node_storages.clone(),
-                                path_within_storage.clone(),
-                                storages_id,
-                            ),
-                            absolute_path: PathBuf::from(requested_path),
-                        }))
-                    }
+                        })
+                        .collect_vec()),
+                    ReaddirResponse::NotADirectory => Ok(vec![NodeDescriptor::Physical {
+                        storages: NodeStorages::new(
+                            node_storages.clone(),
+                            path_within_storage.clone(),
+                            storages_id,
+                        ),
+                        absolute_path: PathBuf::from(requested_path),
+                    }]),
+                    ReaddirResponse::NoSuchPath => Err(DfsFrontendError::NoSuchPath),
                 })
         }
     });
@@ -156,7 +168,7 @@ fn map_physical_path_to_node_descriptor<'a>(
         // TODO WILX-362 getting first should be a temporary policy, maybe we should ping backends to check if any of them
         // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
         ExecutionPolicy::SequentiallyToFirstSuccess,
-    )
+    )?
 }
 
 #[cfg(test)]
