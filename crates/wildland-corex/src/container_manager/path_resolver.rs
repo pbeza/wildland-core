@@ -73,5 +73,5 @@ pub trait PathResolver {
     /// ]
     ///
     ///
-    fn resolve(&self, path: &Path) -> Result<HashSet<ResolvedPath>, PathResolutionError>; // TODO it can return iterator
+    fn resolve(&self, path: &Path) -> Result<HashSet<ResolvedPath>, PathResolutionError>;
 }
