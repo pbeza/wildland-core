@@ -19,7 +19,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use mockall::predicate;
-use rsfs::GenFS;
+use rsfs::{GenFS, Metadata};
 use rstest::rstest;
 use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError};
@@ -119,7 +119,7 @@ fn test_create_dir_conflicting_with_virtual_node() {
 }
 
 #[rstest]
-fn test_create_dir_in_ambiguous_location() {
+fn test_create_dir_when_path_resolver_returned_many_possible_paths() {
     let mut path_resolver = MockPathResolver::new();
 
     // each container has its own subfolder
@@ -150,7 +150,52 @@ fn test_create_dir_in_ambiguous_location() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_dir("/storage1").unwrap();
+    fs.create_dir("/storage2").unwrap();
+
+    dfs.create_dir("/a/b/new_dir".to_string()).unwrap();
+    assert!(fs.metadata("/storage2/new_dir").unwrap().is_dir());
+}
+
+#[rstest]
+fn test_create_dir_in_ambiguous_path_should_fail() {
+    let mut path_resolver = MockPathResolver::new();
+
+    // each container has its own subfolder
+    let storage1 = new_mufs_storage("/storage1/");
+    let storage2 = new_mufs_storage("/storage2/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/b/new_dir")))
+        .times(1)
+        .returning({
+            let storage1 = storage1;
+            let storage2 = storage2;
+            move |_path| {
+                Ok(HashSet::from([
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/b/new_dir".into(), // returned by the container claiming path `/a/`
+                        storages_id: Uuid::from_u128(1),
+                        storages: vec![storage1.clone()],
+                    },
+                    ResolvedPath::PathWithStorages {
+                        path_within_storage: "/new_dir".into(), // returned by the container claiming path `/a/b/`
+                        storages_id: Uuid::from_u128(2),
+                        storages: vec![storage2.clone()],
+                    },
+                ]))
+            }
+        });
+
+    let path_resolver = Box::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_dir("/storage1").unwrap();
+    fs.create_dir("/storage1/b").unwrap();
+    fs.create_dir("/storage2").unwrap();
 
     let err = dfs.create_dir("/a/b/new_dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::ReadOnlyPath);
@@ -271,7 +316,7 @@ fn test_remove_empty_dir() {
 }
 
 #[rstest]
-fn test_remove_virtual_dir() {
+fn test_remove_root_from_container() {
     let mut path_resolver = MockPathResolver::new();
     let mufs_storage = new_mufs_storage("/");
 
@@ -291,6 +336,29 @@ fn test_remove_virtual_dir() {
                     },
                     ResolvedPath::VirtualPath(PathBuf::from("/virtual_dir/end_of_path")),
                 ]))
+            }
+        });
+
+    let path_resolver = Box::new(path_resolver);
+    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+
+    let err = dfs.remove_dir("/virtual_dir".to_string()).unwrap_err();
+    assert_eq!(err, DfsFrontendError::ReadOnlyPath);
+}
+
+#[rstest]
+fn test_remove_virtual_dir() {
+    let mut path_resolver = MockPathResolver::new();
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/virtual_dir")))
+        .times(1)
+        .returning({
+            move |_path| {
+                Ok(HashSet::from([ResolvedPath::VirtualPath(PathBuf::from(
+                    "/virtual_dir/end_of_path",
+                ))]))
             }
         });
 
@@ -333,7 +401,13 @@ fn test_remove_dir_in_conflicting_path() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_dir("/storage1").unwrap();
+    fs.create_dir("/storage1/b/").unwrap();
+    fs.create_dir("/storage1/b/dir").unwrap();
+    fs.create_dir("/storage2").unwrap();
+    fs.create_dir("/storage2/dir").unwrap();
 
     let err = dfs.remove_dir("/a/b/dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::ReadOnlyPath);

@@ -34,10 +34,11 @@ use wildland_corex::{MockPathResolver, Storage};
 use crate::storage_backends::models::{
     CloseError,
     CreateDirResponse,
-    GetattrResponse,
+    MetadataResponse,
     OpenResponse,
-    ReaddirResponse,
+    ReadDirResponse,
     RemoveDirResponse,
+    RemoveFileResponse,
     SeekFrom,
     StorageBackendError,
 };
@@ -93,19 +94,19 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for Mufs {
-    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
+    fn read_dir(&self, path: &Path) -> Result<ReadDirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
         let file_type = match self.fs.metadata(&path) {
             Ok(metadata) => metadata.file_type(),
-            Err(_) => return Ok(ReaddirResponse::NoSuchPath),
+            Err(_) => return Ok(ReadDirResponse::NoSuchPath),
         };
 
         if !file_type.is_dir() {
-            return Ok(ReaddirResponse::NotADirectory);
+            return Ok(ReadDirResponse::NotADirectory);
         }
 
-        Ok(ReaddirResponse::Entries(
+        Ok(ReadDirResponse::Entries(
             self.fs
                 .read_dir(path)?
                 .map(|entry| {
@@ -115,9 +116,9 @@ impl StorageBackend for Mufs {
         ))
     }
 
-    fn getattr(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError> {
+    fn metadata(&self, path: &Path) -> Result<MetadataResponse, StorageBackendError> {
         let relative_path = strip_root(path);
-        Ok(GetattrResponse::Found(
+        Ok(MetadataResponse::Found(
             self.fs
                 .metadata(self.base_dir.join(relative_path))
                 .map(|metadata| {
@@ -175,6 +176,10 @@ impl StorageBackend for Mufs {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
+        if path == Path::new("/") {
+            return Ok(RemoveDirResponse::RootRemovalNotAllowed);
+        }
+
         if let Ok(metadata) = self.fs.metadata(&path) {
             let file_type = metadata.file_type();
             if !file_type.is_dir() {
@@ -191,6 +196,35 @@ impl StorageBackend for Mufs {
                 .map(|_| RemoveDirResponse::Removed)?)
         } else {
             Ok(RemoveDirResponse::NotFound)
+        }
+    }
+
+    fn path_exists(&self, path: &Path) -> Result<bool, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        Ok(self.fs.metadata(path).is_ok())
+    }
+
+    fn remove_file(&self, path: &Path) -> Result<RemoveFileResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        if let Ok(metadata) = self.fs.metadata(&path) {
+            let file_type = metadata.file_type();
+            if !file_type.is_file() {
+                return Ok(RemoveFileResponse::NotAFile);
+            }
+
+            match self.fs.remove_file(path) {
+                Ok(_) => Ok(RemoveFileResponse::Removed),
+                Err(e) => match e.kind() {
+                    std::io::ErrorKind::NotFound => Ok(RemoveFileResponse::NotFound),
+                    _ => Err(StorageBackendError::Generic(e.into())),
+                },
+            }
+        } else {
+            Ok(RemoveFileResponse::NotFound)
         }
     }
 }

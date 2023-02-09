@@ -27,10 +27,11 @@ use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::storage_backends::models::{
     CloseError,
     CreateDirResponse,
-    GetattrResponse,
+    MetadataResponse,
     OpenResponse,
-    ReaddirResponse,
+    ReadDirResponse,
     RemoveDirResponse,
+    RemoveFileResponse,
     SeekFrom,
     StorageBackendError,
 };
@@ -51,19 +52,19 @@ fn strip_root(path: &Path) -> &Path {
 }
 
 impl StorageBackend for LocalFilesystemStorage {
-    fn readdir(&self, path: &Path) -> Result<ReaddirResponse, StorageBackendError> {
+    fn read_dir(&self, path: &Path) -> Result<ReadDirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
         let file_type = match std::fs::metadata(&path) {
             Ok(metadata) => metadata.file_type(),
-            Err(_) => return Ok(ReaddirResponse::NoSuchPath),
+            Err(_) => return Ok(ReadDirResponse::NoSuchPath),
         };
 
         if !file_type.is_dir() {
-            Ok(ReaddirResponse::NotADirectory)
+            Ok(ReadDirResponse::NotADirectory)
         } else {
-            Ok(ReaddirResponse::Entries(
+            Ok(ReadDirResponse::Entries(
                 fs::read_dir(path)?
                     .map(|entry_result| {
                         Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
@@ -73,17 +74,17 @@ impl StorageBackend for LocalFilesystemStorage {
         }
     }
 
-    fn getattr(&self, path: &Path) -> Result<GetattrResponse, StorageBackendError> {
+    fn metadata(&self, path: &Path) -> Result<MetadataResponse, StorageBackendError> {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
         if !path.exists() {
-            return Ok(GetattrResponse::NotFound);
+            return Ok(MetadataResponse::NotFound);
         }
 
         Ok(fs::metadata(path).map(|metadata| {
             let file_type = metadata.file_type();
-            GetattrResponse::Found(Stat {
+            MetadataResponse::Found(Stat {
                 node_type: if file_type.is_file() {
                     NodeType::File
                 } else if file_type.is_dir() {
@@ -145,6 +146,10 @@ impl StorageBackend for LocalFilesystemStorage {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
+        if path == Path::new("/") {
+            return Ok(RemoveDirResponse::RootRemovalNotAllowed);
+        }
+
         if let Ok(metadata) = std::fs::metadata(&path) {
             let file_type = metadata.file_type();
             if !file_type.is_dir() {
@@ -158,6 +163,35 @@ impl StorageBackend for LocalFilesystemStorage {
             Ok(std::fs::remove_dir(&path).map(|_| RemoveDirResponse::Removed)?)
         } else {
             Ok(RemoveDirResponse::NotFound)
+        }
+    }
+
+    fn path_exists(&self, path: &Path) -> Result<bool, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        Ok(path.exists())
+    }
+
+    fn remove_file(&self, path: &Path) -> Result<RemoveFileResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        if let Ok(metadata) = std::fs::metadata(&path) {
+            let file_type = metadata.file_type();
+            if !file_type.is_file() {
+                return Ok(RemoveFileResponse::NotAFile);
+            }
+
+            match std::fs::remove_file(path) {
+                Ok(_) => Ok(RemoveFileResponse::Removed),
+                Err(e) => match e.kind() {
+                    std::io::ErrorKind::NotFound => Ok(RemoveFileResponse::NotFound),
+                    _ => Err(StorageBackendError::Generic(e.into())),
+                },
+            }
+        } else {
+            Ok(RemoveFileResponse::NotFound)
         }
     }
 }
@@ -235,11 +269,11 @@ mod tests {
         create_dir(tmpdir.path().join("books")).unwrap(); // container dir
         let _ = File::create(tmpdir.path().join("books/file1")).unwrap();
 
-        let files = backend.readdir(Path::new("/")).unwrap();
+        let files = backend.read_dir(Path::new("/")).unwrap();
 
         assert_eq!(
             files,
-            ReaddirResponse::Entries(vec![PathBuf::from_str("/file1").unwrap()])
+            ReadDirResponse::Entries(vec![PathBuf::from_str("/file1").unwrap()])
         );
     }
     #[test]
@@ -260,11 +294,11 @@ mod tests {
         create_dir(tmpdir.path().join("books").join("dir")).unwrap(); // container subdir
         let _ = File::create(tmpdir.path().join("books/dir/file1")).unwrap();
 
-        let files = backend.readdir(Path::new("/dir")).unwrap();
+        let files = backend.read_dir(Path::new("/dir")).unwrap();
 
         assert_eq!(
             files,
-            ReaddirResponse::Entries(vec![PathBuf::from_str("/dir/file1").unwrap()])
+            ReadDirResponse::Entries(vec![PathBuf::from_str("/dir/file1").unwrap()])
         );
     }
 }
