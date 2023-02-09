@@ -15,113 +15,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-mod close_on_drop_descriptor;
+mod descriptors;
+pub mod models;
 pub mod s3;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::rc::Rc;
 
-pub use close_on_drop_descriptor::CloseOnDropDescriptor;
-use wildland_corex::dfs::interface::{DfsFrontendError, Stat};
+pub use descriptors::CloseOnDropDescriptor;
 use wildland_corex::Storage;
 
-#[derive(thiserror::Error, Debug)]
-pub enum StorageBackendError {
-    #[error(transparent)]
-    Generic(#[from] anyhow::Error),
-}
-
-impl From<std::io::Error> for StorageBackendError {
-    fn from(e: std::io::Error) -> Self {
-        Self::Generic(e.into())
-    }
-}
-
-impl From<std::path::StripPrefixError> for StorageBackendError {
-    fn from(e: std::path::StripPrefixError) -> Self {
-        Self::Generic(e.into())
-    }
-}
-
-pub enum SeekFrom {
-    Start(u64),
-    End(i64),
-    Current(i64),
-}
-
-impl SeekFrom {
-    pub fn to_std(self) -> std::io::SeekFrom {
-        match self {
-            SeekFrom::Start(p) => std::io::SeekFrom::Start(p),
-            SeekFrom::End(p) => std::io::SeekFrom::End(p),
-            SeekFrom::Current(p) => std::io::SeekFrom::Current(p),
-        }
-    }
-}
-
-#[derive(thiserror::Error, Debug)]
-pub enum CloseError {
-    #[error("File has been already closed")]
-    FileAlreadyClosed,
-}
-
-/// FileDescriptor contains state of opened file and definition of how it is stored, therefore
-/// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
-/// on the backend's type) and e.g. seek operation may be implemented differently.
-pub trait OpenedFileDescriptor: std::fmt::Debug {
-    fn close(&self) -> Result<(), CloseError>;
-    /// Reads number of bytes specified by the `count` parameter and advances inner cursor of the
-    /// opened file.
-    ///
-    /// Returns vector of bytes which can have length smaller than requested.
-    fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
-
-    /// Writes bytes at the current cursor position and returns number of written bytes.
-    fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError>;
-
-    /// Changes inner cursor position.
-    fn seek(&mut self, seek_from: SeekFrom) -> Result<u64, DfsFrontendError>;
-}
-
-#[derive(Debug)]
-pub enum OpenResponse {
-    Found(CloseOnDropDescriptor),
-    NotAFile,
-    NotFound,
-}
-
-impl OpenResponse {
-    pub fn found<T: OpenedFileDescriptor + 'static>(descriptor: T) -> Self {
-        Self::Found(CloseOnDropDescriptor::new(Box::new(descriptor)))
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum ReaddirResponse {
-    Entries(Vec<PathBuf>),
-    NotADirectory,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum GetattrResponse {
-    Found(Stat),
-    NotFound,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum CreateDirResponse {
-    Created,
-    ParentDoesNotExist,
-    PathAlreadyExists,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum RemoveDirResponse {
-    Removed,
-    DirNotEmpty,
-    NotFound,
-    NotADirectory,
-}
+pub use self::descriptors::OpenedFileDescriptor;
+use self::models::{
+    CreateDirResponse,
+    GetattrResponse,
+    OpenResponse,
+    ReaddirResponse,
+    RemoveDirResponse,
+    StorageBackendError,
+};
 
 /// Error represents scenario when data could not be retrieved from the StorageBackend, e.g. some
 /// network error. This mean that operation can be called again later of data can still be successfully
