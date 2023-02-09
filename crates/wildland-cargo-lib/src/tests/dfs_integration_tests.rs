@@ -77,8 +77,8 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     let dfs = cargo_lib.dfs_api();
     let mut dfs = dfs.lock().unwrap();
 
-    let entries = dfs.readdir("/some/path/".to_string()).unwrap();
-    assert_eq!(entries, Vec::<String>::new());
+    let entries = dfs.readdir("/some/path/".to_string()).unwrap_err();
+    assert_eq!(entries, DfsFrontendError::NoSuchPath);
 
     //
     // When containers are mounted
