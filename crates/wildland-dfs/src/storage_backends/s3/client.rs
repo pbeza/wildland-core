@@ -20,6 +20,7 @@ use super::error::S3Error;
 use super::helpers::{execute_by_step, to_completed_part};
 use super::models::{ObjectAttributes, WriteResp};
 
+// S3 multipart upload limits
 const MINIMUM_PART_SIZE: usize = 5 * 1024 * 1024;
 const MAXIMUM_PART_SIZE: usize = 5 * 1024 * 1024 * 1024;
 

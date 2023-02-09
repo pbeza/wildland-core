@@ -43,7 +43,7 @@ impl From<S3Error> for DfsFrontendError {
 
 impl From<ListObjectsV2Error> for S3Error {
     fn from(value: ListObjectsV2Error) -> Self {
-        if value.code() == Some("PreconditionFailed") {
+        if let Some("PreconditionFailed") = value.code() {
             return Self::ETagMistmach;
         }
 
@@ -57,7 +57,7 @@ impl From<ListObjectsV2Error> for S3Error {
 
 impl From<HeadObjectError> for S3Error {
     fn from(value: HeadObjectError) -> Self {
-        if value.code() == Some("PreconditionFailed") {
+        if let Some("PreconditionFailed") = value.code() {
             return Self::ETagMistmach;
         }
 
@@ -71,7 +71,7 @@ impl From<HeadObjectError> for S3Error {
 
 impl From<GetObjectError> for S3Error {
     fn from(value: GetObjectError) -> Self {
-        if value.code() == Some("PreconditionFailed") {
+        if let Some("PreconditionFailed") = value.code() {
             return Self::ETagMistmach;
         }
 
@@ -86,7 +86,7 @@ impl From<GetObjectError> for S3Error {
 
 impl From<CreateMultipartUploadError> for S3Error {
     fn from(value: CreateMultipartUploadError) -> Self {
-        if value.code() == Some("PreconditionFailed") {
+        if let Some("PreconditionFailed") = value.code() {
             return Self::ETagMistmach;
         }
 
@@ -99,7 +99,7 @@ impl From<CreateMultipartUploadError> for S3Error {
 
 impl From<CompleteMultipartUploadError> for S3Error {
     fn from(value: CompleteMultipartUploadError) -> Self {
-        if value.code() == Some("PreconditionFailed") {
+        if let Some("PreconditionFailed") = value.code() {
             return Self::ETagMistmach;
         }
 
@@ -112,7 +112,7 @@ impl From<CompleteMultipartUploadError> for S3Error {
 
 impl From<UploadPartCopyError> for S3Error {
     fn from(value: UploadPartCopyError) -> Self {
-        if value.code() == Some("PreconditionFailed") {
+        if let Some("PreconditionFailed") = value.code() {
             return Self::ETagMistmach;
         }
 
@@ -125,7 +125,7 @@ impl From<UploadPartCopyError> for S3Error {
 
 impl From<UploadPartError> for S3Error {
     fn from(value: UploadPartError) -> Self {
-        if value.code() == Some("PreconditionFailed") {
+        if let Some("PreconditionFailed") = value.code() {
             return Self::ETagMistmach;
         }
 
