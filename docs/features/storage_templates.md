@@ -1,5 +1,9 @@
 # Storage Template
 
+Storage Templates provide some general information about storage location. Their only purpose is to be
+filled with the container's parameters during container creation and to generate Storage Manifest 
+(in opposition to a template it points to the storage location assigned to the particular container).
+
 ## Structure
 
 Storage Templates have the following structure:
@@ -28,7 +32,6 @@ Templates can be formatted with the following formats
 
 - JSON
 - YAML
-- TOML
 
 ## Examples
 
