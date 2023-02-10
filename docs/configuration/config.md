@@ -7,7 +7,7 @@ platform-agnostic client side or can be created as a rust structure.
 
 This describes the implementation that passes the configuration from the outside.
 Object passed, has to implement a set of getters described by the
-`CargoCfgProvider` trait in the [config.rs](../../crates/wildland-cargo-lib/src/api/config.rs) file.
+[`CargoCfgProvider`](https://docs.wildland.dev/docs/wildland/lld/doc/wildland_cargo_lib/api/config/trait.CargoCfgProvider.html) trait in the [config.rs](../../crates/wildland-cargo-lib/src/api/config.rs) file.
 
 This basic set of getters will allow the configuration to be translated into
 internal structure after being received.
