@@ -2,13 +2,13 @@
 
 ## Description
 
-LSS is a platform specific component that is only exposed from Wildland as a
-set of traits. That means each platform (os) have to have their own
+LSS is a platform-specific component that is only exposed from Wildland as a
+set of traits. That means each platform (os) has to have its own
 implementations that are then passed as an instance to wildland.
 
-LSS data is persistant for specific device.
+LSS data is persistent for a specific device.
 
-LSS is responsible for storing security oriented data, for example:
+LSS is responsible for storing security-oriented data, for example:
 
 - private keys (device, forest, master identity)
 - storage definitions

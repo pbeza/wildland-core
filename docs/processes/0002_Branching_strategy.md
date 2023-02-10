@@ -33,7 +33,7 @@ release, our goal in producing releases, is to provide a stable set of
 features that are accessible to end users, as well as maintaining a means by
 which we can conveniently and correctly provide patches for said releases.
 
-The branching strategy is a a soft-restricted version of the gitflow.
+The branching strategy is a soft-restricted version of the gitflow.
 
 When a release is planned, the next branch should be created (sprouted from the
 common development branch) with name based on semversion (e.g. v1.3.12).
@@ -50,15 +50,15 @@ main branch is treated as one and it can not get new features. Additionally, a
 release branch's origin cannot be moved after creation and features cannot be
 cherry-picked or merged afterward (no rebase or cherry-pick).
 
-After the release branch is created (the stabilisation branch), the
-stabilisation effort will proceed on that branch; however the development branch
+After the release branch is created (the stabilization branch), the
+stabilization effort will proceed on that branch; however the development branch
 can still be used for further development. That means, if the release deadline
-will be missed by a developers, stabilisation does not have to wait for the
+will be missed by a developers, stabilization does not have to wait for the
 feature development to release. That also means that no new features can't be
-committed to the released branch, only stabilisation patches and/or bug fixes
+committed to the released branch, only stabilization patches and/or bug fixes
 (which also have to be mirrored to development branch if applies)
 
-If Stabilisation branch is deemed stable, it can be merged to master. Squashing
+If stabilization branch is deemed stable, it can be merged to master. Squashing
 of the commits should not be required due to the fact that merges in the develop
 branch are already tidy and in proper formatting. Example of such format:
 
@@ -71,13 +71,13 @@ Feature WILX-000
 - ...
 ```
 
-After the merge, stabilistaion branch must be deleted.
+After the merge, stabilization branch must be deleted.
 
 ### Versioning
 
-Release branches are not supported long term. The reason releases are happening
+Release branches are not supported long-term. The reason releases are happening
 is to periodically provide user with stable and tested build artifacts, that are
-used by non-rust clients - i.e. c++, c#, or switft clients.
+used by non-rust clients - i.e. c++, c#, or swift clients.
 
 #### Master Branch
 
@@ -90,9 +90,9 @@ For example `v1.3.1`
 
 There are no tags on development branches.
 
-#### Stabilistaion Branches
+#### Stabilization Branches
 
-Branch must be created using the following format: `release/v0.0.0`
+A branch must be created using the following format: `release/v0.0.0`
 
 There are no tags on release branches.
 
