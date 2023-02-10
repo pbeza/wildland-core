@@ -101,7 +101,7 @@ impl StorageTemplate {
     /// Deserializes json-formatted content as a StorageTemplate.
     ///
     /// It expects the following structure:
-    /// ```
+    /// ```ignore
     /// {
     ///     "backend_type": "some type",
     ///     "template": {
@@ -141,7 +141,7 @@ impl StorageTemplate {
     /// Deserializes yaml-formatted content as a StorageTemplate.
     ///
     /// It expects the following structure:
-    /// ```
+    /// ```ignore
     /// backend_type: some type
     /// template:
     ///     ...template specific fields

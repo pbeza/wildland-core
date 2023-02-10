@@ -1,5 +1,5 @@
 #[cfg(test)]
-pub mod test {
+pub(crate) mod test {
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::rc::Rc;

@@ -101,7 +101,10 @@ All devices:
     /// # use wildland_cargo_lib::api::cargo_lib::create_cargo_lib;
     /// # use wildland_lfs::template::LocalFilesystemStorageTemplate;
     /// # use wildland_corex::StorageTemplate;
-    /// # use wildland_cargo_lib::utils::test::lss_stub;
+    /// # use wildland_corex::LocalSecureStorage;
+    /// # use std::cell::RefCell;
+    /// # use std::collections::HashMap;
+    /// # use wildland_corex::LssResult;
     ///
     /// let tmpdir = tempfile::tempdir().unwrap().into_path();
     ///
@@ -115,6 +118,55 @@ All devices:
     ///     "sc_url": "some_url"
     /// }"#;
     /// let cfg: CargoConfig = serde_json::from_str(config_str).unwrap();
+    ///
+    /// fn lss_stub() -> &'static dyn LocalSecureStorage {
+    ///     #[derive(Default)]
+    ///     struct LssStub {
+    ///         storage: RefCell<HashMap<String, String>>,
+    ///     }
+    ///
+    ///     impl LocalSecureStorage for LssStub {
+    ///         fn insert(&self, key: String, value: String) -> LssResult<Option<String>> {
+    ///             Ok(self.storage.borrow_mut().insert(key, value))
+    ///         }
+    ///
+    ///         fn get(&self, key: String) -> LssResult<Option<String>> {
+    ///             Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
+    ///         }
+    ///
+    ///         fn contains_key(&self, key: String) -> LssResult<bool> {
+    ///             Ok(self.storage.borrow().contains_key(&key))
+    ///         }
+    ///
+    ///         fn keys(&self) -> LssResult<Vec<String>> {
+    ///             Ok(self.storage.borrow().keys().cloned().collect())
+    ///         }
+    ///
+    ///         fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
+    ///             Ok(self
+    ///                 .storage
+    ///                 .borrow()
+    ///                 .keys()
+    ///                 .filter(|key| key.starts_with(&prefix))
+    ///                 .cloned()
+    ///                 .collect())
+    ///         }
+    ///
+    ///         fn remove(&self, key: String) -> LssResult<Option<String>> {
+    ///             Ok(self.storage.borrow_mut().remove(&key))
+    ///         }
+    ///
+    ///         fn len(&self) -> LssResult<usize> {
+    ///             Ok(self.storage.borrow().len())
+    ///         }
+    ///
+    ///         fn is_empty(&self) -> LssResult<bool> {
+    ///             Ok(self.storage.borrow().is_empty())
+    ///         }
+    ///     }
+
+    ///     Box::leak(Box::<LssStub>::default())
+    /// }
     ///
     /// let lss_stub = lss_stub();
     ///

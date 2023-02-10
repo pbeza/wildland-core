@@ -84,7 +84,11 @@ use forest::ForestEntity;
 use storage::StorageEntity;
 use uuid::Uuid;
 use wildland_corex::catlib_service::entities::{
-    ContainerManifest, ForestManifest, Identity, Signers, StorageManifest,
+    ContainerManifest,
+    ForestManifest,
+    Identity,
+    Signers,
+    StorageManifest,
 };
 use wildland_corex::catlib_service::interface::CatLib as ICatLib;
 
