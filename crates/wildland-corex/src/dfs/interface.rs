@@ -189,26 +189,27 @@ pub trait DfsFrontend {
     /// the requested number of bytes.
     fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
 
-    /// Writes whole buffer to a File.
+    /// Tries to write bytes from the buffer to a file and returns amount of actually written bytes
+    /// which can be different from buf length.
     fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError>;
 
     /// Seek to an offset, in bytes from the beginning of a file.
     fn seek_from_start(
         &mut self,
         file: &FileHandle,
-        pos_from_start: usize,
+        pos_from_start: u64,
     ) -> Result<usize, DfsFrontendError>;
     /// Seek to an offset, in bytes from the current cursor position of a file.
     fn seek_from_current(
         &mut self,
         file: &FileHandle,
-        pos_from_current: isize,
+        pos_from_current: i64,
     ) -> Result<usize, DfsFrontendError>;
     /// Seek to an offset, in bytes from the end of a file.
-    /// Negative argument means moving a cursor back.
+    /// Negative argument means moving a cursor back (std-like approach).
     fn seek_from_end(
         &mut self,
         file: &FileHandle,
-        pos_from_end: usize,
+        pos_from_end: i64,
     ) -> Result<usize, DfsFrontendError>;
 }

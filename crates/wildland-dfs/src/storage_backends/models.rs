@@ -7,9 +7,9 @@ use super::{CloseOnDropDescriptor, OpenedFileDescriptor};
 
 #[derive(Debug)]
 pub enum SeekFrom {
-    Start { position: usize },
-    End { remaining: usize },
-    Current { offset: isize },
+    Start { position: u64 },
+    End { remaining: i64 },
+    Current { offset: i64 },
 }
 
 impl SeekFrom {
