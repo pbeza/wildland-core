@@ -8,6 +8,7 @@
   - [Catlib](architecture/catlib.md)
   - [LSS](architecture/lss.md)
   - [User Creation](architecture/user_creation.md)
+  - [DFS - Data and Filesystem Provide](architecture/dfs.md)
 - [Development](development/about.md)
   - [cargo.toml formatting](development/cargo_toml_formatting.md)
 - [CI](ci/about.md)

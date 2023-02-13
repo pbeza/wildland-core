@@ -66,11 +66,11 @@ pub trait PathResolver {
     ///
     /// E.g. if container C1 claims path `/a/` and container C2 claims path `/a/b/` and container C3 claims
     /// path `/a/b/c/d` when PathResolver is asked about path `/a/b/c`, then three-element vector is returned:
-    /// [
+    /// `[
     ///     PathWithStorages { path: "/b/c/", storages: [all storages of C1]},
     ///     PathWithStorages { path: "/c/", storages: [all storages of C2]},
     ///     VirtualPath ( "/a/b/c/d" ),
-    /// ]
+    /// ]`
     ///
     ///
     fn resolve(&self, path: &Path) -> Result<HashSet<ResolvedPath>, PathResolutionError>;
