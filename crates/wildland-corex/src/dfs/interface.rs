@@ -147,7 +147,7 @@ pub trait DfsFrontend {
     /// - `NoSuchPath` - requested path does not exist
     fn metadata(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
 
-    /// Opens a file.
+    /// Opens a file. If file does not exist, it will not create one.
     ///
     /// Opening a file means initiating its state in DFS memory.
     ///

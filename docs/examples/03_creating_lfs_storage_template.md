@@ -14,7 +14,7 @@ because it is not sharable between multiple user's devices. It is useful for dev
 let yaml_content = "
     template:
         local_dir: /home/users/wildland_data
-        container_prefix: '{{ CONTAINER_NAME_PARAM }}_{{ CONTAINER_UUID_PARAM }}'
+        container_dir: '{{ CONTAINER_NAME }}'
     backend_type: LocalFilesystem
 ";
 
@@ -22,6 +22,12 @@ let mut lfs_template = StorageTemplate::from_yaml(yaml_content.as_bytes().to_vec
 
 lfs_template.set_name("random name".to_string()); // it is possible to give it a name
 ```
+
+It is convenient to use just `{{ CONTAINER_NAME }}` as a `container_dir`. Then, DFS driver for LFS will expect the
+existence of a directory named exactly as a created Container (container creation described [here](./04_create_and_mount_container.md))
+in the location pointed by the `local_dir` value.
+
+**DFS does not create a directory for a container** (it has to be created manually).
 
 On other platforms, for deserializing a `StorageTemplate`, one can use `storage_template_from_json`
 and `storage_template_from_yaml` global functions.

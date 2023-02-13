@@ -42,7 +42,7 @@ name: null
 uuid: 00000000-0000-0000-0000-0000000000001     # template uuid
 backend_type: ImaginaryStorage
 template:
-    container_prefix: '{{ CONTAINER_NAME }}'
+    container_dir: '{{ CONTAINER_NAME }}'
     user: '{{ OWNER }}'
     password: 'secret password'
     url: http://storage.com
@@ -66,7 +66,7 @@ name: null
 uuid: 00000000-0000-0000-0000-0000000000003 # Storage uuid
 backend_type: ImaginaryStorage
 data:
-    container_prefix: 'Movies'
+    container_dir: 'Movies'
     user: 'Quentin Tarantino'
     password: 'secret password'
     url: http://storage.com

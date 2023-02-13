@@ -180,7 +180,7 @@ All devices:
     ///
     /// let template = LocalFilesystemStorageTemplate {
     ///     local_dir: tmpdir.clone(),
-    ///     container_prefix: "{{ CONTAINER_NAME }}".to_owned(),
+    ///     container_dir: "{{ CONTAINER_NAME }}".to_owned(),
     /// };
     /// let container = user
     ///     .create_container(
@@ -406,7 +406,7 @@ mod tests {
                     "credential_id": "cred_id",
                     "credential_secret": "cred_secret",
                     "sc_url": "",
-                    "container_prefix": "{{ OWNER }}/{{ CONTAINER_NAME }}"
+                    "container_dir": "{{ OWNER }}/{{ CONTAINER_NAME }}"
                 }
             }
         );
