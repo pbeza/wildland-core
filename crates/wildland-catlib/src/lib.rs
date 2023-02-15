@@ -109,12 +109,9 @@ impl CatLib {
     pub fn new(redis_url: String, key_prefix: String) -> Self {
         let db = db::db_conn(redis_url.clone());
 
-        if db.is_err() {
-            // TODO COR-61: The app should not crash just because there's no connection to the DB
+        if let Some(err) = db.clone().err() {
             panic!(
-                "Could not connect to Redis Server. [{}] {:?}",
-                redis_url,
-                db.err().unwrap()
+                "Could not instantiate Redis backend connection pool for the given URL [{redis_url}]. {err:?}",
             );
         }
 
@@ -224,6 +221,17 @@ impl ICatLib for CatLib {
     #[tracing::instrument(level = "debug", skip_all)]
     fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>> {
         db::fetch_templates(&self.db)
+    }
+
+    /// Checks if connection to the backend database is valid
+    ///
+    /// Be warned that Redis implementation may return generic IO errors
+    /// instead of application-level errors.
+    /// see: https://github.com/redis-rs/redis-rs/issues/784
+    ///
+    #[tracing::instrument(level = "debug", skip_all)]
+    fn is_db_alive(&self) -> CatlibResult<bool> {
+        db::is_alive(&self.db)
     }
 }
 

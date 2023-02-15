@@ -47,4 +47,7 @@ pub trait CatLib {
 
     /// Fetche every StorageTemplate data from CatLib.
     fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>>;
+
+    /// Check if database backend is available
+    fn is_db_alive(&self) -> CatlibResult<bool>;
 }

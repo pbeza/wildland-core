@@ -22,5 +22,5 @@ pub(crate) fn redis_to_catlib_err(err: redis::RedisError) -> CatlibError {
 }
 
 pub(crate) fn r2d2_to_catlib_err(err: r2d2::Error) -> CatlibError {
-    CatlibError::Generic(format!("R2D2 error: {err}"))
+    CatlibError::Generic(format!("Catlib connection pool error: {err}"))
 }
