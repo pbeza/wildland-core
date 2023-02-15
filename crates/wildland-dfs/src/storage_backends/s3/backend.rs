@@ -117,10 +117,10 @@ impl StorageBackend for S3Backend {
         match self.read_dir(path)? {
             ReadDirResponse::Entries(children) if children.is_empty() => {
                 match self.client.remove_object(path, &self.bucket_name) {
-                    Ok(_) => Ok(RemoveDirResponse::Removed),
-                    Err(
-                        err @ (S3Error::NotFound | S3Error::ETagMistmach | S3Error::Generic(_)),
-                    ) => Err(StorageBackendError::Generic(err.into())),
+                    Ok(_) | Err(S3Error::NotFound) => Ok(RemoveDirResponse::Removed),
+                    Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
+                        Err(StorageBackendError::Generic(err.into()))
+                    }
                 }
             }
             ReadDirResponse::Entries(_) => Ok(RemoveDirResponse::DirNotEmpty),

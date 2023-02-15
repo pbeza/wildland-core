@@ -18,9 +18,9 @@ use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
 use super::connector::build_s3_client;
 use super::error::S3Error;
 use super::helpers::{
-    add_trailling_slash,
+    add_trailing_slash,
     execute_by_step,
-    remove_trailling_slash,
+    remove_trailing_slash,
     to_completed_part,
 };
 use super::models::{ObjectAttributes, WriteResp};
@@ -114,7 +114,7 @@ impl WildlandS3Client {
 impl S3Client for WildlandS3Client {
     #[tracing::instrument(err(Debug), level = "debug", skip_all)]
     fn list_files(&self, path: &Path, bucket_name: &str) -> Result<Vec<PathBuf>, S3Error> {
-        let object_key = add_trailling_slash(path);
+        let object_key = add_trailing_slash(path);
 
         let result = self.rt.block_on(async {
             self.client
@@ -132,7 +132,6 @@ impl S3Client for WildlandS3Client {
             .filter_map(|item| item.contents)
             .flatten()
             .filter_map(|object| object.key)
-            .filter(|key| key != &object_key)
             .filter(|key| {
                 key.strip_prefix(&object_key).map(|tail| tail.contains('/')) == Some(false)
             })
@@ -146,7 +145,7 @@ impl S3Client for WildlandS3Client {
         path: &Path,
         bucket_name: &str,
     ) -> Result<ObjectAttributes, S3Error> {
-        let path = remove_trailling_slash(path);
+        let path = remove_trailing_slash(path);
 
         let HeadObjectOutput {
             last_modified,
@@ -197,7 +196,7 @@ impl S3Client for WildlandS3Client {
         number_of_bytes: usize,
         etag: Option<String>,
     ) -> Result<Vec<u8>, S3Error> {
-        let path = remove_trailling_slash(path);
+        let path = remove_trailing_slash(path);
 
         let GetObjectOutput { body, .. } = self.rt.block_on(async {
             self.client
@@ -230,7 +229,7 @@ impl S3Client for WildlandS3Client {
         file_size: usize,
         etag: Option<String>,
     ) -> Result<WriteResp, S3Error> {
-        let path = remove_trailling_slash(path);
+        let path = remove_trailing_slash(path);
 
         let CreateMultipartUploadOutput { upload_id, key, .. } = self.rt.block_on(async {
             self.client
@@ -377,8 +376,9 @@ impl S3Client for WildlandS3Client {
         })
     }
 
+    #[tracing::instrument(err(Debug), level = "debug", skip_all)]
     fn create_dir(&self, path: &Path, bucket_name: &str) -> Result<(), S3Error> {
-        let path = remove_trailling_slash(path);
+        let path = remove_trailing_slash(path);
 
         self.rt.block_on(async {
             self.client
@@ -393,8 +393,9 @@ impl S3Client for WildlandS3Client {
         Ok(())
     }
 
+    #[tracing::instrument(err(Debug), level = "debug", skip_all)]
     fn remove_object(&self, path: &Path, bucket_name: &str) -> Result<(), S3Error> {
-        let path = remove_trailling_slash(path);
+        let path = remove_trailing_slash(path);
 
         self.rt.block_on(async {
             self.client

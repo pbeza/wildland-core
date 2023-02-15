@@ -27,14 +27,14 @@ where
     execute_by_step(begin + step, end, step, op)
 }
 
-pub fn remove_trailling_slash(path: &Path) -> String {
+pub fn remove_trailing_slash(path: &Path) -> String {
     let path = path.to_string_lossy().to_string();
     path.strip_suffix('/')
         .map(ToOwned::to_owned)
         .unwrap_or(path)
 }
 
-pub fn add_trailling_slash(path: &Path) -> String {
+pub fn add_trailing_slash(path: &Path) -> String {
     let path = path.to_string_lossy().to_string();
     if !path.ends_with('/') {
         format!("{path}/")
