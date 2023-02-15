@@ -47,7 +47,7 @@ RFC - Request for Comments
 
 * path: `docs/processes`
 * purpose: a place for all our processes. For example: commit message
-  formalization or this process.
+  formalization of this process.
 * used by: Dev Team
 
 ### RFCs
@@ -100,7 +100,7 @@ meeting, everyone agrees to wait for new information from superiors, etc.
 
 Each RFC has an assigned ordering number that is an always-increasing integer.
 In rare situations, there might be gaps between two integers.
-RFC ordering number is encoded by 4 digit (fixed length) decimal integer (values
+RFC ordering number is encoded by a 4-digit (fixed length) decimal integer (values
 from `0001` to `9999`). In the future, it might be extended by prefixing
 additional zeroes (`9999` becomes `09999`).
 
@@ -119,7 +119,7 @@ For example: `1234_database_scheme.md`.
 Format:
 `<RFC ordering number>_<Human readable name>.md`
 
-Each RFC should contain at least following sections in the format:
+Each RFC should contain at least the following sections in the format:
 
 * "Motivation" - explaining the reasoning behind the rfc (what does the rfc
   solves or why was it brought to the table)
@@ -127,7 +127,7 @@ Each RFC should contain at least following sections in the format:
   * work, packages, and tasks needed to implement RFC, rough estimates are also
     welcome,
   * breakage of contracts or features if any,
-  * any other action that is requried to properly implement the RFC,
+  * any other action that is required to properly implement the RFC,
 
 RFC Header Example:
 
@@ -163,8 +163,8 @@ reviewers.
 Each RFC must result in:
 
 * When accepted:
-  * If the team decide to implement a feature described in the RFC:
-    * Implementator should create tracking issue - he should include its id
+  * If the team decides to implement a feature described in the RFC:
+    * Implementor should create tracking issue - he should include its id
   * in `features/index.md` table.
     * Update in `architecture` - all components that were changed should be
       updated, so this RFC won't be needed to understand how, for example,
@@ -180,7 +180,7 @@ Each RFC must result in:
     * Update in `processes` - if RFCs category is `Process` - Update existing
       or create a new process.md and write a further description of how the
       process looks. In some cases, the author can selectively copy-paste it
-      from RFC; however, the author must be careful. Implementator should do
+      from RFC; however, the author must be careful. Implementor should do
       it in PR that has been merged.
 * If the deadline has been met, but no conclusion has been reached - RFC should
   be updated with the new deadline (sub-issues).

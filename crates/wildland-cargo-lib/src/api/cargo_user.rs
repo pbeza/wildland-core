@@ -92,7 +92,104 @@ All devices:
         self.forest.containers()
     }
 
-    /// Creates a new container within user's forest and return its handle
+    /// Creates a new container within user's forest and returns its handle
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// # use wildland_cargo_lib::api::CargoConfig;
+    /// # use wildland_cargo_lib::api::cargo_lib::create_cargo_lib;
+    /// # use wildland_lfs::template::LocalFilesystemStorageTemplate;
+    /// # use wildland_corex::StorageTemplate;
+    /// # use wildland_corex::LocalSecureStorage;
+    /// # use std::cell::RefCell;
+    /// # use std::collections::HashMap;
+    /// # use wildland_corex::LssResult;
+    ///
+    /// # let tmpdir = tempfile::tempdir().unwrap().into_path();
+    ///
+    /// # let config_str = r#"{
+    /// #     "log_level": "trace",
+    /// #     "log_use_ansi": false,
+    /// #     "log_file_enabled": true,
+    /// #     "log_file_path": "cargo_lib_log",
+    /// #     "log_file_rotate_directory": ".",
+    /// #     "evs_url": "some_url",
+    /// #     "sc_url": "some_url"
+    /// # }"#;
+    /// # let cfg: CargoConfig = serde_json::from_str(config_str).unwrap();
+    ///
+    /// # fn lss_stub() -> &'static dyn LocalSecureStorage {
+    /// #     #[derive(Default)]
+    /// #     struct LssStub {
+    /// #         storage: RefCell<HashMap<String, String>>,
+    /// #     }
+    ///
+    /// #     impl LocalSecureStorage for LssStub {
+    /// #         fn insert(&self, key: String, value: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.borrow_mut().insert(key, value))
+    /// #         }
+    ///
+    /// #         fn get(&self, key: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
+    /// #         }
+    ///
+    /// #         fn contains_key(&self, key: String) -> LssResult<bool> {
+    /// #             Ok(self.storage.borrow().contains_key(&key))
+    /// #         }
+    ///
+    /// #         fn keys(&self) -> LssResult<Vec<String>> {
+    /// #             Ok(self.storage.borrow().keys().cloned().collect())
+    /// #         }
+    ///
+    /// #         fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
+    /// #             Ok(self
+    /// #                 .storage
+    /// #                 .borrow()
+    /// #                 .keys()
+    /// #                 .filter(|key| key.starts_with(&prefix))
+    /// #                 .cloned()
+    /// #                 .collect())
+    /// #         }
+    ///
+    /// #         fn remove(&self, key: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.borrow_mut().remove(&key))
+    /// #         }
+    ///
+    /// #         fn len(&self) -> LssResult<usize> {
+    /// #             Ok(self.storage.borrow().len())
+    /// #         }
+    ///
+    /// #         fn is_empty(&self) -> LssResult<bool> {
+    /// #             Ok(self.storage.borrow().is_empty())
+    /// #         }
+    /// #     }
+
+    /// #     Box::leak(Box::<LssStub>::default())
+    /// # }
+    ///
+    /// # let lss_stub = lss_stub();
+    ///
+    /// # let cargo_lib = create_cargo_lib(lss_stub, cfg).unwrap();
+    /// # let cargo_lib = cargo_lib.lock().unwrap();
+    /// # let user_api = cargo_lib.user_api();
+    /// # let mnemonic = user_api.generate_mnemonic().unwrap();
+    /// # let user = user_api
+    /// #     .create_user_from_mnemonic(&mnemonic, "device_name".to_string())
+    /// #     .unwrap();
+    ///
+    /// let template = LocalFilesystemStorageTemplate {
+    ///     local_dir: tmpdir.clone(),
+    ///     container_dir: "{{ CONTAINER_NAME }}".to_owned(),
+    /// };
+    /// let container = user
+    ///     .create_container(
+    ///         "C1".to_owned(),
+    ///         &StorageTemplate::try_new("LocalFilesystem", &template).unwrap(),
+    ///         "/some/path/".to_owned(),
+    ///     )
+    ///     .unwrap();
+    /// ```
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_container(
         &self,
@@ -174,10 +271,14 @@ All devices:
             .is_free_storage_granted(&self.forest.forest_manifest())
     }
 
+    /// Mounts a container in Wildland local device state. After this operation container data
+    /// should be accessible via DFS API.
     pub fn mount(&self, container: &Container) -> Result<(), ContainerManagerError> {
         self.container_manager.mount(container)
     }
 
+    /// Unmounts a container from the Wildland local device state. After this operation container
+    /// data is not accessible anymore.
     pub fn unmount(&self, container: &Container) -> Result<(), ContainerManagerError> {
         self.container_manager.unmount(container)
     }
@@ -204,7 +305,7 @@ mod tests {
     use crate::utils::test::catlib_service;
 
     #[fixture]
-    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Forest) {
+    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Forest, mockito::Server) {
         let this_dev_name = "My device".to_string();
 
         let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
@@ -224,25 +325,29 @@ mod tests {
             .unwrap();
         let forest = Forest::new(forest);
 
+        let server = mockito::Server::new_with_port(0);
+
         let cargo_user = CargoUser::new(
             this_dev_name.clone(),
             vec![this_dev_name],
             forest.clone(),
             catlib_service.clone(),
             &FoundationStorageApiConfig {
-                evs_url: mockito::server_url(),
+                evs_url: server.url(),
                 sc_url: "".to_string(),
             },
             ContainerManager::default(),
         );
 
-        (cargo_user, catlib_service, forest)
+        (cargo_user, catlib_service, forest, server)
     }
 
     #[rstest]
-    fn test_requesting_free_tier_storage(setup: (CargoUser, CatLibService, Forest)) {
+    fn test_requesting_free_tier_storage(
+        setup: (CargoUser, CatLibService, Forest, mockito::Server),
+    ) {
         // given setup
-        let (mut cargo_user, catlib_service, forest) = setup;
+        let (mut cargo_user, catlib_service, forest, mut server) = setup;
 
         // when storage request is sent
         let session_uuid = "00000000-0000-0000-0000-000000000001";
@@ -251,7 +356,8 @@ mod tests {
                 "session_id": "{session_uuid}"
             }}"#
         );
-        let storage_req_mock_1 = mockito::mock("PUT", "/get_storage")
+        let storage_req_mock_1 = server
+            .mock("PUT", "/get_storage")
             .with_status(202)
             .with_body(session_id_response)
             .create();
@@ -261,7 +367,8 @@ mod tests {
             .unwrap();
 
         // and verification is performed
-        let verify_token_mock = mockito::mock("PUT", "/confirm_token")
+        let verify_token_mock = server
+            .mock("PUT", "/confirm_token")
             .match_body(Matcher::JsonString(format!(
                 r#"{{
                     "email": "test@wildland.io",
@@ -275,7 +382,8 @@ mod tests {
         let response_json_str = r#"{"id": "00000000-0000-0000-0000-000000000001", "credentialID": "cred_id", "credentialSecret": "cred_secret"}"#;
         let response_base64 = STANDARD.encode(response_json_str);
         let credentials_response = format!("{{ \"credentials\": \"{response_base64}\" }}");
-        let storage_req_mock_2 = mockito::mock("PUT", "/get_storage")
+        let storage_req_mock_2 = server
+            .mock("PUT", "/get_storage")
             .with_status(200)
             .with_body(credentials_response)
             .create();
@@ -305,7 +413,7 @@ mod tests {
                     "credential_id": "cred_id",
                     "credential_secret": "cred_secret",
                     "sc_url": "",
-                    "container_prefix": "{{ OWNER }}/{{ CONTAINER_NAME }}"
+                    "container_dir": "{{ OWNER }}/{{ CONTAINER_NAME }}"
                 }
             }
         );
@@ -318,9 +426,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_creating_container(setup: (CargoUser, CatLibService, Forest)) {
+    fn test_creating_container(setup: (CargoUser, CatLibService, Forest, mockito::Server)) {
         // given setup
-        let (cargo_user, catlib_service, forest) = setup;
+        let (cargo_user, catlib_service, forest, _server) = setup;
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
@@ -360,9 +468,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_getting_created_container(setup: (CargoUser, CatLibService, Forest)) {
+    fn test_getting_created_container(setup: (CargoUser, CatLibService, Forest, mockito::Server)) {
         // given setup
-        let (cargo_user, _catlib_service, _forest) = setup;
+        let (cargo_user, _catlib_service, _forest, _server) = setup;
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
@@ -387,9 +495,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_delete_created_container(setup: (CargoUser, CatLibService, Forest)) {
+    fn test_delete_created_container(setup: (CargoUser, CatLibService, Forest, mockito::Server)) {
         // given setup
-        let (cargo_user, _catlib_service, _forest) = setup;
+        let (cargo_user, _catlib_service, _forest, _server) = setup;
 
         // when a container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";

@@ -13,7 +13,7 @@ uuid: `00000000-0000-0000-0000-0000000000001`
 backend_type: LFS
 template:
     local_dir: `/home/user/storage/`
-    container_prefix: `{{ CONTAINER_NAME }}`
+    container_dir: `{{ CONTAINER_NAME }}`
 ```
 
-`container_prefix` specifies a directory inside a storage location (`local_dir` param).
+`container_dir` specifies a directory inside a storage location (`local_dir` param).

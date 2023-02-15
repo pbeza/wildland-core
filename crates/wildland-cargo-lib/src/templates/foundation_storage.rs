@@ -27,7 +27,7 @@ pub struct FoundationStorageTemplate {
     credential_id: String,
     credential_secret: String,
     sc_url: String,
-    container_prefix: String,
+    container_dir: String,
 }
 
 impl FoundationStorageTemplate {
@@ -43,7 +43,7 @@ impl FoundationStorageTemplate {
             credential_id,
             credential_secret,
             sc_url,
-            container_prefix: Self::default_container_prefix(),
+            container_dir: Self::default_container_dir(),
         }
     }
 
@@ -57,14 +57,14 @@ impl FoundationStorageTemplate {
     ) -> FoundationStorageTemplate {
         FoundationStorageTemplate {
             bucket_uuid: id,
-            container_prefix: FoundationStorageTemplate::default_container_prefix(),
+            container_dir: FoundationStorageTemplate::default_container_dir(),
             credential_id,
             credential_secret,
             sc_url,
         }
     }
 
-    fn default_container_prefix() -> String {
+    fn default_container_dir() -> String {
         format!("{{{{ {OWNER_PARAM} }}}}/{{{{ {CONTAINER_NAME_PARAM} }}}}")
     }
 }
@@ -109,7 +109,7 @@ mod tests {
                     "credential_id": "cred_id",
                     "credential_secret": "cred_secret",
                     "sc_url": "sc_url",
-                    "container_prefix": "{{ OWNER }}/{{ CONTAINER_NAME }}"
+                    "container_dir": "{{ OWNER }}/{{ CONTAINER_NAME }}"
                 }
             }
         );
@@ -140,7 +140,7 @@ mod tests {
                 credential_id: cred_id
                 credential_secret: cred_secret
                 sc_url: sc_url
-                container_prefix: '{{{{ OWNER }}}}/{{{{ CONTAINER_NAME }}}}'
+                container_dir: '{{{{ OWNER }}}}/{{{{ CONTAINER_NAME }}}}'
         "#
         );
 
@@ -173,7 +173,7 @@ mod tests {
                 credential_id: cred_id
                 credential_secret: cred_secret
                 sc_url: sc_url
-                container_prefix: '{{{{ OWNER }}}}/{{{{ CONTAINER_NAME }}}}'
+                container_dir: '{{{{ OWNER }}}}/{{{{ CONTAINER_NAME }}}}'
         "#
         );
         assert_eq!(
@@ -212,7 +212,7 @@ mod tests {
             backend_type: FoundationStorage
             data:
                 bucket_uuid: 00000000-0000-0000-0000-000000000001
-                container_prefix: Quentin Tarantino/Movies
+                container_dir: Quentin Tarantino/Movies
                 credential_id: cred_id
                 credential_secret: cred_secret
                 sc_url: sc_url

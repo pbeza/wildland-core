@@ -23,11 +23,12 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::DfsFrontendError;
 use wildland_corex::{ResolvedPath, Storage};
 
+use super::node_descriptor::{NodeDescriptor, NodeStorages};
 use super::utils::{execute_backend_op_with_policy, ExecutionPolicy};
-use super::{NodeDescriptor, NodeStorages, UnencryptedDfs};
-use crate::storage_backends::models::ReaddirResponse;
+use super::UnencryptedDfs;
+use crate::storage_backends::models::ReadDirResponse;
 
-pub fn readdir(
+pub fn read_dir(
     dfs_front: &mut UnencryptedDfs,
     requested_path: String,
 ) -> Result<Vec<String>, DfsFrontendError> {
@@ -133,9 +134,9 @@ fn map_physical_path_to_node_descriptors(
         let node_storages = node_storages.clone();
         {
             backend
-                .readdir(&path_within_storage)
+                .read_dir(&path_within_storage)
                 .map(|response| match response {
-                    ReaddirResponse::Entries(resulting_paths) => Ok(resulting_paths
+                    ReadDirResponse::Entries(resulting_paths) => Ok(resulting_paths
                         .into_iter()
                         .map({
                             let node_storages = node_storages.clone();
@@ -149,7 +150,7 @@ fn map_physical_path_to_node_descriptors(
                             }
                         })
                         .collect_vec()),
-                    ReaddirResponse::NotADirectory => Ok(vec![NodeDescriptor::Physical {
+                    ReadDirResponse::NotADirectory => Ok(vec![NodeDescriptor::Physical {
                         storages: NodeStorages::new(
                             node_storages.clone(),
                             path_within_storage.clone(),
@@ -157,7 +158,7 @@ fn map_physical_path_to_node_descriptors(
                         ),
                         absolute_path: PathBuf::from(requested_path),
                     }]),
-                    ReaddirResponse::NoSuchPath => Err(DfsFrontendError::NoSuchPath),
+                    ReadDirResponse::NoSuchPath => Err(DfsFrontendError::NoSuchPath),
                 })
         }
     });

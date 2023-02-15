@@ -28,14 +28,14 @@ use wildland_dfs::{
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocalFilesystemStorageTemplate {
     pub local_dir: PathBuf,
-    pub container_prefix: String,
+    pub container_dir: String,
 }
 
 impl LocalFilesystemStorageTemplate {
     pub fn new(local_dir: impl Into<PathBuf>) -> Self {
         Self {
             local_dir: local_dir.into(),
-            container_prefix: format!(
+            container_dir: format!(
                 "{{{{ {CONTAINER_NAME_PARAM} }}}}/{{{{ {CONTAINER_UUID_PARAM} }}}}"
             ),
         }
@@ -70,7 +70,7 @@ mod tests {
             "name": null,
             "template": {
                 "local_dir": "/home/user/wildland",
-                "container_prefix": "{{ CONTAINER_NAME }}/{{ CONTAINER_UUID }}"
+                "container_dir": "{{ CONTAINER_NAME }}/{{ CONTAINER_UUID }}"
             }
         });
 

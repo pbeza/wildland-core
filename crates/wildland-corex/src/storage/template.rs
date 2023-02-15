@@ -54,6 +54,10 @@ pub enum StorageTemplateError {
     TemplateEngineErr(String),
 }
 
+/// Storage Templates provide some general information about storage location. Their only purpose is to be
+/// filled with the container's parameters during container creation and to generate Storage Manifest
+/// (in opposition to a template it points to the storage location assigned to the particular container).
+///
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct StorageTemplate {
     name: Option<String>,
@@ -63,6 +67,12 @@ pub struct StorageTemplate {
 }
 
 impl StorageTemplate {
+    /// Creates new `StorageTemplate`
+    ///
+    /// # Args:
+    /// - `backend_type` - string defining backend type
+    /// - `template` - template specific fields ("template" property of a whole Storage Template object)
+    ///
     pub fn try_new(
         backend_type: impl ToString,
         template: &impl Serialize,
@@ -88,48 +98,81 @@ impl StorageTemplate {
         format!("{:?}", &self)
     }
 
+    /// Deserializes json-formatted content as a StorageTemplate.
+    ///
+    /// It expects the following structure:
+    /// ```ignore
+    /// {
+    ///     "backend_type": "some type",
+    ///     "template": {
+    ///         ...template specific fields
+    ///     }
+    /// }
+    /// ```
     pub fn from_json(content: Vec<u8>) -> Result<StorageTemplate, StorageTemplateError> {
         let storage_data: serde_json::Value = serde_json::from_slice(content.as_slice())
             .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
 
         let backend_type = storage_data.get("backend_type").map_or(
             Err(StorageTemplateError::SerdeErr(
-                "Missing backend_type key".into(),
+                "Missing `backend_type` key".into(),
             )),
             |b| {
                 if b.is_string() {
                     Ok(b.as_str().unwrap())
                 } else {
                     Err(StorageTemplateError::SerdeErr(
-                        "Invalid backend_type value".into(),
+                        "Invalid `backend_type` value".into(),
                     ))
                 }
             },
         )?;
 
-        Self::try_new(backend_type, &storage_data)
+        let template_specific_fields =
+            storage_data
+                .get("template")
+                .ok_or(StorageTemplateError::SerdeErr(
+                    "Missing `template` key".into(),
+                ))?;
+
+        Self::try_new(backend_type, &template_specific_fields)
     }
 
+    /// Deserializes yaml-formatted content as a StorageTemplate.
+    ///
+    /// It expects the following structure:
+    /// ```ignore
+    /// backend_type: some type
+    /// template:
+    ///     ...template specific fields
+    /// ```
     pub fn from_yaml(content: Vec<u8>) -> Result<StorageTemplate, StorageTemplateError> {
         let storage_data: serde_yaml::Value = serde_yaml::from_slice(content.as_slice())
             .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
 
         let backend_type = storage_data.get("backend_type").map_or(
             Err(StorageTemplateError::SerdeErr(
-                "Missing backend_type key".into(),
+                "Missing `backend_type` key".into(),
             )),
             |b| {
                 if b.is_string() {
                     Ok(b.as_str().unwrap())
                 } else {
                     Err(StorageTemplateError::SerdeErr(
-                        "Invalid backend_type value".into(),
+                        "Invalid `backend_type` value".into(),
                     ))
                 }
             },
         )?;
 
-        Self::try_new(backend_type, &storage_data)
+        let template_specific_fields =
+            storage_data
+                .get("template")
+                .ok_or(StorageTemplateError::SerdeErr(
+                    "Missing `template` key".into(),
+                ))?;
+
+        Self::try_new(backend_type, &template_specific_fields)
     }
 
     pub fn to_json(&self) -> Result<String, StorageTemplateError> {
@@ -187,30 +230,59 @@ mod tests {
     #[test]
     fn parse_generic_json_template() {
         let json_str = serde_json::json!({
-            "access":
-            [
-                {
-                    "user": "*"
-                }
-            ],
-            "credentials":
-            {
-                "access-key": "NOT_SO_SECRET",
-                "secret-key": "VERY_SECRET"
+            "template": {
+                "access":
+                    [
+                        {
+                            "user": "*"
+                        }
+                    ],
+                "credentials":
+                    {
+                        "access-key": "NOT_SO_SECRET",
+                        "secret-key": "VERY_SECRET"
+                    },
+                "manifest-pattern":
+                    {
+                        "path": "/{path}.yaml",
+                        "type": "glob"
+                    },
+                "read-only": true,
+                "s3_url": "s3://michal-afc03a81-307c-4b41-b9dd-771835617900/{{ CONTAINER_UUID  }}",
+                "with-index": false
             },
-            "manifest-pattern":
-            {
-                "path": "/{path}.yaml",
-                "type": "glob"
-            },
-            "read-only": true,
-            "s3_url": "s3://michal-afc03a81-307c-4b41-b9dd-771835617900/{{ CONTAINER_UUID  }}",
             "backend_type": "s3",
-            "with-index": false
         })
         .to_string();
 
         let mut tpl = StorageTemplate::from_json(json_str.as_bytes().to_vec()).unwrap();
+
+        assert_eq!(tpl.name(), None);
+
+        tpl.set_name("random name".to_string());
+
+        assert_eq!(tpl.name(), Some("random name".to_string()));
+    }
+
+    #[test]
+    fn parse_generic_yaml_template() {
+        let yaml_content = "
+            template:
+                access:
+                    - user1: '*'
+                credentials:
+                    access-key: NOT_SO_SECRET
+                    secret-key: VERY_SECRET
+                manifest-pattern:
+                    path: /{path}.yaml
+                    type: glob
+                read-only: true
+                s3_url: s3://michal-afc03a81-307c-4b41-b9dd-771835617900/{{ CONTAINER_UUID  }}
+                with-index: false
+            backend_type: s3
+        ";
+
+        let mut tpl = StorageTemplate::from_yaml(yaml_content.as_bytes().to_vec()).unwrap();
 
         assert_eq!(tpl.name(), None);
 

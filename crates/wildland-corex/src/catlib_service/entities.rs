@@ -91,7 +91,7 @@ pub trait ForestManifest: std::fmt::Debug {
 
     /// Create an empty container, bound to the Forest.
     ///
-    /// To set container paths, use [`Container::add_path`]
+    /// To set container paths, use [`crate::Container::add_path`]
     ///
     fn create_container(
         &self,
@@ -180,7 +180,7 @@ pub trait ContainerManifest: std::fmt::Debug {
     ///
     fn remove(&mut self) -> Result<(), CatlibError>;
 
-    /// Return [`Forest`] that contains the [`Container`].
+    /// Return [`crate::Forest`] that contains the [`crate::Container`].
     ///
     fn forest(&self) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>>;
 
@@ -221,7 +221,7 @@ pub trait ContainerManifest: std::fmt::Debug {
 
 #[cfg_attr(test, mockall::automock)]
 pub trait StorageManifest: std::fmt::Debug {
-    /// Return [`Container`] that contains the [`Storage`].
+    /// Return [`crate::Container`] that contains the [`crate::Storage`].
     fn container(&self) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>>;
 
     /// Update Storage data
@@ -246,7 +246,7 @@ pub trait StorageManifest: std::fmt::Debug {
 
 #[cfg_attr(test, mockall::automock)]
 pub trait BridgeManifest: std::fmt::Debug {
-    /// Return [`Forest`] that contains the [`Bridge`].
+    /// Return [`crate::Forest`] that contains the `Bridge`.
     fn forest(&self) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>>;
 
     /// Update Bridge link data

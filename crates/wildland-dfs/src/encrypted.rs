@@ -39,14 +39,14 @@ impl EncryptedDfs {
 }
 
 impl DfsFrontend for EncryptedDfs {
-    fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError> {
+    fn read_dir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
-        self.inner.readdir(path)
+        self.inner.read_dir(path)
     }
 
-    fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError> {
+    fn metadata(&mut self, path: String) -> Result<Stat, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
-        self.inner.getattr(path)
+        self.inner.metadata(path)
     }
 
     fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError> {
@@ -82,7 +82,7 @@ impl DfsFrontend for EncryptedDfs {
     fn seek_from_start(
         &mut self,
         file: &FileHandle,
-        pos_from_start: usize,
+        pos_from_start: u64,
     ) -> Result<usize, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.seek_from_start(file, pos_from_start)
@@ -91,7 +91,7 @@ impl DfsFrontend for EncryptedDfs {
     fn seek_from_current(
         &mut self,
         file: &FileHandle,
-        pos_from_current: isize,
+        pos_from_current: i64,
     ) -> Result<usize, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.seek_from_current(file, pos_from_current)
@@ -100,9 +100,14 @@ impl DfsFrontend for EncryptedDfs {
     fn seek_from_end(
         &mut self,
         file: &FileHandle,
-        pos_from_end: usize,
+        pos_from_end: i64,
     ) -> Result<usize, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.seek_from_end(file, pos_from_end)
+    }
+
+    fn remove_file(&mut self, path: String) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.remove_file(path)
     }
 }

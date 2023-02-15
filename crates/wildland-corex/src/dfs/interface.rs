@@ -21,6 +21,7 @@ use uuid::Uuid;
 use crate::PathResolutionError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+/// Represents metadata of a filesystem node
 pub struct Stat {
     pub node_type: NodeType,
     /// size in bytes
@@ -103,8 +104,8 @@ pub enum DfsFrontendError {
     PathResolutionError(#[from] PathResolutionError),
     #[error("Path already exists")]
     PathAlreadyExists,
-    #[error("Parent of the provided path does not exist")]
-    ParentDoesNotExist,
+    #[error("Parent of the provided path does not exist or is a file")]
+    InvalidParent,
     #[error("Storages didn't respond")]
     StorageNotResponsive,
     #[error("Operation could not modify read-only path")]
@@ -122,6 +123,13 @@ impl From<std::io::Error> for DfsFrontendError {
 }
 
 /// Interface that DFS exposes towards filesystem-like frontend providers
+///
+/// DFS methods may return error that are not related with particular operation but rather
+/// with wildland system in general. Those errors could be:
+///
+/// - `PathResolutionError` - happens when path resolving failed, e.g. due to the catlib error.
+/// - `StorageNotResponsive` - happens when none of storages that operation involves returns an answer.
+/// - `Generic` - unanticipated errors.
 pub trait DfsFrontend {
     /// Returns vector of entries found under the provided path.
     /// It may merge entries from multiple containers.
@@ -129,38 +137,79 @@ pub trait DfsFrontend {
     /// # Errors:
     /// - `NotADirectory` - for paths that don't represent directories
     /// - `NoSuchPath` - requested path does not exist
-    fn readdir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
+    ///
+    fn read_dir(&mut self, path: String) -> Result<Vec<String>, DfsFrontendError>;
 
-    fn getattr(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
+    /// Returns metadata of a node.
+    ///
+    /// # Errors:
+    ///
+    /// - `NoSuchPath` - requested path does not exist
+    fn metadata(&mut self, path: String) -> Result<Stat, DfsFrontendError>;
 
-    /// Opens a file.
+    /// Opens a file. If file does not exist, it will not create one.
     ///
     /// Opening a file means initiating its state in DFS memory.
     ///
-    /// Returns an error in case of file absence.
+    /// # Errors:
+    /// - `NoSuchPath` - requested path does not exist
+    /// - `NotAFile` - provided path represents a node that is not a file
     fn open(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
+
+    /// Closes a file (removes file's state from DFS) referred by the provided `FileHandle`.
+    ///
+    /// # Errors:
+    /// - `FileAlreadyClosed` - DFS does not have the file's state, meaning it's been already close.
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
 
+    /// Removes a file
+    ///
+    /// # Errors:
+    /// - `NoSuchPath` - requested path does not exist
+    /// - `NotAFile` - provided path represents a node that is not a file
+    fn remove_file(&mut self, path: String) -> Result<(), DfsFrontendError>;
+
+    /// Creates a new, empty directory at the provided path
+    ///
+    /// # Errors:
+    /// `ParentDoesNotExist` - a parent of the given path doesn’t exist.
+    /// `PathAlreadyExists` - path already exists.
     fn create_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
 
-    /// Succeeds if the directory exists and is empty
+    /// Removes an empty directory
+    ///
+    /// # Errors:
+    /// `NotADirectory` - path does not represent a directory
+    /// `NoSuchPath` - no such path exists
+    /// `DirNotEmpty` - directory is not empty
     fn remove_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
 
+    /// Reads number of bytes (specified by the `count` arg) returned as a vector.
+    /// Vector length represents number of bytes that were actually read, it may be less than
+    /// the requested number of bytes.
     fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError>;
+
+    /// Tries to write bytes from the buffer to a file and returns amount of actually written bytes
+    /// which can be different from buf length.
     fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError>;
+
+    /// Seek to an offset, in bytes from the beginning of a file.
     fn seek_from_start(
         &mut self,
         file: &FileHandle,
-        pos_from_start: usize,
+        pos_from_start: u64,
     ) -> Result<usize, DfsFrontendError>;
+    /// Seek to an offset, in bytes from the current cursor position of a file.
     fn seek_from_current(
         &mut self,
         file: &FileHandle,
-        pos_from_current: isize,
+        pos_from_current: i64,
     ) -> Result<usize, DfsFrontendError>;
+    /// Seek to an offset, in bytes from the end of a file.
+    /// Negative argument means moving a cursor back (std-like approach).
     fn seek_from_end(
         &mut self,
         file: &FileHandle,
-        pos_from_end: usize,
+        pos_from_end: i64,
     ) -> Result<usize, DfsFrontendError>;
 }
