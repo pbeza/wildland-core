@@ -184,6 +184,14 @@ pub trait DfsFrontend {
     fn remove_file(&mut self, path: String) -> Result<(), DfsFrontendError>;
 
     /// Rename a file or directory to a new name, replacing the original file if `new_path` already exists.
+    ///
+    /// # Errors:
+    /// `NoSuchPath` - source not found
+    /// `SourceIsParentOfTarget` - new directory would be a subdirectory of itself
+    /// `NotAFile` - `old_path` is a file but `new_path` is not
+    /// `NotADirectory` - `old_path` is a directory but `new_path` is not
+    /// `DirNotEmpty` - `new_path` is a nonempty directory
+    /// `MoveBetweenContainers` - `new_path` is in different Container than `old_path`
     fn rename(&mut self, old_path: String, new_path: String) -> Result<(), DfsFrontendError>;
 
     /// Changes the permissions on the underlying file.
