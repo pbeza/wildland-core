@@ -41,7 +41,7 @@ fn test_create_dir_in_path_without_containers() {
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
     let err = dfs.create_dir("/dir".to_string()).unwrap_err();
-    assert_eq!(err, DfsFrontendError::ParentDoesNotExist);
+    assert_eq!(err, DfsFrontendError::InvalidParent);
 }
 
 #[rstest]
@@ -68,7 +68,7 @@ fn test_create_dir_in_path_without_parent() {
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
     let err = dfs.create_dir("/a/dir".to_string()).unwrap_err();
-    assert_eq!(err, DfsFrontendError::ParentDoesNotExist);
+    assert_eq!(err, DfsFrontendError::InvalidParent);
 }
 
 #[rstest]

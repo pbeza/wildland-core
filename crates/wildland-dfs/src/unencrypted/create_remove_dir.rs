@@ -36,9 +36,7 @@ pub fn create_dir(
             execute_container_operation(dfs, storages, |backend, path| backend.create_dir(path))
                 .and_then(|resp| match resp {
                     CreateDirResponse::Created => Ok(()),
-                    CreateDirResponse::ParentDoesNotExist => {
-                        Err(DfsFrontendError::ParentDoesNotExist)
-                    }
+                    CreateDirResponse::InvalidParent => Err(DfsFrontendError::InvalidParent),
                     CreateDirResponse::PathAlreadyExists => {
                         Err(DfsFrontendError::PathAlreadyExists)
                     }
@@ -48,7 +46,7 @@ pub fn create_dir(
     };
 
     match nodes.len() {
-        0 => Err(DfsFrontendError::ParentDoesNotExist),
+        0 => Err(DfsFrontendError::InvalidParent),
         1 => create_dir_in_container(dfs, &nodes.pop().unwrap()),
         _ => {
             let mut nodes_that_have_parent: Vec<&NodeDescriptor> = nodes
@@ -74,7 +72,7 @@ pub fn create_dir(
                 .collect::<Result<_, DfsFrontendError>>()?;
 
             match nodes_that_have_parent.len() {
-                0 => Err(DfsFrontendError::ParentDoesNotExist),
+                0 => Err(DfsFrontendError::InvalidParent),
                 1 => create_dir_in_container(dfs, nodes_that_have_parent.pop().unwrap()),
                 _ => Err(DfsFrontendError::ReadOnlyPath), // Ambiguous path are for now read-only
             }
