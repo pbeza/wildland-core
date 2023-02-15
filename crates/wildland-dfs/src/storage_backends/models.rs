@@ -79,7 +79,7 @@ pub enum MetadataResponse {
 #[derive(Debug, PartialEq, Eq)]
 pub enum CreateDirResponse {
     Created,
-    ParentDoesNotExist,
+    InvalidParent,
     PathAlreadyExists,
 }
 

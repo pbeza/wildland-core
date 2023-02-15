@@ -103,8 +103,8 @@ pub enum DfsFrontendError {
     PathResolutionError(#[from] PathResolutionError),
     #[error("Path already exists")]
     PathAlreadyExists,
-    #[error("Parent of the provided path does not exist")]
-    ParentDoesNotExist,
+    #[error("Parent of the provided path does not exist or is a file")]
+    InvalidParent,
     #[error("Storages didn't respond")]
     StorageNotResponsive,
     #[error("Operation could not modify read-only path")]
