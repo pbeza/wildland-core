@@ -165,7 +165,7 @@ impl StorageBackend for Mufs {
         match self.fs.create_dir(path) {
             Ok(()) => Ok(CreateDirResponse::Created),
             Err(e) => match e.kind() {
-                std::io::ErrorKind::NotFound => Ok(CreateDirResponse::ParentDoesNotExist),
+                std::io::ErrorKind::NotFound => Ok(CreateDirResponse::InvalidParent),
                 std::io::ErrorKind::AlreadyExists => Ok(CreateDirResponse::PathAlreadyExists),
                 _ => Err(StorageBackendError::Generic(e.into())),
             },
