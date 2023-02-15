@@ -300,12 +300,12 @@ impl DfsFrontend for UnencryptedDfs {
     fn seek_from_start(
         &mut self,
         file: &FileHandle,
-        pos_from_start: usize,
+        pos_from_start: u64,
     ) -> Result<usize, DfsFrontendError> {
         self.seek(
             file,
             SeekFrom::Start {
-                position: pos_from_start,
+                offset: pos_from_start,
             },
         )
     }
@@ -313,7 +313,7 @@ impl DfsFrontend for UnencryptedDfs {
     fn seek_from_current(
         &mut self,
         file: &FileHandle,
-        pos_from_current: isize,
+        pos_from_current: i64,
     ) -> Result<usize, DfsFrontendError> {
         self.seek(
             file,
@@ -326,12 +326,12 @@ impl DfsFrontend for UnencryptedDfs {
     fn seek_from_end(
         &mut self,
         file: &FileHandle,
-        pos_from_end: usize,
+        pos_from_end: i64,
     ) -> Result<usize, DfsFrontendError> {
         self.seek(
             file,
             SeekFrom::End {
-                remaining: pos_from_end,
+                offset: pos_from_end,
             },
         )
     }

@@ -236,7 +236,7 @@ impl StorageBackendFactory for LfsBackendFactory {
     fn init_backend(&self, storage: Storage) -> anyhow::Result<Rc<dyn StorageBackend>> {
         let template: LocalFilesystemStorageTemplate = serde_json::from_value(storage.data())?;
         Ok(Rc::new(LocalFilesystemStorage {
-            base_dir: template.local_dir.join(template.container_prefix),
+            base_dir: template.local_dir.join(template.container_dir),
         }))
     }
 }
@@ -260,7 +260,7 @@ mod tests {
             "LFS".to_owned(),
             json!({
                 "local_dir": tmpdir.path(),
-                "container_prefix": "books"
+                "container_dir": "books"
             }),
         );
         let factory = LfsBackendFactory {};
@@ -284,7 +284,7 @@ mod tests {
             "LFS".to_owned(),
             json!({
                 "local_dir": tmpdir.path(),
-                "container_prefix": "books"
+                "container_dir": "books"
             }),
         );
         let factory = LfsBackendFactory {};

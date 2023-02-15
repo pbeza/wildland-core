@@ -40,7 +40,7 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
 
     let template = LocalFilesystemStorageTemplate {
         local_dir: tmpdir.clone(),
-        container_prefix: "{{ CONTAINER_NAME }}".to_owned(),
+        container_dir: "{{ CONTAINER_NAME }}".to_owned(),
     };
     let container1 = user
         .create_container(

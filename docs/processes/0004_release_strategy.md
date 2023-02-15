@@ -68,7 +68,7 @@ repository.
 ## Crates versions bumping
 
 There must be no manual crates version bumping with the Wildland Core workspace.
-Crates versions from now on are bumped only by the project maintainers in a
+Crates versions from now on are bumped only by the project maintainers in
 release branches as well as by CD workflow on master branch upon crates
 publishing.
 

@@ -26,7 +26,7 @@ pub struct MnemonicPayload(MnemonicPhrase);
 
 /// Wrapper to check the mnemonic.
 /// Accepts string. Returns Ok if the mnemonic is valid or Err otherwise
-/// throws [`CryptoError`] if the mnemonic is invalid
+/// throws [`CreateMnemonicError`] if the mnemonic is invalid
 pub fn check_phrase_mnemonic(phrase: &str) -> Result<(), CreateMnemonicError> {
     match utils::new_mnemonic_from_phrase(phrase) {
         Ok(_) => Ok(()),
