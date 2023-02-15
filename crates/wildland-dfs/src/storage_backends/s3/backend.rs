@@ -33,10 +33,15 @@ impl S3Backend {
 
 impl StorageBackend for S3Backend {
     fn read_dir(&self, path: &Path) -> Result<ReadDirResponse, StorageBackendError> {
+        match self.metadata(path)? {
+            MetadataResponse::Found(stat) if stat.node_type == NodeType::Dir => (),
+            MetadataResponse::Found(_) => return Ok(ReadDirResponse::NotADirectory),
+            MetadataResponse::NotFound => return Ok(ReadDirResponse::NoSuchPath),
+        };
+
         match self.client.list_files(path, &self.bucket_name) {
-            // TODO COR-86 handle NoSuchPath and NotADirectory in different way
             Ok(vec) => Ok(ReadDirResponse::Entries(vec)),
-            Err(S3Error::NotFound) => Ok(ReadDirResponse::NotADirectory),
+            Err(S3Error::NotFound) => Ok(ReadDirResponse::NoSuchPath),
             Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
                 Err(StorageBackendError::Generic(err.into()))
             }

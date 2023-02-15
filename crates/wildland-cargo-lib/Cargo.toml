@@ -50,7 +50,7 @@ rusty-bind-build = { version = "0.1", optional = true }
 
 [dev-dependencies]
 mockall           = { version = "0.11" }
-mockito           = { version = "0.31" }
+mockito           = { version = "0.32" }
 pretty_assertions = { version = "1.3" }
 rand              = { version = "0.8" }
 rstest            = { version = "0.16" }
