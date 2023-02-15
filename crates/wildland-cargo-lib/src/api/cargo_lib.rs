@@ -64,6 +64,7 @@ static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 /// calling its methods before a user is created/retrieved access to **Foundation Storage API** is
 /// enclosed within [`crate::api::cargo_user::CargoUser`] object.
 ///
+/// Filesystem like interface can be retrieved with the [`CargoLib::dfs_api`] method.
 #[derive(Clone)]
 pub struct CargoLib {
     user_api: UserApi,

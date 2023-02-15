@@ -1,4 +1,4 @@
 
 # Getting Started
 
-welp, TODO
+To start working with CargoLib, please, read the [examples](examples/about.md) chapter.

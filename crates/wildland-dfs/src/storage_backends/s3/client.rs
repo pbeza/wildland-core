@@ -268,7 +268,7 @@ impl S3Client for WildlandS3Client {
 
         // We might not have enough bytes to perform multipart upload so wee need to take some from the original file.
         // Buffer size may not reach MINIMUM_PART_SIZE after that "if" statement but it not a problem.
-        // It means that we are uploading the last part of a file and MINIMUM_PART_SIZE restriction doesn't need to be fullfiled.
+        // It means that we are uploading the last part of a file and MINIMUM_PART_SIZE restriction doesn't need to be fulfilled.
         if buffer.len() < MINIMUM_PART_SIZE && position_after_write < file_size {
             let remaining_bytes = self.read_object(
                 path,

@@ -393,17 +393,17 @@ mod ffi_binding {
         fn seek_from_start(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             file: &FileHandle,
-            pos_from_start: usize,
+            pos_from_start: u64,
         ) -> Result<usize, DfsFrontendError>;
         fn seek_from_current(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             file: &FileHandle,
-            pos_from_current: isize,
+            pos_from_current: i64,
         ) -> Result<usize, DfsFrontendError>;
         fn seek_from_end(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             file: &FileHandle,
-            pos_from_end: usize,
+            pos_from_end: i64,
         ) -> Result<usize, DfsFrontendError>;
 
         //

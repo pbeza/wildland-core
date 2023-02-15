@@ -133,7 +133,25 @@ namespace Main
             // -------------- TEMPLATES ----------------
 
             Console.WriteLine("TEST: Create and save storage template from json");
-            var tpl_str = @"{""access"":[{""user"":""*""}],""credentials"":{""access-key"":""NOT_SO_SECRET"",""secret-key"":""VERY_SECRET""},""manifest-pattern"":{""path"":""/{path}.yaml"",""type"":""glob""},""read-only"":true,""s3_url"":""s3://michal-afc03a81-307c-4b41-b9dd-771835617900/{{ CONTAINER_UUID  }}"",""backend_type"":""s3"",""with-index"":false}";
+            var tpl_str = @"{
+                ""template"": {
+                    ""access"":[
+                        {""user"":""*""}
+                    ],
+                    ""credentials"":{
+                        ""access-key"":""NOT_SO_SECRET"",
+                        ""secret-key"":""VERY_SECRET""
+                    },
+                    ""manifest-pattern"":{
+                        ""path"":""/{path}.yaml"",
+                        ""type"":""glob""
+                    },
+                    ""read-only"":true,
+                    ""s3_url"":""s3://michal-afc03a81-307c-4b41-b9dd-771835617900/{{ CONTAINER_UUID  }}"",
+                    ""with-index"":false
+                },
+                ""backend_type"":""s3""
+            }";
             var json_tpl = new Vecu8();
 
             foreach(byte b in System.Text.Encoding.UTF8.GetBytes(tpl_str)) { json_tpl.push(b); }
@@ -146,18 +164,19 @@ namespace Main
 
             Console.WriteLine("TEST: Create and save storage template from yaml");
             tpl_str = @"---
-access:
-- user: '*'
-credentials:
-  access-key: NOT_SO_SECRET
-  secret-key: VERY_SECRET
-manifest-pattern:
-  path: /{path}.yaml
-  type: glob
-read-only: true
-s3_url: s3://michal-afc03a81-307c-4b41-b9dd-771835617900/{{ CONTAINER_UUID  }}
+template:
+    access:
+        - user: '*'
+    credentials:
+        access-key: NOT_SO_SECRET
+        secret-key: VERY_SECRET
+    manifest-pattern:
+        path: /{path}.yaml
+        type: glob
+    read-only: true
+    s3_url: s3://michal-afc03a81-307c-4b41-b9dd-771835617900/{{ CONTAINER_UUID  }}
+    with-index: false
 backend_type: s3
-with-index: false
 ";
 
             var yaml_tpl = new Vecu8();

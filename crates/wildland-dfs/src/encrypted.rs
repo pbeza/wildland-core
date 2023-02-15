@@ -82,7 +82,7 @@ impl DfsFrontend for EncryptedDfs {
     fn seek_from_start(
         &mut self,
         file: &FileHandle,
-        pos_from_start: usize,
+        pos_from_start: u64,
     ) -> Result<usize, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.seek_from_start(file, pos_from_start)
@@ -91,7 +91,7 @@ impl DfsFrontend for EncryptedDfs {
     fn seek_from_current(
         &mut self,
         file: &FileHandle,
-        pos_from_current: isize,
+        pos_from_current: i64,
     ) -> Result<usize, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.seek_from_current(file, pos_from_current)
@@ -100,7 +100,7 @@ impl DfsFrontend for EncryptedDfs {
     fn seek_from_end(
         &mut self,
         file: &FileHandle,
-        pos_from_end: usize,
+        pos_from_end: i64,
     ) -> Result<usize, DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.seek_from_end(file, pos_from_end)

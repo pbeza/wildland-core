@@ -36,7 +36,7 @@ impl Container {
 
     /// ## Errors
     ///
-    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`crate::catlib_service::error::CatlibResult`] upon failure to save to the database.
     ///
     /// ## Example
     ///
@@ -83,7 +83,7 @@ impl Container {
 
     /// ## Errors
     ///
-    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`crate::catlib_service::error::CatlibResult`] upon failure to save to the database.
     ///
     /// ## Example
     ///
@@ -133,7 +133,7 @@ impl Container {
     ///
     /// ## Errors
     ///
-    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`crate::catlib_service::error::CatlibResult`] upon failure to save to the database.
     ///
     pub fn get_paths(&self) -> Result<Vec<String>, CatlibError> {
         self.container_manifest
@@ -191,7 +191,7 @@ impl Container {
 
     /// ## Errors
     ///
-    /// Returns [`CatlibError::NoRecordsFound`] if Forest has no [`Storage`].
+    /// Returns [`CatlibError::NoRecordsFound`] if Forest has no [`crate::Storage`].
     pub fn get_storages(&mut self) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, CatlibError> {
         self.container_manifest
             .lock()
@@ -203,7 +203,7 @@ impl Container {
     ///
     /// ## Errors
     ///
-    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`crate::catlib_service::error::CatlibResult`] upon failure to save to the database.
     pub fn set_name(&self, new_name: String) -> Result<(), CatlibError> {
         self.container_manifest
             .lock()
@@ -213,7 +213,7 @@ impl Container {
 
     /// ## Errors
     ///
-    /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
+    /// Returns `RedisError` cast on [`crate::catlib_service::error::CatlibResult`] upon failure to save to the database.
     pub fn remove(&self) -> Result<(), CatlibError> {
         self.container_manifest
             .lock()
