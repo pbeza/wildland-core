@@ -305,7 +305,7 @@ impl DfsFrontend for UnencryptedDfs {
         self.seek(
             file,
             SeekFrom::Start {
-                position: pos_from_start,
+                offset: pos_from_start,
             },
         )
     }
@@ -331,7 +331,7 @@ impl DfsFrontend for UnencryptedDfs {
         self.seek(
             file,
             SeekFrom::End {
-                remaining: pos_from_end,
+                offset: pos_from_end,
             },
         )
     }

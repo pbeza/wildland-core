@@ -31,7 +31,7 @@ struct Cursor {
 impl Cursor {
     pub fn apply_seek(&self, seek: SeekFrom) -> Result<Self, SeekError> {
         match seek {
-            SeekFrom::Start { position } => {
+            SeekFrom::Start { offset: position } => {
                 if position as usize > self.total_size {
                     Err(SeekError::OutOfFileBoundaries)
                 } else {
@@ -42,12 +42,12 @@ impl Cursor {
                 }
             }
 
-            SeekFrom::End { remaining } => {
-                if remaining > self.total_size as i64 {
+            SeekFrom::End { offset } => {
+                if offset > self.total_size as i64 {
                     Err(SeekError::OutOfFileBoundaries)
                 } else {
                     self.total_size
-                        .checked_add_signed(remaining as isize)
+                        .checked_add_signed(offset as isize)
                         .ok_or(SeekError::OutOfFileBoundaries)
                         .and_then(|position| {
                             if position > self.total_size {
