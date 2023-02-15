@@ -26,5 +26,5 @@ mockall = { version = "0.11" }
 minreq = { version = "2.6", features = ["json-using-serde", "https-rustls"] }
 
 [build-dependencies]
-bindgen      = "0.63"
-build-target = "0.4"
+bindgen      = { version = "0.64" }
+build-target = { version = "0.4" }

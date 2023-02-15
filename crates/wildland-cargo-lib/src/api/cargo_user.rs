@@ -305,7 +305,7 @@ mod tests {
     use crate::utils::test::catlib_service;
 
     #[fixture]
-    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Forest) {
+    fn setup(catlib_service: CatLibService) -> (CargoUser, CatLibService, Forest, mockito::Server) {
         let this_dev_name = "My device".to_string();
 
         let forest_keypair = SigningKeypair::try_from_bytes_slices([1; 32], [2; 32]).unwrap();
@@ -325,25 +325,29 @@ mod tests {
             .unwrap();
         let forest = Forest::new(forest);
 
+        let server = mockito::Server::new_with_port(0);
+
         let cargo_user = CargoUser::new(
             this_dev_name.clone(),
             vec![this_dev_name],
             forest.clone(),
             catlib_service.clone(),
             &FoundationStorageApiConfig {
-                evs_url: mockito::server_url(),
+                evs_url: server.url(),
                 sc_url: "".to_string(),
             },
             ContainerManager::default(),
         );
 
-        (cargo_user, catlib_service, forest)
+        (cargo_user, catlib_service, forest, server)
     }
 
     #[rstest]
-    fn test_requesting_free_tier_storage(setup: (CargoUser, CatLibService, Forest)) {
+    fn test_requesting_free_tier_storage(
+        setup: (CargoUser, CatLibService, Forest, mockito::Server),
+    ) {
         // given setup
-        let (mut cargo_user, catlib_service, forest) = setup;
+        let (mut cargo_user, catlib_service, forest, mut server) = setup;
 
         // when storage request is sent
         let session_uuid = "00000000-0000-0000-0000-000000000001";
@@ -352,7 +356,8 @@ mod tests {
                 "session_id": "{session_uuid}"
             }}"#
         );
-        let storage_req_mock_1 = mockito::mock("PUT", "/get_storage")
+        let storage_req_mock_1 = server
+            .mock("PUT", "/get_storage")
             .with_status(202)
             .with_body(session_id_response)
             .create();
@@ -362,7 +367,8 @@ mod tests {
             .unwrap();
 
         // and verification is performed
-        let verify_token_mock = mockito::mock("PUT", "/confirm_token")
+        let verify_token_mock = server
+            .mock("PUT", "/confirm_token")
             .match_body(Matcher::JsonString(format!(
                 r#"{{
                     "email": "test@wildland.io",
@@ -376,7 +382,8 @@ mod tests {
         let response_json_str = r#"{"id": "00000000-0000-0000-0000-000000000001", "credentialID": "cred_id", "credentialSecret": "cred_secret"}"#;
         let response_base64 = STANDARD.encode(response_json_str);
         let credentials_response = format!("{{ \"credentials\": \"{response_base64}\" }}");
-        let storage_req_mock_2 = mockito::mock("PUT", "/get_storage")
+        let storage_req_mock_2 = server
+            .mock("PUT", "/get_storage")
             .with_status(200)
             .with_body(credentials_response)
             .create();
@@ -419,9 +426,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_creating_container(setup: (CargoUser, CatLibService, Forest)) {
+    fn test_creating_container(setup: (CargoUser, CatLibService, Forest, mockito::Server)) {
         // given setup
-        let (cargo_user, catlib_service, forest) = setup;
+        let (cargo_user, catlib_service, forest, _server) = setup;
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
@@ -461,9 +468,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_getting_created_container(setup: (CargoUser, CatLibService, Forest)) {
+    fn test_getting_created_container(setup: (CargoUser, CatLibService, Forest, mockito::Server)) {
         // given setup
-        let (cargo_user, _catlib_service, _forest) = setup;
+        let (cargo_user, _catlib_service, _forest, _server) = setup;
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
@@ -488,9 +495,9 @@ mod tests {
     }
 
     #[rstest]
-    fn test_delete_created_container(setup: (CargoUser, CatLibService, Forest)) {
+    fn test_delete_created_container(setup: (CargoUser, CatLibService, Forest, mockito::Server)) {
         // given setup
-        let (cargo_user, _catlib_service, _forest) = setup;
+        let (cargo_user, _catlib_service, _forest, _server) = setup;
 
         // when a container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
