@@ -150,6 +150,7 @@ INPUT=input.swift
           -target $ARCH_TARGET \
           -dynamiclib \
           $OBJ_OUT \
+          -Xlinker -application_extension \
           -install_name @rpath/$MODULE.framework$ADDITIONAL_LIBRARY_PATH/$MODULE \
           -L. \
           -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$XCRUN_SDK -L/usr/lib/swift \
