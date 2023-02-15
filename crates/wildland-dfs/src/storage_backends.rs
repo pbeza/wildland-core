@@ -28,11 +28,13 @@ use wildland_corex::Storage;
 pub use self::descriptors::OpenedFileDescriptor;
 use self::models::{
     CreateDirResponse,
+    CreateFileResponse,
     MetadataResponse,
     OpenResponse,
     ReadDirResponse,
     RemoveDirResponse,
     RemoveFileResponse,
+    RenameResponse,
     StorageBackendError,
 };
 
@@ -50,6 +52,12 @@ pub trait StorageBackend {
     fn remove_dir(&self, path: &Path) -> Result<RemoveDirResponse, StorageBackendError>;
     fn path_exists(&self, path: &Path) -> Result<bool, StorageBackendError>;
     fn remove_file(&self, path: &Path) -> Result<RemoveFileResponse, StorageBackendError>;
+    fn create_file(&self, path: &Path) -> Result<CreateFileResponse, StorageBackendError>;
+    fn rename(
+        &self,
+        old_path: &Path,
+        new_path: &Path,
+    ) -> Result<RenameResponse, StorageBackendError>;
 }
 
 pub trait StorageBackendFactory {

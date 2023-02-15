@@ -17,7 +17,14 @@
 
 use std::collections::HashMap;
 
-use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, FileHandle, Stat};
+use wildland_corex::dfs::interface::{
+    DfsFrontend,
+    DfsFrontendError,
+    FileHandle,
+    Permissions,
+    Stat,
+    UnixTimestamp,
+};
 use wildland_corex::PathResolver;
 
 use crate::storage_backends::StorageBackendFactory;
@@ -109,5 +116,60 @@ impl DfsFrontend for EncryptedDfs {
     fn remove_file(&mut self, path: String) -> Result<(), DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
         self.inner.remove_file(path)
+    }
+
+    fn create_file(&mut self, path: String) -> Result<FileHandle, DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.create_file(path)
+    }
+
+    fn rename(&mut self, old_path: String, new_path: String) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.rename(old_path, new_path)
+    }
+
+    fn set_permissions(&mut self, permissions: Permissions) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.set_permissions(permissions)
+    }
+
+    fn set_owner(&mut self) {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.set_owner()
+    }
+
+    fn set_len(&mut self, file: &FileHandle, length: usize) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.set_len(file, length)
+    }
+
+    fn flush(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.flush(file)
+    }
+
+    fn sync(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.sync(file)
+    }
+
+    fn set_times(
+        &mut self,
+        file: &FileHandle,
+        access_time: Option<UnixTimestamp>,
+        modification_time: Option<UnixTimestamp>,
+    ) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.set_times(file, access_time, modification_time)
+    }
+
+    fn file_metadata(&mut self, file: &FileHandle) -> Result<Stat, DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.file_metadata(file)
+    }
+
+    fn sync_all(&mut self) -> Result<(), DfsFrontendError> {
+        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
+        self.inner.sync_all()
     }
 }

@@ -85,6 +85,8 @@ pub struct FileHandle {
     pub descriptor_uuid: Uuid,
 }
 
+pub struct Permissions {} // TODO COR-5
+
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
 #[repr(C)]
 pub enum DfsFrontendError {
@@ -114,6 +116,10 @@ pub enum DfsFrontendError {
     DirNotEmpty,
     #[error("DFS Error: {0}")]
     Generic(String),
+    #[error("Source path and target path are in different Containers")]
+    MoveBetweenContainers,
+    #[error("The new pathname contained a path prefix of the old, or, more generally, an attempt was made to make a directory a subdirectory of itself.")]
+    SourceIsParentOfTarget,
 }
 
 impl From<std::io::Error> for DfsFrontendError {
@@ -162,12 +168,29 @@ pub trait DfsFrontend {
     /// - `FileAlreadyClosed` - DFS does not have the file's state, meaning it's been already close.
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
 
+    /// Opens a file in write-only mode.
+    ///
+    /// This function will create a file if it does not exist, and will truncate it if it does.
+    ///
+    /// # Errors:
+    /// `ParentDoesNotExist` - parent directory does not exist
+    fn create_file(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
+
     /// Removes a file
     ///
     /// # Errors:
     /// - `NoSuchPath` - requested path does not exist
     /// - `NotAFile` - provided path represents a node that is not a file
     fn remove_file(&mut self, path: String) -> Result<(), DfsFrontendError>;
+
+    /// Rename a file or directory to a new name, replacing the original file if `new_path` already exists.
+    fn rename(&mut self, old_path: String, new_path: String) -> Result<(), DfsFrontendError>;
+
+    /// Changes the permissions on the underlying file.
+    fn set_permissions(&mut self, permissions: Permissions) -> Result<(), DfsFrontendError>;
+
+    /// Not implemented yet!
+    fn set_owner(&mut self); // TODO create a ticket for that
 
     /// Creates a new, empty directory at the provided path
     ///
@@ -193,6 +216,35 @@ pub trait DfsFrontend {
     /// which can be different from buf length.
     fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError>;
 
+    /// Truncates or extends the underlying file, updating the size of this file to become length.
+    /// If the size is less than the current file’s size, then the file will be shrunk. If it is greater
+    /// than the current file’s size, then the file will be extended to size and have all of the intermediate
+    /// data filled in with 0s.
+    /// The file’s cursor isn’t changed. In particular, if the cursor was at the end and the file is
+    /// shrunk using this operation, the cursor will now be past the end.
+    fn set_len(&mut self, file: &FileHandle, length: usize) -> Result<(), DfsFrontendError>;
+
+    /// Forces a write of all data that could be buffered by the StorageBackend driver.
+    fn flush(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
+
+    /// Attempts to sync all metadata to storage.
+    ///
+    /// This function will attempt to ensure that all in-memory data reaches the storage before returning.
+    fn sync(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
+
+    /// Changes the timestamps of the underlying file.
+    ///
+    /// Passing None as an argument means not overwriting given parameter (not setting it to None)
+    fn set_times(
+        &mut self,
+        file: &FileHandle,
+        access_time: Option<UnixTimestamp>,
+        modification_time: Option<UnixTimestamp>,
+    ) -> Result<(), DfsFrontendError>;
+
+    /// Queries metadata about the underlying file.
+    fn file_metadata(&mut self, file: &FileHandle) -> Result<Stat, DfsFrontendError>;
+
     /// Seek to an offset, in bytes from the beginning of a file.
     fn seek_from_start(
         &mut self,
@@ -212,4 +264,7 @@ pub trait DfsFrontend {
         file: &FileHandle,
         pos_from_end: i64,
     ) -> Result<usize, DfsFrontendError>;
+
+    /// Attempts to sync all metadata and data of all opened files in DFS Context.
+    fn sync_all(&mut self) -> Result<(), DfsFrontendError>;
 }
