@@ -9,7 +9,7 @@ list of fixes, features, and commit message itself.
 In the repository, all issues titles, pull request titles and commit messages
 must be prefixed with a tag.
 
-Currently, following tags are allowed:
+Currently, the following tags are allowed:
 
 * `chore` - dependency updates, CI updates, refactorings, other changes that
   don't affect the project functionality

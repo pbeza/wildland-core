@@ -92,7 +92,104 @@ All devices:
         self.forest.containers()
     }
 
-    /// Creates a new container within user's forest and return its handle
+    /// Creates a new container within user's forest and returns its handle
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// # use wildland_cargo_lib::api::CargoConfig;
+    /// # use wildland_cargo_lib::api::cargo_lib::create_cargo_lib;
+    /// # use wildland_lfs::template::LocalFilesystemStorageTemplate;
+    /// # use wildland_corex::StorageTemplate;
+    /// # use wildland_corex::LocalSecureStorage;
+    /// # use std::cell::RefCell;
+    /// # use std::collections::HashMap;
+    /// # use wildland_corex::LssResult;
+    ///
+    /// # let tmpdir = tempfile::tempdir().unwrap().into_path();
+    ///
+    /// # let config_str = r#"{
+    /// #     "log_level": "trace",
+    /// #     "log_use_ansi": false,
+    /// #     "log_file_enabled": true,
+    /// #     "log_file_path": "cargo_lib_log",
+    /// #     "log_file_rotate_directory": ".",
+    /// #     "evs_url": "some_url",
+    /// #     "sc_url": "some_url"
+    /// # }"#;
+    /// # let cfg: CargoConfig = serde_json::from_str(config_str).unwrap();
+    ///
+    /// # fn lss_stub() -> &'static dyn LocalSecureStorage {
+    /// #     #[derive(Default)]
+    /// #     struct LssStub {
+    /// #         storage: RefCell<HashMap<String, String>>,
+    /// #     }
+    ///
+    /// #     impl LocalSecureStorage for LssStub {
+    /// #         fn insert(&self, key: String, value: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.borrow_mut().insert(key, value))
+    /// #         }
+    ///
+    /// #         fn get(&self, key: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
+    /// #         }
+    ///
+    /// #         fn contains_key(&self, key: String) -> LssResult<bool> {
+    /// #             Ok(self.storage.borrow().contains_key(&key))
+    /// #         }
+    ///
+    /// #         fn keys(&self) -> LssResult<Vec<String>> {
+    /// #             Ok(self.storage.borrow().keys().cloned().collect())
+    /// #         }
+    ///
+    /// #         fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
+    /// #             Ok(self
+    /// #                 .storage
+    /// #                 .borrow()
+    /// #                 .keys()
+    /// #                 .filter(|key| key.starts_with(&prefix))
+    /// #                 .cloned()
+    /// #                 .collect())
+    /// #         }
+    ///
+    /// #         fn remove(&self, key: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.borrow_mut().remove(&key))
+    /// #         }
+    ///
+    /// #         fn len(&self) -> LssResult<usize> {
+    /// #             Ok(self.storage.borrow().len())
+    /// #         }
+    ///
+    /// #         fn is_empty(&self) -> LssResult<bool> {
+    /// #             Ok(self.storage.borrow().is_empty())
+    /// #         }
+    /// #     }
+
+    /// #     Box::leak(Box::<LssStub>::default())
+    /// # }
+    ///
+    /// # let lss_stub = lss_stub();
+    ///
+    /// # let cargo_lib = create_cargo_lib(lss_stub, cfg).unwrap();
+    /// # let cargo_lib = cargo_lib.lock().unwrap();
+    /// # let user_api = cargo_lib.user_api();
+    /// # let mnemonic = user_api.generate_mnemonic().unwrap();
+    /// # let user = user_api
+    /// #     .create_user_from_mnemonic(&mnemonic, "device_name".to_string())
+    /// #     .unwrap();
+    ///
+    /// let template = LocalFilesystemStorageTemplate {
+    ///     local_dir: tmpdir.clone(),
+    ///     container_dir: "{{ CONTAINER_NAME }}".to_owned(),
+    /// };
+    /// let container = user
+    ///     .create_container(
+    ///         "C1".to_owned(),
+    ///         &StorageTemplate::try_new("LocalFilesystem", &template).unwrap(),
+    ///         "/some/path/".to_owned(),
+    ///     )
+    ///     .unwrap();
+    /// ```
     #[tracing::instrument(level = "debug", skip_all)]
     pub fn create_container(
         &self,
@@ -174,10 +271,14 @@ All devices:
             .is_free_storage_granted(&self.forest.forest_manifest())
     }
 
+    /// Mounts a container in Wildland local device state. After this operation container data
+    /// should be accessible via DFS API.
     pub fn mount(&self, container: &Container) -> Result<(), ContainerManagerError> {
         self.container_manager.mount(container)
     }
 
+    /// Unmounts a container from the Wildland local device state. After this operation container
+    /// data is not accessible anymore.
     pub fn unmount(&self, container: &Container) -> Result<(), ContainerManagerError> {
         self.container_manager.unmount(container)
     }
@@ -305,7 +406,7 @@ mod tests {
                     "credential_id": "cred_id",
                     "credential_secret": "cred_secret",
                     "sc_url": "",
-                    "container_prefix": "{{ OWNER }}/{{ CONTAINER_NAME }}"
+                    "container_dir": "{{ OWNER }}/{{ CONTAINER_NAME }}"
                 }
             }
         );

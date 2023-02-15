@@ -58,7 +58,7 @@ pub trait PathResolver {
     ///
     /// **Example**: if a container claims path `/a/b/` and [`PathResolver`] receives request to resolve
     /// path `/a/b/c/d` then [`PathResolver`] should return path `/c/d` with all Storages of that
-    /// container as a single [`PathWithStorages`] instance, so DFS could choose which Storage to use.
+    /// container as a single [`ResolvedPath::PathWithStorages`] instance, so DFS could choose which Storage to use.
     ///
     /// Storages from different containers are represented by different elements in a resulting vector
     /// because the matching paths inside containers may be different. Additionally, method returns full
@@ -66,11 +66,11 @@ pub trait PathResolver {
     ///
     /// E.g. if container C1 claims path `/a/` and container C2 claims path `/a/b/` and container C3 claims
     /// path `/a/b/c/d` when PathResolver is asked about path `/a/b/c`, then three-element vector is returned:
-    /// [
+    /// `[
     ///     PathWithStorages { path: "/b/c/", storages: [all storages of C1]},
     ///     PathWithStorages { path: "/c/", storages: [all storages of C2]},
     ///     VirtualPath ( "/a/b/c/d" ),
-    /// ]
+    /// ]`
     ///
     ///
     fn resolve(&self, path: &Path) -> Result<HashSet<ResolvedPath>, PathResolutionError>;

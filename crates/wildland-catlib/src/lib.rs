@@ -166,8 +166,8 @@ impl ICatLib for CatLib {
 
     /// ## Errors
     ///
-    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Forest`] was found.
-    /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Forest`] was found.
+    /// - Returns [`CatlibError::NoRecordsFound`] if no [`ForestManifest`] was found.
+    /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`ForestManifest`] was found.
     /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn find_forest(&self, owner: &Identity) -> CatlibResult<Arc<Mutex<dyn ForestManifest>>> {
@@ -190,7 +190,7 @@ impl ICatLib for CatLib {
 
     /// ## Errors
     ///
-    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Storage`] was found.
+    /// - Returns [`CatlibError::NoRecordsFound`] if no [`StorageManifest`] was found.
     /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn find_storages_with_template(
@@ -202,7 +202,7 @@ impl ICatLib for CatLib {
 
     /// ## Errors
     ///
-    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
+    /// - Returns [`CatlibError::NoRecordsFound`] if no [`ContainerManifest`] was found.
     /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     #[tracing::instrument(level = "debug", skip_all)]
     fn find_containers_with_template(

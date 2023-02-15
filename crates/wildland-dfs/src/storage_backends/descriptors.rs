@@ -19,7 +19,7 @@ use wildland_corex::dfs::interface::DfsFrontendError;
 
 use super::models::{CloseError, SeekFrom};
 
-/// FileDescriptor contains state of opened file and definition of how it is stored, therefore
+/// OpenedFileDescriptor contains state of opened file and definition of how it is stored, therefore
 /// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
 /// on the backend's type) and e.g. seek operation may be implemented differently.
 pub trait OpenedFileDescriptor: std::fmt::Debug {

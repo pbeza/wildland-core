@@ -7,17 +7,17 @@ use super::{CloseOnDropDescriptor, OpenedFileDescriptor};
 
 #[derive(Debug)]
 pub enum SeekFrom {
-    Start { position: usize },
-    End { remaining: usize },
-    Current { offset: isize },
+    Start { offset: u64 },
+    End { offset: i64 },
+    Current { offset: i64 },
 }
 
 impl SeekFrom {
     pub fn to_std(self) -> std::io::SeekFrom {
         match self {
-            SeekFrom::Start { position } => std::io::SeekFrom::Start(position as _),
-            SeekFrom::End { remaining } => std::io::SeekFrom::End(
-                TryInto::<i64>::try_into(remaining)
+            SeekFrom::Start { offset } => std::io::SeekFrom::Start(offset as _),
+            SeekFrom::End { offset } => std::io::SeekFrom::End(
+                TryInto::<i64>::try_into(offset)
                     .map(|v| v.neg())
                     .unwrap_or(i64::MIN),
             ),

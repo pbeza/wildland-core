@@ -31,31 +31,40 @@ struct Cursor {
 impl Cursor {
     pub fn apply_seek(&self, seek: SeekFrom) -> Result<Self, SeekError> {
         match seek {
-            SeekFrom::Start { position } => {
-                if position > self.total_size {
+            SeekFrom::Start { offset: position } => {
+                if position as usize > self.total_size {
                     Err(SeekError::OutOfFileBoundaries)
                 } else {
                     Ok(Self {
                         total_size: self.total_size,
-                        position,
+                        position: position as usize,
                     })
                 }
             }
 
-            SeekFrom::End { remaining } => {
-                if remaining > self.total_size {
+            SeekFrom::End { offset } => {
+                if offset > self.total_size as i64 {
                     Err(SeekError::OutOfFileBoundaries)
                 } else {
-                    Ok(Self {
-                        total_size: self.total_size,
-                        position: self.total_size - remaining,
-                    })
+                    self.total_size
+                        .checked_add_signed(offset as isize)
+                        .ok_or(SeekError::OutOfFileBoundaries)
+                        .and_then(|position| {
+                            if position > self.total_size {
+                                Err(SeekError::OutOfFileBoundaries)
+                            } else {
+                                Ok(Self {
+                                    total_size: self.total_size,
+                                    position,
+                                })
+                            }
+                        })
                 }
             }
 
             SeekFrom::Current { offset } => self
                 .position
-                .checked_add_signed(offset)
+                .checked_add_signed(offset as isize)
                 .ok_or(SeekError::OutOfFileBoundaries)
                 .and_then(|position| {
                     if position > self.total_size {
