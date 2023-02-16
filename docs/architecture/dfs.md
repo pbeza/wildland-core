@@ -12,7 +12,7 @@ The D/FS module can be considered a client of the CoreX module. It relies on Cor
 - Where each containers data is kept (i.e. storage backend access credentials and endpoints),
 - How does each of the container data map onto the user’s namespace, i.e. under which path within the forest should they be exposed to the user.
 
-![DFS component diagram](../../crates/wildland-dfs/docs/images/dfs.png)
+![DFS component diagram](images/dfs.png)
 
 - [`DfsFrontend` description](https://docs.wildland.dev/docs/wildland/lld/doc/wildland_corex/dfs/interface/trait.DfsFrontend.html)
 - [`PathResolver` description](https://docs.wildland.dev/docs/wildland/lld/doc/wildland_corex/container_manager/trait.PathResolver.html)
