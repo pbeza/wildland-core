@@ -37,9 +37,22 @@ use crate::storage::StorageData;
 #[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn db_conn(connection_string: String) -> CatlibResult<DbClient> {
     let client = redis::Client::open(connection_string).map_err(redis_to_catlib_err)?;
-    let pool = r2d2::Pool::new(client).map_err(r2d2_to_catlib_err)?;
 
-    Ok(pool)
+    // Do not throw exception if there's no connection to the backend during
+    // initialisation. The pool size will increase during an attempt to
+    // interact with the backend.
+    let min_connection_pool_size = Some(0);
+
+    r2d2::Pool::builder()
+        .min_idle(min_connection_pool_size)
+        .idle_timeout(Some(std::time::Duration::from_secs(5 * 60)))
+        .connection_timeout(std::time::Duration::from_secs(10))
+        .build(client)
+        .map_err(r2d2_to_catlib_err)
+}
+
+pub(crate) fn is_alive(db: &RedisDb) -> CatlibResult<bool> {
+    ping(db)
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
