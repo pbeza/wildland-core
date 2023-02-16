@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use redis::Commands;
+use redis::{Commands, ConnectionLike};
 use wildland_corex::catlib_service::error::{CatlibError, CatlibResult};
 
 use crate::{r2d2_to_catlib_err, redis_to_catlib_err, RedisDb};
@@ -11,6 +11,15 @@ fn handle_key_prefix(db: &RedisDb, mut key: String) -> String {
     }
 
     key
+}
+
+#[tracing::instrument(level = "debug", skip_all)]
+pub(crate) fn ping(db: &RedisDb) -> CatlibResult<bool> {
+    Ok(db
+        .client
+        .get()
+        .map_err(r2d2_to_catlib_err)?
+        .check_connection())
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
