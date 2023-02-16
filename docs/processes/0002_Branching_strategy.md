@@ -1,8 +1,6 @@
 # Branching strategy
 
 ````text
-Acceptance in progress
-
 =========================================================
 shortened version is available at the end of the document
 =========================================================

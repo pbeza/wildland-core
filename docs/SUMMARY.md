@@ -1,5 +1,7 @@
 # Summary
 
+Last update 2023-02-09.20:48
+
 - [Wildland Core](about.md)
   - [Getting Started](getting_started.md)
   - [Stability](stability.md)
@@ -8,13 +10,16 @@
   - [Catlib](architecture/catlib.md)
   - [LSS](architecture/lss.md)
   - [User Creation](architecture/user_creation.md)
+  - [Forests And Containers](architecture/forests_and_containers.md)
   - [DFS - Data and Filesystem Provide](architecture/dfs.md)
 - [Development](development/about.md)
   - [cargo.toml formatting](development/cargo_toml_formatting.md)
 - [CI](ci/about.md)
   - [Apple](ci/apple_ci.md)
 - [Configuration](configuration/about.md)
+  - [Overview](configuration/overview.md)
   - [Cargo Config](configuration/config.md)
+  - [Logging](configuration/logging.md)
 - [Deployment](deployment/about.md)
 - [Examples](examples/about.md)
   - [Init CargoLib (create CargoLib object)](examples/01_creating_cargo_lib.md)
@@ -29,5 +34,8 @@
   - [0001: Commit Message Formalization and Enforcment](processes/0001_Commit_message_formalization_and_enforcement.md)
   - [0002: Branching Strategy](processes/0002_Branching_strategy.md)
   - [0003: Documentation Structure and RFC Process](processes/0003_Documentation_structure_and_RFC_process.md)
+  - [0004: Release Strategy](processes/0004_release_strategy.md)
 - [RFC](rfc/about.md)
   - [Archived](rfc/archive/about.md)
+  - [0001: wasm_bindgen usage in CargoLib](rfc/0001_wasm_bindgen_usage.md)
+  - [0002: Storage Template API Design](rfc/0002_storage_template_api_design.md)
