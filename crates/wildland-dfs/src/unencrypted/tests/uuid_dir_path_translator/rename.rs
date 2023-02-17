@@ -93,6 +93,35 @@ fn test_successful_rename_of_file() {
 }
 
 #[rstest]
+fn test_rename_of_file_when_target_file_exists() {
+    let mut path_resolver = MockPathResolver::new();
+    let storage = new_mufs_storage("/");
+
+    path_resolver
+        .expect_resolve()
+        .with(predicate::eq(Path::new("/a/file")))
+        .times(1)
+        .returning(move |_path| {
+            Ok(HashSet::from([ResolvedPath::PathWithStorages {
+                path_within_storage: "/file".into(),
+                storages_id: Uuid::from_u128(1),
+                storages: vec![storage.clone()],
+            }]))
+        });
+
+    let path_resolver = Box::new(path_resolver);
+    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+
+    fs.create_file("/file").unwrap();
+    fs.create_file("/new_file").unwrap();
+
+    let err = dfs
+        .rename("/a/file".to_string(), "/a/new_file".into())
+        .unwrap_err();
+    assert_eq!(err, DfsFrontendError::PathAlreadyExists);
+}
+
+#[rstest]
 fn test_successful_rename_of_dir() {
     let mut path_resolver = MockPathResolver::new();
     let storage = new_mufs_storage("/");
@@ -202,7 +231,7 @@ fn test_target_path_is_dir_but_source_is_not() {
     let err = dfs
         .rename("/a/file".to_string(), "/a/dir".into())
         .unwrap_err();
-    assert_eq!(err, DfsFrontendError::NotAFile);
+    assert_eq!(err, DfsFrontendError::PathAlreadyExists);
 }
 
 #[rstest]
@@ -231,7 +260,7 @@ fn test_target_path_is_file_but_source_is_not() {
     let err = dfs
         .rename("/a/dir".to_string(), "/a/file".into())
         .unwrap_err();
-    assert_eq!(err, DfsFrontendError::NotADirectory);
+    assert_eq!(err, DfsFrontendError::PathAlreadyExists);
 }
 
 #[rstest]
@@ -258,9 +287,10 @@ fn test_rename_directory_with_empty_dir_as_target() {
     fs.create_file("/dir/file").unwrap();
     fs.create_dir("/empty_dir").unwrap();
 
-    dfs.rename("/dir".to_string(), "/empty_dir".into()).unwrap();
-    assert!(fs.metadata("/dir").is_err());
-    assert!(fs.metadata("/empty_dir/file").unwrap().is_file());
+    let err = dfs
+        .rename("/dir".to_string(), "/empty_dir".into())
+        .unwrap_err();
+    assert_eq!(err, DfsFrontendError::PathAlreadyExists);
 }
 
 #[rstest]
@@ -291,7 +321,7 @@ fn test_rename_directory_with_non_empty_dir_as_target() {
     let err = dfs
         .rename("/dir".to_string(), "/non_empty_dir".into())
         .unwrap_err();
-    assert_eq!(err, DfsFrontendError::DirNotEmpty);
+    assert_eq!(err, DfsFrontendError::PathAlreadyExists);
 }
 
 #[rstest]

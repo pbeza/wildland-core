@@ -168,12 +168,11 @@ pub trait DfsFrontend {
     /// - `FileAlreadyClosed` - DFS does not have the file's state, meaning it's been already close.
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
 
-    /// Opens a file in write-only mode.
-    ///
-    /// This function will create a file if it does not exist, and will truncate it if it does.
+    /// Opens a file for update (reading and writing), first truncating the file to zero length
+    /// if it exists or creating the file if it does not exist.
     ///
     /// # Errors:
-    /// `ParentDoesNotExist` - parent directory does not exist
+    /// `InvalidParent` - parent directory does not exist
     fn create_file(&mut self, path: String) -> Result<FileHandle, DfsFrontendError>;
 
     /// Removes a file
@@ -183,15 +182,15 @@ pub trait DfsFrontend {
     /// - `NotAFile` - provided path represents a node that is not a file
     fn remove_file(&mut self, path: String) -> Result<(), DfsFrontendError>;
 
-    /// Rename a file or directory to a new name, replacing the original file if `new_path` already exists.
+    /// Rename a file or directory to a new path, if new path does not exist yet.
+    /// In contrast to POSIX-like rename operation, it returns error in case of new path existence
+    /// in all cases, so it is up to a caller whether to remove a node under new path or not.
     ///
     /// # Errors:
     /// `NoSuchPath` - source not found
     /// `SourceIsParentOfTarget` - new directory would be a subdirectory of itself
-    /// `NotAFile` - `old_path` is a file but `new_path` is not
-    /// `NotADirectory` - `old_path` is a directory but `new_path` is not
-    /// `DirNotEmpty` - `new_path` is a nonempty directory
     /// `MoveBetweenContainers` - `new_path` is in different Container than `old_path`
+    /// `PathAlreadyExists` - `new_path` already exists
     fn rename(&mut self, old_path: String, new_path: String) -> Result<(), DfsFrontendError>;
 
     /// Changes the permissions on the underlying file.
@@ -203,7 +202,7 @@ pub trait DfsFrontend {
     /// Creates a new, empty directory at the provided path
     ///
     /// # Errors:
-    /// `ParentDoesNotExist` - a parent of the given path doesn’t exist.
+    /// `InvalidParent` - a parent of the given path doesn’t exist.
     /// `PathAlreadyExists` - path already exists.
     fn create_dir(&mut self, path: String) -> Result<(), DfsFrontendError>;
 
@@ -224,18 +223,15 @@ pub trait DfsFrontend {
     /// which can be different from buf length.
     fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError>;
 
-    /// Truncates or extends the underlying file, updating the size of this file to become length.
+    /// Truncates or extends the underlying file, updating the size of this file to become `length`.
     /// If the size is less than the current file’s size, then the file will be shrunk. If it is greater
     /// than the current file’s size, then the file will be extended to size and have all of the intermediate
     /// data filled in with 0s.
-    /// The file’s cursor isn’t changed. In particular, if the cursor was at the end and the file is
-    /// shrunk using this operation, the cursor will now be past the end.
-    fn set_len(&mut self, file: &FileHandle, length: usize) -> Result<(), DfsFrontendError>;
+    /// If the file’s cursor was further than the new length then the file is
+    /// shrunk using this operation, the cursor will now be at the new end of file.
+    fn set_length(&mut self, file: &FileHandle, length: usize) -> Result<(), DfsFrontendError>;
 
-    /// Forces a write of all data that could be buffered by the StorageBackend driver.
-    fn flush(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;
-
-    /// Attempts to sync all metadata to storage.
+    /// Attempts to sync all data and metadata to storage.
     ///
     /// This function will attempt to ensure that all in-memory data reaches the storage before returning.
     fn sync(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError>;

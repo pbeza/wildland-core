@@ -104,9 +104,7 @@ pub enum RenameResponse {
     Renamed,
     NotFound,
     SourceIsParentOfTarget,
-    IsDir,
-    IsFile,
-    DirNotEmpty,
+    TargetPathAlreadyExists,
 }
 
 #[derive(Debug)]

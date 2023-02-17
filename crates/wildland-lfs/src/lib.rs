@@ -225,30 +225,20 @@ impl StorageBackend for LocalFilesystemStorage {
         let relative_new_path = strip_root(new_path);
         let new_path = self.base_dir.join(relative_new_path);
 
-        if let Ok(old_path_metadata) = std::fs::metadata(&old_path) {
-            if let Ok(new_path_metadata) = std::fs::metadata(&new_path) {
-                if new_path_metadata.is_dir() {
-                    if std::fs::read_dir(&new_path).unwrap().next().is_some() {
-                        return Ok(RenameResponse::DirNotEmpty);
-                    }
-                    if old_path_metadata.is_file() {
-                        return Ok(RenameResponse::IsDir);
-                    }
-                }
-                if old_path_metadata.is_dir() && new_path_metadata.is_file() {
-                    return Ok(RenameResponse::IsFile);
-                }
-            }
-
-            match new_path.strip_prefix(&old_path) {
-                Ok(_) => Ok(RenameResponse::SourceIsParentOfTarget),
-                Err(_) => match std::fs::rename(old_path, new_path) {
-                    Ok(_) => Ok(RenameResponse::Renamed),
-                    Err(e) => match e.kind() {
-                        std::io::ErrorKind::NotFound => Ok(RenameResponse::NotFound),
-                        _ => Err(StorageBackendError::Generic(e.into())),
+        if old_path.exists() {
+            if new_path.exists() {
+                Ok(RenameResponse::TargetPathAlreadyExists)
+            } else {
+                match new_path.strip_prefix(&old_path) {
+                    Ok(_) => Ok(RenameResponse::SourceIsParentOfTarget),
+                    Err(_) => match std::fs::rename(old_path, new_path) {
+                        Ok(_) => Ok(RenameResponse::Renamed),
+                        Err(e) => match e.kind() {
+                            std::io::ErrorKind::NotFound => Ok(RenameResponse::NotFound),
+                            _ => Err(StorageBackendError::Generic(e.into())),
+                        },
                     },
-                },
+                }
             }
         } else {
             Ok(RenameResponse::NotFound)

@@ -138,14 +138,9 @@ impl DfsFrontend for EncryptedDfs {
         self.inner.set_owner()
     }
 
-    fn set_len(&mut self, file: &FileHandle, length: usize) -> Result<(), DfsFrontendError> {
+    fn set_length(&mut self, file: &FileHandle, length: usize) -> Result<(), DfsFrontendError> {
         // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
-        self.inner.set_len(file, length)
-    }
-
-    fn flush(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
-        // TODO WILX-11 encrypt/decrypt and delegate to unencrypted dfs
-        self.inner.flush(file)
+        self.inner.set_length(file, length)
     }
 
     fn sync(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {

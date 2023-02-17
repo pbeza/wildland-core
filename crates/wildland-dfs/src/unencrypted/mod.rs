@@ -341,9 +341,9 @@ impl DfsFrontend for UnencryptedDfs {
                     RenameResponse::SourceIsParentOfTarget => {
                         Err(DfsFrontendError::SourceIsParentOfTarget)
                     }
-                    RenameResponse::IsDir => Err(DfsFrontendError::NotAFile),
-                    RenameResponse::IsFile => Err(DfsFrontendError::NotADirectory),
-                    RenameResponse::DirNotEmpty => Err(DfsFrontendError::DirNotEmpty),
+                    RenameResponse::TargetPathAlreadyExists => {
+                        Err(DfsFrontendError::PathAlreadyExists)
+                    }
                 })
             } else {
                 Err(DfsFrontendError::MoveBetweenContainers)
@@ -380,11 +380,7 @@ impl DfsFrontend for UnencryptedDfs {
         todo!() // TODO COR-5
     }
 
-    fn set_len(&mut self, _file: &FileHandle, _length: usize) -> Result<(), DfsFrontendError> {
-        todo!() // TODO COR-5
-    }
-
-    fn flush(&mut self, _file: &FileHandle) -> Result<(), DfsFrontendError> {
+    fn set_length(&mut self, _file: &FileHandle, _length: usize) -> Result<(), DfsFrontendError> {
         todo!() // TODO COR-5
     }
 
