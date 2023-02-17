@@ -8,11 +8,13 @@ use super::descriptor::S3Descriptor;
 use super::error::S3Error;
 use crate::storage_backends::models::{
     CreateDirResponse,
+    CreateFileResponse,
     MetadataResponse,
     OpenResponse,
     ReadDirResponse,
     RemoveDirResponse,
     RemoveFileResponse,
+    RenameResponse,
     StorageBackendError,
 };
 use crate::storage_backends::StorageBackend;
@@ -139,6 +141,18 @@ impl StorageBackend for S3Backend {
     }
 
     fn remove_file(&self, _path: &Path) -> Result<RemoveFileResponse, StorageBackendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn create_file(&self, _path: &Path) -> Result<CreateFileResponse, StorageBackendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn rename(
+        &self,
+        _old_path: &Path,
+        _new_path: &Path,
+    ) -> Result<RenameResponse, StorageBackendError> {
         todo!() // TODO COR-87
     }
 }

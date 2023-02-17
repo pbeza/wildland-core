@@ -11,18 +11,32 @@ use super::{NodeDescriptor, UnencryptedDfs};
 use crate::storage_backends::models::StorageBackendError;
 use crate::storage_backends::StorageBackend;
 
-pub type BackendOp<T> = fn(Rc<dyn StorageBackend>, path: &Path) -> Result<T, StorageBackendError>;
+pub fn filter_existent_nodes<'a: 'b, 'b>(
+    nodes: &'a [NodeDescriptor],
+    dfs: &'b mut UnencryptedDfs,
+) -> Result<impl Iterator<Item = &'a NodeDescriptor>, DfsFrontendError> {
+    Ok(
+        fetch_data_from_containers_by_path(nodes, dfs, &|backend, path| backend.path_exists(path))
+            .collect::<Result<Vec<_>, DfsFrontendError>>()?
+            .into_iter()
+            .filter_map(|(node, exists)| if exists { Some(node) } else { None }),
+    )
+}
+
+type ContainersOp<T> = dyn Fn(Rc<dyn StorageBackend>, &Path) -> Result<T, StorageBackendError>;
 /// Ignores virtual nodes
-pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
+pub fn fetch_data_from_containers_by_path<'a: 'b, 'b, T: Debug + 'a>(
     nodes: &'a [NodeDescriptor],
     dfs_front: &'b mut UnencryptedDfs,
-    backend_op: BackendOp<T>,
+    backend_op: &'b ContainersOp<T>,
 ) -> impl Iterator<Item = Result<(&'a NodeDescriptor, T), DfsFrontendError>> + 'b {
     nodes.iter().filter_map(move |node| {
         // virtual nodes are not processed
         node.storages().map(|storages| {
-            execute_container_operation(dfs_front, storages, backend_op)
-                .map(|response| (node, response))
+            execute_container_operation(dfs_front, storages, &|backend| {
+                backend_op(backend, storages.path_within_storage())
+            })
+            .map(|response| (node, response))
         })
     })
 }
@@ -30,12 +44,11 @@ pub fn fetch_data_from_containers<'a: 'b, 'b, T: Debug + 'a>(
 pub fn execute_container_operation<T: Debug>(
     dfs_front: &mut UnencryptedDfs,
     node_storages: &NodeStorages,
-    backend_op: BackendOp<T>,
+    backend_op: &dyn Fn(Rc<dyn StorageBackend>) -> Result<T, StorageBackendError>,
 ) -> Result<T, DfsFrontendError> {
     let backends = dfs_front.get_backends(node_storages.storages());
 
-    let backend_ops =
-        backends.map(|backend| backend_op(backend, node_storages.path_within_storage()));
+    let backend_ops = backends.map(|backend| backend_op(backend));
 
     // TODO WILX-362
     execute_backend_op_with_policy(

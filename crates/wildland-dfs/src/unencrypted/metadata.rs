@@ -32,30 +32,32 @@ pub fn metadata(
     let nodes = get_related_nodes(dfs_front, input_exposed_path)?;
 
     let mut stats: Vec<(&NodeDescriptor, Stat)> =
-        fetch_data_from_containers(&nodes, dfs_front, |backend, path| backend.metadata(path))
-            .collect::<Result<Vec<_>, DfsFrontendError>>()?
-            .into_iter()
-            .filter_map(|(node, opt_result)| match opt_result {
-                MetadataResponse::Found(stat) => Some((node, stat)),
-                MetadataResponse::NotFound => None,
-            })
-            .chain(nodes.iter().filter_map(|node| {
-                if node.is_virtual() {
-                    Some((
-                        node,
-                        Stat {
-                            node_type: NodeType::Dir,
-                            size: 0,
-                            access_time: None,
-                            modification_time: None,
-                            change_time: None,
-                        },
-                    ))
-                } else {
-                    None
-                }
-            }))
-            .collect();
+        fetch_data_from_containers_by_path(&nodes, dfs_front, &|backend, path| {
+            backend.metadata(path)
+        })
+        .collect::<Result<Vec<_>, DfsFrontendError>>()?
+        .into_iter()
+        .filter_map(|(node, opt_result)| match opt_result {
+            MetadataResponse::Found(stat) => Some((node, stat)),
+            MetadataResponse::NotFound => None,
+        })
+        .chain(nodes.iter().filter_map(|node| {
+            if node.is_virtual() {
+                Some((
+                    node,
+                    Stat {
+                        node_type: NodeType::Dir,
+                        size: 0,
+                        access_time: None,
+                        modification_time: None,
+                        change_time: None,
+                    },
+                ))
+            } else {
+                None
+            }
+        }))
+        .collect();
 
     match stats.len() {
         0 => Err(DfsFrontendError::NoSuchPath),

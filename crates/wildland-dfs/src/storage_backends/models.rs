@@ -98,3 +98,23 @@ pub enum RemoveFileResponse {
     NotFound,
     NotAFile,
 }
+
+#[derive(Debug)]
+pub enum RenameResponse {
+    Renamed,
+    NotFound,
+    SourceIsParentOfTarget,
+    TargetPathAlreadyExists,
+}
+
+#[derive(Debug)]
+pub enum CreateFileResponse {
+    Created(CloseOnDropDescriptor),
+    ParentDoesNotExist,
+}
+
+impl CreateFileResponse {
+    pub fn created<T: OpenedFileDescriptor + 'static>(descriptor: T) -> Self {
+        Self::Created(CloseOnDropDescriptor::new(Box::new(descriptor)))
+    }
+}
