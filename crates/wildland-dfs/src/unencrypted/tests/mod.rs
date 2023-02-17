@@ -34,11 +34,13 @@ use wildland_corex::{MockPathResolver, Storage};
 use crate::storage_backends::models::{
     CloseError,
     CreateDirResponse,
+    CreateFileResponse,
     MetadataResponse,
     OpenResponse,
     ReadDirResponse,
     RemoveDirResponse,
     RemoveFileResponse,
+    RenameResponse,
     SeekFrom,
     StorageBackendError,
 };
@@ -225,6 +227,62 @@ impl StorageBackend for Mufs {
             }
         } else {
             Ok(RemoveFileResponse::NotFound)
+        }
+    }
+
+    fn create_file(&self, path: &Path) -> Result<CreateFileResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        match self.fs.create_file(path.as_path()) {
+            Ok(_) => {
+                let opened_file = self
+                    .fs
+                    .new_openopts()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .read(true)
+                    .open(path)?;
+                Ok(CreateFileResponse::created(MufsOpenedFile::new(
+                    opened_file,
+                )))
+            }
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => Ok(CreateFileResponse::ParentDoesNotExist),
+                _ => Err(StorageBackendError::Generic(e.into())),
+            },
+        }
+    }
+
+    fn rename(
+        &self,
+        old_path: &Path,
+        new_path: &Path,
+    ) -> Result<RenameResponse, StorageBackendError> {
+        let relative_old_path = strip_root(old_path);
+        let old_path = self.base_dir.join(relative_old_path);
+
+        let relative_new_path = strip_root(new_path);
+        let new_path = self.base_dir.join(relative_new_path);
+
+        if self.fs.metadata(&old_path).is_ok() {
+            if self.fs.metadata(&new_path).is_ok() {
+                Ok(RenameResponse::TargetPathAlreadyExists)
+            } else {
+                match new_path.strip_prefix(&old_path) {
+                    Ok(_) => Ok(RenameResponse::SourceIsParentOfTarget),
+                    Err(_) => match self.fs.rename(old_path, new_path) {
+                        Ok(_) => Ok(RenameResponse::Renamed),
+                        Err(e) => match e.kind() {
+                            std::io::ErrorKind::NotFound => Ok(RenameResponse::NotFound),
+                            _ => Err(StorageBackendError::Generic(e.into())),
+                        },
+                    },
+                }
+            }
+        } else {
+            Ok(RenameResponse::NotFound)
         }
     }
 }
