@@ -234,8 +234,20 @@ impl StorageBackend for Mufs {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
-        match self.fs.create_file(path) {
-            Ok(file) => Ok(CreateFileResponse::created(MufsOpenedFile::new(file))),
+        match self.fs.create_file(path.as_path()) {
+            Ok(_) => {
+                let opened_file = self
+                    .fs
+                    .new_openopts()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .read(true)
+                    .open(path)?;
+                Ok(CreateFileResponse::created(MufsOpenedFile::new(
+                    opened_file,
+                )))
+            }
             Err(e) => match e.kind() {
                 std::io::ErrorKind::NotFound => Ok(CreateFileResponse::ParentDoesNotExist),
                 _ => Err(StorageBackendError::Generic(e.into())),
@@ -254,8 +266,8 @@ impl StorageBackend for Mufs {
         let relative_new_path = strip_root(new_path);
         let new_path = self.base_dir.join(relative_new_path);
 
-        if let Ok(_) = self.fs.metadata(&old_path) {
-            if let Ok(_) = self.fs.metadata(&new_path) {
+        if self.fs.metadata(&old_path).is_ok() {
+            if self.fs.metadata(&new_path).is_ok() {
                 Ok(RenameResponse::TargetPathAlreadyExists)
             } else {
                 match new_path.strip_prefix(&old_path) {

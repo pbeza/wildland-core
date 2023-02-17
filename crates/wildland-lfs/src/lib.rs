@@ -205,8 +205,18 @@ impl StorageBackend for LocalFilesystemStorage {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
-        match std::fs::File::create(path) {
-            Ok(file) => Ok(CreateFileResponse::created(StdFsOpenedFile::new(file))),
+        match std::fs::File::create(path.as_path()) {
+            Ok(_file) => {
+                let opened_file = OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .read(true)
+                    .open(path)?;
+                Ok(CreateFileResponse::created(StdFsOpenedFile::new(
+                    opened_file,
+                )))
+            }
             Err(e) => match e.kind() {
                 std::io::ErrorKind::NotFound => Ok(CreateFileResponse::ParentDoesNotExist),
                 _ => Err(StorageBackendError::Generic(e.into())),
