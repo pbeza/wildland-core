@@ -16,7 +16,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 mod create_and_remove_dir;
+mod create_and_remove_file;
 mod metadata;
 mod open_close;
 mod read_dir;
 mod read_write_seek;
+mod rename;

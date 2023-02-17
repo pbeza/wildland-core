@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-mod create_remove_dir;
+mod create_remove;
 mod metadata;
 mod node_descriptor;
 mod path_translator;
@@ -26,18 +26,31 @@ mod utils;
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::str::FromStr;
 
 use uuid::Uuid;
-use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, FileHandle, Stat};
+use wildland_corex::dfs::interface::{
+    DfsFrontend,
+    DfsFrontendError,
+    FileHandle,
+    Permissions,
+    Stat,
+    UnixTimestamp,
+};
 use wildland_corex::{PathResolver, Storage};
 
 use self::node_descriptor::NodeDescriptor;
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
-use self::utils::{execute_container_operation, fetch_data_from_containers, get_related_nodes};
-use crate::storage_backends::models::{CloseError, OpenResponse, RemoveFileResponse, SeekFrom};
+use self::utils::{
+    execute_container_operation,
+    fetch_data_from_containers_by_path,
+    filter_existent_nodes,
+    get_related_nodes,
+};
+use crate::storage_backends::models::{CloseError, OpenResponse, RenameResponse, SeekFrom};
 use crate::storage_backends::{
     CloseOnDropDescriptor,
     OpenedFileDescriptor,
@@ -182,7 +195,7 @@ impl DfsFrontend for UnencryptedDfs {
         let nodes = get_related_nodes(self, input_exposed_path)?;
 
         let mut descriptors: Vec<(&NodeDescriptor, OpenResponse)> =
-            fetch_data_from_containers(&nodes, self, |backend, path| backend.open(path))
+            fetch_data_from_containers_by_path(&nodes, self, &|backend, path| backend.open(path))
                 .collect::<Result<Vec<_>, DfsFrontendError>>()?
                 .into_iter()
                 .filter(|(_node, response)| !matches!(response, OpenResponse::NotFound))
@@ -231,54 +244,19 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn remove_file(&mut self, input_exposed_path: String) -> Result<(), DfsFrontendError> {
-        let input_exposed_path = Path::new(&input_exposed_path);
+        create_remove::remove_file(self, input_exposed_path)
+    }
 
-        let mut nodes = get_related_nodes(self, input_exposed_path)?;
-
-        let remove_from_container = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| {
-            match node {
-                NodeDescriptor::Physical { storages, .. } => {
-                    execute_container_operation(dfs, storages, |backend, path| {
-                        backend.remove_file(path)
-                    })
-                    .and_then(|resp| match resp {
-                        RemoveFileResponse::Removed => Ok(()),
-                        RemoveFileResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
-                        RemoveFileResponse::NotAFile => Err(DfsFrontendError::NotAFile),
-                    })
-                }
-                NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::ReadOnlyPath), // Virtual paths are considered as read-only
-            }
-        };
-
-        match nodes.len() {
-            0 => Err(DfsFrontendError::NoSuchPath),
-            1 => remove_from_container(self, &nodes.pop().unwrap()),
-            _ => {
-                let mut existent_paths: Vec<&NodeDescriptor> =
-                    fetch_data_from_containers(&nodes, self, |backend, path| {
-                        backend.path_exists(path)
-                    })
-                    .collect::<Result<Vec<_>, DfsFrontendError>>()?
-                    .into_iter()
-                    .filter_map(|(node, exists)| if exists { Some(node) } else { None })
-                    .collect();
-
-                match existent_paths.len() {
-                    0 => Err(DfsFrontendError::NoSuchPath),
-                    1 => remove_from_container(self, existent_paths.pop().unwrap()),
-                    _ => Err(DfsFrontendError::ReadOnlyPath), // Ambiguous path are for now read-only
-                }
-            }
-        }
+    fn create_file(&mut self, requested_path: String) -> Result<FileHandle, DfsFrontendError> {
+        create_remove::create_file(self, requested_path)
     }
 
     fn create_dir(&mut self, requested_path: String) -> Result<(), DfsFrontendError> {
-        create_remove_dir::create_dir(self, requested_path)
+        create_remove::create_dir(self, requested_path)
     }
 
     fn remove_dir(&mut self, requested_path: String) -> Result<(), DfsFrontendError> {
-        create_remove_dir::remove_dir(self, requested_path)
+        create_remove::remove_dir(self, requested_path)
     }
 
     fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
@@ -334,5 +312,96 @@ impl DfsFrontend for UnencryptedDfs {
                 offset: pos_from_end,
             },
         )
+    }
+
+    fn rename(&mut self, old_path: String, new_path: String) -> Result<(), DfsFrontendError> {
+        let old_path = PathBuf::from_str(&old_path).unwrap();
+        let mut nodes = get_related_nodes(self, &old_path)?;
+
+        let rename_node = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| {
+            let storages = node.storages().unwrap(); // safe to unwrap cause virtual nodes are filtered out
+
+            let abs_path = node.abs_path().to_string_lossy().to_string();
+            let claimed_container_root_path = abs_path
+                .strip_suffix(&storages.path_within_storage().to_string_lossy().to_string())
+                .unwrap_or("");
+
+            if let Some(new_path_within_storage) =
+                new_path.strip_prefix(claimed_container_root_path)
+            {
+                execute_container_operation(dfs, storages, &|backend| {
+                    backend.rename(
+                        storages.path_within_storage(),
+                        Path::new(new_path_within_storage),
+                    )
+                })
+                .and_then(|response| match response {
+                    RenameResponse::Renamed => Ok(()),
+                    RenameResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
+                    RenameResponse::SourceIsParentOfTarget => {
+                        Err(DfsFrontendError::SourceIsParentOfTarget)
+                    }
+                    RenameResponse::TargetPathAlreadyExists => {
+                        Err(DfsFrontendError::PathAlreadyExists)
+                    }
+                })
+            } else {
+                Err(DfsFrontendError::MoveBetweenContainers)
+            }
+        };
+
+        match nodes.len() {
+            0 => Err(DfsFrontendError::NoSuchPath),
+            1 => match nodes.pop().unwrap() {
+                node @ NodeDescriptor::Physical { .. } => rename_node(self, &node),
+                NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::ReadOnlyPath),
+            },
+            _ => {
+                let mut existent_physical_nodes: Vec<&NodeDescriptor> =
+                    filter_existent_nodes(&nodes, self)?.collect();
+
+                match existent_physical_nodes.len() {
+                    0 => Err(DfsFrontendError::NoSuchPath),
+                    1 => {
+                        let node = existent_physical_nodes.pop().unwrap();
+                        rename_node(self, node)
+                    }
+                    _ => Err(DfsFrontendError::ReadOnlyPath), // For now, conflicting paths are considered as read-only
+                }
+            }
+        }
+    }
+
+    fn set_permissions(&mut self, _permissions: Permissions) -> Result<(), DfsFrontendError> {
+        todo!() // TODO COR-5
+    }
+
+    fn set_owner(&mut self) {
+        todo!() // TODO COR-5
+    }
+
+    fn set_length(&mut self, _file: &FileHandle, _length: usize) -> Result<(), DfsFrontendError> {
+        todo!() // TODO COR-5
+    }
+
+    fn sync(&mut self, _file: &FileHandle) -> Result<(), DfsFrontendError> {
+        todo!() // TODO COR-5
+    }
+
+    fn set_times(
+        &mut self,
+        _file: &FileHandle,
+        _access_time: Option<UnixTimestamp>,
+        _modification_time: Option<UnixTimestamp>,
+    ) -> Result<(), DfsFrontendError> {
+        todo!() // TODO COR-5
+    }
+
+    fn file_metadata(&mut self, _file: &FileHandle) -> Result<Stat, DfsFrontendError> {
+        todo!() // TODO COR-5
+    }
+
+    fn sync_all(&mut self) -> Result<(), DfsFrontendError> {
+        todo!() // TODO COR-5
     }
 }

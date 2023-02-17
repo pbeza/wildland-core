@@ -368,6 +368,15 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn DfsFrontend>>,
             file_handle: &FileHandle,
         ) -> Result<VoidType, DfsFrontendError>;
+        fn create_file(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            path: String,
+        ) -> Result<FileHandle, DfsFrontendError>;
+        fn rename(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            old_path: String,
+            new_path: String,
+        ) -> Result<VoidType, DfsFrontendError>;
         fn remove_file(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
