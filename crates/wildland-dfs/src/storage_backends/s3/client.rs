@@ -1,31 +1,24 @@
-use std::path::{Path, PathBuf};
+use std::ops::RangeInclusive;
 use std::rc::Rc;
+use std::time::SystemTime;
 
 use aws_sdk_s3::model::{CompletedMultipartUpload, CompletedPart};
 use aws_sdk_s3::output::{
     CompleteMultipartUploadOutput,
     CreateMultipartUploadOutput,
     GetObjectOutput,
-    HeadObjectOutput,
     UploadPartCopyOutput,
     UploadPartOutput,
 };
 use aws_sdk_s3::{Client, Credentials, Region};
 use tokio::runtime::Runtime;
-use tokio_stream::StreamExt;
-use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
+use uuid::Uuid;
+use wildland_corex::dfs::interface::UnixTimestamp;
 
 use super::connector::build_s3_client;
 use super::error::S3Error;
-use super::helpers::{
-    add_trailing_slash,
-    execute_by_step,
-    remove_trailing_slash,
-    to_completed_part,
-};
-use super::models::{ObjectAttributes, WriteResp};
-
-const NODE_TYPE_META_KEY: &str = "nodeType";
+use super::helpers::{defuse, execute_by_step, to_completed_part};
+use super::models::WriteResp;
 
 // S3 multipart upload limits
 const MINIMUM_PART_SIZE: usize = 5 * 1024 * 1024;
@@ -33,31 +26,29 @@ const MAXIMUM_PART_SIZE: usize = 5 * 1024 * 1024 * 1024;
 
 #[cfg_attr(test, mockall::automock)]
 pub trait S3Client {
-    fn list_files(&self, path: &Path, bucket_name: &str) -> Result<Vec<PathBuf>, S3Error>;
-    fn get_object_attributes(
-        &self,
-        path: &Path,
-        bucket_name: &str,
-    ) -> Result<ObjectAttributes, S3Error>;
     fn read_object(
         &self,
-        path: &Path,
+        object_name: &str,
         bucket_name: &str,
-        position: usize,
-        number_of_bytes: usize,
-        etag: Option<String>,
+        range: Option<RangeInclusive<usize>>,
+        e_tag: Option<String>,
     ) -> Result<Vec<u8>, S3Error>;
     fn write_buffer(
         &self,
-        path: &Path,
+        object_name: &str,
         bucket_name: &str,
         position: usize,
         buf: &[u8],
         file_size: usize,
-        etag: Option<String>,
+        e_tag: Option<String>,
     ) -> Result<WriteResp, S3Error>;
-    fn create_dir(&self, path: &Path, bucket_name: &str) -> Result<(), S3Error>;
-    fn remove_object(&self, path: &Path, bucket_name: &str) -> Result<(), S3Error>;
+    fn remove_object(&self, object_name: &str, bucket_name: &str) -> Result<(), S3Error>;
+    fn save_object(
+        &self,
+        object_name: &str,
+        bucket_name: &str,
+        buf: Vec<u8>,
+    ) -> Result<(), S3Error>;
 }
 
 pub struct WildlandS3Client {
@@ -80,8 +71,8 @@ impl WildlandS3Client {
         end: usize,
         bucket_name: &str,
         copy_source: &str,
-        etag: &Option<String>,
-        key: &Option<String>,
+        e_tag: &Option<String>,
+        new_object_name: &str,
         upload_id: &Option<String>,
         part_number: &mut i32,
     ) -> Result<Vec<CompletedPart>, S3Error> {
@@ -94,9 +85,9 @@ impl WildlandS3Client {
                     .upload_part_copy()
                     .bucket(bucket_name)
                     .copy_source(copy_source)
-                    .set_copy_source_if_match(etag.clone())
+                    .set_copy_source_if_match(e_tag.clone())
                     .copy_source_range(format!("bytes={begin}-{}", end - 1))
-                    .set_key(key.clone())
+                    .key(new_object_name)
                     .part_number(*part_number)
                     .set_upload_id(upload_id.clone())
                     .send()
@@ -113,102 +104,22 @@ impl WildlandS3Client {
 
 impl S3Client for WildlandS3Client {
     #[tracing::instrument(err(Debug), level = "debug", skip_all)]
-    fn list_files(&self, path: &Path, bucket_name: &str) -> Result<Vec<PathBuf>, S3Error> {
-        let object_key = add_trailing_slash(path);
-
-        let result = self.rt.block_on(async {
-            self.client
-                .list_objects_v2()
-                .bucket(bucket_name)
-                .prefix(object_key.clone())
-                .into_paginator()
-                .send()
-                .collect::<Result<Vec<_>, _>>()
-                .await
-        })?;
-
-        Ok(result
-            .into_iter()
-            .filter_map(|item| item.contents)
-            .flatten()
-            .filter_map(|object| object.key)
-            .filter(|key| {
-                key.strip_prefix(&object_key).map(|tail| tail.contains('/')) == Some(false)
-            })
-            .map(Into::into)
-            .collect())
-    }
-
-    #[tracing::instrument(err(Debug), level = "debug", skip_all)]
-    fn get_object_attributes(
-        &self,
-        path: &Path,
-        bucket_name: &str,
-    ) -> Result<ObjectAttributes, S3Error> {
-        let path = remove_trailing_slash(path);
-
-        let HeadObjectOutput {
-            last_modified,
-            content_length,
-            e_tag,
-            metadata,
-            ..
-        } = self.rt.block_on(async {
-            self.client
-                .head_object()
-                .bucket(bucket_name)
-                .key(path)
-                .send()
-                .await
-        })?;
-
-        Ok(ObjectAttributes {
-            stat: Stat {
-                node_type: metadata
-                    .as_ref()
-                    .and_then(|metadata| metadata.get(NODE_TYPE_META_KEY))
-                    .map(|node_type| match node_type.as_str() {
-                        "File" => NodeType::File,
-                        "Dir" => NodeType::Dir,
-                        "Symlink" => NodeType::Symlink,
-                        "Other" => NodeType::Other,
-                        _ => NodeType::Other,
-                    })
-                    .unwrap_or(NodeType::Other),
-                size: content_length as _,
-                access_time: None,
-                modification_time: last_modified.map(|time| UnixTimestamp {
-                    sec: time.secs() as _,
-                    nano_sec: time.subsec_nanos(),
-                }),
-                change_time: None,
-            },
-            etag: e_tag,
-        })
-    }
-
-    #[tracing::instrument(err(Debug), level = "debug", skip_all)]
     fn read_object(
         &self,
-        path: &Path,
+        object_name: &str,
         bucket_name: &str,
-        position: usize,
-        number_of_bytes: usize,
-        etag: Option<String>,
+        range: Option<RangeInclusive<usize>>,
+        e_tag: Option<String>,
     ) -> Result<Vec<u8>, S3Error> {
-        let path = remove_trailing_slash(path);
+        let range_bytes = range.map(|range| format!("bytes={}-{}", range.start(), range.end()));
 
         let GetObjectOutput { body, .. } = self.rt.block_on(async {
             self.client
                 .get_object()
                 .bucket(bucket_name)
-                .range(format!(
-                    "bytes={begin}-{end}",
-                    begin = position,
-                    end = position + number_of_bytes - 1
-                ))
-                .key(path)
-                .set_if_match(etag)
+                .set_range(range_bytes)
+                .key(object_name)
+                .set_if_match(e_tag)
                 .send()
                 .await
         })?;
@@ -222,20 +133,20 @@ impl S3Client for WildlandS3Client {
     #[tracing::instrument(err(Debug), level = "debug", skip_all)]
     fn write_buffer(
         &self,
-        path: &Path,
+        object_name: &str,
         bucket_name: &str,
         mut position: usize,
         buf: &[u8],
         file_size: usize,
-        etag: Option<String>,
+        e_tag: Option<String>,
     ) -> Result<WriteResp, S3Error> {
-        let path = remove_trailing_slash(path);
+        let new_object_name = Uuid::new_v4().to_string();
 
-        let CreateMultipartUploadOutput { upload_id, key, .. } = self.rt.block_on(async {
+        let CreateMultipartUploadOutput { upload_id, .. } = self.rt.block_on(async {
             self.client
                 .create_multipart_upload()
                 .bucket(bucket_name)
-                .key(path.clone())
+                .key(&new_object_name)
                 .send()
                 .await
         })?;
@@ -248,7 +159,7 @@ impl S3Client for WildlandS3Client {
                     self.client
                         .abort_multipart_upload()
                         .bucket(bucket_name)
-                        .set_key(key.clone())
+                        .key(&new_object_name)
                         .set_upload_id(upload_id.clone())
                         .send()
                         .await
@@ -262,7 +173,7 @@ impl S3Client for WildlandS3Client {
         let mut buffer = vec![];
         let mut part_number = 1;
         let mut completed_parts = vec![];
-        let copy_source = format!("{bucket_name}/{path}");
+        let copy_source = format!("{bucket_name}/{object_name}");
 
         // Copy range [0, position) from the original file
         match position {
@@ -270,7 +181,12 @@ impl S3Client for WildlandS3Client {
             0 => (),
             // Not enough bytes to use multipart copy. We need to copy it manually
             p if p < MINIMUM_PART_SIZE => {
-                buffer = self.read_object(path.as_ref(), bucket_name, 0, position, etag.clone())?;
+                buffer = self.read_object(
+                    object_name.as_ref(),
+                    bucket_name,
+                    Some(RangeInclusive::new(0, position - 1)),
+                    e_tag.clone(),
+                )?;
                 position = 0;
             }
             _ => {
@@ -279,8 +195,8 @@ impl S3Client for WildlandS3Client {
                     position,
                     bucket_name,
                     &copy_source,
-                    &etag,
-                    &key,
+                    &e_tag,
+                    &new_object_name,
                     &upload_id,
                     &mut part_number,
                 )?;
@@ -296,11 +212,13 @@ impl S3Client for WildlandS3Client {
         // It means that we are uploading the last part of a file and MINIMUM_PART_SIZE restriction doesn't need to be fulfilled.
         if buffer.len() < MINIMUM_PART_SIZE && position_after_write < file_size {
             let remaining_bytes = self.read_object(
-                path.as_ref(),
+                object_name.as_ref(),
                 bucket_name,
-                position + buffer.len(),
-                MINIMUM_PART_SIZE - buffer.len(),
-                etag.clone(),
+                Some(RangeInclusive::new(
+                    position + buffer.len(),
+                    MINIMUM_PART_SIZE - buffer.len() - 1,
+                )),
+                e_tag.clone(),
             )?;
             buffer.extend(remaining_bytes);
         }
@@ -318,7 +236,7 @@ impl S3Client for WildlandS3Client {
                     .upload_part()
                     .body(chunk.to_vec().into())
                     .bucket(bucket_name)
-                    .set_key(key.clone())
+                    .key(&new_object_name)
                     .part_number(part_number)
                     .set_upload_id(upload_id.clone())
                     .send()
@@ -345,8 +263,8 @@ impl S3Client for WildlandS3Client {
                 file_size,
                 bucket_name,
                 &copy_source,
-                &etag,
-                &key,
+                &e_tag,
+                &new_object_name,
                 &upload_id,
                 &mut part_number,
             )?;
@@ -357,7 +275,7 @@ impl S3Client for WildlandS3Client {
             self.client
                 .complete_multipart_upload()
                 .bucket(bucket_name)
-                .set_key(key.clone())
+                .key(&new_object_name)
                 .multipart_upload(
                     CompletedMultipartUpload::builder()
                         .set_parts(Some(completed_parts))
@@ -368,25 +286,29 @@ impl S3Client for WildlandS3Client {
                 .await
         })?;
 
-        scopeguard::ScopeGuard::into_inner(aboart_upload_on_exit); // defuse
+        defuse(aboart_upload_on_exit);
 
         Ok(WriteResp {
             bytes_count: buf.len(),
-            etag: e_tag,
+            new_object_name,
+            new_modification_time: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .map(|duration| UnixTimestamp {
+                    sec: duration.as_secs(),
+                    nano_sec: duration.subsec_nanos(),
+                })
+                .unwrap(),
+            new_e_tag: e_tag.unwrap(),
         })
     }
 
     #[tracing::instrument(err(Debug), level = "debug", skip_all)]
-    fn create_dir(&self, path: &Path, bucket_name: &str) -> Result<(), S3Error> {
-        let path = remove_trailing_slash(path);
-
+    fn remove_object(&self, object_name: &str, bucket_name: &str) -> Result<(), S3Error> {
         self.rt.block_on(async {
             self.client
-                .put_object()
+                .delete_object()
                 .bucket(bucket_name)
-                .body(Vec::new().into())
-                .key(path)
-                .metadata(NODE_TYPE_META_KEY, "Dir")
+                .key(object_name)
                 .send()
                 .await
         })?;
@@ -394,14 +316,18 @@ impl S3Client for WildlandS3Client {
     }
 
     #[tracing::instrument(err(Debug), level = "debug", skip_all)]
-    fn remove_object(&self, path: &Path, bucket_name: &str) -> Result<(), S3Error> {
-        let path = remove_trailing_slash(path);
-
+    fn save_object(
+        &self,
+        object_name: &str,
+        bucket_name: &str,
+        buf: Vec<u8>,
+    ) -> Result<(), S3Error> {
         self.rt.block_on(async {
             self.client
-                .delete_object()
+                .put_object()
                 .bucket(bucket_name)
-                .key(path)
+                .key(object_name)
+                .body(buf.into())
                 .send()
                 .await
         })?;

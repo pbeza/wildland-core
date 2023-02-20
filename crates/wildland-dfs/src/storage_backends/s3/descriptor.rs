@@ -1,3 +1,4 @@
+use std::ops::RangeInclusive;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -5,6 +6,9 @@ use derivative::Derivative;
 use wildland_corex::dfs::interface::DfsFrontendError;
 
 use super::client::S3Client;
+use super::file_system::FileSystemNode;
+use super::helpers::{commit_file_system, load_file_system};
+use super::models::WriteResp;
 use crate::storage_backends::models::{CloseError, SeekFrom};
 use crate::storage_backends::OpenedFileDescriptor;
 
@@ -84,9 +88,10 @@ impl Cursor {
 #[derivative(Debug)]
 pub struct S3Descriptor {
     bucket_name: String,
-    path: PathBuf,
+    object_name: String,
+    node_path: PathBuf,
     cursor: Cursor,
-    etag: Option<String>,
+    e_tag: String,
 
     #[derivative(Debug = "ignore")]
     client: Rc<dyn S3Client>,
@@ -95,19 +100,21 @@ pub struct S3Descriptor {
 impl S3Descriptor {
     pub fn new(
         bucket_name: String,
-        path: PathBuf,
+        object_name: String,
+        node_path: PathBuf,
         total_size: usize,
-        etag: Option<String>,
+        e_tag: String,
         client: Rc<dyn S3Client>,
     ) -> Self {
         Self {
             bucket_name,
-            path,
+            object_name,
+            node_path,
             cursor: Cursor {
                 total_size,
                 position: 0,
             },
-            etag,
+            e_tag,
             client,
         }
     }
@@ -119,32 +126,65 @@ impl OpenedFileDescriptor for S3Descriptor {
     }
 
     fn read(&mut self, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
+        if self.cursor.position == self.cursor.total_size {
+            return Ok(Vec::new());
+        }
+
         let resp = self.client.read_object(
-            &self.path,
+            &self.object_name,
             &self.bucket_name,
-            self.cursor.position,
-            count,
-            self.etag.clone(),
+            Some(RangeInclusive::new(self.cursor.position, count - 1)),
+            Some(self.e_tag.clone()),
         )?;
         self.cursor.position += resp.len();
         Ok(resp)
     }
 
     fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError> {
-        let resp = self.client.write_buffer(
-            &self.path,
+        let mut file_system = load_file_system(&*self.client, &self.bucket_name)
+            .map_err(|err| DfsFrontendError::Generic(format!("{:?}", err)))?;
+
+        let WriteResp {
+            bytes_count,
+            new_object_name,
+            new_modification_time,
+            new_e_tag,
+        } = self.client.write_buffer(
+            &self.object_name,
             &self.bucket_name,
             self.cursor.position,
             buf,
             self.cursor.total_size,
-            self.etag.clone(),
+            Some(self.e_tag.clone()),
         )?;
 
-        self.etag = resp.etag;
-        self.cursor.position += resp.bytes_count;
-        self.cursor.total_size = std::cmp::max(self.cursor.position, self.cursor.total_size);
+        let new_position = self.cursor.position + bytes_count;
+        let new_total_size = std::cmp::max(new_position, self.cursor.total_size);
 
-        Ok(resp.bytes_count)
+        match file_system.get_node(&self.node_path) {
+            Some(FileSystemNode::File {
+                object_name,
+                size,
+                e_tag,
+                modification_time,
+                ..
+            }) => {
+                *object_name = new_object_name;
+                *size = new_total_size;
+                *e_tag = new_e_tag.clone();
+                *modification_time = new_modification_time;
+            }
+            _ => return Err(DfsFrontendError::ConcurrentIssue),
+        };
+
+        commit_file_system(&*self.client, &self.bucket_name, file_system)
+            .map_err(|err| DfsFrontendError::Generic(format!("{:?}", err)))?;
+
+        self.e_tag = new_e_tag;
+        self.cursor.position = new_position;
+        self.cursor.total_size = new_total_size;
+
+        Ok(bytes_count)
     }
 
     fn seek(&mut self, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {

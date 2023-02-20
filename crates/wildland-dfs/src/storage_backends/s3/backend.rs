@@ -1,11 +1,13 @@
-use std::path::{Component, Path};
+use std::path::Path;
 use std::rc::Rc;
+use std::time::SystemTime;
 
-use wildland_corex::dfs::interface::NodeType;
+use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
 
 use super::client::S3Client;
 use super::descriptor::S3Descriptor;
-use super::error::S3Error;
+use super::file_system::FileSystemNode;
+use super::helpers::{commit_file_system, load_file_system};
 use crate::storage_backends::models::{
     CreateDirResponse,
     CreateFileResponse,
@@ -35,113 +37,157 @@ impl S3Backend {
 
 impl StorageBackend for S3Backend {
     fn read_dir(&self, path: &Path) -> Result<ReadDirResponse, StorageBackendError> {
-        match self.metadata(path)? {
-            MetadataResponse::Found(stat) if stat.node_type == NodeType::Dir => (),
-            MetadataResponse::Found(_) => return Ok(ReadDirResponse::NotADirectory),
-            MetadataResponse::NotFound => return Ok(ReadDirResponse::NoSuchPath),
-        };
-
-        match self.client.list_files(path, &self.bucket_name) {
-            Ok(vec) => Ok(ReadDirResponse::Entries(vec)),
-            Err(S3Error::NotFound) => Ok(ReadDirResponse::NoSuchPath),
-            Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
-                Err(StorageBackendError::Generic(err.into()))
-            }
+        match load_file_system(&*self.client, &self.bucket_name)?.get_node(path) {
+            Some(FileSystemNode::Directory { children, .. }) => Ok(ReadDirResponse::Entries(
+                children.iter().map(|node| node.name().into()).collect(),
+            )),
+            Some(FileSystemNode::File { .. }) => Ok(ReadDirResponse::NotADirectory),
+            None => Ok(ReadDirResponse::NoSuchPath),
         }
     }
 
     fn metadata(&self, path: &Path) -> Result<MetadataResponse, StorageBackendError> {
-        match self.client.get_object_attributes(path, &self.bucket_name) {
-            Ok(v) => Ok(MetadataResponse::Found(v.stat)),
-            Err(S3Error::NotFound) => Ok(MetadataResponse::NotFound),
-            Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
-                Err(StorageBackendError::Generic(err.into()))
-            }
+        match load_file_system(&*self.client, &self.bucket_name)?.get_node(path) {
+            Some(FileSystemNode::File {
+                size,
+                modification_time,
+                ..
+            }) => Ok(MetadataResponse::Found(Stat {
+                node_type: NodeType::File,
+                size: *size,
+                access_time: None,
+                modification_time: Some(modification_time.clone()),
+                change_time: None,
+            })),
+            Some(FileSystemNode::Directory {
+                modification_time, ..
+            }) => Ok(MetadataResponse::Found(Stat {
+                node_type: NodeType::Dir,
+                size: 0,
+                access_time: None,
+                modification_time: Some(modification_time.clone()),
+                change_time: None,
+            })),
+            None => Ok(MetadataResponse::NotFound),
         }
     }
 
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError> {
-        match self.client.get_object_attributes(path, &self.bucket_name) {
-            Ok(attrs) if attrs.stat.node_type == NodeType::File => {
-                Ok(OpenResponse::found(S3Descriptor::new(
-                    self.bucket_name.clone(),
-                    path.into(),
-                    attrs.stat.size,
-                    attrs.etag,
-                    self.client.clone(),
-                )))
-            }
-            Ok(_) => Ok(OpenResponse::NotAFile),
-            Err(S3Error::NotFound) => Ok(OpenResponse::NotFound),
-            Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
-                Err(StorageBackendError::Generic(err.into()))
-            }
+        match load_file_system(&*self.client, &self.bucket_name)?.get_node(path) {
+            Some(FileSystemNode::File {
+                object_name,
+                size,
+                e_tag,
+                ..
+            }) => Ok(OpenResponse::found(S3Descriptor::new(
+                self.bucket_name.clone(),
+                object_name.clone(),
+                path.to_owned(),
+                *size,
+                e_tag.clone(),
+                self.client.clone(),
+            ))),
+            Some(FileSystemNode::Directory { .. }) => Ok(OpenResponse::NotAFile),
+            None => Ok(OpenResponse::NotFound),
         }
     }
 
     fn create_dir(&self, path: &Path) -> Result<CreateDirResponse, StorageBackendError> {
-        let components: Vec<_> = path.components().collect();
-
-        match components.as_slice() {
-            // parent dir is root. no need to check if it exists.
-            [Component::RootDir, _] => (),
-            _ => {
-                match self
-                    .client
-                    .get_object_attributes(path.parent().unwrap(), &self.bucket_name)
-                {
-                    Ok(attrs) if attrs.stat.node_type == NodeType::Dir => (),
-                    Ok(_) => return Ok(CreateDirResponse::InvalidParent),
-                    Err(S3Error::NotFound) => return Ok(CreateDirResponse::InvalidParent),
-                    Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
-                        return Err(StorageBackendError::Generic(err.into()))
-                    }
-                }
-            }
+        let parent = match path.parent() {
+            Some(parent) => parent,
+            None => return Ok(CreateDirResponse::InvalidParent),
         };
 
-        match self.client.get_object_attributes(path, &self.bucket_name) {
-            Err(S3Error::NotFound) => (),
-            Ok(_) => return Ok(CreateDirResponse::PathAlreadyExists),
-            Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
-                return Err(StorageBackendError::Generic(err.into()))
-            }
+        let mut file_system = load_file_system(&*self.client, &self.bucket_name)?;
+
+        if file_system.get_node(path).is_some() {
+            return Ok(CreateDirResponse::PathAlreadyExists);
         };
 
-        match self.client.create_dir(path, &self.bucket_name) {
-            Ok(_) => Ok(CreateDirResponse::Created),
-            Err(err @ (S3Error::NotFound | S3Error::ETagMistmach | S3Error::Generic(_))) => {
-                Err(StorageBackendError::Generic(err.into()))
+        match file_system.get_node(parent) {
+            Some(FileSystemNode::Directory { children, .. }) => {
+                children.push(FileSystemNode::Directory {
+                    name: path.file_name().unwrap().to_string_lossy().to_string(),
+                    children: Vec::new(),
+                    modification_time: SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .map(|duration| UnixTimestamp {
+                            sec: duration.as_secs(),
+                            nano_sec: duration.subsec_nanos(),
+                        })
+                        .unwrap(),
+                })
             }
-        }
+            Some(FileSystemNode::File { .. }) => return Ok(CreateDirResponse::InvalidParent),
+            None => return Ok(CreateDirResponse::InvalidParent),
+        };
+
+        commit_file_system(&*self.client, &self.bucket_name, file_system)?;
+        Ok(CreateDirResponse::Created)
     }
 
     fn remove_dir(&self, path: &Path) -> Result<RemoveDirResponse, StorageBackendError> {
-        if path == Path::new("/") {
-            return Ok(RemoveDirResponse::RootRemovalNotAllowed);
-        }
+        let parent = match path.parent() {
+            Some(parent) => parent,
+            None => return Ok(RemoveDirResponse::RootRemovalNotAllowed),
+        };
 
-        match self.read_dir(path)? {
-            ReadDirResponse::Entries(children) if children.is_empty() => {
-                match self.client.remove_object(path, &self.bucket_name) {
-                    Ok(_) | Err(S3Error::NotFound) => Ok(RemoveDirResponse::Removed),
-                    Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
-                        Err(StorageBackendError::Generic(err.into()))
-                    }
-                }
+        let mut file_system = load_file_system(&*self.client, &self.bucket_name)?;
+
+        match file_system.get_node(path) {
+            Some(FileSystemNode::Directory { children, .. }) if children.is_empty() => (),
+            Some(FileSystemNode::Directory { .. }) => return Ok(RemoveDirResponse::DirNotEmpty),
+            Some(FileSystemNode::File { .. }) => return Ok(RemoveDirResponse::NotADirectory),
+            None => return Ok(RemoveDirResponse::NotFound),
+        };
+
+        match file_system.get_node(parent) {
+            Some(FileSystemNode::Directory { children, .. }) => {
+                children.retain(|node| node.name() != path.file_name().unwrap())
             }
-            ReadDirResponse::Entries(_) => Ok(RemoveDirResponse::DirNotEmpty),
-            ReadDirResponse::NoSuchPath => Ok(RemoveDirResponse::NotFound),
-            ReadDirResponse::NotADirectory => Ok(RemoveDirResponse::NotADirectory),
+            Some(FileSystemNode::File { .. }) => return Ok(RemoveDirResponse::NotFound),
+            None => return Ok(RemoveDirResponse::NotFound),
         }
+
+        commit_file_system(&*self.client, &self.bucket_name, file_system)?;
+        Ok(RemoveDirResponse::Removed)
     }
 
-    fn path_exists(&self, _path: &Path) -> Result<bool, StorageBackendError> {
-        todo!() // TODO COR-87
+    fn path_exists(&self, path: &Path) -> Result<bool, StorageBackendError> {
+        Ok(load_file_system(&*self.client, &self.bucket_name)?
+            .get_node(path)
+            .is_some())
     }
 
-    fn remove_file(&self, _path: &Path) -> Result<RemoveFileResponse, StorageBackendError> {
-        todo!() // TODO COR-87
+    fn remove_file(&self, path: &Path) -> Result<RemoveFileResponse, StorageBackendError> {
+        let parent = match path.parent() {
+            Some(parent) => parent,
+            None => return Ok(RemoveFileResponse::NotFound),
+        };
+
+        let mut file_system = load_file_system(&*self.client, &self.bucket_name)?;
+
+        let object_name_to_remove = match file_system.get_node(path) {
+            Some(FileSystemNode::File { object_name, .. }) => object_name.clone(),
+            Some(FileSystemNode::Directory { .. }) => return Ok(RemoveFileResponse::NotAFile),
+            None => return Ok(RemoveFileResponse::NotFound),
+        };
+
+        match file_system.get_node(parent) {
+            Some(FileSystemNode::Directory { children, .. }) => {
+                children.retain(|node| node.name() != path.file_name().unwrap())
+            }
+            Some(FileSystemNode::File { .. }) => return Ok(RemoveFileResponse::NotFound),
+            None => return Ok(RemoveFileResponse::NotFound),
+        }
+
+        commit_file_system(&*self.client, &self.bucket_name, file_system)?;
+
+        self.client
+            .remove_object(&object_name_to_remove, &self.bucket_name)
+            .map_err(|err| StorageBackendError::Generic(err.into()))?;
+
+        Ok(RemoveFileResponse::Removed)
     }
 
     fn create_file(&self, _path: &Path) -> Result<CreateFileResponse, StorageBackendError> {
