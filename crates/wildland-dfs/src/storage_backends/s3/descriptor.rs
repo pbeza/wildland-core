@@ -142,7 +142,7 @@ impl OpenedFileDescriptor for S3Descriptor {
 
     fn write(&mut self, buf: &[u8]) -> Result<usize, DfsFrontendError> {
         let mut file_system = load_file_system(&*self.client, &self.bucket_name)
-            .map_err(|err| DfsFrontendError::Generic(format!("{:?}", err)))?;
+            .map_err(|err| DfsFrontendError::Generic(format!("{err:?}")))?;
 
         let WriteResp {
             bytes_count,
@@ -178,7 +178,7 @@ impl OpenedFileDescriptor for S3Descriptor {
         };
 
         commit_file_system(&*self.client, &self.bucket_name, file_system)
-            .map_err(|err| DfsFrontendError::Generic(format!("{:?}", err)))?;
+            .map_err(|err| DfsFrontendError::Generic(format!("{err:?}")))?;
 
         self.e_tag = new_e_tag;
         self.cursor.position = new_position;
