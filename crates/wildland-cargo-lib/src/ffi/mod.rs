@@ -46,6 +46,8 @@ use crate::errors::ExceptionTrait;
 mod wrapper {
     use wildland_corex::{StorageTemplate, StorageTemplateError};
 
+    use super::WlPermissions;
+
     pub(crate) fn storage_template_from_json(
         content: Vec<u8>,
     ) -> Result<StorageTemplate, StorageTemplateError> {
@@ -57,9 +59,13 @@ mod wrapper {
     ) -> Result<StorageTemplate, StorageTemplateError> {
         StorageTemplate::from_yaml(content)
     }
+
+    pub(crate) fn new_wl_permissions(readonly: bool) -> WlPermissions {
+        WlPermissions::new(readonly)
+    }
 }
 
-use self::wrapper::{storage_template_from_json, storage_template_from_yaml};
+use self::wrapper::{new_wl_permissions, storage_template_from_json, storage_template_from_yaml};
 
 type VoidType = ();
 
@@ -372,12 +378,26 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
         ) -> Result<FileHandle, DfsFrontendError>;
+        fn remove_file(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            path: String,
+        ) -> Result<VoidType, DfsFrontendError>;
         fn rename(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             old_path: String,
             new_path: String,
         ) -> Result<VoidType, DfsFrontendError>;
-        fn remove_file(
+        fn set_permissions(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            path: String,
+            permissions: WlPermissions,
+        ) -> Result<VoidType, DfsFrontendError>;
+        fn set_file_permissions(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+            permissions: WlPermissions,
+        ) -> Result<VoidType, DfsFrontendError>;
+        fn set_owner(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
         ) -> Result<VoidType, DfsFrontendError>;
@@ -399,6 +419,29 @@ mod ffi_binding {
             file: &FileHandle,
             buf: Vec<u8>,
         ) -> Result<usize, DfsFrontendError>;
+        fn set_length(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+            length: usize,
+        ) -> Result<VoidType, DfsFrontendError>;
+        fn sync(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+        ) -> Result<VoidType, DfsFrontendError>;
+        fn set_times(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+            access_time: Option<UnixTimestamp>,
+            modification_time: Option<UnixTimestamp>,
+        ) -> Result<VoidType, DfsFrontendError>;
+        fn file_metadata(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+        ) -> Result<Stat, DfsFrontendError>;
+        fn file_stat_fs(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            file: &FileHandle,
+        ) -> Result<FsStat, DfsFrontendError>;
         fn seek_from_start(
             self: &Arc<Mutex<dyn DfsFrontend>>,
             file: &FileHandle,
@@ -414,6 +457,11 @@ mod ffi_binding {
             file: &FileHandle,
             pos_from_end: i64,
         ) -> Result<usize, DfsFrontendError>;
+        fn sync_all(self: &Arc<Mutex<dyn DfsFrontend>>) -> Result<VoidType, DfsFrontendError>;
+        fn stat_fs(
+            self: &Arc<Mutex<dyn DfsFrontend>>,
+            path: String,
+        ) -> Result<FsStat, DfsFrontendError>;
 
         //
         // FileHandle
@@ -434,5 +482,23 @@ mod ffi_binding {
         //
         fn sec(self: &UnixTimestamp) -> u64;
         fn nano_sec(self: &UnixTimestamp) -> u32;
+
+        //
+        // FsStat
+        //
+        fn block_size(self: &FsStat) -> u64;
+        fn io_size(self: &FsStat) -> Option<u64>;
+        fn blocks(self: &FsStat) -> u64;
+        fn free_blocks(self: &FsStat) -> u64;
+        fn blocks_available(self: &FsStat) -> u64;
+        fn nodes(self: &FsStat) -> u64;
+        fn name_length(self: &FsStat) -> u64;
+
+        //
+        // WlPermissions
+        //
+        fn readonly(self: &WlPermissions) -> bool;
+        fn set_readonly(self: &WlPermissions, readonly: bool);
+        fn new_wl_permissions(readonly: bool) -> WlPermissions;
     }
 }

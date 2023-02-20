@@ -21,14 +21,29 @@
 mod uuid_dir_path_translator;
 
 use std::collections::HashMap;
-use std::io::{Read, Seek, Write};
+use std::io::{ErrorKind, Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::SystemTime;
 
-use rsfs::mem::{File, FS};
-use rsfs::{DirEntry, FileType, GenFS, Metadata, OpenOptions};
-use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat, UnixTimestamp};
+use rsfs::mem::{File, Metadata, FS};
+use rsfs::unix_ext::PermissionsExt;
+use rsfs::{
+    DirEntry,
+    File as FileTrait,
+    FileType,
+    GenFS,
+    Metadata as MetadataTrait,
+    OpenOptions,
+    Permissions,
+};
+use wildland_corex::dfs::interface::{
+    DfsFrontendError,
+    NodeType,
+    Stat,
+    UnixTimestamp,
+    WlPermissions,
+};
 use wildland_corex::{MockPathResolver, Storage};
 
 use crate::storage_backends::models::{
@@ -42,6 +57,8 @@ use crate::storage_backends::models::{
     RemoveFileResponse,
     RenameResponse,
     SeekFrom,
+    SetPermissionsResponse,
+    StatFsResponse,
     StorageBackendError,
 };
 use crate::storage_backends::OpenedFileDescriptor;
@@ -123,25 +140,7 @@ impl StorageBackend for Mufs {
         Ok(MetadataResponse::Found(
             self.fs
                 .metadata(self.base_dir.join(relative_path))
-                .map(|metadata| {
-                    let file_type = metadata.file_type();
-                    Stat {
-                        node_type: if file_type.is_file() {
-                            NodeType::File
-                        } else if file_type.is_dir() {
-                            NodeType::Dir
-                        } else if file_type.is_symlink() {
-                            NodeType::Symlink
-                        } else {
-                            NodeType::Other
-                        },
-                        size: metadata.len() as _,
-                        access_time: metadata.accessed().ok().map(systime_to_unix),
-                        modification_time: metadata.modified().ok().map(systime_to_unix),
-                        // NOTE: Mufs does not support ctime, for tests sake let's use creation time
-                        change_time: metadata.created().ok().map(systime_to_unix),
-                    }
-                })?,
+                .map(map_metadata_to_stat)?,
         ))
     }
 
@@ -285,6 +284,34 @@ impl StorageBackend for Mufs {
             Ok(RenameResponse::NotFound)
         }
     }
+
+    fn set_permissions(
+        &self,
+        path: &Path,
+        permissions: WlPermissions,
+    ) -> Result<SetPermissionsResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        let mode = if permissions.readonly() { 0o444 } else { 0o644 };
+
+        match self
+            .fs
+            .set_permissions(path, rsfs::mem::Permissions::from_mode(mode))
+        {
+            Ok(_) => Ok(SetPermissionsResponse::Set),
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => Ok(SetPermissionsResponse::NotFound),
+                _ => Err(e.into()),
+            },
+        }
+    }
+
+    fn stat_fs(&self, _path: &Path) -> Result<StatFsResponse, StorageBackendError> {
+        Ok(StatFsResponse::NotSupported(
+            "MuFS does not support `stat_fs` operation".into(),
+        ))
+    }
 }
 
 #[derive(Debug)]
@@ -319,6 +346,60 @@ impl OpenedFileDescriptor for MufsOpenedFile {
 
     fn seek(&mut self, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
         Ok(self.inner.seek(seek_from.to_std())? as _)
+    }
+
+    fn set_permissions(&mut self, permissions: WlPermissions) -> Result<(), DfsFrontendError> {
+        let mode = if permissions.readonly() { 0o444 } else { 0o644 };
+        Ok(self
+            .inner
+            .set_permissions(rsfs::mem::Permissions::from_mode(mode))?)
+    }
+
+    fn sync(&mut self) -> Result<(), DfsFrontendError> {
+        Ok(self.inner.sync_all()?)
+    }
+
+    fn metadata(&mut self) -> Result<Stat, DfsFrontendError> {
+        Ok(self.inner.metadata().map(map_metadata_to_stat)?)
+    }
+
+    fn set_times(
+        &mut self,
+        _access_time: Option<UnixTimestamp>,
+        _modification_time: Option<UnixTimestamp>,
+    ) -> Result<(), DfsFrontendError> {
+        Err(DfsFrontendError::Generic(
+            "`set_times` is not supported for MuFS".into(),
+        ))
+    }
+
+    fn set_length(&mut self, length: usize) -> Result<(), DfsFrontendError> {
+        Ok(self.inner.set_len(length as u64)?)
+    }
+
+    fn stat_fs(&mut self) -> Result<wildland_corex::dfs::interface::FsStat, DfsFrontendError> {
+        todo!() // do it
+    }
+}
+
+fn map_metadata_to_stat(metadata: Metadata) -> Stat {
+    let file_type = metadata.file_type();
+    Stat {
+        node_type: if file_type.is_file() {
+            NodeType::File
+        } else if file_type.is_dir() {
+            NodeType::Dir
+        } else if file_type.is_symlink() {
+            NodeType::Symlink
+        } else {
+            NodeType::Other
+        },
+        size: metadata.len() as _,
+        access_time: metadata.accessed().ok().map(systime_to_unix),
+        modification_time: metadata.modified().ok().map(systime_to_unix),
+        // NOTE: Mufs does not support ctime, for tests sake let's use creation time
+        change_time: metadata.created().ok().map(systime_to_unix),
+        permissions: WlPermissions::new(metadata.permissions().readonly()),
     }
 }
 

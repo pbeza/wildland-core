@@ -74,7 +74,8 @@ impl UserService {
     ) -> Result<CargoUser, UserCreationError> {
         tracing::trace!("Checking whether user exists.");
         match self.get_user() {
-            Ok(_) => return Err(UserCreationError::UserAlreadyExists),
+            Ok(None) => Ok(()),
+            Ok(Some(_)) => Err(UserCreationError::UserAlreadyExists),
             Err(UserRetrievalError::ForestNotFound(_)) => Ok(()),
             Err(e) => Err(UserCreationError::UserRetrievalError(e)),
         }?;

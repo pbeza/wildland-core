@@ -21,7 +21,7 @@ use std::str::FromStr;
 use wildland_corex::dfs::interface::{DfsFrontendError, FileHandle};
 
 use super::node_descriptor::NodeStorages;
-use super::utils::{execute_container_operation, filter_existent_nodes, get_related_nodes};
+use super::utils::{exec_on_single_existing_node, execute_container_operation, get_related_nodes};
 use super::{NodeDescriptor, UnencryptedDfs};
 use crate::storage_backends::models::{
     CreateDirResponse,
@@ -165,18 +165,5 @@ fn generic_remove<T>(
     let requested_path = PathBuf::from_str(&requested_path).unwrap();
     let mut nodes = get_related_nodes(dfs, &requested_path)?;
 
-    match nodes.len() {
-        0 => Err(DfsFrontendError::NoSuchPath),
-        1 => remove_from_container(dfs, &nodes.pop().unwrap()),
-        _ => {
-            let mut existent_paths: Vec<&NodeDescriptor> =
-                filter_existent_nodes(&nodes, dfs)?.collect();
-
-            match existent_paths.len() {
-                0 => Err(DfsFrontendError::NoSuchPath),
-                1 => remove_from_container(dfs, existent_paths.pop().unwrap()),
-                _ => Err(DfsFrontendError::ReadOnlyPath), // Ambiguous path are for now read-only
-            }
-        }
-    }
+    exec_on_single_existing_node(dfs, &mut nodes, &remove_from_container)
 }

@@ -15,30 +15,20 @@ pub fn filter_existent_nodes<'a: 'b, 'b>(
     nodes: &'a [NodeDescriptor],
     dfs: &'b mut UnencryptedDfs,
 ) -> Result<impl Iterator<Item = &'a NodeDescriptor>, DfsFrontendError> {
-    Ok(
-        fetch_data_from_containers_by_path(nodes, dfs, &|backend, path| backend.path_exists(path))
-            .collect::<Result<Vec<_>, DfsFrontendError>>()?
-            .into_iter()
-            .filter_map(|(node, exists)| if exists { Some(node) } else { None }),
-    )
-}
-
-type ContainersOp<T> = dyn Fn(Rc<dyn StorageBackend>, &Path) -> Result<T, StorageBackendError>;
-/// Ignores virtual nodes
-pub fn fetch_data_from_containers_by_path<'a: 'b, 'b, T: Debug + 'a>(
-    nodes: &'a [NodeDescriptor],
-    dfs_front: &'b mut UnencryptedDfs,
-    backend_op: &'b ContainersOp<T>,
-) -> impl Iterator<Item = Result<(&'a NodeDescriptor, T), DfsFrontendError>> + 'b {
-    nodes.iter().filter_map(move |node| {
-        // virtual nodes are not processed
-        node.storages().map(|storages| {
-            execute_container_operation(dfs_front, storages, &|backend| {
-                backend_op(backend, storages.path_within_storage())
-            })
-            .map(|response| (node, response))
+    Ok(nodes
+        .iter()
+        .map(move |node| match node {
+            NodeDescriptor::Physical { storages, .. } => {
+                execute_container_operation(dfs, storages, &|backend| {
+                    backend.path_exists(storages.path_within_storage())
+                })
+                .map(|exists| exists.then_some(node))
+            }
+            NodeDescriptor::Virtual { .. } => Ok(Some(node)), // virtual nodes are forwarded
         })
-    })
+        .collect::<Result<Vec<_>, DfsFrontendError>>()?
+        .into_iter()
+        .flatten())
 }
 
 pub fn execute_container_operation<T: Debug>(
@@ -144,4 +134,25 @@ pub fn find_node_matching_requested_path<'a>(
             }
         })
         .copied()
+}
+
+pub fn exec_on_single_existing_node<T>(
+    dfs: &mut UnencryptedDfs,
+    nodes: &mut Vec<NodeDescriptor>,
+    operation: &dyn Fn(&mut UnencryptedDfs, &NodeDescriptor) -> Result<T, DfsFrontendError>,
+) -> Result<T, DfsFrontendError> {
+    match nodes.len() {
+        0 => Err(DfsFrontendError::NoSuchPath),
+        1 => operation(dfs, &nodes.pop().unwrap()),
+        _ => {
+            let mut existent_paths: Vec<&NodeDescriptor> =
+                filter_existent_nodes(nodes, dfs)?.collect();
+
+            match existent_paths.len() {
+                0 => Err(DfsFrontendError::NoSuchPath),
+                1 => operation(dfs, existent_paths.pop().unwrap()),
+                _ => Err(DfsFrontendError::ReadOnlyPath), // Ambiguous path are for now read-only
+            }
+        }
+    }
 }
