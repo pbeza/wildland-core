@@ -56,7 +56,7 @@ impl StorageBackend for S3Backend {
                 access_time: None,
                 modification_time: Some(file.modification_time.clone()),
                 change_time: None,
-                permissions: WlPermissions::read_write(),
+                permissions: WlPermissions::read_write(), // TODO COR-87 store permission in metadata and retrieve it
             })),
             Some(FileSystemNodeRef::Directory(dir)) => Ok(MetadataResponse::Found(Stat {
                 node_type: NodeType::Dir,
@@ -64,7 +64,7 @@ impl StorageBackend for S3Backend {
                 access_time: None,
                 modification_time: Some(dir.modification_time.clone()),
                 change_time: None,
-                permissions: WlPermissions::read_write(),
+                permissions: WlPermissions::read_write(), // TODO COR-87 store permission in metadata and retrieve it
             })),
             None => Ok(MetadataResponse::NotFound),
         }
