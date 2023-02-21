@@ -1,8 +1,13 @@
-use std::path::Path;
-
+use anyhow::Context;
 use aws_sdk_s3::model::{CompletedPart, CopyPartResult};
+use scopeguard::ScopeGuard;
 
+use super::client::S3Client;
 use super::error::S3Error;
+use super::file_system::FileSystem;
+use crate::storage_backends::models::StorageBackendError;
+
+const FILE_SYSTEM_FILE: &str = "filesystem.wildland";
 
 pub fn to_completed_part(mut result: Option<CopyPartResult>, part_number: i32) -> CompletedPart {
     CompletedPart::builder()
@@ -27,18 +32,41 @@ where
     execute_by_step(begin + step, end, step, op)
 }
 
-pub fn remove_trailing_slash(path: &Path) -> String {
-    let path = path.to_string_lossy().to_string();
-    path.strip_suffix('/')
-        .map(ToOwned::to_owned)
-        .unwrap_or(path)
+pub fn load_file_system(
+    client: &dyn S3Client,
+    bucket_name: &str,
+) -> Result<FileSystem, StorageBackendError> {
+    match client.read_object(FILE_SYSTEM_FILE, bucket_name, None, None) {
+        Ok(body) => serde_json::from_slice(&body)
+            .context("Filesystem metadata deserialization error")
+            .map_err(StorageBackendError::Generic),
+        Err(S3Error::NotFound) => Ok(Default::default()),
+        Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
+            Err(StorageBackendError::Generic(err.into()))
+        }
+    }
 }
 
-pub fn add_trailing_slash(path: &Path) -> String {
-    let path = path.to_string_lossy().to_string();
-    if !path.ends_with('/') {
-        format!("{path}/")
-    } else {
-        path
-    }
+pub fn commit_file_system(
+    client: &dyn S3Client,
+    bucket_name: &str,
+    file_system: FileSystem,
+) -> Result<(), StorageBackendError> {
+    // Prone to "lost write" anomaly
+    client
+        .save_object(
+            FILE_SYSTEM_FILE,
+            bucket_name,
+            serde_json::to_vec(&file_system)
+                .map_err(|err| StorageBackendError::Generic(err.into()))?,
+        )
+        .map_err(|err| StorageBackendError::Generic(err.into()))
+}
+
+pub fn defuse<T, F, S>(guard: ScopeGuard<T, F, S>)
+where
+    F: FnOnce(T),
+    S: scopeguard::Strategy,
+{
+    scopeguard::ScopeGuard::into_inner(guard);
 }
