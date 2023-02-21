@@ -60,12 +60,21 @@ mod wrapper {
         StorageTemplate::from_yaml(content)
     }
 
-    pub(crate) fn new_wl_permissions(readonly: bool) -> WlPermissions {
-        WlPermissions::new(readonly)
+    pub(crate) fn readonly_wl_permissions() -> WlPermissions {
+        WlPermissions::readonly()
+    }
+
+    pub(crate) fn read_write_wl_permissions() -> WlPermissions {
+        WlPermissions::read_write()
     }
 }
 
-use self::wrapper::{new_wl_permissions, storage_template_from_json, storage_template_from_yaml};
+use self::wrapper::{
+    read_write_wl_permissions,
+    readonly_wl_permissions,
+    storage_template_from_json,
+    storage_template_from_yaml,
+};
 
 type VoidType = ();
 
@@ -497,8 +506,9 @@ mod ffi_binding {
         //
         // WlPermissions
         //
-        fn readonly(self: &WlPermissions) -> bool;
+        fn is_readonly(self: &WlPermissions) -> bool;
         fn set_readonly(self: &WlPermissions, readonly: bool);
-        fn new_wl_permissions(readonly: bool) -> WlPermissions;
+        fn readonly_wl_permissions() -> WlPermissions;
+        fn read_write_wl_permissions() -> WlPermissions;
     }
 }
