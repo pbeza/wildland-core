@@ -1,13 +1,9 @@
-use wildland_corex::dfs::interface::Stat;
-
-#[derive(Debug, Clone)]
-pub struct ObjectAttributes {
-    pub stat: Stat,
-    pub etag: Option<String>,
-}
+use wildland_corex::dfs::interface::UnixTimestamp;
 
 #[derive(Debug, Clone)]
 pub struct WriteResp {
     pub bytes_count: usize,
-    pub etag: Option<String>,
+    pub new_object_name: String,
+    pub new_modification_time: UnixTimestamp,
+    pub new_e_tag: String,
 }
