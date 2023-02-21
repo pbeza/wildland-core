@@ -169,7 +169,7 @@ impl OpenedFileDescriptor for S3Descriptor {
                 modification_time,
                 ..
             }) => {
-                *object_name = new_object_name;
+                *object_name = new_object_name.clone();
                 *size = new_total_size;
                 *e_tag = new_e_tag.clone();
                 *modification_time = new_modification_time;
@@ -180,6 +180,10 @@ impl OpenedFileDescriptor for S3Descriptor {
         commit_file_system(&*self.client, &self.bucket_name, file_system)
             .map_err(|err| DfsFrontendError::Generic(format!("{err:?}")))?;
 
+        self.client
+            .remove_object(&self.object_name, &self.bucket_name)?;
+
+        self.object_name = new_object_name;
         self.e_tag = new_e_tag;
         self.cursor.position = new_position;
         self.cursor.total_size = new_total_size;
