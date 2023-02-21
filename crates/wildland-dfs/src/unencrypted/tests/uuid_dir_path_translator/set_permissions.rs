@@ -69,12 +69,20 @@ fn test_set_permissions_of_file_in_container_root() {
 
     fs.create_file("/file").unwrap();
 
-    dfs.set_permissions("/file".to_string(), WlPermissions::new(true))
+    dfs.set_permissions("/file".to_string(), WlPermissions::readonly())
         .unwrap();
-    assert!(dfs.metadata("/file".into()).unwrap().permissions.readonly());
-    dfs.set_permissions("/file".to_string(), WlPermissions::new(false))
+    assert!(dfs
+        .metadata("/file".into())
+        .unwrap()
+        .permissions
+        .is_readonly());
+    dfs.set_permissions("/file".to_string(), WlPermissions::read_write())
         .unwrap();
-    assert!(!dfs.metadata("/file".into()).unwrap().permissions.readonly());
+    assert!(!dfs
+        .metadata("/file".into())
+        .unwrap()
+        .permissions
+        .is_readonly());
 }
 
 #[rstest]
@@ -102,12 +110,20 @@ fn test_set_permissions_of_dir_in_container_root() {
 
     fs.create_dir("/dir").unwrap();
 
-    dfs.set_permissions("/dir".to_string(), WlPermissions::new(true))
+    dfs.set_permissions("/dir".to_string(), WlPermissions::readonly())
         .unwrap();
-    assert!(dfs.metadata("/dir".into()).unwrap().permissions.readonly());
-    dfs.set_permissions("/dir".to_string(), WlPermissions::new(false))
+    assert!(dfs
+        .metadata("/dir".into())
+        .unwrap()
+        .permissions
+        .is_readonly());
+    dfs.set_permissions("/dir".to_string(), WlPermissions::read_write())
         .unwrap();
-    assert!(!dfs.metadata("/dir".into()).unwrap().permissions.readonly());
+    assert!(!dfs
+        .metadata("/dir".into())
+        .unwrap()
+        .permissions
+        .is_readonly());
 }
 
 #[rstest]
@@ -128,7 +144,7 @@ fn test_set_permissions_of_virtual_dir() {
     let (mut dfs, _fs) = dfs_with_fs(path_resolver);
 
     let err = dfs
-        .set_permissions("/virtual_dir".to_string(), WlPermissions::new(false))
+        .set_permissions("/virtual_dir".to_string(), WlPermissions::read_write())
         .unwrap_err();
     assert_eq!(err, DfsFrontendError::ReadOnlyPath);
 }
@@ -174,7 +190,7 @@ fn test_set_permissions_of_conflicting_paths() {
     fs.create_dir("/storage2/file_or_dir").unwrap();
 
     let err = dfs
-        .set_permissions("/a/b/file_or_dir".to_string(), WlPermissions::new(false))
+        .set_permissions("/a/b/file_or_dir".to_string(), WlPermissions::read_write())
         .unwrap_err();
     assert_eq!(err, DfsFrontendError::ReadOnlyPath);
 }
@@ -210,7 +226,7 @@ fn test_virtual_path_colliding_with_file() {
     fs.create_file("/storage1/b").unwrap();
 
     let err = dfs
-        .set_permissions("/a/b".to_string(), WlPermissions::new(false))
+        .set_permissions("/a/b".to_string(), WlPermissions::read_write())
         .unwrap_err();
     assert_eq!(err, DfsFrontendError::ReadOnlyPath);
 }

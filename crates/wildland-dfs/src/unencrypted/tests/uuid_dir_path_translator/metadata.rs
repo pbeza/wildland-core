@@ -91,7 +91,7 @@ fn test_metadata_of_file_in_container_root() {
             modification_time,
             change_time,
             size: size as _,
-            permissions: WlPermissions::new(false),
+            permissions: WlPermissions::read_write(),
         }
     )
 }
@@ -136,7 +136,7 @@ fn test_metadata_of_dir_in_container_root() {
             modification_time,
             change_time,
             size: size as _,
-            permissions: WlPermissions::new(false)
+            permissions: WlPermissions::read_write()
         }
     )
 }
@@ -167,7 +167,7 @@ fn test_metadata_of_virtual_dir() {
             modification_time: None,
             change_time: None,
             size: 0,
-            permissions: WlPermissions::new(true)
+            permissions: WlPermissions::readonly()
         }
     )
 }
@@ -229,7 +229,7 @@ fn test_metadata_of_conflicting_path_using_container_uuid() {
             modification_time,
             change_time,
             size: size as _,
-            permissions: WlPermissions::new(false)
+            permissions: WlPermissions::read_write()
         }
     );
 
@@ -243,7 +243,7 @@ fn test_metadata_of_conflicting_path_using_container_uuid() {
             modification_time: None,
             change_time: None,
             size: 0,
-            permissions: WlPermissions::new(true)
+            permissions: WlPermissions::readonly()
         }
     );
 
@@ -266,7 +266,7 @@ fn test_metadata_of_conflicting_path_using_container_uuid() {
             modification_time,
             change_time,
             size: size as _,
-            permissions: WlPermissions::new(false)
+            permissions: WlPermissions::read_write()
         }
     );
 }
@@ -311,7 +311,7 @@ fn test_virtual_path_colliding_with_file() {
             modification_time: None,
             change_time: None,
             size: 0,
-            permissions: WlPermissions::new(true)
+            permissions: WlPermissions::readonly()
         }
     );
 
@@ -333,7 +333,7 @@ fn test_virtual_path_colliding_with_file() {
             modification_time,
             change_time,
             size: size as _,
-            permissions: WlPermissions::new(false)
+            permissions: WlPermissions::read_write()
         }
     )
 }
@@ -378,7 +378,7 @@ fn test_virtual_path_colliding_with_dir() {
             modification_time: None,
             change_time: None,
             size: 0,
-            permissions: WlPermissions::new(true)
+            permissions: WlPermissions::readonly()
         }
     );
 
@@ -400,7 +400,7 @@ fn test_virtual_path_colliding_with_dir() {
             modification_time,
             change_time,
             size: size as _,
-            permissions: WlPermissions::new(false)
+            permissions: WlPermissions::read_write()
         }
     )
 }

@@ -28,17 +28,10 @@ use std::time::SystemTime;
 
 use rsfs::mem::{File, Metadata, FS};
 use rsfs::unix_ext::PermissionsExt;
-use rsfs::{
-    DirEntry,
-    File as FileTrait,
-    FileType,
-    GenFS,
-    Metadata as MetadataTrait,
-    OpenOptions,
-    Permissions,
-};
+use rsfs::{DirEntry, File as _, FileType, GenFS, Metadata as _, OpenOptions, Permissions};
 use wildland_corex::dfs::interface::{
     DfsFrontendError,
+    FsStat,
     NodeType,
     Stat,
     UnixTimestamp,
@@ -293,7 +286,11 @@ impl StorageBackend for Mufs {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
-        let mode = if permissions.readonly() { 0o444 } else { 0o644 };
+        let mode = if permissions.is_readonly() {
+            0o444
+        } else {
+            0o644
+        };
 
         match self
             .fs
@@ -349,7 +346,11 @@ impl OpenedFileDescriptor for MufsOpenedFile {
     }
 
     fn set_permissions(&mut self, permissions: WlPermissions) -> Result<(), DfsFrontendError> {
-        let mode = if permissions.readonly() { 0o444 } else { 0o644 };
+        let mode = if permissions.is_readonly() {
+            0o444
+        } else {
+            0o644
+        };
         Ok(self
             .inner
             .set_permissions(rsfs::mem::Permissions::from_mode(mode))?)
@@ -377,8 +378,10 @@ impl OpenedFileDescriptor for MufsOpenedFile {
         Ok(self.inner.set_len(length as u64)?)
     }
 
-    fn stat_fs(&mut self) -> Result<wildland_corex::dfs::interface::FsStat, DfsFrontendError> {
-        todo!() // do it
+    fn stat_fs(&mut self) -> Result<FsStat, DfsFrontendError> {
+        Err(DfsFrontendError::Generic(
+            "MuFS does not support `stat_fs` operation".into(),
+        ))
     }
 }
 
@@ -399,7 +402,11 @@ fn map_metadata_to_stat(metadata: Metadata) -> Stat {
         modification_time: metadata.modified().ok().map(systime_to_unix),
         // NOTE: Mufs does not support ctime, for tests sake let's use creation time
         change_time: metadata.created().ok().map(systime_to_unix),
-        permissions: WlPermissions::new(metadata.permissions().readonly()),
+        permissions: if metadata.permissions().readonly() {
+            WlPermissions::readonly()
+        } else {
+            WlPermissions::read_write()
+        },
     }
 }
 

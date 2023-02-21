@@ -137,15 +137,19 @@ pub struct WlPermissions {
 }
 
 impl WlPermissions {
-    pub fn new(readonly: bool) -> Self {
-        Self { readonly }
+    pub fn readonly() -> Self {
+        Self { readonly: true }
+    }
+
+    pub fn read_write() -> Self {
+        Self { readonly: false }
     }
 
     pub fn set_readonly(&mut self, readonly: bool) {
         self.readonly = readonly
     }
 
-    pub fn readonly(&self) -> bool {
+    pub fn is_readonly(&self) -> bool {
         self.readonly
     }
 }

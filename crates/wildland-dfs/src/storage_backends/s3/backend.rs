@@ -17,6 +17,8 @@ use crate::storage_backends::models::{
     RemoveDirResponse,
     RemoveFileResponse,
     RenameResponse,
+    SetPermissionsResponse,
+    StatFsResponse,
     StorageBackendError,
 };
 use crate::storage_backends::StorageBackend;
@@ -54,7 +56,7 @@ impl StorageBackend for S3Backend {
                 access_time: None,
                 modification_time: Some(file.modification_time.clone()),
                 change_time: None,
-                permissions: WlPermissions::new(false),
+                permissions: WlPermissions::read_write(),
             })),
             Some(FileSystemNodeRef::Directory(dir)) => Ok(MetadataResponse::Found(Stat {
                 node_type: NodeType::Dir,
@@ -62,7 +64,7 @@ impl StorageBackend for S3Backend {
                 access_time: None,
                 modification_time: Some(dir.modification_time.clone()),
                 change_time: None,
-                permissions: WlPermissions::new(false),
+                permissions: WlPermissions::read_write(),
             })),
             None => Ok(MetadataResponse::NotFound),
         }
@@ -197,15 +199,12 @@ impl StorageBackend for S3Backend {
     fn set_permissions(
         &self,
         _path: &Path,
-        _permissions: wildland_corex::dfs::interface::WlPermissions,
-    ) -> Result<crate::storage_backends::models::SetPermissionsResponse, StorageBackendError> {
+        _permissions: WlPermissions,
+    ) -> Result<SetPermissionsResponse, StorageBackendError> {
         todo!() // TODO COR-87
     }
 
-    fn stat_fs(
-        &self,
-        _path: &Path,
-    ) -> Result<crate::storage_backends::models::StatFsResponse, StorageBackendError> {
+    fn stat_fs(&self, _path: &Path) -> Result<StatFsResponse, StorageBackendError> {
         todo!() // TODO COR-87
     }
 }

@@ -43,38 +43,29 @@ pub fn metadata(
             access_time: None,
             modification_time: None,
             change_time: None,
-            permissions: WlPermissions::new(true),
+            permissions: WlPermissions::readonly(),
         }),
     };
 
     let input_exposed_path = Path::new(&input_exposed_path);
-    let mut nodes = get_related_nodes(dfs, input_exposed_path)?;
+    let nodes = get_related_nodes(dfs, input_exposed_path)?;
 
-    match nodes.len() {
-        0 => Err(DfsFrontendError::NoSuchPath),
-        1 => get_metadata(dfs, &nodes.pop().unwrap()),
+    match nodes.as_slice() {
+        [] => Err(DfsFrontendError::NoSuchPath),
+        [node] => get_metadata(dfs, node),
         _ => {
-            let mut existent_paths: Vec<&NodeDescriptor> =
-                filter_existent_nodes(&nodes, dfs)?.collect();
+            let existent_paths: Vec<_> = filter_existent_nodes(&nodes, dfs)?.collect();
 
-            match existent_paths.len() {
-                0 => Err(DfsFrontendError::NoSuchPath),
-                1 => get_metadata(dfs, existent_paths.pop().unwrap()),
+            match existent_paths.as_slice() {
+                [] => Err(DfsFrontendError::NoSuchPath),
+                [node] => get_metadata(dfs, node),
                 _ => {
                     let exposed_paths = dfs.path_translator.solve_conflicts(existent_paths);
                     let node =
                         find_node_matching_requested_path(input_exposed_path, &exposed_paths);
 
                     match &node {
-                        Some(node @ NodeDescriptor::Physical { .. }) => get_metadata(dfs, node),
-                        Some(NodeDescriptor::Virtual { .. }) => Ok(Stat {
-                            node_type: NodeType::Dir,
-                            size: 0,
-                            access_time: None,
-                            modification_time: None,
-                            change_time: None,
-                            permissions: WlPermissions::new(true),
-                        }),
+                        Some(node) => get_metadata(dfs, node),
                         // Aggregating dir for conflicting files
                         // This behavior does not abstract from conflict resolution methods, so it should be changed when conflict resolution changes
                         None if !exposed_paths.is_empty() => Ok(Stat {
@@ -83,7 +74,7 @@ pub fn metadata(
                             access_time: None,
                             modification_time: None,
                             change_time: None,
-                            permissions: WlPermissions::new(true),
+                            permissions: WlPermissions::readonly(),
                         }),
                         None => Err(DfsFrontendError::NoSuchPath),
                     }

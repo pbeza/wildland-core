@@ -76,13 +76,13 @@ fn generic_create<T>(
     };
 
     let requested_path = PathBuf::from_str(&requested_path).unwrap();
-    let mut nodes = get_related_nodes(dfs, &requested_path)?;
+    let nodes = get_related_nodes(dfs, &requested_path)?;
 
-    match nodes.len() {
-        0 => Err(DfsFrontendError::InvalidParent),
-        1 => create_in_container(dfs, &nodes.pop().unwrap()),
+    match nodes.as_slice() {
+        [] => Err(DfsFrontendError::InvalidParent),
+        [node] => create_in_container(dfs, node),
         _ => {
-            let mut nodes_that_have_parent: Vec<&NodeDescriptor> = nodes
+            let nodes_that_have_parent: Vec<_> = nodes
                 .iter()
                 .filter_map(|node| {
                     let parent = node.parent()?;
@@ -103,9 +103,9 @@ fn generic_create<T>(
                 })
                 .collect::<Result<_, DfsFrontendError>>()?;
 
-            match nodes_that_have_parent.len() {
-                0 => Err(DfsFrontendError::InvalidParent),
-                1 => create_in_container(dfs, nodes_that_have_parent.pop().unwrap()),
+            match nodes_that_have_parent.as_slice() {
+                [] => Err(DfsFrontendError::InvalidParent),
+                [node] => create_in_container(dfs, node),
                 _ => Err(DfsFrontendError::ReadOnlyPath), // Ambiguous path are for now read-only
             }
         }

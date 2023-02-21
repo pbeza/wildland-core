@@ -21,6 +21,7 @@ use wildland_corex::dfs::interface::{
     DfsFrontend,
     DfsFrontendError,
     FileHandle,
+    FsStat,
     Stat,
     UnixTimestamp,
     WlPermissions,
@@ -160,17 +161,11 @@ impl DfsFrontend for EncryptedDfs {
         self.inner.set_file_permissions(file, permissions)
     }
 
-    fn file_stat_fs(
-        &mut self,
-        file: &FileHandle,
-    ) -> Result<wildland_corex::dfs::interface::FsStat, DfsFrontendError> {
+    fn file_stat_fs(&mut self, file: &FileHandle) -> Result<FsStat, DfsFrontendError> {
         self.inner.file_stat_fs(file)
     }
 
-    fn stat_fs(
-        &mut self,
-        path: String,
-    ) -> Result<wildland_corex::dfs::interface::FsStat, DfsFrontendError> {
+    fn stat_fs(&mut self, path: String) -> Result<FsStat, DfsFrontendError> {
         self.inner.stat_fs(path)
     }
 }

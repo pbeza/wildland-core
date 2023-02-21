@@ -255,7 +255,11 @@ impl StorageBackend for LocalFilesystemStorage {
         let relative_path = strip_root(path);
         let path = self.base_dir.join(relative_path);
 
-        let mode = if permissions.readonly() { 0o444 } else { 0o644 };
+        let mode = if permissions.is_readonly() {
+            0o444
+        } else {
+            0o644
+        };
 
         match std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)) {
             Ok(_) => Ok(SetPermissionsResponse::Set),
@@ -321,7 +325,11 @@ impl OpenedFileDescriptor for StdFsOpenedFile {
     }
 
     fn set_permissions(&mut self, permissions: WlPermissions) -> Result<(), DfsFrontendError> {
-        let mode = if permissions.readonly() { 0o444 } else { 0o644 };
+        let mode = if permissions.is_readonly() {
+            0o444
+        } else {
+            0o644
+        };
         Ok(self
             .inner
             .set_permissions(std::fs::Permissions::from_mode(mode))?)
@@ -394,7 +402,11 @@ fn map_metadata_to_stat(metadata: Metadata) -> Stat {
             sec: metadata.ctime() as u64,
             nano_sec: metadata.ctime_nsec() as u32,
         }),
-        permissions: WlPermissions::new(metadata.permissions().readonly()),
+        permissions: if metadata.permissions().readonly() {
+            WlPermissions::readonly()
+        } else {
+            WlPermissions::read_write()
+        },
     }
 }
 

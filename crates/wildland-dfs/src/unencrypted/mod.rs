@@ -213,18 +213,17 @@ impl DfsFrontend for UnencryptedDfs {
         };
 
         let input_exposed_path = Path::new(&input_exposed_path);
-        let mut nodes = get_related_nodes(self, input_exposed_path)?;
+        let nodes = get_related_nodes(self, input_exposed_path)?;
 
-        match nodes.len() {
-            0 => Err(DfsFrontendError::NoSuchPath),
-            1 => open_op(self, &nodes.pop().unwrap()),
+        match nodes.as_slice() {
+            [] => Err(DfsFrontendError::NoSuchPath),
+            [node] => open_op(self, node),
             _ => {
-                let mut existent_paths: Vec<&NodeDescriptor> =
-                    filter_existent_nodes(&nodes, self)?.collect();
+                let existent_paths: Vec<_> = filter_existent_nodes(&nodes, self)?.collect();
 
-                match existent_paths.len() {
-                    0 => Err(DfsFrontendError::NoSuchPath),
-                    1 => open_op(self, existent_paths.pop().unwrap()),
+                match existent_paths.as_slice() {
+                    [] => Err(DfsFrontendError::NoSuchPath),
+                    [node] => open_op(self, node),
                     _ => {
                         let exposed_paths = self.path_translator.solve_conflicts(existent_paths);
                         let node =

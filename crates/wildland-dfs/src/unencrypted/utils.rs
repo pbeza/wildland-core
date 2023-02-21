@@ -141,16 +141,15 @@ pub fn exec_on_single_existing_node<T>(
     nodes: &mut Vec<NodeDescriptor>,
     operation: &dyn Fn(&mut UnencryptedDfs, &NodeDescriptor) -> Result<T, DfsFrontendError>,
 ) -> Result<T, DfsFrontendError> {
-    match nodes.len() {
-        0 => Err(DfsFrontendError::NoSuchPath),
-        1 => operation(dfs, &nodes.pop().unwrap()),
+    match nodes.as_slice() {
+        [] => Err(DfsFrontendError::NoSuchPath),
+        [node] => operation(dfs, node),
         _ => {
-            let mut existent_paths: Vec<&NodeDescriptor> =
-                filter_existent_nodes(nodes, dfs)?.collect();
+            let existent_paths: Vec<_> = filter_existent_nodes(nodes, dfs)?.collect();
 
-            match existent_paths.len() {
-                0 => Err(DfsFrontendError::NoSuchPath),
-                1 => operation(dfs, existent_paths.pop().unwrap()),
+            match existent_paths.as_slice() {
+                [] => Err(DfsFrontendError::NoSuchPath),
+                [node] => operation(dfs, node),
                 _ => Err(DfsFrontendError::ReadOnlyPath), // Ambiguous path are for now read-only
             }
         }
