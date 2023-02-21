@@ -6,4 +6,5 @@ pub struct S3StorageTemplate {
     pub secret_access_key: String,
     pub region: String,
     pub bucket_name: String,
+    pub endpoint_url: Option<String>,
 }

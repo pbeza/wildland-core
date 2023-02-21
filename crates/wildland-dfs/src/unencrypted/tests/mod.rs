@@ -249,7 +249,7 @@ impl StorageBackend for Mufs {
                 )))
             }
             Err(e) => match e.kind() {
-                std::io::ErrorKind::NotFound => Ok(CreateFileResponse::ParentDoesNotExist),
+                std::io::ErrorKind::NotFound => Ok(CreateFileResponse::InvalidParent),
                 _ => Err(StorageBackendError::Generic(e.into())),
             },
         }
