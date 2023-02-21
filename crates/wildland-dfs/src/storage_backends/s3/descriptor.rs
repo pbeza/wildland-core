@@ -180,13 +180,14 @@ impl OpenedFileDescriptor for S3Descriptor {
         commit_file_system(&*self.client, &self.bucket_name, file_system)
             .map_err(|err| DfsFrontendError::Generic(format!("{err:?}")))?;
 
-        self.client
-            .remove_object(&self.object_name, &self.bucket_name)?;
-
         self.object_name = new_object_name;
         self.e_tag = new_e_tag;
         self.cursor.position = new_position;
         self.cursor.total_size = new_total_size;
+
+        let _ = self
+            .client
+            .remove_object(&self.object_name, &self.bucket_name);
 
         Ok(bytes_count)
     }
