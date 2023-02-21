@@ -54,12 +54,12 @@ pub struct FileSystem {
 }
 
 #[derive(Debug)]
-pub enum Node<'a> {
+pub enum FileSystemNodeRef<'a> {
     Directory(&'a mut Directory),
     File(&'a mut File),
 }
 
-impl<'a> From<&'a mut FileSystemNode> for Node<'a> {
+impl<'a> From<&'a mut FileSystemNode> for FileSystemNodeRef<'a> {
     fn from(value: &'a mut FileSystemNode) -> Self {
         match value {
             FileSystemNode::Directory(dir) => Self::Directory(dir),
@@ -87,13 +87,13 @@ impl Default for FileSystem {
 }
 
 impl FileSystem {
-    pub fn get_node(&mut self, path: &Path) -> Option<Node> {
+    pub fn get_node(&mut self, path: &Path) -> Option<FileSystemNodeRef> {
         let mut components = path.components();
 
         fn visit_node<'a>(
             node: &'a mut FileSystemNode,
             components: &mut Components,
-        ) -> Option<Node<'a>> {
+        ) -> Option<FileSystemNodeRef<'a>> {
             match components.next() {
                 Some(Component::RootDir) => None,
                 Some(Component::CurDir) => visit_node(node, components),
@@ -124,7 +124,7 @@ impl FileSystem {
                 }
                 Some(Component::ParentDir) => return None,
                 Some(Component::Prefix(_)) => return None,
-                None => return Some(Node::Directory(&mut self.root_node)),
+                None => return Some(FileSystemNodeRef::Directory(&mut self.root_node)),
             }
         }
     }

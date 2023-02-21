@@ -6,7 +6,7 @@ use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
 
 use super::client::S3Client;
 use super::descriptor::S3Descriptor;
-use super::file_system::{Directory, Node};
+use super::file_system::{Directory, FileSystemNodeRef};
 use super::helpers::{commit_file_system, load_file_system};
 use crate::storage_backends::models::{
     CreateDirResponse,
@@ -38,24 +38,24 @@ impl S3Backend {
 impl StorageBackend for S3Backend {
     fn read_dir(&self, path: &Path) -> Result<ReadDirResponse, StorageBackendError> {
         match load_file_system(&*self.client, &self.bucket_name)?.get_node(path) {
-            Some(Node::Directory(dir)) => Ok(ReadDirResponse::Entries(
+            Some(FileSystemNodeRef::Directory(dir)) => Ok(ReadDirResponse::Entries(
                 dir.children.iter().map(|node| node.name().into()).collect(),
             )),
-            Some(Node::File(_)) => Ok(ReadDirResponse::NotADirectory),
+            Some(FileSystemNodeRef::File(_)) => Ok(ReadDirResponse::NotADirectory),
             None => Ok(ReadDirResponse::NoSuchPath),
         }
     }
 
     fn metadata(&self, path: &Path) -> Result<MetadataResponse, StorageBackendError> {
         match load_file_system(&*self.client, &self.bucket_name)?.get_node(path) {
-            Some(Node::File(file)) => Ok(MetadataResponse::Found(Stat {
+            Some(FileSystemNodeRef::File(file)) => Ok(MetadataResponse::Found(Stat {
                 node_type: NodeType::File,
                 size: file.size,
                 access_time: None,
                 modification_time: Some(file.modification_time.clone()),
                 change_time: None,
             })),
-            Some(Node::Directory(dir)) => Ok(MetadataResponse::Found(Stat {
+            Some(FileSystemNodeRef::Directory(dir)) => Ok(MetadataResponse::Found(Stat {
                 node_type: NodeType::Dir,
                 size: 0,
                 access_time: None,
@@ -68,7 +68,7 @@ impl StorageBackend for S3Backend {
 
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError> {
         match load_file_system(&*self.client, &self.bucket_name)?.get_node(path) {
-            Some(Node::File(file)) => Ok(OpenResponse::found(S3Descriptor::new(
+            Some(FileSystemNodeRef::File(file)) => Ok(OpenResponse::found(S3Descriptor::new(
                 self.bucket_name.clone(),
                 file.object_name.clone(),
                 path.to_owned(),
@@ -76,7 +76,7 @@ impl StorageBackend for S3Backend {
                 file.e_tag.clone(),
                 self.client.clone(),
             ))),
-            Some(Node::Directory(_)) => Ok(OpenResponse::NotAFile),
+            Some(FileSystemNodeRef::Directory(_)) => Ok(OpenResponse::NotAFile),
             None => Ok(OpenResponse::NotFound),
         }
     }
@@ -94,7 +94,7 @@ impl StorageBackend for S3Backend {
         };
 
         match file_system.get_node(parent) {
-            Some(Node::Directory(dir)) => dir.children.push(
+            Some(FileSystemNodeRef::Directory(dir)) => dir.children.push(
                 Directory {
                     name: path.file_name().unwrap().to_string_lossy().to_string(),
                     children: Vec::new(),
@@ -108,7 +108,7 @@ impl StorageBackend for S3Backend {
                 }
                 .into(),
             ),
-            Some(Node::File(_)) => return Ok(CreateDirResponse::InvalidParent),
+            Some(FileSystemNodeRef::File(_)) => return Ok(CreateDirResponse::InvalidParent),
             None => return Ok(CreateDirResponse::InvalidParent),
         };
 
@@ -125,17 +125,17 @@ impl StorageBackend for S3Backend {
         let mut file_system = load_file_system(&*self.client, &self.bucket_name)?;
 
         match file_system.get_node(path) {
-            Some(Node::Directory(dir)) if dir.children.is_empty() => (),
-            Some(Node::Directory(_)) => return Ok(RemoveDirResponse::DirNotEmpty),
-            Some(Node::File(_)) => return Ok(RemoveDirResponse::NotADirectory),
+            Some(FileSystemNodeRef::Directory(dir)) if dir.children.is_empty() => (),
+            Some(FileSystemNodeRef::Directory(_)) => return Ok(RemoveDirResponse::DirNotEmpty),
+            Some(FileSystemNodeRef::File(_)) => return Ok(RemoveDirResponse::NotADirectory),
             None => return Ok(RemoveDirResponse::NotFound),
         };
 
         match file_system.get_node(parent) {
-            Some(Node::Directory(dir)) => dir
+            Some(FileSystemNodeRef::Directory(dir)) => dir
                 .children
                 .retain(|node| node.name() != path.file_name().unwrap()),
-            Some(Node::File(_)) => return Ok(RemoveDirResponse::NotFound),
+            Some(FileSystemNodeRef::File(_)) => return Ok(RemoveDirResponse::NotFound),
             None => return Ok(RemoveDirResponse::NotFound),
         }
 
@@ -158,16 +158,16 @@ impl StorageBackend for S3Backend {
         let mut file_system = load_file_system(&*self.client, &self.bucket_name)?;
 
         let object_name_to_remove = match file_system.get_node(path) {
-            Some(Node::File(file)) => file.object_name.clone(),
-            Some(Node::Directory(_)) => return Ok(RemoveFileResponse::NotAFile),
+            Some(FileSystemNodeRef::File(file)) => file.object_name.clone(),
+            Some(FileSystemNodeRef::Directory(_)) => return Ok(RemoveFileResponse::NotAFile),
             None => return Ok(RemoveFileResponse::NotFound),
         };
 
         match file_system.get_node(parent) {
-            Some(Node::Directory(dir)) => dir
+            Some(FileSystemNodeRef::Directory(dir)) => dir
                 .children
                 .retain(|node| node.name() != path.file_name().unwrap()),
-            Some(Node::File(_)) => return Ok(RemoveFileResponse::NotFound),
+            Some(FileSystemNodeRef::File(_)) => return Ok(RemoveFileResponse::NotFound),
             None => return Ok(RemoveFileResponse::NotFound),
         }
 
