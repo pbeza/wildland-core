@@ -6,7 +6,7 @@ use derivative::Derivative;
 use wildland_corex::dfs::interface::DfsFrontendError;
 
 use super::client::S3Client;
-use super::file_system::FileSystemNode;
+use super::file_system::Node;
 use super::helpers::{commit_file_system, load_file_system};
 use super::models::WriteResp;
 use crate::storage_backends::models::{CloseError, SeekFrom};
@@ -162,17 +162,11 @@ impl OpenedFileDescriptor for S3Descriptor {
         let new_total_size = std::cmp::max(new_position, self.cursor.total_size);
 
         match file_system.get_node(&self.node_path) {
-            Some(FileSystemNode::File {
-                object_name,
-                size,
-                e_tag,
-                modification_time,
-                ..
-            }) => {
-                *object_name = new_object_name.clone();
-                *size = new_total_size;
-                *e_tag = new_e_tag.clone();
-                *modification_time = new_modification_time;
+            Some(Node::File(file)) => {
+                file.object_name = new_object_name.clone();
+                file.size = new_total_size;
+                file.e_tag = new_e_tag.clone();
+                file.modification_time = new_modification_time;
             }
             _ => return Err(DfsFrontendError::ConcurrentIssue),
         };

@@ -1,3 +1,4 @@
+use anyhow::Context;
 use aws_sdk_s3::model::{CompletedPart, CopyPartResult};
 use scopeguard::ScopeGuard;
 
@@ -36,9 +37,9 @@ pub fn load_file_system(
     bucket_name: &str,
 ) -> Result<FileSystem, StorageBackendError> {
     match client.read_object(FILE_SYSTEM_FILE, bucket_name, None, None) {
-        Ok(body) => {
-            serde_json::from_slice(&body).map_err(|err| StorageBackendError::Generic(err.into()))
-        }
+        Ok(body) => serde_json::from_slice(&body)
+            .context("Filesystem metadata deserialization error")
+            .map_err(StorageBackendError::Generic),
         Err(S3Error::NotFound) => Ok(Default::default()),
         Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
             Err(StorageBackendError::Generic(err.into()))
