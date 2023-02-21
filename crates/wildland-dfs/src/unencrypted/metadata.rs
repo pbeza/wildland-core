@@ -17,70 +17,68 @@
 
 use std::path::Path;
 
-use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat};
+use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat, WlPermissions};
 
 use super::utils::*;
 use super::{NodeDescriptor, UnencryptedDfs};
 use crate::storage_backends::models::MetadataResponse;
 
 pub fn metadata(
-    dfs_front: &mut UnencryptedDfs,
+    dfs: &mut UnencryptedDfs,
     input_exposed_path: String,
 ) -> Result<Stat, DfsFrontendError> {
+    let get_metadata = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
+        NodeDescriptor::Physical { storages, .. } => {
+            execute_container_operation(dfs, storages, &|backend| {
+                backend.metadata(storages.path_within_storage())
+            })
+            .and_then(|resp| match resp {
+                MetadataResponse::Found(stat) => Ok(stat),
+                MetadataResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
+            })
+        }
+        NodeDescriptor::Virtual { .. } => Ok(Stat {
+            node_type: NodeType::Dir,
+            size: 0,
+            access_time: None,
+            modification_time: None,
+            change_time: None,
+            permissions: WlPermissions::readonly(),
+        }),
+    };
+
     let input_exposed_path = Path::new(&input_exposed_path);
+    let nodes = get_related_nodes(dfs, input_exposed_path)?;
 
-    let nodes = get_related_nodes(dfs_front, input_exposed_path)?;
-
-    let mut stats: Vec<(&NodeDescriptor, Stat)> =
-        fetch_data_from_containers_by_path(&nodes, dfs_front, &|backend, path| {
-            backend.metadata(path)
-        })
-        .collect::<Result<Vec<_>, DfsFrontendError>>()?
-        .into_iter()
-        .filter_map(|(node, opt_result)| match opt_result {
-            MetadataResponse::Found(stat) => Some((node, stat)),
-            MetadataResponse::NotFound => None,
-        })
-        .chain(nodes.iter().filter_map(|node| {
-            if node.is_virtual() {
-                Some((
-                    node,
-                    Stat {
-                        node_type: NodeType::Dir,
-                        size: 0,
-                        access_time: None,
-                        modification_time: None,
-                        change_time: None,
-                    },
-                ))
-            } else {
-                None
-            }
-        }))
-        .collect();
-
-    match stats.len() {
-        0 => Err(DfsFrontendError::NoSuchPath),
-        1 => Ok(stats.pop().unwrap().1),
+    match nodes.as_slice() {
+        [] => Err(DfsFrontendError::NoSuchPath),
+        [node] => get_metadata(dfs, node),
         _ => {
-            let nodes: Vec<&NodeDescriptor> = stats.iter().map(|(n, _)| *n).collect();
-            let exposed_paths = dfs_front.path_translator.solve_conflicts(nodes);
-            let node = find_node_matching_requested_path(input_exposed_path, &exposed_paths);
-            match node {
-                // Physical node
-                Some(node @ NodeDescriptor::Physical { .. }) => stats
-                    .into_iter()
-                    .find_map(|(n, stat)| if n == node { Some(stat) } else { None })
-                    .ok_or(DfsFrontendError::NoSuchPath),
-                // Virtual node
-                Some(_) | None if !exposed_paths.is_empty() => Ok(Stat {
-                    node_type: NodeType::Dir,
-                    size: 0,
-                    access_time: None,
-                    modification_time: None,
-                    change_time: None,
-                }),
-                _ => Err(DfsFrontendError::NoSuchPath),
+            let existent_paths: Vec<_> = filter_existent_nodes(&nodes, dfs)?.collect();
+
+            match existent_paths.as_slice() {
+                [] => Err(DfsFrontendError::NoSuchPath),
+                [node] => get_metadata(dfs, node),
+                _ => {
+                    let exposed_paths = dfs.path_translator.solve_conflicts(existent_paths);
+                    let node =
+                        find_node_matching_requested_path(input_exposed_path, &exposed_paths);
+
+                    match &node {
+                        Some(node) => get_metadata(dfs, node),
+                        // Aggregating dir for conflicting files
+                        // This behavior does not abstract from conflict resolution methods, so it should be changed when conflict resolution changes
+                        None if !exposed_paths.is_empty() => Ok(Stat {
+                            node_type: NodeType::Dir,
+                            size: 0,
+                            access_time: None,
+                            modification_time: None,
+                            change_time: None,
+                            permissions: WlPermissions::readonly(),
+                        }),
+                        None => Err(DfsFrontendError::NoSuchPath),
+                    }
+                }
             }
         }
     }

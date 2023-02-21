@@ -1,26 +1,31 @@
 use std::collections::HashSet;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use pretty_assertions::assert_eq;
-use rstest::rstest;
+use rstest::{fixture, rstest};
 use wildland_corex::{LocalSecureStorage, StorageTemplate};
-use wildland_dfs::{DfsFrontendError, NodeType};
+use wildland_dfs::{DfsFrontend, DfsFrontendError, NodeType};
 use wildland_lfs::template::LocalFilesystemStorageTemplate;
 
 use crate::api::cargo_lib::create_cargo_lib;
+use crate::api::cargo_user::CargoUser;
 use crate::api::CargoConfig;
 use crate::utils::test::lss_stub;
 
-#[rstest]
-fn dfs_integration_test_with_containers_with_lfs_storages(
+#[fixture]
+fn setup(
     lss_stub: &'static dyn LocalSecureStorage,
+) -> (
+    CargoUser,
+    PathBuf,
+    LocalFilesystemStorageTemplate,
+    Arc<Mutex<(dyn DfsFrontend)>>,
 ) {
-    //
-    // Given containers with data
-    //
     let tmpdir = tempfile::tempdir().unwrap().into_path();
 
     let config_str = r#"{
-        "log_level": "trace",
+        "log_level": "info",
         "log_use_ansi": false,
         "log_file_enabled": true,
         "log_file_path": "cargo_lib_log",
@@ -42,6 +47,25 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
         local_dir: tmpdir.clone(),
         container_dir: "{{ CONTAINER_NAME }}".to_owned(),
     };
+
+    let dfs = cargo_lib.dfs_api();
+
+    (user, tmpdir, template, dfs)
+}
+
+#[rstest]
+fn dfs_integration_test_with_containers_with_lfs_storages(
+    setup: (
+        CargoUser,
+        PathBuf,
+        LocalFilesystemStorageTemplate,
+        Arc<Mutex<(dyn DfsFrontend)>>,
+    ),
+) {
+    //
+    // Given containers with data
+    //
+    let (user, tmpdir, template, dfs) = setup;
     let container1 = user
         .create_container(
             "C1".to_owned(),
@@ -76,7 +100,6 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     std::fs::create_dir(tmpdir.join("C3")).unwrap();
     std::fs::File::create(tmpdir.join("C3/c3_file")).unwrap();
 
-    let dfs = cargo_lib.dfs_api();
     let mut dfs = dfs.lock().unwrap();
 
     let err = dfs.read_dir("/some/path/".to_string()).unwrap_err();
@@ -122,8 +145,8 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     );
     let c1_file_stat = dfs.metadata("/some/path/dir/c1_file".to_owned()).unwrap();
     assert_eq!(c1_file_stat.node_type, NodeType::File);
-    let c1_file_stat = dfs.metadata("/some/path/dir/".to_owned()).unwrap();
-    assert_eq!(c1_file_stat.node_type, NodeType::Dir);
+    let dir_stat = dfs.metadata("/some/path/dir/".to_owned()).unwrap();
+    assert_eq!(dir_stat.node_type, NodeType::Dir);
 
     let file = dfs.open("/some/path/dir/c1_file".to_owned()).unwrap();
 

@@ -17,12 +17,14 @@
 
 pub mod template;
 
-use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Seek, Write};
-use std::os::unix::prelude::MetadataExt;
+use std::fs::{self, File, Metadata, OpenOptions};
+use std::io::{ErrorKind, Read, Seek, Write};
+use std::os::unix::prelude::{MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use anyhow::anyhow;
+use filetime::{set_file_atime, set_file_mtime, FileTime};
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::storage_backends::models::{
     CloseError,
@@ -35,10 +37,20 @@ use wildland_dfs::storage_backends::models::{
     RemoveFileResponse,
     RenameResponse,
     SeekFrom,
+    SetPermissionsResponse,
+    StatFsResponse,
     StorageBackendError,
 };
 use wildland_dfs::storage_backends::{OpenedFileDescriptor, StorageBackend, StorageBackendFactory};
-use wildland_dfs::{DfsFrontendError, NodeType, Stat, Storage, UnixTimestamp};
+use wildland_dfs::{
+    DfsFrontendError,
+    FsStat,
+    NodeType,
+    Stat,
+    Storage,
+    UnixTimestamp,
+    WlPermissions,
+};
 
 #[derive(Debug)]
 pub struct LocalFilesystemStorage {
@@ -84,33 +96,9 @@ impl StorageBackend for LocalFilesystemStorage {
             return Ok(MetadataResponse::NotFound);
         }
 
-        Ok(fs::metadata(path).map(|metadata| {
-            let file_type = metadata.file_type();
-            MetadataResponse::Found(Stat {
-                node_type: if file_type.is_file() {
-                    NodeType::File
-                } else if file_type.is_dir() {
-                    NodeType::Dir
-                } else if file_type.is_symlink() {
-                    NodeType::Symlink
-                } else {
-                    NodeType::Other
-                },
-                size: metadata.len() as _,
-                access_time: Some(UnixTimestamp {
-                    sec: metadata.atime() as u64,
-                    nano_sec: metadata.atime_nsec() as u32,
-                }),
-                modification_time: Some(UnixTimestamp {
-                    sec: metadata.mtime() as u64,
-                    nano_sec: metadata.mtime_nsec() as u32,
-                }),
-                change_time: Some(UnixTimestamp {
-                    sec: metadata.ctime() as u64,
-                    nano_sec: metadata.ctime_nsec() as u32,
-                }),
-            })
-        })?)
+        Ok(MetadataResponse::Found(
+            fs::metadata(path).map(map_metadata_to_stat)?,
+        ))
     }
 
     fn open(&self, path: &Path) -> Result<OpenResponse, StorageBackendError> {
@@ -122,9 +110,12 @@ impl StorageBackend for LocalFilesystemStorage {
         } else if !path.metadata()?.is_file() {
             Ok(OpenResponse::NotAFile)
         } else {
-            let file = OpenOptions::new().read(true).write(true).open(path)?;
+            let file = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(path.as_path())?;
 
-            let opened_file = StdFsOpenedFile::new(file);
+            let opened_file = StdFsOpenedFile::new(file, path);
 
             Ok(OpenResponse::found(opened_file))
         }
@@ -212,9 +203,10 @@ impl StorageBackend for LocalFilesystemStorage {
                     .create(true)
                     .truncate(true)
                     .read(true)
-                    .open(path)?;
+                    .open(path.as_path())?;
                 Ok(CreateFileResponse::created(StdFsOpenedFile::new(
                     opened_file,
+                    path,
                 )))
             }
             Err(e) => match e.kind() {
@@ -254,16 +246,58 @@ impl StorageBackend for LocalFilesystemStorage {
             Ok(RenameResponse::NotFound)
         }
     }
+
+    fn set_permissions(
+        &self,
+        path: &Path,
+        permissions: WlPermissions,
+    ) -> Result<SetPermissionsResponse, StorageBackendError> {
+        let relative_path = strip_root(path);
+        let path = self.base_dir.join(relative_path);
+
+        let mode = if permissions.is_readonly() {
+            0o444
+        } else {
+            0o644
+        };
+
+        match std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)) {
+            Ok(_) => Ok(SetPermissionsResponse::Set),
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => Ok(SetPermissionsResponse::NotFound),
+                _ => Err(e.into()),
+            },
+        }
+    }
+
+    fn stat_fs(&self, path: &Path) -> Result<StatFsResponse, StorageBackendError> {
+        stat_fs(path).map(StatFsResponse::Stat)
+    }
+}
+
+fn stat_fs(path: &Path) -> Result<FsStat, StorageBackendError> {
+    let statfs = rustix::fs::statfs(path)
+        .map_err(|e| StorageBackendError::Generic(anyhow!("LFS `stat_fs` error: {e}")))?;
+    Ok(FsStat {
+        block_size: statfs.f_bsize as u64,
+        io_size: None,
+        blocks: statfs.f_blocks,
+        free_blocks: statfs.f_blocks,
+        blocks_available: statfs.f_blocks,
+        nodes: statfs.f_blocks,
+        name_length: statfs.f_blocks,
+    })
 }
 
 #[derive(Debug)]
 pub struct StdFsOpenedFile {
     inner: File,
+    path: PathBuf,
 }
 
 impl StdFsOpenedFile {
-    fn new(inner: File) -> Self {
-        Self { inner }
+    fn new(inner: File, path: PathBuf) -> Self {
+        Self { inner, path }
     }
 }
 
@@ -288,6 +322,91 @@ impl OpenedFileDescriptor for StdFsOpenedFile {
 
     fn seek(&mut self, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
         Ok(self.inner.seek(seek_from.to_std())? as _)
+    }
+
+    fn set_permissions(&mut self, permissions: WlPermissions) -> Result<(), DfsFrontendError> {
+        let mode = if permissions.is_readonly() {
+            0o444
+        } else {
+            0o644
+        };
+        Ok(self
+            .inner
+            .set_permissions(std::fs::Permissions::from_mode(mode))?)
+    }
+
+    fn sync(&mut self) -> Result<(), DfsFrontendError> {
+        Ok(self.inner.sync_all()?)
+    }
+
+    fn metadata(&mut self) -> Result<Stat, DfsFrontendError> {
+        Ok(self.inner.metadata().map(map_metadata_to_stat)?)
+    }
+
+    fn set_times(
+        &mut self,
+        access_time: Option<UnixTimestamp>,
+        modification_time: Option<UnixTimestamp>,
+    ) -> Result<(), DfsFrontendError> {
+        if let Some(access_time) = access_time {
+            set_file_atime(
+                self.path.as_path(),
+                FileTime::from_unix_time(access_time.sec() as i64, access_time.nano_sec()),
+            )?;
+        }
+        if let Some(modification_time) = modification_time {
+            set_file_mtime(
+                self.path.as_path(),
+                FileTime::from_unix_time(
+                    modification_time.sec() as i64,
+                    modification_time.nano_sec(),
+                ),
+            )?;
+        }
+        Ok(())
+    }
+
+    fn set_length(&mut self, length: usize) -> Result<(), DfsFrontendError> {
+        Ok(self.inner.set_len(length as u64)?)
+    }
+
+    fn stat_fs(&mut self) -> Result<FsStat, DfsFrontendError> {
+        stat_fs(&self.path).map_err(|e| {
+            DfsFrontendError::Generic(format!("Could not retrieve filesystem stats: {e}"))
+        })
+    }
+}
+
+fn map_metadata_to_stat(metadata: Metadata) -> Stat {
+    let file_type = metadata.file_type();
+    Stat {
+        node_type: if file_type.is_file() {
+            NodeType::File
+        } else if file_type.is_dir() {
+            NodeType::Dir
+        } else if file_type.is_symlink() {
+            NodeType::Symlink
+        } else {
+            NodeType::Other
+        },
+        size: metadata.len() as _,
+        access_time: Some(UnixTimestamp {
+            sec: metadata.atime() as u64,
+            nano_sec: metadata.atime_nsec() as u32,
+        }),
+        modification_time: Some(UnixTimestamp {
+            sec: metadata.mtime() as u64,
+            nano_sec: metadata.mtime_nsec() as u32,
+        }),
+        change_time: Some(UnixTimestamp {
+            sec: metadata.ctime() as u64,
+            nano_sec: metadata.ctime_nsec() as u32,
+        }),
+        permissions: if metadata.permissions().readonly() {
+            WlPermissions::readonly()
+        } else {
+            WlPermissions::read_write()
+        },
     }
 }
 

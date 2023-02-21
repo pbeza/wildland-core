@@ -2,7 +2,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::time::SystemTime;
 
-use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp};
+use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp, WlPermissions};
 
 use super::client::S3Client;
 use super::descriptor::S3Descriptor;
@@ -17,6 +17,8 @@ use crate::storage_backends::models::{
     RemoveDirResponse,
     RemoveFileResponse,
     RenameResponse,
+    SetPermissionsResponse,
+    StatFsResponse,
     StorageBackendError,
 };
 use crate::storage_backends::StorageBackend;
@@ -54,6 +56,7 @@ impl StorageBackend for S3Backend {
                 access_time: None,
                 modification_time: Some(file.modification_time.clone()),
                 change_time: None,
+                permissions: WlPermissions::read_write(), // TODO COR-87 store permission in metadata and retrieve it
             })),
             Some(FileSystemNodeRef::Directory(dir)) => Ok(MetadataResponse::Found(Stat {
                 node_type: NodeType::Dir,
@@ -61,6 +64,7 @@ impl StorageBackend for S3Backend {
                 access_time: None,
                 modification_time: Some(dir.modification_time.clone()),
                 change_time: None,
+                permissions: WlPermissions::read_write(), // TODO COR-87 store permission in metadata and retrieve it
             })),
             None => Ok(MetadataResponse::NotFound),
         }
@@ -189,6 +193,18 @@ impl StorageBackend for S3Backend {
         _old_path: &Path,
         _new_path: &Path,
     ) -> Result<RenameResponse, StorageBackendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn set_permissions(
+        &self,
+        _path: &Path,
+        _permissions: WlPermissions,
+    ) -> Result<SetPermissionsResponse, StorageBackendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn stat_fs(&self, _path: &Path) -> Result<StatFsResponse, StorageBackendError> {
         todo!() // TODO COR-87
     }
 }

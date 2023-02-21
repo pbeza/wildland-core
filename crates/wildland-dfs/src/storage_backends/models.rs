@@ -1,7 +1,7 @@
 use std::ops::Neg;
 use std::path::PathBuf;
 
-use wildland_corex::dfs::interface::Stat;
+use wildland_corex::dfs::interface::{FsStat, Stat};
 
 use super::{CloseOnDropDescriptor, OpenedFileDescriptor};
 
@@ -117,4 +117,17 @@ impl CreateFileResponse {
     pub fn created<T: OpenedFileDescriptor + 'static>(descriptor: T) -> Self {
         Self::Created(CloseOnDropDescriptor::new(Box::new(descriptor)))
     }
+}
+
+#[derive(Debug)]
+pub enum SetPermissionsResponse {
+    Set,
+    NotFound,
+}
+
+#[derive(Debug)]
+pub enum StatFsResponse {
+    Stat(FsStat),
+    NotFound,
+    NotSupported(String),
 }

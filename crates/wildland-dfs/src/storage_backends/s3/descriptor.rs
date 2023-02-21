@@ -3,7 +3,13 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use derivative::Derivative;
-use wildland_corex::dfs::interface::DfsFrontendError;
+use wildland_corex::dfs::interface::{
+    DfsFrontendError,
+    FsStat,
+    Stat,
+    UnixTimestamp,
+    WlPermissions,
+};
 
 use super::client::S3Client;
 use super::file_system::FileSystemNodeRef;
@@ -189,5 +195,33 @@ impl OpenedFileDescriptor for S3Descriptor {
     fn seek(&mut self, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
         self.cursor = self.cursor.apply_seek(seek_from)?;
         Ok(self.cursor.position)
+    }
+
+    fn set_permissions(&mut self, _permissions: WlPermissions) -> Result<(), DfsFrontendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn sync(&mut self) -> Result<(), DfsFrontendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn metadata(&mut self) -> Result<Stat, DfsFrontendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn set_times(
+        &mut self,
+        _access_time: Option<UnixTimestamp>,
+        _modification_time: Option<UnixTimestamp>,
+    ) -> Result<(), DfsFrontendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn set_length(&mut self, _length: usize) -> Result<(), DfsFrontendError> {
+        todo!() // TODO COR-87
+    }
+
+    fn stat_fs(&mut self) -> Result<FsStat, DfsFrontendError> {
+        todo!() // TODO COR-87
     }
 }
