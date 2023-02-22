@@ -22,10 +22,10 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 use crate::api::config::LoggerConfig;
 
-pub(crate) fn init_subscriber(cfg: LoggerConfig) -> anyhow::Result<()> {
+pub(crate) fn init_subscriber(cfg: LoggerConfig) {
     if !cfg.use_logger {
         eprintln!("default log subscriber disabled by config!");
-        return Ok(());
+        return;
     }
 
     let mut cfg = cfg;
@@ -38,21 +38,20 @@ pub(crate) fn init_subscriber(cfg: LoggerConfig) -> anyhow::Result<()> {
 
     #[cfg(any(target_os = "macos", target_os = "ios"))]
     if cfg.is_oslog_eligible() {
-        nondefault_oslog(&cfg)?;
+        nondefault_oslog(&cfg);
         tracing::info!("logger initialized");
-        return Ok(());
+        return;
     }
 
     if cfg.is_file_eligible() {
-        default_with_file_copy(&cfg)?;
+        default_with_file_copy(&cfg);
     } else {
-        default_without_file_copy(&cfg)?;
+        default_without_file_copy(&cfg);
     }
     tracing::info!("logger initialized");
-    Ok(())
 }
 
-pub fn default_with_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
+pub fn default_with_file_copy(cfg: &LoggerConfig) {
     let file_appender = tracing_appender::rolling::hourly(
         cfg.log_file_path.clone(),
         cfg.log_file_rotate_directory.clone(),
@@ -76,10 +75,9 @@ pub fn default_with_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
     tracing::subscriber::set_global_default(subscriber)
         .expect("Unable to set a global multilogger instance"); // unrecoverable
     tracing::info!("initialized multilogger");
-    Ok(())
 }
 
-pub fn default_without_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
+pub fn default_without_file_copy(cfg: &LoggerConfig) {
     let subscriber = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env().add_directive(cfg.log_level.into()))
         .with(
@@ -92,11 +90,10 @@ pub fn default_without_file_copy(cfg: &LoggerConfig) -> anyhow::Result<()> {
     tracing::subscriber::set_global_default(subscriber)
         .expect("Unable to set a global stderr-log instance"); // unrecoverable
     tracing::info!("initialized stderr logger");
-    Ok(())
 }
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-pub fn nondefault_oslog(cfg: &LoggerConfig) -> anyhow::Result<()> {
+pub fn nondefault_oslog(cfg: &LoggerConfig) {
     let subscriber = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
         .with(tracing_oslog::OsLogger::new(
@@ -106,5 +103,4 @@ pub fn nondefault_oslog(cfg: &LoggerConfig) -> anyhow::Result<()> {
     tracing::subscriber::set_global_default(subscriber)
         .expect("Unable to set a global oslog instance"); // unrecoverable
     tracing::info!("initialized oslog logger");
-    Ok(())
 }

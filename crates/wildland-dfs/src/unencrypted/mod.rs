@@ -46,6 +46,7 @@ use self::node_descriptor::NodeDescriptor;
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{
+    exec_on_opened_file,
     exec_on_single_existing_node,
     execute_container_operation,
     filter_existent_nodes,
@@ -162,11 +163,7 @@ impl UnencryptedDfs {
     }
 
     fn seek(&mut self, file: &FileHandle, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.seek(seek_from)
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.seek(seek_from))
     }
 }
 
@@ -270,19 +267,11 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.read(count)
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.read(count))
     }
 
     fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.write(&buf)
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.write(&buf))
     }
 
     fn seek_from_start(
@@ -396,19 +385,11 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn set_length(&mut self, file: &FileHandle, length: usize) -> Result<(), DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.set_length(length)
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.set_length(length))
     }
 
     fn sync(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.sync()
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.sync())
     }
 
     fn set_times(
@@ -417,19 +398,13 @@ impl DfsFrontend for UnencryptedDfs {
         access_time: Option<UnixTimestamp>,
         modification_time: Option<UnixTimestamp>,
     ) -> Result<(), DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.set_times(access_time, modification_time)
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| {
+            opened_file.set_times(access_time.clone(), modification_time.clone())
+        })
     }
 
     fn file_metadata(&mut self, file: &FileHandle) -> Result<Stat, DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.metadata()
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.metadata())
     }
 
     fn sync_all(&mut self) -> Result<(), DfsFrontendError> {
@@ -443,19 +418,13 @@ impl DfsFrontend for UnencryptedDfs {
         file: &FileHandle,
         permissions: WlPermissions,
     ) -> Result<(), DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.set_permissions(permissions)
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| {
+            opened_file.set_permissions(permissions.clone())
+        })
     }
 
     fn file_stat_fs(&mut self, file: &FileHandle) -> Result<FsStat, DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.stat_fs()
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.stat_fs())
     }
 
     fn stat_fs(&mut self, input_exposed_path: String) -> Result<FsStat, DfsFrontendError> {
