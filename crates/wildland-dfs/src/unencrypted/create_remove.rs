@@ -45,31 +45,37 @@ pub fn create_dir(
         })
     };
 
-    generic_create(dfs, requested_path, create_dir_in_container)
+    generic_create(dfs, requested_path, &create_dir_in_container)
 }
 
 pub fn create_file(
     dfs: &mut UnencryptedDfs,
     requested_path: String,
 ) -> Result<FileHandle, DfsFrontendError> {
-    let create_file_in_container = |dfs: &mut UnencryptedDfs, storages: &NodeStorages| {
-        execute_container_operation(dfs, storages, &|backend| {
-            backend.create_file(storages.path_within_storage())
-        })
-        .and_then(|resp| match resp {
-            CreateFileResponse::Created(opened_file) => Ok(dfs.insert_opened_file(opened_file)),
-            CreateFileResponse::InvalidParent => Err(DfsFrontendError::InvalidParent),
-            CreateFileResponse::PathTakenByDir => Err(DfsFrontendError::NotAFile),
-        })
+    let create_file_in_container = {
+        let requested_path = requested_path.clone();
+        move |dfs: &mut UnencryptedDfs, storages: &NodeStorages| {
+            execute_container_operation(dfs, storages, &|backend| {
+                backend.create_file(storages.path_within_storage())
+            })
+            .and_then(|resp| match resp {
+                CreateFileResponse::Created(opened_file) => {
+                    let requested_path = requested_path.clone();
+                    Ok(dfs.insert_opened_file(PathBuf::from(requested_path), opened_file))
+                }
+                CreateFileResponse::InvalidParent => Err(DfsFrontendError::InvalidParent),
+                CreateFileResponse::PathTakenByDir => Err(DfsFrontendError::NotAFile),
+            })
+        }
     };
 
-    generic_create(dfs, requested_path, create_file_in_container)
+    generic_create(dfs, requested_path, &create_file_in_container)
 }
 
 fn generic_create<T>(
     dfs: &mut UnencryptedDfs,
     requested_path: String,
-    container_op: fn(&mut UnencryptedDfs, &NodeStorages) -> Result<T, DfsFrontendError>,
+    container_op: &dyn Fn(&mut UnencryptedDfs, &NodeStorages) -> Result<T, DfsFrontendError>,
 ) -> Result<T, DfsFrontendError> {
     let create_in_container = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
         NodeDescriptor::Physical { storages, .. } => container_op(dfs, storages),

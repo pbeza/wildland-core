@@ -375,6 +375,10 @@ impl OpenedFileDescriptor for StdFsOpenedFile {
             DfsFrontendError::Generic(format!("Could not retrieve filesystem stats: {e}"))
         })
     }
+
+    fn update_path(&mut self, new_path: &Path) {
+        self.path = new_path.into();
+    }
 }
 
 fn map_metadata_to_stat(metadata: Metadata) -> Stat {

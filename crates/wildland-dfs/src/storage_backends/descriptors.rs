@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::path::Path;
+
 use wildland_corex::dfs::interface::{
     DfsFrontendError,
     FsStat,
@@ -70,6 +72,10 @@ pub trait OpenedFileDescriptor: std::fmt::Debug {
 
     /// Returns information about a mounted filesystem containing the `file`.
     fn stat_fs(&mut self) -> Result<FsStat, DfsFrontendError>;
+
+    /// File descriptors for some backends may rely on paths as a pointer to inner file's representation.
+    /// This method passes new path after file is renamed.
+    fn update_path(&mut self, new_path: &Path);
 }
 
 /// Wrapper ensuring that close is always called on `OpenedFileDescriptor`
@@ -133,5 +139,9 @@ impl OpenedFileDescriptor for CloseOnDropDescriptor {
 
     fn stat_fs(&mut self) -> Result<FsStat, DfsFrontendError> {
         self.inner.stat_fs()
+    }
+
+    fn update_path(&mut self, new_path: &Path) {
+        self.inner.update_path(new_path)
     }
 }
