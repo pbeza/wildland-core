@@ -383,6 +383,8 @@ impl OpenedFileDescriptor for MufsOpenedFile {
             "MuFS does not support `stat_fs` operation".into(),
         ))
     }
+
+    fn update_path(&mut self, _new_path: &Path) {}
 }
 
 fn map_metadata_to_stat(metadata: Metadata) -> Stat {

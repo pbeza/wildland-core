@@ -46,6 +46,7 @@ use self::node_descriptor::NodeDescriptor;
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{
+    exec_on_opened_file,
     exec_on_single_existing_node,
     execute_container_operation,
     filter_existent_nodes,
@@ -75,7 +76,7 @@ use crate::unencrypted::utils::find_node_matching_requested_path;
 // the conflict resolution took place and find files which paths were mapped.
 
 pub struct UnencryptedDfs {
-    opened_files: HashMap<Uuid, CloseOnDropDescriptor>,
+    opened_files: HashMap<Uuid, (PathBuf, CloseOnDropDescriptor)>,
 
     path_resolver: Box<dyn PathResolver>,
     /// Stores a factory for each supported backend type
@@ -103,12 +104,31 @@ impl UnencryptedDfs {
         }
     }
 
-    fn insert_opened_file(&mut self, opened_file: CloseOnDropDescriptor) -> FileHandle {
+    fn insert_opened_file(
+        &mut self,
+        abs_path: PathBuf,
+        opened_file: CloseOnDropDescriptor,
+    ) -> FileHandle {
         let uuid = Uuid::new_v4();
-        self.opened_files.insert(uuid, opened_file);
+        self.opened_files.insert(uuid, (abs_path, opened_file));
         FileHandle {
             descriptor_uuid: uuid,
         }
+    }
+
+    fn rename_opened_files(
+        &mut self,
+        old_abs_path: &Path,
+        new_abs_path: &Path,
+        new_path_within_storage: &Path,
+    ) {
+        self.opened_files
+            .iter_mut()
+            .filter(|(_uuid, (abs_path, _descriptor))| abs_path == old_abs_path)
+            .for_each(|(_uuid, (abs_path, descriptor))| {
+                descriptor.update_path(new_path_within_storage);
+                *abs_path = new_abs_path.into();
+            })
     }
 
     /// Returns StorageBackend for a given Storage.
@@ -162,7 +182,7 @@ impl UnencryptedDfs {
     }
 
     fn seek(&mut self, file: &FileHandle, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
+        if let Some((_, opened_file)) = self.opened_files.get_mut(&file.descriptor_uuid) {
             opened_file.seek(seek_from)
         } else {
             Err(DfsFrontendError::FileAlreadyClosed)
@@ -198,13 +218,20 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn open(&mut self, input_exposed_path: String) -> Result<FileHandle, DfsFrontendError> {
+        let input_exposed_path = Path::new(&input_exposed_path);
+
         let open_op = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
             NodeDescriptor::Physical { storages, .. } => {
                 execute_container_operation(dfs, storages, &|backend| {
                     backend.open(storages.path_within_storage())
                 })
                 .and_then(|resp| match resp {
-                    OpenResponse::Found(opened_file) => Ok(dfs.insert_opened_file(opened_file)),
+                    OpenResponse::Found(opened_file) => {
+                        let abs_path = dfs
+                            .path_translator
+                            .exposed_to_absolute_path(input_exposed_path);
+                        Ok(dfs.insert_opened_file(abs_path, opened_file))
+                    }
                     OpenResponse::NotAFile => Err(DfsFrontendError::NotAFile),
                     _ => Err(DfsFrontendError::NoSuchPath),
                 })
@@ -212,7 +239,6 @@ impl DfsFrontend for UnencryptedDfs {
             NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::NoSuchPath),
         };
 
-        let input_exposed_path = Path::new(&input_exposed_path);
         let nodes = get_related_nodes(self, input_exposed_path)?;
 
         match nodes.as_slice() {
@@ -244,7 +270,7 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn close(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.remove(&file.descriptor_uuid) {
+        if let Some((_, opened_file)) = self.opened_files.remove(&file.descriptor_uuid) {
             opened_file.close().map_err(|e| match e {
                 CloseError::FileAlreadyClosed => DfsFrontendError::FileAlreadyClosed,
             })
@@ -270,7 +296,7 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
+        if let Some((_, opened_file)) = self.opened_files.get_mut(&file.descriptor_uuid) {
             opened_file.read(count)
         } else {
             Err(DfsFrontendError::FileAlreadyClosed)
@@ -278,7 +304,7 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
+        if let Some((_, opened_file)) = self.opened_files.get_mut(&file.descriptor_uuid) {
             opened_file.write(&buf)
         } else {
             Err(DfsFrontendError::FileAlreadyClosed)
@@ -324,9 +350,13 @@ impl DfsFrontend for UnencryptedDfs {
         )
     }
 
-    fn rename(&mut self, old_path: String, new_path: String) -> Result<(), DfsFrontendError> {
-        let old_path = PathBuf::from_str(&old_path).unwrap();
-        let mut nodes = get_related_nodes(self, &old_path)?;
+    fn rename(
+        &mut self,
+        old_exposed_path: String,
+        new_path: String,
+    ) -> Result<(), DfsFrontendError> {
+        let old_exposed_path = PathBuf::from_str(&old_exposed_path).unwrap();
+        let mut nodes = get_related_nodes(self, &old_exposed_path)?;
 
         let rename_node = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
             node @ NodeDescriptor::Physical { storages, .. } => {
@@ -345,7 +375,17 @@ impl DfsFrontend for UnencryptedDfs {
                         )
                     })
                     .and_then(|response| match response {
-                        RenameResponse::Renamed => Ok(()),
+                        RenameResponse::Renamed => {
+                            let old_abs_path = dfs
+                                .path_translator
+                                .exposed_to_absolute_path(&old_exposed_path);
+                            dfs.rename_opened_files(
+                                old_abs_path.as_path(),
+                                Path::new(&new_path),
+                                Path::new(new_path_within_storage),
+                            );
+                            Ok(())
+                        }
                         RenameResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
                         RenameResponse::SourceIsParentOfTarget => {
                             Err(DfsFrontendError::SourceIsParentOfTarget)
@@ -396,19 +436,11 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn set_length(&mut self, file: &FileHandle, length: usize) -> Result<(), DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.set_length(length)
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.set_length(length))
     }
 
     fn sync(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.sync()
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.sync())
     }
 
     fn set_times(
@@ -417,25 +449,19 @@ impl DfsFrontend for UnencryptedDfs {
         access_time: Option<UnixTimestamp>,
         modification_time: Option<UnixTimestamp>,
     ) -> Result<(), DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.set_times(access_time, modification_time)
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| {
+            opened_file.set_times(access_time.clone(), modification_time.clone())
+        })
     }
 
     fn file_metadata(&mut self, file: &FileHandle) -> Result<Stat, DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.metadata()
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.metadata())
     }
 
     fn sync_all(&mut self) -> Result<(), DfsFrontendError> {
         self.opened_files
             .iter_mut()
-            .try_for_each(|(_uuid, opened_file)| opened_file.sync())
+            .try_for_each(|(_uuid, (_, opened_file))| opened_file.sync())
     }
 
     fn set_file_permissions(
@@ -443,19 +469,13 @@ impl DfsFrontend for UnencryptedDfs {
         file: &FileHandle,
         permissions: WlPermissions,
     ) -> Result<(), DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.set_permissions(permissions)
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| {
+            opened_file.set_permissions(permissions.clone())
+        })
     }
 
     fn file_stat_fs(&mut self, file: &FileHandle) -> Result<FsStat, DfsFrontendError> {
-        if let Some(opened_file) = self.opened_files.get_mut(&file.descriptor_uuid) {
-            opened_file.stat_fs()
-        } else {
-            Err(DfsFrontendError::FileAlreadyClosed)
-        }
+        exec_on_opened_file(self, file, &|opened_file| opened_file.stat_fs())
     }
 
     fn stat_fs(&mut self, input_exposed_path: String) -> Result<FsStat, DfsFrontendError> {

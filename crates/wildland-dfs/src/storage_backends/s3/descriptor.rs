@@ -224,4 +224,8 @@ impl OpenedFileDescriptor for S3Descriptor {
     fn stat_fs(&mut self) -> Result<FsStat, DfsFrontendError> {
         todo!() // TODO COR-87
     }
+
+    fn update_path(&mut self, new_path: &std::path::Path) {
+        self.node_path = new_path.into();
+    }
 }
