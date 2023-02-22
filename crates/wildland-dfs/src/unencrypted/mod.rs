@@ -32,7 +32,13 @@ use std::str::FromStr;
 
 use uuid::Uuid;
 use wildland_corex::dfs::interface::{
-    DfsFrontend, DfsFrontendError, FileHandle, FsStat, Stat, UnixTimestamp, WlPermissions,
+    DfsFrontend,
+    DfsFrontendError,
+    FileHandle,
+    FsStat,
+    Stat,
+    UnixTimestamp,
+    WlPermissions,
 };
 use wildland_corex::{PathResolver, Storage};
 
@@ -40,14 +46,25 @@ use self::node_descriptor::NodeDescriptor;
 use self::path_translator::uuid_in_dir::UuidInDirTranslator;
 use self::path_translator::PathConflictResolver;
 use self::utils::{
-    exec_on_opened_file, exec_on_single_existing_node, execute_container_operation,
-    filter_existent_nodes, get_related_nodes,
+    exec_on_opened_file,
+    exec_on_single_existing_node,
+    execute_container_operation,
+    filter_existent_nodes,
+    get_related_nodes,
 };
 use crate::storage_backends::models::{
-    CloseError, OpenResponse, RenameResponse, SeekFrom, SetPermissionsResponse, StatFsResponse,
+    CloseError,
+    OpenResponse,
+    RenameResponse,
+    SeekFrom,
+    SetPermissionsResponse,
+    StatFsResponse,
 };
 use crate::storage_backends::{
-    CloseOnDropDescriptor, OpenedFileDescriptor, StorageBackend, StorageBackendFactory,
+    CloseOnDropDescriptor,
+    OpenedFileDescriptor,
+    StorageBackend,
+    StorageBackendFactory,
 };
 use crate::unencrypted::utils::find_node_matching_requested_path;
 
