@@ -7,7 +7,7 @@ use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp, WlPermission
 use super::client::S3Client;
 use super::descriptor::S3Descriptor;
 use super::file_system::{Directory, FileSystemNodeRef};
-use super::helpers::{commit_file_system, load_file_system};
+use super::helpers::{commit_file_system, defuse, load_file_system};
 use crate::storage_backends::models::{
     CreateDirResponse,
     CreateFileResponse,
@@ -21,6 +21,7 @@ use crate::storage_backends::models::{
     StatFsResponse,
     StorageBackendError,
 };
+use crate::storage_backends::s3::file_system::File;
 use crate::storage_backends::StorageBackend;
 
 pub struct S3Backend {
@@ -184,8 +185,82 @@ impl StorageBackend for S3Backend {
         Ok(RemoveFileResponse::Removed)
     }
 
-    fn create_file(&self, _path: &Path) -> Result<CreateFileResponse, StorageBackendError> {
-        todo!() // TODO COR-87
+    fn create_file(&self, path: &Path) -> Result<CreateFileResponse, StorageBackendError> {
+        let parent = match path.parent() {
+            Some(parent) => parent,
+            None => return Ok(CreateFileResponse::InvalidParent),
+        };
+
+        let mut file_system = load_file_system(&*self.client, &self.bucket_name)?;
+        let old_file = match file_system.get_node(path) {
+            Some(FileSystemNodeRef::File(file)) => Some(file.clone()),
+            Some(FileSystemNodeRef::Directory(_)) => return Ok(CreateFileResponse::PathTakenByDir),
+            None => None,
+        };
+
+        let parent_dir = match file_system.get_node(parent) {
+            Some(FileSystemNodeRef::Directory(dir)) => dir,
+            Some(FileSystemNodeRef::File(_)) => return Ok(CreateFileResponse::InvalidParent),
+            None => return Ok(CreateFileResponse::InvalidParent),
+        };
+
+        if let Some(old_file) = &old_file {
+            parent_dir
+                .children
+                .retain(|node| node.name() != old_file.name)
+        }
+
+        let new_file = self
+            .client
+            .create_new_empty(&self.bucket_name)
+            .map_err(|err| StorageBackendError::Generic(err.into()))?;
+
+        let remove_new_file_on_exit = scopeguard::guard((), |_| {
+            tracing::error!("Failed to create new file. Aborting.");
+            if self
+                .client
+                .remove_object(&new_file.object_name, &self.bucket_name)
+                .is_err()
+            {
+                tracing::error!("Failed to remove new file");
+            }
+        });
+
+        parent_dir.children.push(
+            File {
+                name: path.file_name().unwrap().to_string_lossy().to_string(),
+                object_name: new_file.object_name.clone(),
+                size: 0,
+                e_tag: new_file.e_tag.clone(),
+                modification_time: SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .map(|duration| UnixTimestamp {
+                        sec: duration.as_secs(),
+                        nano_sec: duration.subsec_nanos(),
+                    })
+                    .unwrap(),
+            }
+            .into(),
+        );
+
+        commit_file_system(&*self.client, &self.bucket_name, file_system)?;
+
+        defuse(remove_new_file_on_exit);
+
+        if let Some(old_file) = old_file {
+            let _ = self
+                .client
+                .remove_object(&old_file.object_name, &self.bucket_name);
+        };
+
+        Ok(CreateFileResponse::created(S3Descriptor::new(
+            self.bucket_name.clone(),
+            new_file.object_name,
+            path.to_owned(),
+            0,
+            new_file.e_tag,
+            self.client.clone(),
+        )))
     }
 
     fn rename(

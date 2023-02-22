@@ -58,7 +58,8 @@ pub fn create_file(
         })
         .and_then(|resp| match resp {
             CreateFileResponse::Created(opened_file) => Ok(dfs.insert_opened_file(opened_file)),
-            CreateFileResponse::ParentDoesNotExist => Err(DfsFrontendError::InvalidParent),
+            CreateFileResponse::InvalidParent => Err(DfsFrontendError::InvalidParent),
+            CreateFileResponse::PathTakenByDir => Err(DfsFrontendError::NotAFile),
         })
     };
 

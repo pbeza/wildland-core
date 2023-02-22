@@ -7,6 +7,7 @@ use aws_sdk_s3::output::{
     CompleteMultipartUploadOutput,
     CreateMultipartUploadOutput,
     GetObjectOutput,
+    PutObjectOutput,
     UploadPartCopyOutput,
     UploadPartOutput,
 };
@@ -18,7 +19,7 @@ use wildland_corex::dfs::interface::UnixTimestamp;
 use super::connector::build_s3_client;
 use super::error::S3Error;
 use super::helpers::{defuse, execute_by_step, to_completed_part};
-use super::models::WriteResp;
+use super::models::{CreateNewEmptyResp, WriteResp};
 
 // S3 multipart upload limits
 const MINIMUM_PART_SIZE: usize = 5 * 1024 * 1024;
@@ -49,6 +50,7 @@ pub trait S3Client {
         bucket_name: &str,
         buf: Vec<u8>,
     ) -> Result<(), S3Error>;
+    fn create_new_empty(&self, bucket_name: &str) -> Result<CreateNewEmptyResp, S3Error>;
 }
 
 pub struct WildlandS3Client {
@@ -57,10 +59,15 @@ pub struct WildlandS3Client {
 }
 
 impl WildlandS3Client {
-    pub fn new(rt: Rc<Runtime>, credentials: Credentials, region: Region) -> Self {
+    pub fn new(
+        rt: Rc<Runtime>,
+        credentials: Credentials,
+        region: Region,
+        endpoint_url: Option<String>,
+    ) -> Self {
         WildlandS3Client {
             rt,
-            client: build_s3_client(credentials, region),
+            client: build_s3_client(credentials, region, endpoint_url),
         }
     }
 
@@ -332,5 +339,24 @@ impl S3Client for WildlandS3Client {
                 .await
         })?;
         Ok(())
+    }
+
+    fn create_new_empty(&self, bucket_name: &str) -> Result<CreateNewEmptyResp, S3Error> {
+        let object_name = Uuid::new_v4().to_string();
+
+        let PutObjectOutput { e_tag, .. } = self.rt.block_on(async {
+            self.client
+                .put_object()
+                .bucket(bucket_name)
+                .key(&object_name)
+                .body(Vec::new().into())
+                .send()
+                .await
+        })?;
+
+        Ok(CreateNewEmptyResp {
+            object_name,
+            e_tag: e_tag.unwrap(),
+        })
     }
 }

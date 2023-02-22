@@ -7,3 +7,9 @@ pub struct WriteResp {
     pub new_modification_time: UnixTimestamp,
     pub new_e_tag: String,
 }
+
+#[derive(Debug, Clone)]
+pub struct CreateNewEmptyResp {
+    pub object_name: String,
+    pub e_tag: String,
+}
