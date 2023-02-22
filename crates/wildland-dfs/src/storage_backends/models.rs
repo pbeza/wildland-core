@@ -110,7 +110,8 @@ pub enum RenameResponse {
 #[derive(Debug)]
 pub enum CreateFileResponse {
     Created(CloseOnDropDescriptor),
-    ParentDoesNotExist,
+    InvalidParent,
+    PathTakenByDir,
 }
 
 impl CreateFileResponse {
