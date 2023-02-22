@@ -5,7 +5,7 @@ use wildland_corex::dfs::interface::{FsStat, Stat};
 
 use super::{CloseOnDropDescriptor, OpenedFileDescriptor};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum SeekFrom {
     Start { offset: u64 },
     End { offset: i64 },

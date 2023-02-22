@@ -117,7 +117,7 @@ do {
     // CargoLib expects to get references with static lifetime so it is important not to inline
     // objects (e.g. LSS) initialization along with createCargoLib call
     // DO NOT: createCargoLib(LocalSecureStorageImpl(), CargoCfgProviderImpl())
-    let cargo_lib = try createCargoLib(lss, cfg)
+    let cargo_lib = createCargoLib(lss, cfg)
     let user_api = cargo_lib.userApi()
 
     // Mnemonic can be restored or generated randomly
