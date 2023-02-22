@@ -40,6 +40,7 @@ pub(crate) fn init_subscriber(cfg: LoggerConfig) {
     if cfg.is_oslog_eligible() {
         nondefault_oslog(&cfg);
         tracing::info!("logger initialized");
+        return;
     }
 
     if cfg.is_file_eligible() {
