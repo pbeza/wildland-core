@@ -177,9 +177,9 @@ pub fn create_cargo_lib(
     lss: &'static dyn LocalSecureStorage,
     cfg: CargoConfig,
 ) -> Result<SharedCargoLib, CargoLibCreationError> {
-    if !INITIALIZED.load(Ordering::Relaxed) {
-        INITIALIZED.store(true, Ordering::Relaxed);
-
+    if let Ok(false) =
+        INITIALIZED.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+    {
         logging::init_subscriber(cfg.logger_config)
             .map_err(|e| CargoLibCreationError::Error(e.to_string()))?;
 

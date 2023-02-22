@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use wildland_corex::dfs::interface::{DfsFrontendError, FileHandle};
@@ -24,10 +24,7 @@ use super::node_descriptor::NodeStorages;
 use super::utils::{exec_on_single_existing_node, execute_container_operation, get_related_nodes};
 use super::{NodeDescriptor, UnencryptedDfs};
 use crate::storage_backends::models::{
-    CreateDirResponse,
-    CreateFileResponse,
-    RemoveDirResponse,
-    RemoveFileResponse,
+    CreateDirResponse, CreateFileResponse, RemoveDirResponse, RemoveFileResponse,
 };
 
 pub fn create_dir(
@@ -45,7 +42,7 @@ pub fn create_dir(
         })
     };
 
-    generic_create(dfs, requested_path, create_dir_in_container)
+    generic_create(dfs, requested_path, &create_dir_in_container)
 }
 
 pub fn create_file(
@@ -63,13 +60,13 @@ pub fn create_file(
         })
     };
 
-    generic_create(dfs, requested_path, create_file_in_container)
+    generic_create(dfs, requested_path, &create_file_in_container)
 }
 
 fn generic_create<T>(
     dfs: &mut UnencryptedDfs,
     requested_path: String,
-    container_op: fn(&mut UnencryptedDfs, &NodeStorages) -> Result<T, DfsFrontendError>,
+    container_op: &dyn Fn(&mut UnencryptedDfs, &NodeStorages) -> Result<T, DfsFrontendError>,
 ) -> Result<T, DfsFrontendError> {
     let create_in_container = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
         NodeDescriptor::Physical { storages, .. } => container_op(dfs, storages),
@@ -119,7 +116,12 @@ pub fn remove_dir(
 ) -> Result<(), DfsFrontendError> {
     let remove_dir_from_container = |dfs: &mut UnencryptedDfs, storages: &NodeStorages| {
         execute_container_operation(dfs, storages, &|backend| {
-            backend.remove_dir(storages.path_within_storage())
+            let path_within_storage = storages.path_within_storage();
+            if path_within_storage == Path::new("/") {
+                Ok(RemoveDirResponse::RootRemovalNotAllowed)
+            } else {
+                backend.remove_dir(path_within_storage)
+            }
         })
         .and_then(|resp| match resp {
             RemoveDirResponse::Removed => Ok(()),
