@@ -51,14 +51,19 @@ impl Service<http::Request<SdkBody>> for S3Connector {
     }
 }
 
-pub fn build_s3_client(credentials: Credentials, region: Region) -> Client {
-    let config = Config::builder()
+pub fn build_s3_client(
+    credentials: Credentials,
+    region: Region,
+    endpoint_url: Option<String>,
+) -> Client {
+    let mut builder = Config::builder()
         .http_connector(HttpConnector::Prebuilt(Some(DynConnector::new(
             S3Connector::default(),
         ))))
         .credentials_provider(credentials)
-        .region(region)
-        .build();
+        .region(region);
 
-    Client::from_conf(config)
+    builder.set_endpoint_url(endpoint_url);
+
+    Client::from_conf(builder.build())
 }

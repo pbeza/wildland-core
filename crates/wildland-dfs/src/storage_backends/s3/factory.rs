@@ -40,6 +40,7 @@ impl StorageBackendFactory for S3BackendFactory {
             secret_access_key,
             region,
             bucket_name,
+            endpoint_url,
         } = serde_json::from_value(storage.data()).context("Invalid S3 storage template")?;
 
         let credentials = Credentials::new(
@@ -51,7 +52,12 @@ impl StorageBackendFactory for S3BackendFactory {
         );
 
         let region = Region::new(region);
-        let client = Rc::new(WildlandS3Client::new(self.rt.clone(), credentials, region));
+        let client = Rc::new(WildlandS3Client::new(
+            self.rt.clone(),
+            credentials,
+            region,
+            endpoint_url,
+        ));
 
         Ok(Rc::new(S3Backend::new(client, bucket_name)))
     }
