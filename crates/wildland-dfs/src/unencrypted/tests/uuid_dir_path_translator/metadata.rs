@@ -23,7 +23,13 @@ use pretty_assertions::assert_eq;
 use rsfs::GenFS;
 use rstest::rstest;
 use uuid::Uuid;
-use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, NodeType, Stat};
+use wildland_corex::dfs::interface::{
+    DfsFrontend,
+    DfsFrontendError,
+    NodeType,
+    Stat,
+    WlPermissions,
+};
 use wildland_corex::{MockPathResolver, ResolvedPath};
 
 use crate::unencrypted::tests::{dfs_with_fs, get_unix_time_of_file, new_mufs_storage, MufsAttrs};
@@ -84,7 +90,8 @@ fn test_metadata_of_file_in_container_root() {
             access_time,
             modification_time,
             change_time,
-            size: size as _
+            size: size as _,
+            permissions: WlPermissions::read_write(),
         }
     )
 }
@@ -128,7 +135,8 @@ fn test_metadata_of_dir_in_container_root() {
             access_time,
             modification_time,
             change_time,
-            size: size as _
+            size: size as _,
+            permissions: WlPermissions::read_write()
         }
     )
 }
@@ -158,7 +166,8 @@ fn test_metadata_of_virtual_dir() {
             access_time: None,
             modification_time: None,
             change_time: None,
-            size: 0
+            size: 0,
+            permissions: WlPermissions::readonly()
         }
     )
 }
@@ -219,7 +228,8 @@ fn test_metadata_of_conflicting_path_using_container_uuid() {
             access_time,
             modification_time,
             change_time,
-            size: size as _
+            size: size as _,
+            permissions: WlPermissions::read_write()
         }
     );
 
@@ -232,7 +242,8 @@ fn test_metadata_of_conflicting_path_using_container_uuid() {
             access_time: None,
             modification_time: None,
             change_time: None,
-            size: 0
+            size: 0,
+            permissions: WlPermissions::readonly()
         }
     );
 
@@ -254,7 +265,8 @@ fn test_metadata_of_conflicting_path_using_container_uuid() {
             access_time,
             modification_time,
             change_time,
-            size: size as _
+            size: size as _,
+            permissions: WlPermissions::read_write()
         }
     );
 }
@@ -298,7 +310,8 @@ fn test_virtual_path_colliding_with_file() {
             access_time: None,
             modification_time: None,
             change_time: None,
-            size: 0
+            size: 0,
+            permissions: WlPermissions::readonly()
         }
     );
 
@@ -319,7 +332,8 @@ fn test_virtual_path_colliding_with_file() {
             access_time,
             modification_time,
             change_time,
-            size: size as _
+            size: size as _,
+            permissions: WlPermissions::read_write()
         }
     )
 }
@@ -363,7 +377,8 @@ fn test_virtual_path_colliding_with_dir() {
             access_time: None,
             modification_time: None,
             change_time: None,
-            size: 0
+            size: 0,
+            permissions: WlPermissions::readonly()
         }
     );
 
@@ -384,7 +399,8 @@ fn test_virtual_path_colliding_with_dir() {
             access_time,
             modification_time,
             change_time,
-            size: size as _
+            size: size as _,
+            permissions: WlPermissions::read_write()
         }
     )
 }

@@ -15,7 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use wildland_corex::dfs::interface::DfsFrontendError;
+use wildland_corex::dfs::interface::{
+    DfsFrontendError,
+    FsStat,
+    Stat,
+    UnixTimestamp,
+    WlPermissions,
+};
 
 use super::models::{CloseError, SeekFrom};
 
@@ -35,6 +41,35 @@ pub trait OpenedFileDescriptor: std::fmt::Debug {
 
     /// Changes inner cursor position.
     fn seek(&mut self, seek_from: SeekFrom) -> Result<usize, DfsFrontendError>;
+
+    /// Sets permission
+    fn set_permissions(&mut self, permissions: WlPermissions) -> Result<(), DfsFrontendError>;
+
+    /// This function will attempt to ensure that all in-memory data reaches the storage before returning.
+    fn sync(&mut self) -> Result<(), DfsFrontendError>;
+
+    /// Queries metadata about the underlying file.
+    fn metadata(&mut self) -> Result<Stat, DfsFrontendError>;
+
+    /// Sets access and modification time.
+    ///
+    /// Passing None as an argument means not overwriting given parameter (not setting it to None)
+    fn set_times(
+        &mut self,
+        access_time: Option<UnixTimestamp>,
+        modification_time: Option<UnixTimestamp>,
+    ) -> Result<(), DfsFrontendError>;
+
+    /// Truncates or extends the underlying file, updating the size of this file to become `length`.
+    /// If the size is less than the current file’s size, then the file will be shrunk. If it is greater
+    /// than the current file’s size, then the file will be extended to size and have all of the intermediate
+    /// data filled in with 0s.
+    /// If the file’s cursor was further than the new length then the file is
+    /// shrunk using this operation, the cursor will now be at the new end of file.
+    fn set_length(&mut self, length: usize) -> Result<(), DfsFrontendError>;
+
+    /// Returns information about a mounted filesystem containing the `file`.
+    fn stat_fs(&mut self) -> Result<FsStat, DfsFrontendError>;
 }
 
 /// Wrapper ensuring that close is always called on `OpenedFileDescriptor`
@@ -70,5 +105,33 @@ impl OpenedFileDescriptor for CloseOnDropDescriptor {
 
     fn seek(&mut self, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
         self.inner.seek(seek_from)
+    }
+
+    fn set_permissions(&mut self, permissions: WlPermissions) -> Result<(), DfsFrontendError> {
+        self.inner.set_permissions(permissions)
+    }
+
+    fn sync(&mut self) -> Result<(), DfsFrontendError> {
+        self.inner.sync()
+    }
+
+    fn metadata(&mut self) -> Result<Stat, DfsFrontendError> {
+        self.inner.metadata()
+    }
+
+    fn set_times(
+        &mut self,
+        access_time: Option<UnixTimestamp>,
+        modification_time: Option<UnixTimestamp>,
+    ) -> Result<(), DfsFrontendError> {
+        self.inner.set_times(access_time, modification_time)
+    }
+
+    fn set_length(&mut self, length: usize) -> Result<(), DfsFrontendError> {
+        self.inner.set_length(length)
+    }
+
+    fn stat_fs(&mut self) -> Result<FsStat, DfsFrontendError> {
+        self.inner.stat_fs()
     }
 }

@@ -22,3 +22,4 @@ mod open_close;
 mod read_dir;
 mod read_write_seek;
 mod rename;
+mod set_permissions;
