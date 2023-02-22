@@ -18,10 +18,8 @@
 use std::collections::HashMap;
 use std::mem::MaybeUninit;
 use std::rc::Rc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Once};
 
-use thiserror::Error;
 use wildland_catlib::CatLib;
 use wildland_corex::catlib_service::CatLibService;
 use wildland_corex::container_manager::ContainerManager;
@@ -38,15 +36,7 @@ use crate::api::user::UserApi;
 use crate::logging;
 use crate::user::UserService;
 
-#[derive(Clone, Debug, Error, PartialEq, Eq)]
-#[repr(C)]
-pub enum CargoLibCreationError {
-    #[error("CargoLib creation error: {0}")]
-    Error(String),
-}
-
-static INITIALIZED: AtomicBool = AtomicBool::new(false);
-
+static INIT: Once = Once::new();
 type SharedCargoLib = Arc<Mutex<CargoLib>>;
 static mut CARGO_LIB: MaybeUninit<SharedCargoLib> = MaybeUninit::uninit();
 
@@ -173,21 +163,13 @@ impl CargoLib {
 /// let lss: &'static TestLss = unsafe { std::mem::transmute(&lss) };
 /// let cargo_lib = create_cargo_lib(lss, cfg);
 /// ```
-pub fn create_cargo_lib(
-    lss: &'static dyn LocalSecureStorage,
-    cfg: CargoConfig,
-) -> Result<SharedCargoLib, CargoLibCreationError> {
-    if !INITIALIZED.load(Ordering::Relaxed) {
-        INITIALIZED.store(true, Ordering::Relaxed);
-
-        logging::init_subscriber(cfg.logger_config)
-            .map_err(|e| CargoLibCreationError::Error(e.to_string()))?;
-
-        let cargo_lib = Arc::new(Mutex::new(CargoLib::new(lss, cfg.fsa_config)));
-
-        unsafe {
+pub fn create_cargo_lib(lss: &'static dyn LocalSecureStorage, cfg: CargoConfig) -> SharedCargoLib {
+    unsafe {
+        INIT.call_once(|| {
+            logging::init_subscriber(cfg.logger_config);
+            let cargo_lib = Arc::new(Mutex::new(CargoLib::new(lss, cfg.fsa_config)));
             CARGO_LIB.write(cargo_lib);
-        }
+        });
+        CARGO_LIB.assume_init_ref().clone()
     }
-    unsafe { Ok(CARGO_LIB.assume_init_ref().clone()) }
 }

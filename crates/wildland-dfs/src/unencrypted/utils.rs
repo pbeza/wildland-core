@@ -3,13 +3,13 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use itertools::Itertools;
-use wildland_corex::dfs::interface::DfsFrontendError;
+use wildland_corex::dfs::interface::{DfsFrontendError, FileHandle};
 use wildland_corex::{ResolvedPath, Storage};
 
 use super::node_descriptor::NodeStorages;
 use super::{NodeDescriptor, UnencryptedDfs};
 use crate::storage_backends::models::StorageBackendError;
-use crate::storage_backends::StorageBackend;
+use crate::storage_backends::{CloseOnDropDescriptor, StorageBackend};
 
 pub fn filter_existent_nodes<'a: 'b, 'b>(
     nodes: &'a [NodeDescriptor],
@@ -153,5 +153,17 @@ pub fn exec_on_single_existing_node<T>(
                 _ => Err(DfsFrontendError::ReadOnlyPath), // Ambiguous path are for now read-only
             }
         }
+    }
+}
+
+pub fn exec_on_opened_file<T>(
+    dfs: &mut UnencryptedDfs,
+    file: &FileHandle,
+    op: &dyn Fn(&mut CloseOnDropDescriptor) -> Result<T, DfsFrontendError>,
+) -> Result<T, DfsFrontendError> {
+    if let Some(opened_file) = dfs.opened_files.get_mut(&file.descriptor_uuid) {
+        op(opened_file)
+    } else {
+        Err(DfsFrontendError::FileAlreadyClosed)
     }
 }

@@ -125,9 +125,6 @@ mod ffi_binding {
     enum ParseConfigError {
         Error(_),
     }
-    enum CargoLibCreationError {
-        Error(_),
-    }
     enum CreateMnemonicError {
         InvalidMnemonicWords,
     }
@@ -224,7 +221,7 @@ mod ffi_binding {
         fn create_cargo_lib(
             lss: &'static dyn LocalSecureStorage,
             config: CargoConfig,
-        ) -> Result<Arc<Mutex<CargoLib>>, CargoLibCreationError>;
+        ) -> Arc<Mutex<CargoLib>>;
         fn user_api(self: &Arc<Mutex<CargoLib>>) -> UserApi;
         fn dfs_api(self: &Arc<Mutex<CargoLib>>) -> Arc<Mutex<dyn DfsFrontend>>;
 
