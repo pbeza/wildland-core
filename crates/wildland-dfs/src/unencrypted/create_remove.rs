@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use wildland_corex::dfs::interface::{DfsFrontendError, FileHandle};
@@ -125,7 +125,12 @@ pub fn remove_dir(
 ) -> Result<(), DfsFrontendError> {
     let remove_dir_from_container = |dfs: &mut UnencryptedDfs, storages: &NodeStorages| {
         execute_container_operation(dfs, storages, &|backend| {
-            backend.remove_dir(storages.path_within_storage())
+            let path_within_storage = storages.path_within_storage();
+            if path_within_storage == Path::new("/") {
+                Ok(RemoveDirResponse::RootRemovalNotAllowed)
+            } else {
+                backend.remove_dir(path_within_storage)
+            }
         })
         .and_then(|resp| match resp {
             RemoveDirResponse::Removed => Ok(()),
