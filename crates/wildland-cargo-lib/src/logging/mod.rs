@@ -38,9 +38,8 @@ pub(crate) fn init_subscriber(cfg: LoggerConfig) {
 
     #[cfg(any(target_os = "macos", target_os = "ios"))]
     if cfg.is_oslog_eligible() {
-        nondefault_oslog(&cfg)?;
+        nondefault_oslog(&cfg);
         tracing::info!("logger initialized");
-        return Ok(());
     }
 
     if cfg.is_file_eligible() {
