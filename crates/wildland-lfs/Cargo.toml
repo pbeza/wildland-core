@@ -12,6 +12,8 @@ version     = "0.40.0"
 
 [dependencies]
 anyhow       = { version = "1.0" }
+filetime     = { version = "0.2" }
+rustix       = { version = "0.36", features = ["fs"] }
 serde        = { version = "1.0" }
 serde_json   = { version = "1.0" }
 wildland-dfs = { version = "0.40.0", path = "../wildland-dfs" }

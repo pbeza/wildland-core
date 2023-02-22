@@ -23,6 +23,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 pub use descriptors::CloseOnDropDescriptor;
+use wildland_corex::dfs::interface::WlPermissions;
 use wildland_corex::Storage;
 
 pub use self::descriptors::OpenedFileDescriptor;
@@ -35,6 +36,8 @@ use self::models::{
     RemoveDirResponse,
     RemoveFileResponse,
     RenameResponse,
+    SetPermissionsResponse,
+    StatFsResponse,
     StorageBackendError,
 };
 
@@ -58,6 +61,12 @@ pub trait StorageBackend {
         old_path: &Path,
         new_path: &Path,
     ) -> Result<RenameResponse, StorageBackendError>;
+    fn set_permissions(
+        &self,
+        path: &Path,
+        permissions: WlPermissions,
+    ) -> Result<SetPermissionsResponse, StorageBackendError>;
+    fn stat_fs(&self, path: &Path) -> Result<StatFsResponse, StorageBackendError>;
 }
 
 pub trait StorageBackendFactory {
