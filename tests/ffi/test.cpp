@@ -201,15 +201,7 @@ int main()
     cfg.override_evs_url(RustString{"overridden url"});
     LocalSecureStorageImpl lss{};
     SharedMutexCargoLib cargo_lib;
-    try
-    {
-        cargo_lib = create_cargo_lib(lss, cfg);
-    }
-    catch (const CargoLibCreationError_ErrorException &e)
-    {
-        std::cerr << e.reason().to_string() << std::endl;
-        assert(false);
-    }
+    cargo_lib = create_cargo_lib(lss, cfg);
 
     UserApi user_api = cargo_lib.user_api();
 

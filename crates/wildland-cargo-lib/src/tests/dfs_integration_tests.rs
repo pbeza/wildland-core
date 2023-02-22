@@ -35,7 +35,7 @@ fn setup(
     }"#;
     let cfg: CargoConfig = serde_json::from_str(config_str).unwrap();
 
-    let cargo_lib = create_cargo_lib(lss_stub, cfg).unwrap();
+    let cargo_lib = create_cargo_lib(lss_stub, cfg);
     let cargo_lib = cargo_lib.lock().unwrap();
     let user_api = cargo_lib.user_api();
     let mnemonic = user_api.generate_mnemonic().unwrap();
