@@ -247,6 +247,7 @@ impl S3Client for WildlandS3Client {
                     .send()
                     .await
             })?;
+
             completed_parts.push(
                 CompletedPart::builder()
                     .set_e_tag(e_tag)

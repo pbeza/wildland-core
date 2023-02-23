@@ -20,3 +20,6 @@ args          = ["deny", "check", "licenses"]
 command       = "cargo"
 description   = "check OSS licenses"
 install_crate = "cargo-deny"
+
+[tasks.deps-up]
+args = ["--file", "docker-compose.yml", "up", "--force-recreate", "--detach"]

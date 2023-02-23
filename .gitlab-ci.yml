@@ -83,7 +83,7 @@ cargo test:
     - merge_requests
   script:
     - redis-server --daemonize yes
-    - cargo make test
+    - cargo make test-ci
 
 cargo clippy (lint):
   stage: Test
