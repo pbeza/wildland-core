@@ -28,7 +28,8 @@
 //!     "log_file_path": "cargo_lib_log",
 //!     "log_file_rotate_directory": ".",
 //!     "evs_url": "some_url",
-//!     "sc_url": "some_url"
+//!     "sc_url": "some_url",
+//!     "redis_connection_string": "redis://127.0.0.1/0"
 //! }"#;
 //!
 //! let _  = parse_config(config_json.as_bytes().to_vec()).unwrap();
@@ -44,6 +45,7 @@ use serde::de::{Error, Unexpected};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 use tracing::Level;
+use url::Url;
 
 const DEV_DEFAULT_EVS_URL: &str = "https://evs.cargo.wildland.dev/";
 const DEV_DEFAULT_SC_URL: &str = "https://storage-controller.cargo.wildland.dev/";
@@ -90,11 +92,39 @@ pub trait CargoCfgProvider {
     fn get_oslog_subsystem(&self) -> Option<String>;
 
     fn get_foundation_cloud_env_mode(&self) -> FoundationCloudMode;
+
+    /// Must return a valid Redis URI which is then used as a connection string
+    /// for the redis Catalog backend.
+    ///
+    /// The URI must have the following format
+    ///
+    /// - w/o TLS
+    ///
+    /// ```none
+    /// redis :// [[username :] password@] host [:port][/database]
+    ///         [?[timeout=timeout[d|h|m|s|ms|us|ns]]
+    /// ```
+    ///
+    /// - w/ TLS
+    ///
+    /// ```none
+    /// rediss :// [[username :] password@] host [: port][/database]
+    ///          [?[timeout=timeout[d|h|m|s|ms|us|ns]]
+    /// ```
+    ///
+    /// Example:
+    ///
+    /// ```none
+    /// redis://127.0.0.1:6379/0
+    /// ```
+    fn get_redis_url(&self) -> String;
 }
 
 #[derive(PartialEq, Eq, Error, Debug, Clone)]
 #[repr(C)]
 pub enum ParseConfigError {
+    #[error("invalid redis URI: {0}")]
+    IncorrectRedisURL(String),
     #[error("Config parse error: {0}")]
     Error(String),
 }
@@ -126,6 +156,10 @@ fn bool_default_as_true() -> bool {
     true
 }
 
+fn bool_default_as_false() -> bool {
+    false
+}
+
 fn serde_logger_default_path() -> PathBuf {
     PathBuf::from("cargo_lib_log")
 }
@@ -151,7 +185,8 @@ fn serde_logger_default_rot_dir() -> PathBuf {
 ///     "log_file_rotate_directory": ".",
 ///     "log_file_enabled": true,
 ///     "evs_url": "some_url",
-///     "sc_url": "some_url"
+///     "sc_url": "some_url",
+///     "redis_connection_string": "redis://127.0.0.1/0"
 /// }
 /// "#;
 /// let parsed_cfg = parse_config(config_json.as_bytes().to_vec()).unwrap();
@@ -184,10 +219,12 @@ pub struct LoggerConfig {
 
     /// If Enabled, the logger will use ansi sequences to style text
     /// not all platforms and receivers do support this feature. False by default.
+    #[serde(default = "bool_default_as_false")]
     #[derivative(Default(value = "false"))]
     pub log_use_ansi: bool,
 
     /// Enables or disables file logging.
+    #[serde(default = "bool_default_as_false")]
     #[derivative(Default(value = "false"))]
     pub log_file_enabled: bool,
 
@@ -266,6 +303,70 @@ impl LoggerConfig {
     }
 }
 
+/// Structure used to define configuration parameters for the Catalog
+/// backend.
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
+#[derivative(Default(new = "true"))]
+pub struct CatlibConfig {
+    #[serde(flatten)]
+    pub redis_config: RedisConfig,
+}
+
+/// Redis backend configuration struct.
+///
+/// - `connection_string` parameter must be a valid redis URI, ie.
+///
+/// ### Redis w/o TLS
+///
+/// ```none
+/// redis :// [[username :] password@] host [:port][/database]
+///         [?[timeout=timeout[d|h|m|s|ms|us|ns]]
+/// ```
+///
+/// ### Redis w/ TLS
+///
+/// ```none
+/// rediss :// [[username :] password@] host [: port][/database]
+///          [?[timeout=timeout[d|h|m|s|ms|us|ns]]
+/// ```
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Derivative)]
+#[derivative(Default(new = "true"))]
+pub struct RedisConfig {
+    #[serde(rename(deserialize = "redis_connection_string"))]
+    #[serde(deserialize_with = "validate_redis_uri")]
+    pub connection_string: String,
+}
+
+fn validate_redis_url(url: &Url) -> Result<(), ParseConfigError> {
+    match url.scheme() {
+        "redis" | "rediss" => Ok(()),
+        _ => Err(ParseConfigError::IncorrectRedisURL(
+            "Only redis and rediss schemes are supported".into(),
+        )),
+    }
+}
+
+fn validate_redis_uri<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    let redis_url = Url::parse(value.as_str()).map_err(|e| {
+        Error::invalid_value(
+            Unexpected::Str(&value),
+            &format!("a valid redis URI. Encountered {e}").as_str(),
+        )
+    })?;
+    validate_redis_url(&redis_url).map_err(|e| {
+        Error::invalid_value(
+            Unexpected::Str(&value),
+            &format!("a valid redis URI. Encountered {e}").as_str(),
+        )
+    })?;
+
+    Ok(value)
+}
+
 /// Helper function for handling deserializing `log_level` field
 fn log_level_deserialize<'de, D>(deserializer: D) -> Result<Level, D::Error>
 where
@@ -306,6 +407,8 @@ pub struct CargoConfig {
     pub fsa_config: FoundationStorageApiConfig,
     #[serde(flatten)]
     pub logger_config: LoggerConfig,
+    #[serde(flatten)]
+    pub catlib_config: CatlibConfig,
 }
 
 impl CargoConfig {
@@ -318,6 +421,18 @@ impl CargoConfig {
     }
 }
 
+impl TryFrom<Url> for RedisConfig {
+    type Error = ParseConfigError;
+
+    fn try_from(url: Url) -> Result<Self, Self::Error> {
+        validate_redis_url(&url)?;
+
+        Ok(RedisConfig {
+            connection_string: url.to_string(),
+        })
+    }
+}
+
 /// Uses an implementation of [`CargoCfgProvider`] to collect a configuration storing structure ([`CargoConfig`])
 /// which then can be passed to [`super::cargo_lib::create_cargo_lib`] in order to instantiate main API object ([`super::CargoLib`])
 ///
@@ -325,6 +440,9 @@ impl CargoConfig {
 pub fn collect_config(
     config_provider: &'static dyn CargoCfgProvider,
 ) -> Result<CargoConfig, ParseConfigError> {
+    let redis_url = Url::parse(config_provider.get_redis_url().as_str())
+        .map_err(|e| ParseConfigError::IncorrectRedisURL(e.to_string()))?;
+
     Ok(CargoConfig {
         logger_config: LoggerConfig {
             use_logger: config_provider.get_use_logger(),
@@ -351,6 +469,9 @@ pub fn collect_config(
             oslog_subsystem: config_provider.get_oslog_subsystem(),
         },
         fsa_config: config_provider.get_foundation_cloud_env_mode().into(),
+        catlib_config: CatlibConfig {
+            redis_config: redis_url.try_into()?,
+        },
     })
 }
 
@@ -371,7 +492,7 @@ mod tests {
 
     use tracing::Level;
 
-    use super::{CargoConfig, FoundationStorageApiConfig, LoggerConfig};
+    use super::{CargoConfig, CatlibConfig, FoundationStorageApiConfig, LoggerConfig, RedisConfig};
 
     #[test]
     fn test_parsing_debug_config() {
@@ -382,7 +503,8 @@ mod tests {
             "log_file_path": "cargo_lib_log",
             "log_file_rotate_directory": ".",
             "evs_url": "some_url",
-            "sc_url": "some_url"
+            "sc_url": "some_url",
+            "redis_connection_string": "redis://127.0.0.1/0"
         }"#;
 
         let config: CargoConfig = serde_json::from_str(config_str).unwrap();
@@ -405,6 +527,11 @@ mod tests {
                     oslog_category: None,
                     #[cfg(any(target_os = "macos", target_os = "ios"))]
                     oslog_subsystem: None,
+                },
+                catlib_config: CatlibConfig {
+                    redis_config: RedisConfig {
+                        connection_string: "redis://127.0.0.1/0".into()
+                    }
                 }
             }
         )
@@ -415,7 +542,8 @@ mod tests {
         let config_str = r#"{
             "log_level": "trace",
             "log_use_ansi": true,
-            "log_file_enabled": false
+            "log_file_enabled": false,
+            "redis_connection_string": "redis://127.0.0.1/0"
         }"#;
 
         let config: CargoConfig = serde_json::from_str(config_str).unwrap();
@@ -438,8 +566,37 @@ mod tests {
                     oslog_category: None,
                     #[cfg(any(target_os = "macos", target_os = "ios"))]
                     oslog_subsystem: None,
+                },
+                catlib_config: CatlibConfig {
+                    redis_config: RedisConfig {
+                        connection_string: "redis://127.0.0.1/0".into()
+                    }
                 }
             }
         )
+    }
+
+    #[test]
+    fn test_invalid_redis_string() {
+        let config_str = r#"{
+            "redis_connection_string": "rediZZ://127.0.0.1/0"
+        }"#;
+
+        let err: Result<CargoConfig, _> = serde_json::from_str(config_str);
+        err.unwrap_err();
+
+        let config_str = r#"{
+            "redis_connection_string": "redis://*/0"
+        }"#;
+
+        let err: Result<CargoConfig, _> = serde_json::from_str(config_str);
+        err.unwrap_err();
+
+        let config_str = r#"{
+            "redis_connection_string": "redis://127.0.0.1:/"
+        }"#;
+
+        let err: Result<CargoConfig, _> = serde_json::from_str(config_str);
+        err.unwrap_err();
     }
 }

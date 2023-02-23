@@ -19,7 +19,7 @@ ${CC} -fpermissive \
       -w \
       -L . \
       ffi_swig_wrap.cxx \
-      -lwildland_cargo_lib \
+      -lwildland_cargo_lib -lssl -lcrypto \
       -o /bindings_test/lib${DLLIMPORT}.so
 
 ${CSHARP_COMPILER} \

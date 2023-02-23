@@ -15,7 +15,7 @@ pub(crate) mod test {
         let uuid = uuid::Builder::from_random_bytes(rand::random::<Bytes>()).into_uuid();
         let redis_url =
             std::env::var("CARGO_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/0".into());
-        let catlib = Rc::new(CatLib::new(redis_url, uuid.to_string()));
+        let catlib = Rc::new(CatLib::new(redis_url, Some(uuid.to_string())));
         CatLibService::new(catlib)
     }
 

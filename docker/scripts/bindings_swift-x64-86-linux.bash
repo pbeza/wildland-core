@@ -6,7 +6,7 @@ cd /ffi_build
 cp /ffi_tests/main.swift .
 mkdir -p ./out
 
-swiftc -L . -lwildland_cargo_lib -lstdc++ \
+swiftc -L . -lwildland_cargo_lib -lstdc++ -lssl -lcrypto \
         -I . -import-objc-header \
         ./ffi_swift.h \
         ./ffi_swift.swift \

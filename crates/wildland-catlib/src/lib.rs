@@ -106,7 +106,7 @@ pub struct CatLib {
 }
 
 impl CatLib {
-    pub fn new(redis_url: String, key_prefix: String) -> Self {
+    pub fn new(redis_url: String, key_prefix: Option<String>) -> Self {
         let db = db::db_conn(redis_url.clone());
 
         if let Some(err) = db.clone().err() {
@@ -118,7 +118,7 @@ impl CatLib {
         CatLib {
             db: RedisDb {
                 client: db.unwrap(),
-                key_prefix,
+                key_prefix: key_prefix.unwrap_or("".into()),
             },
         }
     }
@@ -242,6 +242,6 @@ impl Default for CatLib {
             env::var("CARGO_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/0".into());
         let db_prefix = env::var("CARGO_DB_KEY_PREFIX").unwrap_or_else(|_| "".into());
 
-        CatLib::new(redis_url, db_prefix)
+        CatLib::new(redis_url, Some(db_prefix))
     }
 }

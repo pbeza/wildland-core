@@ -34,6 +34,7 @@ tracing-attributes   = { version = "0.1" }
 tracing-core         = { version = "0.1" }
 tracing-log          = { version = "0.1", features = ["env_logger"] }
 tracing-subscriber   = { version = "0.3", features = ["json", "env-filter", "fmt", "std", "registry"] }
+url = "2.3.1"
 uuid                 = { version = "1.3", features = ["serde"] }
 wildland-catlib      = { version = "0.40.0", path = "../wildland-catlib" }
 wildland-corex       = { version = "0.40.0", path = "../wildland-corex" }

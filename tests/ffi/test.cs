@@ -26,6 +26,9 @@ namespace Main
         public override FoundationCloudMode get_foundation_cloud_env_mode() {
             return FoundationCloudMode.Dev;
         }
+        public override RustString get_redis_url() {
+            return new RustString("redis://127.0.0.1/0");
+        }
     }
 
     class LocalSecureStorageImpl : LocalSecureStorage {
