@@ -7,7 +7,7 @@ use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp, WlPermission
 use super::client::S3Client;
 use super::descriptor::S3Descriptor;
 use super::file_system::{Directory, FileSystemNodeRef};
-use super::helpers::{commit_file_system, defuse, load_file_system};
+use super::helpers::{commit_file_system, load_file_system};
 use crate::storage_backends::models::{
     CreateDirResponse,
     CreateFileResponse,
@@ -215,17 +215,6 @@ impl StorageBackend for S3Backend {
             .create_new_empty(&self.bucket_name)
             .map_err(|err| StorageBackendError::Generic(err.into()))?;
 
-        let remove_new_file_on_exit = scopeguard::guard((), |_| {
-            tracing::error!("Failed to create new file. Aborting.");
-            if self
-                .client
-                .remove_object(&new_file.object_name, &self.bucket_name)
-                .is_err()
-            {
-                tracing::error!("Failed to remove new file");
-            }
-        });
-
         parent_dir.children.push(
             File {
                 name: path.file_name().unwrap().to_string_lossy().to_string(),
@@ -243,9 +232,9 @@ impl StorageBackend for S3Backend {
             .into(),
         );
 
+        // There is a chance it successfully committed even if it returned Err.
+        // In order to have consistent file system we must leave both versions of files as they are.
         commit_file_system(&*self.client, &self.bucket_name, file_system)?;
-
-        defuse(remove_new_file_on_exit);
 
         if let Some(old_file) = old_file {
             let _ = self

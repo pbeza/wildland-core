@@ -1,6 +1,7 @@
 use std::ops::RangeInclusive;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::time::SystemTime;
 
 use derivative::Derivative;
 use wildland_corex::dfs::interface::{
@@ -136,12 +137,19 @@ impl OpenedFileDescriptor for S3Descriptor {
             return Ok(Vec::new());
         }
 
-        let resp = self.client.read_object(
-            &self.object_name,
-            &self.bucket_name,
-            Some(RangeInclusive::new(self.cursor.position, count - 1)),
-            Some(self.e_tag.clone()),
-        )?;
+        let resp = self
+            .client
+            .read_object(
+                &self.object_name,
+                &self.bucket_name,
+                Some(RangeInclusive::new(
+                    self.cursor.position,
+                    self.cursor.position + count - 1,
+                )),
+                Some(self.e_tag.clone()),
+            )
+            .map_err(|_| DfsFrontendError::ConcurrentIssue)?;
+
         self.cursor.position += resp.len();
         Ok(resp)
     }
@@ -150,33 +158,42 @@ impl OpenedFileDescriptor for S3Descriptor {
         let mut file_system = load_file_system(&*self.client, &self.bucket_name)
             .map_err(|err| DfsFrontendError::Generic(format!("{err:?}")))?;
 
-        let WriteResp {
-            bytes_count,
-            new_object_name,
-            new_modification_time,
-            new_e_tag,
-        } = self.client.write_buffer(
-            &self.object_name,
-            &self.bucket_name,
-            self.cursor.position,
-            buf,
-            self.cursor.total_size,
-            Some(self.e_tag.clone()),
-        )?;
-
-        let new_position = self.cursor.position + bytes_count;
-        let new_total_size = std::cmp::max(new_position, self.cursor.total_size);
-
-        match file_system.get_node(&self.node_path) {
-            Some(FileSystemNodeRef::File(file)) => {
-                file.object_name = new_object_name.clone();
-                file.size = new_total_size;
-                file.e_tag = new_e_tag.clone();
-                file.modification_time = new_modification_time;
-            }
+        let mut file = match file_system.get_node(&self.node_path) {
+            Some(FileSystemNodeRef::File(file)) if file.e_tag == self.e_tag => file,
             _ => return Err(DfsFrontendError::ConcurrentIssue),
         };
 
+        let WriteResp {
+            bytes_count,
+            new_object_name,
+            new_e_tag,
+        } = self
+            .client
+            .write_buffer(
+                &self.object_name,
+                &self.bucket_name,
+                self.cursor.position,
+                buf,
+                self.cursor.total_size,
+                Some(self.e_tag.clone()),
+            )
+            .map_err(|_| DfsFrontendError::ConcurrentIssue)?;
+
+        let new_position = self.cursor.position + bytes_count;
+        let new_total_size = std::cmp::max(new_position, self.cursor.total_size);
+        file.object_name = new_object_name.clone();
+        file.size = new_total_size;
+        file.e_tag = new_e_tag.clone();
+        file.modification_time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map(|duration| UnixTimestamp {
+                sec: duration.as_secs(),
+                nano_sec: duration.subsec_nanos(),
+            })
+            .unwrap();
+
+        // There is a chance it successfully committed even if it returned Err.
+        // In order to have consistent file system we must leave both versions of files as they are.
         commit_file_system(&*self.client, &self.bucket_name, file_system)
             .map_err(|err| DfsFrontendError::Generic(format!("{err:?}")))?;
 
