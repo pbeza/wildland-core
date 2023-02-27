@@ -11,7 +11,6 @@ use aws_sdk_s3::error::{
 };
 use aws_smithy_client::SdkError;
 use thiserror::Error;
-use wildland_corex::dfs::interface::DfsFrontendError;
 
 #[derive(Error, Debug)]
 pub enum S3Error {
@@ -21,16 +20,6 @@ pub enum S3Error {
     ETagMistmach,
     #[error(transparent)]
     Generic(#[from] anyhow::Error),
-}
-
-impl From<S3Error> for DfsFrontendError {
-    fn from(value: S3Error) -> Self {
-        match value {
-            S3Error::NotFound => Self::NoSuchPath,
-            S3Error::ETagMistmach => Self::ConcurrentIssue,
-            err @ S3Error::Generic(_) => Self::Generic(format!("{err:?}")),
-        }
-    }
 }
 
 macro_rules! s3_error_implement_from {
