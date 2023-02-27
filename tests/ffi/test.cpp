@@ -186,7 +186,7 @@ auto container_test(CargoUser &user, StorageTemplate &storage_template)
     auto container = user.create_container(RustString{"My Container"}, storage_template, RustString{"/some/path"});
     std::cout << container.stringify().to_string() << std::endl;
 
-    auto containers = user.get_containers();
+    auto containers = user.find_containers(Optional<ContainerFilter>{}, MountState::MountedOrUnmounted);
     for (uint i = 0; i < containers.size(); ++i)
     {
         auto current_container = containers.at(i).unwrap();

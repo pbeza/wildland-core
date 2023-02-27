@@ -25,7 +25,7 @@ pub use path_resolver::*;
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::{Container, ContainerPath, ContainerPaths, Storage};
+use crate::{Container, ContainerPaths, Storage};
 
 #[derive(Debug, Error, Clone)]
 #[repr(C)]
@@ -40,7 +40,10 @@ pub enum ContainerManagerError {
 
 type MountedContainerMap = Arc<Mutex<HashMap<Uuid, (Container, ContainerPaths)>>>;
 
-#[derive(Default, Clone)]
+/// Container Manager handle.
+///
+/// Container Manager by design is a singleton, so every handle should point to the same data.
+#[derive(Default, Clone, Debug)]
 pub struct ContainerManager {
     mounted_containers: MountedContainerMap,
 }
@@ -75,20 +78,12 @@ impl ContainerManager {
             .map(|_| ())
     }
 
-    pub fn mounted_containers_claiming_path(&self, path: ContainerPath) -> Vec<Container> {
+    pub fn is_mounted(&self, container: &Container) -> bool {
+        let container_uuid = container.uuid();
         self.mounted_containers
             .lock()
             .expect("Poisoned mutex!")
-            .values()
-            .filter_map(|(container, paths)| {
-                if paths.contains(&path) {
-                    Some(container)
-                } else {
-                    None
-                }
-            })
-            .cloned()
-            .collect()
+            .contains_key(&container_uuid)
     }
 }
 
@@ -377,65 +372,5 @@ mod tests {
             container_manager.unmount(&Container::from_container_manifest(container1)),
             Err(ContainerManagerError::ContainerNotMounted)
         ));
-    }
-
-    #[test]
-    fn get_containers_with_claimed_path() {
-        let container_manager = ContainerManager::default();
-        let mut container1 = MockContainerManifest::new();
-        container1
-            .expect_get_paths()
-            .returning(|| Ok(vec!["/some/path1".into(), "/some/path2".into()]));
-        container1
-            .expect_uuid()
-            .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap());
-        let container1 = Arc::new(Mutex::new(container1)) as Arc<Mutex<dyn ContainerManifest>>;
-        let mut container2 = MockContainerManifest::new();
-        container2
-            .expect_get_paths()
-            .returning(|| Ok(vec!["/some/path1".into(), "/some/path3".into()]));
-        container2
-            .expect_uuid()
-            .returning(|| Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap());
-        let container2 = Arc::new(Mutex::new(container2)) as Arc<Mutex<dyn ContainerManifest>>;
-        container_manager
-            .mount(&Container::from_container_manifest(container1))
-            .unwrap();
-        container_manager
-            .mount(&Container::from_container_manifest(container2))
-            .unwrap();
-
-        let containers_claiming_path1 =
-            container_manager.mounted_containers_claiming_path("/some/path1".into());
-        assert!(containers_claiming_path1
-            .iter()
-            .any(|container| container.uuid()
-                == Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap()));
-        assert!(containers_claiming_path1
-            .iter()
-            .any(|container| container.uuid()
-                == Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap()));
-
-        let containers_claiming_path2 =
-            container_manager.mounted_containers_claiming_path("/some/path2".into());
-        assert!(containers_claiming_path2
-            .iter()
-            .any(|container| container.uuid()
-                == Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap()));
-        assert!(!containers_claiming_path2
-            .iter()
-            .any(|container| container.uuid()
-                == Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap()));
-
-        let containers_claiming_path3 =
-            container_manager.mounted_containers_claiming_path("/some/path3".into());
-        assert!(!containers_claiming_path3
-            .iter()
-            .any(|container| container.uuid()
-                == Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap()));
-        assert!(containers_claiming_path3
-            .iter()
-            .any(|container| container.uuid()
-                == Uuid::from_str("00000000-0000-0000-0000-000000000002").unwrap()));
     }
 }

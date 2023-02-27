@@ -23,7 +23,6 @@ pub use wildland_corex::dfs::interface::*;
 use wildland_corex::entities::Identity;
 use wildland_corex::{BridgeManifest, Signers, StorageManifest};
 pub use wildland_corex::{
-    Container,
     ContainerManagerError,
     CoreXError,
     CryptoError,
@@ -37,6 +36,11 @@ pub use wildland_corex::{
 use crate::api::cargo_lib::*;
 use crate::api::cargo_user::*;
 use crate::api::config::*;
+use crate::api::container::{
+    CargoContainer as Container,
+    CargoContainerFilter as ContainerFilter,
+    MountState,
+};
 use crate::api::foundation_storage::*;
 use crate::api::user::*;
 use crate::errors::storage::*;
@@ -46,7 +50,7 @@ use crate::errors::ExceptionTrait;
 mod wrapper {
     use wildland_corex::{StorageTemplate, StorageTemplateError};
 
-    use super::WlPermissions;
+    use super::{ContainerFilter, WlPermissions};
 
     pub(crate) fn storage_template_from_json(
         content: Vec<u8>,
@@ -67,9 +71,34 @@ mod wrapper {
     pub(crate) fn read_write_wl_permissions() -> WlPermissions {
         WlPermissions::read_write()
     }
+
+    pub(crate) fn has_exact_path(path: String) -> ContainerFilter {
+        ContainerFilter::has_exact_path(path)
+    }
+
+    pub(crate) fn has_path_starting_with(path: String) -> ContainerFilter {
+        ContainerFilter::has_path_starting_with(path)
+    }
+
+    pub(crate) fn or_filter(f1: ContainerFilter, f2: ContainerFilter) -> ContainerFilter {
+        ContainerFilter::or(f1, f2)
+    }
+
+    pub(crate) fn and_filter(f1: ContainerFilter, f2: ContainerFilter) -> ContainerFilter {
+        ContainerFilter::and(f1, f2)
+    }
+
+    pub(crate) fn not_filter(f: ContainerFilter) -> ContainerFilter {
+        ContainerFilter::not(f)
+    }
 }
 
 use self::wrapper::{
+    and_filter,
+    has_exact_path,
+    has_path_starting_with,
+    not_filter,
+    or_filter,
     read_write_wl_permissions,
     readonly_wl_permissions,
     storage_template_from_json,
@@ -172,6 +201,12 @@ mod ffi_binding {
         Other,
     }
 
+    enum MountState {
+        Mounted,
+        Unmounted,
+        MountedOrUnmounted,
+    }
+
     extern "Traits" {
 
         // # traits required for logging configuration
@@ -268,10 +303,24 @@ mod ffi_binding {
         type Signers;
 
         //
+        // ContainerFilter
+        //
+        type ContainerFilter;
+        fn has_exact_path(path: String) -> ContainerFilter;
+        fn has_path_starting_with(path: String) -> ContainerFilter;
+        fn or_filter(f1: ContainerFilter, f2: ContainerFilter) -> ContainerFilter;
+        fn and_filter(f1: ContainerFilter, f2: ContainerFilter) -> ContainerFilter;
+        fn not_filter(f: ContainerFilter) -> ContainerFilter;
+
+        //
         // CargoUser
         //
         fn stringify(self: &CargoUser) -> String;
-        fn get_containers(self: &CargoUser) -> Result<Vec<Container>, CatlibError>;
+        fn find_containers(
+            self: &CargoUser,
+            filters: Option<ContainerFilter>,
+            mount_state: MountState,
+        ) -> Result<Vec<Container>, CatlibError>;
         fn create_container(
             self: &CargoUser,
             name: String,
@@ -285,14 +334,6 @@ mod ffi_binding {
             self: &CargoUser,
             tpl: &StorageTemplate,
         ) -> Result<String, CatlibError>;
-        fn mount(
-            self: &CargoUser,
-            container: &Container,
-        ) -> Result<VoidType, ContainerManagerError>;
-        fn unmount(
-            self: &CargoUser,
-            container: &Container,
-        ) -> Result<VoidType, ContainerManagerError>;
 
         // Foundation Storage
         type FreeTierProcessHandle;
@@ -324,6 +365,10 @@ mod ffi_binding {
         fn remove(self: &Container) -> Result<VoidType, CatlibError>;
         fn name(self: &Container) -> Result<String, CatlibError>;
         fn stringify(self: &Container) -> String;
+
+        fn mount(self: &Container) -> Result<VoidType, ContainerManagerError>;
+        fn unmount(self: &Container) -> Result<VoidType, ContainerManagerError>;
+        fn is_mounted(self: &Container) -> bool;
 
         //
         // StorageManifest

@@ -182,7 +182,7 @@ impl CatLib for RedisCatLib {
     }
 
     fn get_container(&self, uuid: &Uuid) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
-        fetch_container_by_uuid(&self.db, uuid)
+        fetch_container_by_uuid(self.db.clone(), uuid)
     }
 
     /// ## Errors

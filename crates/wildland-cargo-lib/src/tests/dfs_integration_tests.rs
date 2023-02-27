@@ -109,9 +109,9 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     //
     // When containers are mounted
     //
-    user.mount(&container1).unwrap();
-    user.mount(&container2).unwrap();
-    user.mount(&container3).unwrap();
+    container1.mount().unwrap();
+    container2.mount().unwrap();
+    container3.mount().unwrap();
 
     //
     // Then data is accessible via DFS
@@ -166,7 +166,7 @@ fn dfs_integration_test_with_containers_with_lfs_storages(
     //
     // And when one container is unmounted
     //
-    user.unmount(&container1).unwrap();
+    container1.unmount().unwrap();
 
     //
     // Then its data is inaccessible

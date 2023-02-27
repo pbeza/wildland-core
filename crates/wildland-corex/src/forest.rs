@@ -1,11 +1,17 @@
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use uuid::Uuid;
 
 use crate::catlib_service::error::CatlibError;
 use crate::entities::Identity;
-use crate::{BridgeManifest, Container, ContainerPath, ForestManifest, StorageTemplate};
+use crate::{
+    BridgeManifest,
+    CatlibContainerFilter,
+    Container,
+    ContainerPath,
+    ForestManifest,
+    StorageTemplate,
+};
 
 #[derive(Debug, Clone)]
 pub struct Forest {
@@ -80,41 +86,16 @@ impl Forest {
         Container::new(container_manifest, storage_template)
     }
 
-    pub fn containers(&self) -> Result<Vec<Container>, CatlibError> {
-        self.forest_manifest
-            .lock()
-            .expect("Poisoned Mutex")
-            .containers()
-            .map(|containers_vec| {
-                containers_vec
-                    .into_iter()
-                    .map(|container_manifest| {
-                        Container::from_container_manifest(container_manifest)
-                    })
-                    .collect()
-            })
-    }
-
     pub fn find_containers(
         &self,
-        paths: Vec<String>,
-        include_subdirs: bool,
-    ) -> Result<Vec<Container>, CatlibError> {
-        self.forest_manifest
-            .lock()
-            .expect("Poisoned Mutex")
-            .find_containers(
-                paths.into_iter().map(PathBuf::from).collect(),
-                include_subdirs,
-            )
-            .map(|containers_vec| {
-                containers_vec
-                    .into_iter()
-                    .map(|container_manifest| {
-                        Container::from_container_manifest(container_manifest)
-                    })
-                    .collect()
-            })
+        filter: Option<CatlibContainerFilter>,
+    ) -> Result<impl Iterator<Item = Container> + '_, CatlibError> {
+        let locked_forest = self.forest_manifest.lock().expect("Poisoned Mutex");
+
+        locked_forest.find_containers(filter).map(|containers| {
+            containers
+                .map(|container_manifest| Container::from_container_manifest(container_manifest))
+        })
     }
 
     pub fn create_bridge(

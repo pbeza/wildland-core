@@ -26,7 +26,6 @@ use wildland_corex::catlib_service::entities::{
     ForestManifest,
     StorageManifest,
 };
-use wildland_corex::ContainerPaths;
 
 use super::*;
 use crate::bridge::BridgeData;
@@ -88,10 +87,10 @@ pub(crate) fn fetch_bridge_by_path(
 
 #[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn fetch_containers_by_forest_uuid(
-    db: &RedisDb,
+    db: RedisDb,
     forest_uuid: &Uuid,
 ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
-    let data = query_get(db, "container-*".into())?;
+    let data = query_get(&db, "container-*".into())?;
 
     let containers: Vec<_> = data
         .iter()
@@ -103,9 +102,11 @@ pub(crate) fn fetch_containers_by_forest_uuid(
             )
         })
         .filter(|(_key, data)| data.forest_uuid == *forest_uuid)
-        .map(|(_key, data)| {
-            Arc::new(Mutex::new(ContainerEntity::from_container_data(data, db)))
-                as Arc<Mutex<dyn ContainerManifest>>
+        .map(move |(_key, data)| {
+            Arc::new(Mutex::new(ContainerEntity::from_container_data(
+                data,
+                db.clone(),
+            ))) as Arc<Mutex<dyn ContainerManifest>>
         })
         .collect();
 
@@ -117,78 +118,25 @@ pub(crate) fn fetch_containers_by_forest_uuid(
 
 #[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn fetch_all_containers(
-    db: &RedisDb,
-    forest_uuid: &Uuid,
-) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
-    let data = query_get(db, "container-*".into())?;
+    db: RedisDb,
+    forest_uuid: Uuid,
+) -> CatlibResult<impl Iterator<Item = ContainerEntity>> {
+    let data = query_get(&db, "container-*".into())?;
 
-    let containers: Vec<_> = data
-        .iter()
+    Ok(data
+        .into_iter()
         .filter(|(_, value)| value.is_some())
-        .map(|(key, value)| {
-            (
-                key.clone(),
-                ContainerData::from(value.as_ref().unwrap().as_str()),
-            )
-        })
-        .filter(|(_key, data)| data.forest_uuid == *forest_uuid)
-        .map(|(_key, data)| {
-            Arc::new(Mutex::new(ContainerEntity::from_container_data(data, db)))
-                as Arc<Mutex<dyn ContainerManifest>>
-        })
-        .collect();
-
-    match containers.len() {
-        0 => Err(CatlibError::NoRecordsFound),
-        _ => Ok(containers),
-    }
-}
-
-#[tracing::instrument(level = "debug", skip_all)]
-pub(crate) fn fetch_containers_by_path(
-    db: &RedisDb,
-    forest_uuid: &Uuid,
-    paths: ContainerPaths,
-    include_subdirs: bool,
-) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
-    let data = query_get(db, "container-*".into())?;
-
-    let containers: Vec<_> = data
-        .iter()
-        .filter(|(_, value)| value.is_some())
-        .map(|(key, value)| {
-            (
-                key.clone(),
-                ContainerData::from(value.as_ref().unwrap().as_str()),
-            )
-        })
-        .filter(|(_key, data)| data.forest_uuid == *forest_uuid)
-        .filter(|(_key, container_data)| {
-            container_data.paths.iter().any(|container_path| {
-                paths.iter().any(|path| {
-                    (include_subdirs && container_path.starts_with(path))
-                        || container_path.eq(&PathBuf::from(path))
-                })
-            })
-        })
-        .map(|(_key, data)| {
-            Arc::new(Mutex::new(ContainerEntity::from_container_data(data, db)))
-                as Arc<Mutex<dyn ContainerManifest>>
-        })
-        .collect();
-
-    match containers.len() {
-        0 => Err(CatlibError::NoRecordsFound),
-        _ => Ok(containers),
-    }
+        .map(|(key, value)| (key, ContainerData::from(value.as_ref().unwrap().as_str())))
+        .filter(move |(_key, data)| data.forest_uuid == forest_uuid)
+        .map(move |(_key, data)| ContainerEntity::from_container_data(data, db.clone())))
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn fetch_container_by_uuid(
-    db: &RedisDb,
+    db: RedisDb,
     uuid: &Uuid,
 ) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
-    let data = get(db, format!("container-{uuid}"))?;
+    let data = get(&db, format!("container-{uuid}"))?;
 
     match data {
         Some(serialised) => {

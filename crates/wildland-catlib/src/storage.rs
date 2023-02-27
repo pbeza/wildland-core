@@ -89,7 +89,7 @@ impl StorageManifest for StorageEntity {
     /// - Returns [`CatlibError::MalformedDatabaseRecord`] if more than one [`Container`] was found.
     /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     fn container(&self) -> CatlibResult<Arc<Mutex<dyn ContainerManifest>>> {
-        fetch_container_by_uuid(&self.db, &self.storage_data.container_uuid)
+        fetch_container_by_uuid(self.db.clone(), &self.storage_data.container_uuid)
     }
 
     /// ## Errors

@@ -138,6 +138,15 @@ do {
     let user = try user_api.getUser()
     print("User: " + user.stringify().toString())
 
+    let _ = try user.findContainers(
+        Optional.some( // Passing some filter turns on filtering
+            orFilter(
+                hasPathStartingWith(RustString("/some_path")),
+                hasPathStartingWith(RustString("/other_path"))
+            )
+        ).toRustOptional()
+        , MountState_MountedOrUnmounted)
+
     do {
         let config_bytes: RustVec<u8> = RustVec<u8>()
         let raw_config = "{\"log_level\": \"trace\", \"redis_connection_string\": \"redis://127.0.0.1/0\"}"
@@ -145,7 +154,7 @@ do {
             config_bytes.push(ch);
         }
         let parsed_cfg: CargoConfig = try parseConfig(config_bytes)
-        let _ = createCargoLib(lss, parsed_cfg)
+        let cargo_lib = createCargoLib(lss, parsed_cfg)
     } catch let err as RustExceptionBase {
         print(err.reason().toString())
     }

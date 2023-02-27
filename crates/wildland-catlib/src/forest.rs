@@ -26,7 +26,7 @@ use wildland_corex::catlib_service::entities::{
     Identity,
     Signers,
 };
-use wildland_corex::{ContainerPath, ContainerPaths};
+use wildland_corex::{CatlibContainerFilter, ContainerManifestIter, ContainerPath, ContainerPaths};
 
 use super::*;
 use crate::container::ContainerData;
@@ -104,11 +104,30 @@ impl ForestManifest for ForestEntity {
 
     /// ## Errors
     ///
-    /// - Returns [`CatlibError::NoRecordsFound`] if Forest has no [`Container`].
     /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
-    #[tracing::instrument(level = "debug", skip_all)]
-    fn containers(&self) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
-        db::fetch_containers_by_forest_uuid(&self.db, &self.data.uuid)
+    fn find_containers(
+        &self,
+        filter: Option<CatlibContainerFilter>,
+    ) -> CatlibResult<ContainerManifestIter> {
+        let containers = db::fetch_all_containers(self.db.clone(), self.uuid());
+
+        match containers {
+            Ok(containers) => {
+                let containers = containers
+                    .filter(move |container| {
+                        if let Some(filter) = &filter {
+                            container.check_filter(filter)
+                        } else {
+                            true
+                        }
+                    })
+                    .map(|container| {
+                        Arc::new(Mutex::new(container)) as Arc<Mutex<dyn ContainerManifest>>
+                    });
+                Ok(Box::new(containers))
+            }
+            Err(err) => Err(err),
+        }
     }
 
     /// ## Errors
@@ -144,7 +163,7 @@ impl ForestManifest for ForestEntity {
             name,
             paths: ContainerPaths::from([path]),
         };
-        let container = ContainerEntity::from_container_data(container_data, &self.db);
+        let container = ContainerEntity::from_container_data(container_data, self.db.clone());
         container.save()?;
         Ok(Arc::new(Mutex::new(container)))
     }
@@ -187,35 +206,6 @@ impl ForestManifest for ForestEntity {
     #[tracing::instrument(level = "debug", skip_all)]
     fn find_bridge(&self, path: String) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError> {
         db::fetch_bridge_by_path(&self.db, &self.uuid(), path)
-    }
-
-    /// ## Errors
-    ///
-    /// - Returns [`CatlibError::NoRecordsFound`] if no [`Container`] was found.
-    /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
-    ///
-    /// ## Example
-    /// # use wildland_catlib::RedisCatLib;
-    /// # use std::collections::HashSet;
-    /// # use wildland_corex::catlib_service::entities::Identity;
-    /// # use wildland_corex::catlib_service::interface::CatLib;
-    /// let catlib = RedisCatLib::default();
-    /// let forest = catlib.create_forest(
-    ///                  b"owner".to_vec(),
-    ///                  HashSet::from([b"signer".to_vec()]),
-    ///                  vec![],
-    ///              ).unwrap();
-    /// let container = forest.lock().unwrap().create_container("container name".to_owned()).unwrap();
-    /// container.lock().unwrap().add_path("/foo/bar".into());
-    ///
-    /// let containers = forest.find_containers(vec!["/foo/bar".to_string()], false).unwrap();
-    #[tracing::instrument(level = "debug", skip_all)]
-    fn find_containers(
-        &self,
-        paths: ContainerPaths,
-        include_subdirs: bool,
-    ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
-        db::fetch_containers_by_path(&self.db, &self.uuid(), paths, include_subdirs)
     }
 
     fn data(&mut self) -> CatlibResult<Vec<u8>> {
