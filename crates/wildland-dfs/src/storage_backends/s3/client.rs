@@ -1,6 +1,5 @@
 use std::ops::RangeInclusive;
 use std::rc::Rc;
-use std::time::SystemTime;
 
 use aws_sdk_s3::model::{CompletedMultipartUpload, CompletedPart};
 use aws_sdk_s3::output::{
@@ -14,7 +13,6 @@ use aws_sdk_s3::output::{
 use aws_sdk_s3::{Client, Credentials, Region};
 use tokio::runtime::Runtime;
 use uuid::Uuid;
-use wildland_corex::dfs::interface::UnixTimestamp;
 
 use super::connector::build_s3_client;
 use super::error::S3Error;
@@ -298,13 +296,6 @@ impl S3Client for WildlandS3Client {
         Ok(WriteResp {
             bytes_count: buf.len(),
             new_object_name,
-            new_modification_time: SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .map(|duration| UnixTimestamp {
-                    sec: duration.as_secs(),
-                    nano_sec: duration.subsec_nanos(),
-                })
-                .unwrap(),
             new_e_tag: e_tag.unwrap(),
         })
     }
@@ -341,6 +332,7 @@ impl S3Client for WildlandS3Client {
         Ok(())
     }
 
+    #[tracing::instrument(err(Debug), level = "debug", skip_all)]
     fn create_new_empty(&self, bucket_name: &str) -> Result<CreateNewEmptyResp, S3Error> {
         let object_name = Uuid::new_v4().to_string();
 
