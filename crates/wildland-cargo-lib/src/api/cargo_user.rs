@@ -196,7 +196,6 @@ All devices:
         Ok(self
             .forest
             .find_containers(filter.map(Into::into))?
-            .into_iter()
             .filter_map(|corex_container| {
                 let container =
                     CargoContainer::new(self.container_manager.clone(), corex_container);
@@ -408,8 +407,6 @@ All devices:
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use base64::engine::general_purpose::STANDARD;
     use base64::Engine;
     use mockito::Matcher;
@@ -554,9 +551,8 @@ mod tests {
         let (cargo_user, catlib_service, forest, _server) = setup;
 
         // when container is created
-        let container_uuid_str = "00000000-0000-0000-0000-000000000001";
         let storage_template = FoundationStorageTemplate::new(
-            Uuid::from_str(container_uuid_str).unwrap(),
+            Uuid::new_v4(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
             "some url".to_owned(),
@@ -601,9 +597,8 @@ mod tests {
         let (cargo_user, _catlib_service, _forest, _server) = setup;
 
         // when container is created
-        let container_uuid_str = "00000000-0000-0000-0000-000000000001";
         let storage_template = FoundationStorageTemplate::new(
-            Uuid::from_str(container_uuid_str).unwrap(),
+            Uuid::new_v4(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
             "some url".to_owned(),
@@ -630,9 +625,8 @@ mod tests {
         let (cargo_user, _catlib_service, _forest, _server) = setup;
 
         // when a container is created
-        let container_uuid_str = "00000000-0000-0000-0000-000000000001";
         let storage_template = FoundationStorageTemplate::new(
-            Uuid::from_str(container_uuid_str).unwrap(),
+            Uuid::new_v4(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
             "some url".to_owned(),
@@ -673,7 +667,7 @@ mod tests {
         let container_name = "new container".to_string();
         let path = "/some/path".to_owned();
         let c1 = cargo_user
-            .create_container(container_name.clone(), &storage_template, path)
+            .create_container(container_name, &storage_template, path)
             .unwrap();
         c1.mount().unwrap();
 
@@ -681,7 +675,7 @@ mod tests {
         let container_name = "new container 2".to_string();
         let path = "/some/other/path".to_owned();
         let _c2 = cargo_user
-            .create_container(container_name.clone(), &storage_template, path)
+            .create_container(container_name, &storage_template, path)
             .unwrap();
 
         // then both containers may be retrieved when mount state is irrelevant
@@ -697,12 +691,10 @@ mod tests {
         assert_eq!(containers.len(), 2);
         assert!(containers
             .iter()
-            .find(|c| c.name().unwrap() == "new container")
-            .is_some());
+            .any(|c| c.name().unwrap() == "new container"));
         assert!(containers
             .iter()
-            .find(|c| c.name().unwrap() == "new container 2")
-            .is_some());
+            .any(|c| c.name().unwrap() == "new container 2"));
 
         // and then containers mounted containers can be retrieved
         let containers = cargo_user
@@ -711,8 +703,7 @@ mod tests {
         assert_eq!(containers.len(), 1);
         assert!(containers
             .iter()
-            .find(|c| c.name().unwrap() == "new container")
-            .is_some());
+            .any(|c| c.name().unwrap() == "new container"));
 
         // and then containers unmounted containers can be retrieved
         let containers = cargo_user
@@ -721,7 +712,6 @@ mod tests {
         assert_eq!(containers.len(), 1);
         assert!(containers
             .iter()
-            .find(|c| c.name().unwrap() == "new container 2")
-            .is_some());
+            .any(|c| c.name().unwrap() == "new container 2"));
     }
 }
