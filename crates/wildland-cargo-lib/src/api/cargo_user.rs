@@ -92,6 +92,102 @@ All devices:
     /// # Args:
     /// - `filter`: filter that is passed to catlib, so the query to database could be optimized
     /// - `mount_state`: specifies whether to include mounted, unmounted or all containers in results.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// # use wildland_cargo_lib::api::CargoConfig;
+    /// # use wildland_cargo_lib::api::container::*;
+    /// # use wildland_cargo_lib::api::cargo_lib::create_cargo_lib;
+    /// # use wildland_lfs::template::LocalFilesystemStorageTemplate;
+    /// # use wildland_corex::StorageTemplate;
+    /// # use wildland_corex::LocalSecureStorage;
+    /// # use std::cell::RefCell;
+    /// # use std::collections::HashMap;
+    /// # use wildland_corex::LssResult;
+    ///
+    /// # let tmpdir = tempfile::tempdir().unwrap().into_path();
+    ///
+    /// # let config_str = r#"{
+    /// #     "log_level": "trace",
+    /// #     "log_use_ansi": false,
+    /// #     "log_file_enabled": true,
+    /// #     "log_file_path": "cargo_lib_log",
+    /// #     "log_file_rotate_directory": ".",
+    /// #     "evs_url": "some_url",
+    /// #     "sc_url": "some_url"
+    /// # }"#;
+    /// # let cfg: CargoConfig = serde_json::from_str(config_str).unwrap();
+    ///
+    /// # fn lss_stub() -> &'static dyn LocalSecureStorage {
+    /// #     #[derive(Default)]
+    /// #     struct LssStub {
+    /// #         storage: RefCell<HashMap<String, String>>,
+    /// #     }
+    ///
+    /// #     impl LocalSecureStorage for LssStub {
+    /// #         fn insert(&self, key: String, value: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.borrow_mut().insert(key, value))
+    /// #         }
+    ///
+    /// #         fn get(&self, key: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
+    /// #         }
+    ///
+    /// #         fn contains_key(&self, key: String) -> LssResult<bool> {
+    /// #             Ok(self.storage.borrow().contains_key(&key))
+    /// #         }
+    ///
+    /// #         fn keys(&self) -> LssResult<Vec<String>> {
+    /// #             Ok(self.storage.borrow().keys().cloned().collect())
+    /// #         }
+    ///
+    /// #         fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
+    /// #             Ok(self
+    /// #                 .storage
+    /// #                 .borrow()
+    /// #                 .keys()
+    /// #                 .filter(|key| key.starts_with(&prefix))
+    /// #                 .cloned()
+    /// #                 .collect())
+    /// #         }
+    ///
+    /// #         fn remove(&self, key: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.borrow_mut().remove(&key))
+    /// #         }
+    ///
+    /// #         fn len(&self) -> LssResult<usize> {
+    /// #             Ok(self.storage.borrow().len())
+    /// #         }
+    ///
+    /// #         fn is_empty(&self) -> LssResult<bool> {
+    /// #             Ok(self.storage.borrow().is_empty())
+    /// #         }
+    /// #     }
+
+    /// #     Box::leak(Box::<LssStub>::default())
+    /// # }
+    ///
+    /// # let lss_stub = lss_stub();
+    ///
+    /// # let cargo_lib = create_cargo_lib(lss_stub, cfg);
+    /// # let cargo_lib = cargo_lib.lock().unwrap();
+    /// # let user_api = cargo_lib.user_api();
+    /// # let mnemonic = user_api.generate_mnemonic().unwrap();
+    /// # let user = user_api
+    /// #     .create_user_from_mnemonic(&mnemonic, "device_name".to_string())
+    /// #     .unwrap();
+    ///
+    /// let containers = user
+    ///     .find_containers(
+    ///         Some(CargoContainerFilter::or(
+    ///             CargoContainerFilter::has_exact_path("/some/path".into()),
+    ///             CargoContainerFilter::has_path_starting_with("/some/other/".into()),
+    ///         )),
+    ///         MountState::MountedOrUnmounted,
+    ///     )
+    ///     .unwrap();
+    /// ```
     pub fn find_containers(
         &self,
         filter: Option<CargoContainerFilter>,

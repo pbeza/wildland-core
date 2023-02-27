@@ -144,8 +144,8 @@ do {
                 hasPathStartingWith(RustString("/some_path")),
                 hasPathStartingWith(RustString("/other_path"))
             )
-        ).toRustOptional()
-        , MountState_MountedOrUnmounted)
+        ).toRustOptional(),
+        MountState_MountedOrUnmounted)
 
     do {
         let config_bytes: RustVec<u8> = RustVec<u8>()
