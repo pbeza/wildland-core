@@ -12,6 +12,7 @@ it might be exposed as a global function with a slightly different name.
 - [Create Storage Template for development purposes](./03_creating_lfs_storage_template.md)
 - [Create and mount Container using Storage Template](./04_create_and_mount_container.md)
 - [Use DFS filesystem-like API to interact with Container's data](./05_using_dfs.md)
+- [Finding container](./06_retrieving_containers.md)
 
 ## Error propagation
 

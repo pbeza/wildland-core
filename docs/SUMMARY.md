@@ -27,6 +27,7 @@ Last update 2023-02-09.20:48
   - [Create Storage Template for development purposes](examples/03_creating_lfs_storage_template.md)
   - [Create and mount Container using Storage Template](examples/04_create_and_mount_container.md)
   - [Use DFS filesystem-like API to interact with Container's data](examples/05_using_dfs.md)
+  - [Finding containers](examples/06_retrieving_containers.md)
 - [Features](features/about.md)
   - [Free Tier Storage](features/gain_free_tier_foundation_storage.md)
   - [Storage Templates](features/storage_templates.md)
