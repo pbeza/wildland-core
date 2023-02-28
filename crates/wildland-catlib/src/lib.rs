@@ -46,9 +46,9 @@
 //! ## Example usage
 //!
 //! ```no_run
-//! # use wildland_catlib::CatLib;
+//! # use wildland_catlib::RedisCatLib;
 //! # use wildland_corex::entities::Identity;
-//! # use wildland_corex::interface::CatLib as ICatLib;
+//! # use wildland_corex::interface::CatLib;
 //! # use wildland_corex::StorageTemplate;
 //! # use std::collections::{HashSet, HashMap};
 //! # use uuid::Uuid;
@@ -56,7 +56,7 @@
 //! let forest_owner = Identity([1; 32]);
 //! let signer = Identity([2; 32]);
 //!
-//! let catlib = CatLib::default();
+//! let catlib = RedisCatLib::default();
 //! let forest = catlib.create_forest(
 //!                  forest_owner,
 //!                  HashSet::from([signer]),
@@ -90,7 +90,7 @@ use wildland_corex::catlib_service::entities::{
     Signers,
     StorageManifest,
 };
-use wildland_corex::catlib_service::interface::CatLib as ICatLib;
+use wildland_corex::catlib_service::interface::CatLib;
 
 mod bridge;
 mod common;
@@ -101,11 +101,11 @@ mod forest;
 mod storage;
 
 #[derive(Clone)]
-pub struct CatLib {
+pub struct RedisCatLib {
     db: RedisDb,
 }
 
-impl CatLib {
+impl RedisCatLib {
     pub fn new(redis_url: String, key_prefix: Option<String>) -> Self {
         let db = db::db_conn(redis_url.clone());
 
@@ -115,7 +115,7 @@ impl CatLib {
             );
         }
 
-        CatLib {
+        RedisCatLib {
             db: RedisDb {
                 client: db.unwrap(),
                 key_prefix: key_prefix.unwrap_or("".into()),
@@ -124,7 +124,7 @@ impl CatLib {
     }
 }
 
-impl ICatLib for CatLib {
+impl CatLib for RedisCatLib {
     /// ## Errors
     ///
     /// Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
@@ -132,14 +132,14 @@ impl ICatLib for CatLib {
     /// ## Example
     ///
     /// ```rust
-    /// # use wildland_catlib::CatLib;
+    /// # use wildland_catlib::RedisCatLib;
     /// # use wildland_corex::catlib_service::entities::Identity;
-    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
+    /// # use wildland_corex::catlib_service::interface::CatLib;
     /// # use std::collections::HashSet;
     /// let forest_owner = Identity([1; 32]);
     /// let signer = Identity([2; 32]);
     ///
-    /// let catlib = CatLib::default();
+    /// let catlib = RedisCatLib::default();
     /// let forest = catlib.create_forest(
     ///                  forest_owner,
     ///                  HashSet::from([signer]),
@@ -235,13 +235,13 @@ impl ICatLib for CatLib {
     }
 }
 
-impl Default for CatLib {
+impl Default for RedisCatLib {
     fn default() -> Self {
         use std::env;
         let redis_url =
             env::var("CARGO_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/0".into());
         let db_prefix = env::var("CARGO_DB_KEY_PREFIX").unwrap_or_else(|_| "".into());
 
-        CatLib::new(redis_url, Some(db_prefix))
+        RedisCatLib::new(redis_url, Some(db_prefix))
     }
 }

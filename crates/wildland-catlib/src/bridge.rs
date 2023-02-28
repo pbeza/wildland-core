@@ -144,7 +144,7 @@ mod tests {
     use crate::*;
 
     #[rstest]
-    fn create_bridge(catlib: CatLib) {
+    fn create_bridge(catlib: RedisCatLib) {
         let forest = catlib
             .create_forest(Identity([1; 32]), Signers::new(), vec![])
             .unwrap();

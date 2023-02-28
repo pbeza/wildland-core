@@ -185,7 +185,7 @@ mod tests {
     use crate::*;
 
     #[fixture]
-    fn catlib_with_forest(catlib: CatLib) -> CatLib {
+    fn catlib_with_forest(catlib: RedisCatLib) -> RedisCatLib {
         // Create a dummy forest to which containers will be bound
         catlib
             .create_forest(
@@ -198,7 +198,10 @@ mod tests {
         catlib
     }
 
-    fn make_container(catlib: &CatLib, container_uuid: Uuid) -> Arc<Mutex<dyn ContainerManifest>> {
+    fn make_container(
+        catlib: &RedisCatLib,
+        container_uuid: Uuid,
+    ) -> Arc<Mutex<dyn ContainerManifest>> {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
         let forest_uuid: Uuid = forest.lock().unwrap().uuid();
         let name: String = "container_name".to_owned();
@@ -210,7 +213,7 @@ mod tests {
     }
 
     #[rstest(catlib_with_forest as catlib)]
-    fn fetch_created_container(catlib: CatLib) {
+    fn fetch_created_container(catlib: RedisCatLib) {
         let container_uuid: Uuid = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
         let container = make_container(&catlib, container_uuid);
         let container = catlib
@@ -231,7 +234,7 @@ mod tests {
     }
 
     #[rstest(catlib_with_forest as catlib)]
-    fn fetch_created_container_from_forest_obj(catlib: CatLib) {
+    fn fetch_created_container_from_forest_obj(catlib: RedisCatLib) {
         let container_uuid: Uuid = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
         let container = make_container(&catlib, container_uuid);
         let container = catlib
@@ -252,7 +255,7 @@ mod tests {
     }
 
     #[rstest(catlib_with_forest as catlib)]
-    fn container_with_paths(catlib: CatLib) {
+    fn container_with_paths(catlib: RedisCatLib) {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
         let container_uuid: Uuid = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
@@ -314,7 +317,7 @@ mod tests {
     }
 
     #[rstest(catlib_with_forest as catlib)]
-    fn multiple_containers_with_paths(catlib: CatLib) {
+    fn multiple_containers_with_paths(catlib: RedisCatLib) {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
         let container_uuid1: Uuid = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();
@@ -372,7 +375,7 @@ mod tests {
     }
 
     #[rstest(catlib_with_forest as catlib)]
-    fn create_containers_with_different_storages(catlib: CatLib) {
+    fn create_containers_with_different_storages(catlib: RedisCatLib) {
         let container_uuid1 = Uuid::from_str("00000000-0000-0000-0000-000000000011").unwrap();
         let container_uuid2 = Uuid::from_str("00000000-0000-0000-0000-000000000012").unwrap();
 
@@ -420,7 +423,7 @@ mod tests {
     }
 
     #[rstest(catlib_with_forest as catlib)]
-    fn multiple_containers_with_subpaths(catlib: CatLib) {
+    fn multiple_containers_with_subpaths(catlib: RedisCatLib) {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
 
         let container_uuid1: Uuid = Uuid::from_str("00000000-0000-0000-0000-000000000001").unwrap();

@@ -365,20 +365,20 @@ pub(crate) fn fetch_bridge_by_uuid(
 pub(crate) mod test {
     use rstest::{fixture, *};
     use wildland_corex::catlib_service::entities::{ForestManifest, Identity, Signers};
-    use wildland_corex::catlib_service::interface::CatLib as ICatLib;
+    use wildland_corex::catlib_service::interface::CatLib;
 
     use crate::*;
 
     #[fixture]
-    pub fn catlib() -> crate::CatLib {
+    pub fn catlib() -> crate::RedisCatLib {
         let random = rand::random::<uuid::Bytes>();
         let uuid = uuid::Builder::from_random_bytes(random).into_uuid();
         let redis_url =
             std::env::var("CARGO_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/0".into());
-        crate::CatLib::new(redis_url, Some(uuid.to_string()))
+        crate::RedisCatLib::new(redis_url, Some(uuid.to_string()))
     }
 
-    fn _make_forest_with_signer(catlib: &CatLib) -> Arc<Mutex<dyn ForestManifest>> {
+    fn _make_forest_with_signer(catlib: &RedisCatLib) -> Arc<Mutex<dyn ForestManifest>> {
         let owner = Identity([1; 32]);
         let signer = Identity([2; 32]);
 
@@ -389,7 +389,7 @@ pub(crate) mod test {
     }
 
     #[rstest]
-    fn db_read_with_many_threads(catlib: CatLib) {
+    fn db_read_with_many_threads(catlib: RedisCatLib) {
         let run_fetch = |i: u32, db: RedisDb| async move {
             let err = Err(CatlibError::NoRecordsFound);
             println!(

@@ -164,7 +164,7 @@ mod tests {
     use crate::*;
 
     #[fixture]
-    fn catlib_with_forest(catlib: CatLib) -> CatLib {
+    fn catlib_with_forest(catlib: RedisCatLib) -> RedisCatLib {
         // Create a dummy forest and container to which storages will be bound
         catlib
             .create_forest(
@@ -177,7 +177,7 @@ mod tests {
         catlib
     }
 
-    fn _container(catlib: &CatLib) -> Arc<Mutex<dyn ContainerManifest>> {
+    fn _container(catlib: &RedisCatLib) -> Arc<Mutex<dyn ContainerManifest>> {
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
         let locked_forest = forest.lock().unwrap();
         let forest_uuid = locked_forest.uuid();
@@ -189,7 +189,7 @@ mod tests {
     }
 
     #[fixture]
-    fn container(catlib_with_forest: CatLib) -> Arc<Mutex<dyn ContainerManifest>> {
+    fn container(catlib_with_forest: RedisCatLib) -> Arc<Mutex<dyn ContainerManifest>> {
         _container(&catlib_with_forest)
     }
 
@@ -259,7 +259,7 @@ mod tests {
     }
 
     #[rstest(catlib_with_forest as catlib)]
-    fn create_storage_with_template_id(catlib: CatLib) {
+    fn create_storage_with_template_id(catlib: RedisCatLib) {
         let container = _container(&catlib);
         let storage_uuid0 = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
         make_storage(&container, storage_uuid0); // Create storage w/o template id on purpose
