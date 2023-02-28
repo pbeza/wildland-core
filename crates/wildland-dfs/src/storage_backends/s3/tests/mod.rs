@@ -23,7 +23,7 @@ struct MinioClient {
 
 #[fixture]
 fn minio_url() -> String {
-    "http://127.0.0.1:9000".into()
+    std::env::var("MINIO_URL").unwrap_or_else(|_| "http://127.0.0.1:9000".into())
 }
 
 #[fixture]

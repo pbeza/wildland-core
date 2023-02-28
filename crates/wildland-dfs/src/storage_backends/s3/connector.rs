@@ -61,6 +61,7 @@ pub fn build_s3_client(
             S3Connector::default(),
         ))))
         .credentials_provider(credentials)
+        .force_path_style(true)
         .region(region);
 
     builder.set_endpoint_url(endpoint_url);

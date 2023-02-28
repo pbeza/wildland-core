@@ -2,15 +2,17 @@ version: "3"
 services:
   minio:
     image: minio/minio:latest
+    container_name: cargo_minio
     ports:
       - "9000:9000" # api
       - "9001:9001" # web ui
     command: ["server", "/minio-data", "--console-address", ":9001"]
     tmpfs:
-      - /data
+      - /minio-data
 
   redis:
     image: redis
+    container_name: cargo_redis
     ports:
       - "6379:6379"
     tmpfs:
