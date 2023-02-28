@@ -115,7 +115,8 @@ All devices:
     /// #     "log_file_path": "cargo_lib_log",
     /// #     "log_file_rotate_directory": ".",
     /// #     "evs_url": "some_url",
-    /// #     "sc_url": "some_url"
+    /// #     "sc_url": "some_url",
+    /// #     "redis_connection_string": "redis://127.0.0.1/0"
     /// # }"#;
     /// # let cfg: CargoConfig = serde_json::from_str(config_str).unwrap();
     ///

@@ -28,14 +28,14 @@ impl Forest {
     /// ## Example
     ///
     /// ```no_run
-    /// # use wildland_catlib::CatLib;
+    /// # use wildland_catlib::RedisCatLib;
     /// # use std::collections::{HashSet, HashMap};
     /// # use wildland_corex::entities::Identity;
     /// # use wildland_corex::StorageTemplate;
-    /// # use wildland_corex::interface::CatLib as ICatLib;
+    /// # use wildland_corex::interface::CatLib;
     /// # use wildland_corex::Forest;
     ///
-    /// let catlib = CatLib::default();
+    /// let catlib = RedisCatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
     ///                  HashSet::from([Identity([2; 32])]),

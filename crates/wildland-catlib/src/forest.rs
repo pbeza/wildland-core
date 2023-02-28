@@ -156,11 +156,11 @@ impl ForestManifest for ForestEntity {
     /// ## Example
     ///
     /// ```rust
-    /// # use wildland_catlib::CatLib;
+    /// # use wildland_catlib::RedisCatLib;
     /// # use wildland_corex::catlib_service::entities::Identity;
-    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
+    /// # use wildland_corex::catlib_service::interface::CatLib;
     /// # use std::collections::HashSet;
-    /// let catlib = CatLib::default();
+    /// let catlib = RedisCatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
     ///                  HashSet::from([Identity([2; 32])]),
@@ -195,11 +195,11 @@ impl ForestManifest for ForestEntity {
     /// - Returns `RedisError` cast on [`CatlibResult`] upon failure to save to the database.
     ///
     /// ## Example
-    /// # use wildland_catlib::CatLib;
+    /// # use wildland_catlib::RedisCatLib;
     /// # use std::collections::HashSet;
     /// # use wildland_corex::catlib_service::entities::Identity;
-    /// # use wildland_corex::catlib_service::interface::CatLib as ICatLib;
-    /// let catlib = CatLib::default();
+    /// # use wildland_corex::catlib_service::interface::CatLib;
+    /// let catlib = RedisCatLib::default();
     /// let forest = catlib.create_forest(
     ///                  b"owner".to_vec(),
     ///                  HashSet::from([b"signer".to_vec()]),
@@ -270,13 +270,13 @@ mod tests {
     use super::db::test::catlib;
     use crate::*;
 
-    fn make_forest(catlib: &CatLib) -> Arc<Mutex<dyn ForestManifest>> {
+    fn make_forest(catlib: &RedisCatLib) -> Arc<Mutex<dyn ForestManifest>> {
         let owner = Identity([1; 32]);
 
         catlib.create_forest(owner, Signers::new(), vec![]).unwrap()
     }
 
-    fn make_forest_with_signer(catlib: &CatLib) -> Arc<Mutex<dyn ForestManifest>> {
+    fn make_forest_with_signer(catlib: &RedisCatLib) -> Arc<Mutex<dyn ForestManifest>> {
         let owner = Identity([1; 32]);
         let signer = Identity([2; 32]);
 
@@ -287,7 +287,7 @@ mod tests {
     }
 
     #[rstest]
-    fn read_new_forest(catlib: CatLib) {
+    fn read_new_forest(catlib: RedisCatLib) {
         make_forest_with_signer(&catlib);
 
         let forest = catlib.find_forest(&Identity([1; 32])).unwrap();
@@ -297,7 +297,7 @@ mod tests {
     }
 
     #[rstest]
-    fn read_new_forest_by_uuid(catlib: CatLib) {
+    fn read_new_forest_by_uuid(catlib: RedisCatLib) {
         let f = make_forest_with_signer(&catlib);
 
         let forest = catlib.get_forest(&f.lock().unwrap().uuid()).unwrap();
@@ -307,7 +307,7 @@ mod tests {
     }
 
     #[rstest]
-    fn create_two_different_forests(catlib: CatLib) {
+    fn create_two_different_forests(catlib: RedisCatLib) {
         make_forest(&catlib);
         catlib
             .create_forest(Identity([2; 32]), Signers::new(), vec![])
@@ -323,14 +323,14 @@ mod tests {
     }
 
     #[rstest]
-    fn read_non_existing_forest(catlib: CatLib) {
+    fn read_non_existing_forest(catlib: RedisCatLib) {
         let forest = catlib.find_forest(&Identity([1; 32]));
 
         assert_eq!(forest.err(), Some(CatlibError::NoRecordsFound));
     }
 
     #[rstest]
-    fn read_wrong_forest_owner(catlib: CatLib) {
+    fn read_wrong_forest_owner(catlib: RedisCatLib) {
         make_forest(&catlib);
 
         let forest = catlib.find_forest(&Identity([0; 32]));
@@ -339,7 +339,7 @@ mod tests {
     }
 
     #[rstest]
-    fn add_forest_data(catlib: CatLib) {
+    fn add_forest_data(catlib: RedisCatLib) {
         let f = make_forest(&catlib);
 
         f.lock().unwrap().update(b"some data".to_vec()).unwrap();
@@ -353,7 +353,7 @@ mod tests {
     }
 
     #[rstest]
-    fn delete_empty_forest(catlib: CatLib) {
+    fn delete_empty_forest(catlib: RedisCatLib) {
         let f = make_forest(&catlib);
 
         f.lock().unwrap().remove().unwrap();
@@ -365,7 +365,7 @@ mod tests {
     }
 
     #[rstest]
-    fn delete_forest_with_data(catlib: CatLib) {
+    fn delete_forest_with_data(catlib: RedisCatLib) {
         let f = make_forest_with_signer(&catlib);
 
         f.lock().unwrap().remove().unwrap();
@@ -377,7 +377,7 @@ mod tests {
     }
 
     #[rstest]
-    fn add_forest_data_and_fetch_twice(catlib: CatLib) {
+    fn add_forest_data_and_fetch_twice(catlib: RedisCatLib) {
         let f = make_forest(&catlib);
 
         f.lock().unwrap().update(b"some data".to_vec()).unwrap();
@@ -404,7 +404,7 @@ mod tests {
     }
 
     #[rstest]
-    fn adding_signers(catlib: CatLib) {
+    fn adding_signers(catlib: RedisCatLib) {
         let alice = Identity([3; 32]);
         let bob = Identity([4; 32]);
         let charlie = Identity([5; 32]);

@@ -16,13 +16,13 @@ Location of the database file depends on the platform where the application runs
 ### Creating container with paths
 
 ```rust
-use wildland_catlib::CatLib;
-use wildland_corex::interface::CatLib as ICatLib;
+use wildland_catlib::RedisCatLib;
+use wildland_corex::interface::CatLib;
 use std::collections::{HashSet, HashMap};
 use wildland_corex::entities::Identity;
 use wildland_corex::StorageTemplate;
 use wildland_corex::Forest;
-let catlib = CatLib::default();
+let catlib = RedisCatLib::default();
 let forest = catlib.create_forest(
                  Identity([1; 32]),
                  HashSet::from([Identity([2; 32])]),
@@ -53,6 +53,6 @@ container.add_path("/bar/baz2".into()).unwrap();
 ### Finding container(s) by paths
 
 ```rust
-let catlib = CatLib::default();
+let catlib = RedisCatLib::default();
 let containers = catlib.find_containers(vec!["/foo/bar".into()], false).unwrap();
 ```
