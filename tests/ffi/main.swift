@@ -23,6 +23,9 @@ class CargoCfgProviderImpl: CargoCfgProvider {
     public override func getFoundationCloudEnvMode() -> FoundationCloudMode {
         return FoundationCloudMode_Dev
     }
+    public override func getRedisUrl() -> RustString {
+        return RustString("redis://127.0.0.1/0")
+    }
 }
 
 class LocalSecureStorageImpl : LocalSecureStorage {
@@ -137,12 +140,12 @@ do {
 
     do {
         let config_bytes: RustVec<u8> = RustVec<u8>()
-        let raw_config = "{\"log_level\": \"trace\"}"
+        let raw_config = "{\"log_level\": \"trace\", \"redis_connection_string\": \"redis://127.0.0.1/0\"}"
         for ch in raw_config.utf8 {
             config_bytes.push(ch);
         }
         let parsed_cfg: CargoConfig = try parseConfig(config_bytes)
-        let _ = try createCargoLib(lss, parsed_cfg)
+        let _ = createCargoLib(lss, parsed_cfg)
     } catch let err as RustExceptionBase {
         print(err.reason().toString())
     }

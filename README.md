@@ -33,11 +33,11 @@ Official website:
 Running Wildland Core requires Redis server to be accessible from local or remote network. The
 server must be accessible at all times even if one does not interact with Catalog backend.
 
-The default connection string is `redis://127.0.0.1:6379/0` where `/0` denotes database with id `0`.
-The default connection string can be overriden by specifying it in a `CARGO_REDIS_URL` environment
-variable.
+You must specify a valid redis URI in the Cargo Configuration Provider in order to be able to
+use the catalog backend.
 
-_note: this solution is temporary and will be shortly replaced by a cargo configuration entry_
+Consult the appropiate section in the [Cargo docs](https://docs.wildland.dev/lld/doc/wildland_cargo_lib/api/config/trait.CargoCfgProvider.html)
+to see what methods should you implement in your SDK.
 
 ## Local Documentation
 

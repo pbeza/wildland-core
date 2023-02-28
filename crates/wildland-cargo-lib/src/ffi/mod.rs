@@ -123,6 +123,7 @@ mod ffi_binding {
         Error(_),
     }
     enum ParseConfigError {
+        IncorrectRedisURL(_),
         Error(_),
     }
     enum CreateMnemonicError {
@@ -188,6 +189,7 @@ mod ffi_binding {
         fn get_oslog_subsystem(self: &dyn CargoCfgProvider) -> Option<String>;
 
         fn get_foundation_cloud_env_mode(self: &dyn CargoCfgProvider) -> FoundationCloudMode;
+        fn get_redis_url(self: &dyn CargoCfgProvider) -> String;
 
         // # traits required for lss:
         //

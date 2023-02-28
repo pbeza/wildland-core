@@ -20,7 +20,7 @@ use std::mem::MaybeUninit;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, Once};
 
-use wildland_catlib::CatLib;
+use wildland_catlib::RedisCatLib;
 use wildland_corex::catlib_service::CatLibService;
 use wildland_corex::container_manager::ContainerManager;
 use wildland_corex::dfs::interface::DfsFrontend;
@@ -31,6 +31,7 @@ use wildland_dfs::storage_backends::StorageBackendFactory;
 #[cfg(feature = "lfs")]
 use wildland_lfs::LfsBackendFactory;
 
+use super::config::CatlibConfig;
 use crate::api::config::{CargoConfig, FoundationStorageApiConfig};
 use crate::api::user::UserApi;
 use crate::logging;
@@ -65,6 +66,7 @@ impl CargoLib {
     pub fn new(
         lss: &'static dyn LocalSecureStorage,
         fsa_config: FoundationStorageApiConfig,
+        catlib_config: CatlibConfig,
     ) -> Self {
         let lss_service = LssService::new(lss);
         let container_manager = ContainerManager::default();
@@ -79,10 +81,12 @@ impl CargoLib {
 
         dfs_storage_factories.insert("S3".to_string(), Box::new(S3BackendFactory::new()));
 
+        let redis_cfg = catlib_config.redis_config;
+
         Self {
             user_api: UserApi::new(UserService::new(
                 lss_service,
-                CatLibService::new(Rc::new(CatLib::default())),
+                CatLibService::new(Rc::new(RedisCatLib::new(redis_cfg.connection_string, None))),
                 fsa_config,
                 container_manager.clone(),
             )),
@@ -158,6 +162,9 @@ impl CargoLib {
 ///         evs_url: "some_url".to_owned(),
 ///         sc_url: "some_url".to_owned(),
 ///     },
+///     catlib_config: CatlibConfig {
+///         redis_config: url::Url::parse("redis://127.0.0.1/0").unwrap().try_into().unwrap()
+///     }
 /// };
 ///
 /// let lss: &'static TestLss = unsafe { std::mem::transmute(&lss) };
@@ -167,7 +174,11 @@ pub fn create_cargo_lib(lss: &'static dyn LocalSecureStorage, cfg: CargoConfig) 
     unsafe {
         INIT.call_once(|| {
             logging::init_subscriber(cfg.logger_config);
-            let cargo_lib = Arc::new(Mutex::new(CargoLib::new(lss, cfg.fsa_config)));
+            let cargo_lib = Arc::new(Mutex::new(CargoLib::new(
+                lss,
+                cfg.fsa_config,
+                cfg.catlib_config,
+            )));
             CARGO_LIB.write(cargo_lib);
         });
         CARGO_LIB.assume_init_ref().clone()
