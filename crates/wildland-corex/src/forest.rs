@@ -34,6 +34,7 @@ impl Forest {
     /// # use wildland_corex::StorageTemplate;
     /// # use wildland_corex::interface::CatLib;
     /// # use wildland_corex::Forest;
+    /// # use uuid::Uuid;
     ///
     /// let catlib = RedisCatLib::default();
     /// let forest = catlib.create_forest(
@@ -59,7 +60,7 @@ impl Forest {
     ///     )
     ///     .unwrap();
     /// let path = "/some/path".into();
-    /// let container = forest.create_container("container name1".to_owned(), &storage_template, path).unwrap();
+    /// let container = forest.create_container("container name1".to_owned(), Uuid::new_v4(), &storage_template, path).unwrap();
     /// container.add_path("/foo/bar1".into());
     /// container.add_path("/bar/baz1".into());
     /// ```
@@ -67,6 +68,7 @@ impl Forest {
     pub fn create_container(
         &self,
         name: String,
+        template_uuid: Uuid,
         storage_template: &StorageTemplate,
         path: ContainerPath,
     ) -> Result<Container, CatlibError> {
@@ -77,7 +79,7 @@ impl Forest {
             .lock()
             .expect("Poisoned Mutex")
             .create_container(container_uuid, forest_uuid, name, path)?;
-        Container::new(container_manifest, storage_template)
+        Container::new(container_manifest, template_uuid, storage_template)
     }
 
     pub fn containers(&self) -> Result<Vec<Container>, CatlibError> {

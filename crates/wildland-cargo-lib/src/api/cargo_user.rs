@@ -22,7 +22,6 @@ use wildland_corex::{Container, ContainerManager, ContainerManagerError, Forest,
 
 use super::config::FoundationStorageApiConfig;
 use super::foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError};
-use crate::errors::storage::GetStorageTemplateError;
 
 /// Structure representing a User.
 ///
@@ -186,7 +185,7 @@ All devices:
     /// let container = user
     ///     .create_container(
     ///         "C1".to_owned(),
-    ///         &StorageTemplate::try_new("LocalFilesystem", &template).unwrap(),
+    ///         &mut StorageTemplate::try_new("LocalFilesystem", &template).unwrap(),
     ///         "/some/path/".to_owned(),
     ///     )
     ///     .unwrap();
@@ -195,10 +194,16 @@ All devices:
     pub fn create_container(
         &self,
         name: String,
-        template: &StorageTemplate,
+        template: &mut StorageTemplate,
         path: String,
     ) -> Result<Container, CatlibError> {
-        self.forest.create_container(name, template, path.into())
+        let (template_uuid, saved_template) = self
+            .catlib_service
+            .save_storage_template(template.clone())?;
+        // We cannot enforce other languages to give ownership away, so we must set uuid on reference argument
+        template.set_uuid(template_uuid);
+        self.forest
+            .create_container(name, template_uuid, &saved_template, path.into())
     }
 
     pub fn this_device(&self) -> &str {
@@ -212,24 +217,19 @@ All devices:
     /// Returns vector of user's storage templates
     ///
     #[tracing::instrument(level = "debug", skip_all)]
-    pub fn get_storage_templates(&self) -> Result<Vec<StorageTemplate>, GetStorageTemplateError> {
-        self.catlib_service
-            .get_storage_templates_data()?
-            .into_iter()
-            .map(|st_data| {
-                serde_json::from_str(&st_data)
-                    .map_err(|e| GetStorageTemplateError::DeserializationError(e.to_string()))
-            })
-            .collect()
+    pub fn get_storage_templates(&self) -> Result<Vec<StorageTemplate>, CatlibError> {
+        self.catlib_service.get_storage_templates()
     }
 
     /// Save StorageTemplate data in CatLib.
     ///
     #[tracing::instrument(level = "debug", skip_all)]
-    pub fn save_storage_template(&self, tpl: &StorageTemplate) -> Result<String, CatlibError> {
-        self.catlib_service.save_storage_template(tpl)?;
+    pub fn save_storage_template(&self, tpl: &mut StorageTemplate) -> Result<String, CatlibError> {
+        let (template_uuid, _saved_template) =
+            self.catlib_service.save_storage_template(tpl.clone())?;
+        tpl.set_uuid(template_uuid);
 
-        Ok(tpl.uuid().to_string())
+        Ok(template_uuid.to_string())
     }
 
     /// Starts process of granting Free Tier Foundation Storage.
@@ -260,11 +260,12 @@ All devices:
         token: String,
     ) -> Result<StorageTemplate, FsaError> {
         let storage_template = process_handle.verify_email(token)?;
-        self.catlib_service
-            .save_storage_template(&storage_template)?;
+        let (_, saved_template) = self
+            .catlib_service
+            .save_storage_template(storage_template)?;
         self.catlib_service
             .mark_free_storage_granted(&self.forest.forest_manifest())?;
-        Ok(storage_template)
+        Ok(saved_template)
     }
 
     pub fn is_free_storage_granted(&mut self) -> Result<bool, CatlibError> {
@@ -389,7 +390,7 @@ mod tests {
             .with_body(credentials_response)
             .create();
 
-        cargo_user
+        let result_template = cargo_user
             .verify_email(&process_handle, "123456".to_string())
             .unwrap();
 
@@ -399,13 +400,9 @@ mod tests {
         storage_req_mock_2.assert();
 
         // and storage template is saved in CatLib
-        let template_data = serde_json::from_str::<serde_json::Value>(
-            &catlib_service.get_storage_templates_data().unwrap()[0],
-        )
-        .unwrap();
+        let template = &catlib_service.get_storage_templates().unwrap()[0];
         let expected_template_json = json!(
             {
-                "uuid": template_data["uuid"],
                 "backend_type":"FoundationStorage",
                 "name": null,
                 "template":
@@ -418,7 +415,11 @@ mod tests {
                 }
             }
         );
-        assert_eq!(template_data, expected_template_json);
+        assert_eq!(
+            serde_json::to_value(template).unwrap(),
+            expected_template_json
+        );
+        assert_eq!(template.uuid(), result_template.uuid());
 
         // and storage granted flag is set in catlib
         assert!(catlib_service
@@ -433,7 +434,7 @@ mod tests {
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-        let storage_template = FoundationStorageTemplate::new(
+        let mut storage_template = FoundationStorageTemplate::new(
             Uuid::from_str(container_uuid_str).unwrap(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
@@ -444,7 +445,7 @@ mod tests {
         let container_name = "new container".to_string();
         let path = "/some/path".to_owned();
         cargo_user
-            .create_container(container_name.clone(), &storage_template, path)
+            .create_container(container_name.clone(), &mut storage_template, path)
             .unwrap();
 
         // then it is stored in catlib
@@ -475,7 +476,7 @@ mod tests {
 
         // when container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-        let storage_template = FoundationStorageTemplate::new(
+        let mut storage_template = FoundationStorageTemplate::new(
             Uuid::from_str(container_uuid_str).unwrap(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
@@ -486,7 +487,7 @@ mod tests {
         let container_name = "new container".to_string();
         let path = "/some/path".to_owned();
         cargo_user
-            .create_container(container_name.clone(), &storage_template, path)
+            .create_container(container_name.clone(), &mut storage_template, path)
             .unwrap();
 
         // then it can be retrieved via CargoUser api
@@ -502,7 +503,7 @@ mod tests {
 
         // when a container is created
         let container_uuid_str = "00000000-0000-0000-0000-000000000001";
-        let storage_template = FoundationStorageTemplate::new(
+        let mut storage_template = FoundationStorageTemplate::new(
             Uuid::from_str(container_uuid_str).unwrap(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
@@ -513,7 +514,7 @@ mod tests {
         let path = "/some/path".to_owned();
         let container_name = "new container".to_string();
         let container = cargo_user
-            .create_container(container_name, &storage_template, path)
+            .create_container(container_name, &mut storage_template, path)
             .unwrap();
 
         // and the container is deleted

@@ -124,15 +124,27 @@ impl CatLibService {
             .map_err(|e| CatlibError::Generic(format!("Could not deserialize forest metadata {e}")))
     }
 
-    pub fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>> {
-        self.catlib.get_storage_templates_data()
+    pub fn get_storage_templates(&self) -> CatlibResult<Vec<StorageTemplate>> {
+        self.catlib
+            .get_storage_templates_data()?
+            .into_iter()
+            .map(|(uuid, data)| {
+                serde_json::from_slice::<StorageTemplate>(data.as_bytes())
+                    .map_err(|e| CatlibError::MalformedDatabaseRecord(e.to_string()))
+                    .map(|t| t.with_uuid(uuid))
+            })
+            .collect::<Result<_, CatlibError>>()
     }
 
-    pub fn save_storage_template(&self, storage_template: &StorageTemplate) -> CatlibResult<()> {
-        self.catlib.save_storage_template(
-            &storage_template.uuid(),
-            serde_json::to_string(storage_template)
+    pub fn save_storage_template(
+        &self,
+        storage_template: StorageTemplate,
+    ) -> CatlibResult<(Uuid, StorageTemplate)> {
+        let uuid = self.catlib.save_storage_template(
+            storage_template.uuid(),
+            serde_json::to_string(&storage_template)
                 .map_err(|e| CatlibError::Generic(format!("Could not serialize object: {e}")))?,
-        )
+        )?;
+        Ok((uuid, storage_template.with_uuid(uuid)))
     }
 }

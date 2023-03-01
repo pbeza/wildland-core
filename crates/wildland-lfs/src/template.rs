@@ -62,10 +62,8 @@ mod tests {
         let template: StorageTemplate = LocalFilesystemStorageTemplate::new("/home/user/wildland")
             .try_into()
             .unwrap();
-        let template_uuid = template.uuid();
 
         let expected_json_form = json!({
-            "uuid": template_uuid,
             "backend_type": "LocalFilesystem",
             "name": null,
             "template": {

@@ -18,6 +18,7 @@
 pub(crate) mod commands;
 
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use commands::*;
 use wildland_corex::catlib_service::entities::{
@@ -61,16 +62,11 @@ pub(crate) fn fetch_bridge_by_path(
     forest_uuid: &Uuid,
     path: String,
 ) -> CatlibResult<Arc<Mutex<dyn BridgeManifest>>> {
-    let data = query_get(db, "bridge-*".into())?;
+    let data = query_get(db, "bridge-*")?;
 
     let bridges: Vec<_> = data
-        .iter()
-        .map(|(key, value)| {
-            (
-                key.clone(),
-                BridgeData::from(value.as_ref().unwrap().as_str()),
-            )
-        })
+        .into_iter()
+        .map(|(key, value)| (key, BridgeData::from(value.as_ref().unwrap().as_str())))
         .filter(|(_key, bridge_data)| bridge_data.forest_uuid == *forest_uuid)
         .filter(|(_key, bridge_data)| bridge_data.path == PathBuf::from(path.clone()))
         .map(|(_key, data)| {
@@ -79,10 +75,12 @@ pub(crate) fn fetch_bridge_by_path(
         })
         .collect();
 
-    match bridges.len() {
-        0 => Err(CatlibError::NoRecordsFound),
-        1 => Ok(bridges[0].clone()),
-        _ => Err(CatlibError::MalformedDatabaseRecord),
+    match bridges.as_slice() {
+        [] => Err(CatlibError::NoRecordsFound),
+        [bridge] => Ok(bridge.clone()),
+        _ => Err(CatlibError::MalformedDatabaseRecord(
+            "More than 1 bridge found in Catalog Backend".into(),
+        )),
     }
 }
 
@@ -91,7 +89,7 @@ pub(crate) fn fetch_containers_by_forest_uuid(
     db: &RedisDb,
     forest_uuid: &Uuid,
 ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
-    let data = query_get(db, "container-*".into())?;
+    let data = query_get(db, "container-*")?;
 
     let containers: Vec<_> = data
         .iter()
@@ -120,7 +118,7 @@ pub(crate) fn fetch_all_containers(
     db: &RedisDb,
     forest_uuid: &Uuid,
 ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
-    let data = query_get(db, "container-*".into())?;
+    let data = query_get(db, "container-*")?;
 
     let containers: Vec<_> = data
         .iter()
@@ -151,7 +149,7 @@ pub(crate) fn fetch_containers_by_path(
     paths: ContainerPaths,
     include_subdirs: bool,
 ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>> {
-    let data = query_get(db, "container-*".into())?;
+    let data = query_get(db, "container-*")?;
 
     let containers: Vec<_> = data
         .iter()
@@ -226,7 +224,7 @@ pub(crate) fn fetch_forest_by_uuid(
 
 #[tracing::instrument(level = "debug", skip_all)]
 pub(crate) fn fetch_all_forests(db: &RedisDb) -> CatlibResult<Vec<Arc<Mutex<dyn ForestManifest>>>> {
-    let data = query_get(db, "forest-*".into())?;
+    let data = query_get(db, "forest-*")?;
 
     let forests: Vec<_> = data
         .iter()
@@ -250,20 +248,17 @@ pub(crate) fn fetch_all_forests(db: &RedisDb) -> CatlibResult<Vec<Arc<Mutex<dyn 
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
-pub(crate) fn fetch_templates(db: &RedisDb) -> CatlibResult<Vec<String>> {
-    let data = query_get(db, "template-*".into())?;
+pub(crate) fn fetch_templates(db: &RedisDb) -> CatlibResult<impl Iterator<Item = (Uuid, String)>> {
+    let data = query_get(db, "template-*")?;
 
-    let templates: Vec<_> = data
-        .iter()
-        .filter(|(_, value)| value.is_some())
-        .map(|(_, value)| value.as_ref().unwrap())
-        .cloned()
-        .collect();
-
-    match templates.len() {
-        0 => Err(CatlibError::NoRecordsFound),
-        _ => Ok(templates),
-    }
+    Ok(data.into_iter().filter_map(|(key, value)| {
+        value.map(|v| {
+            (
+                Uuid::from_str(key.strip_prefix("template-").unwrap()).unwrap(),
+                v,
+            )
+        })
+    }))
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
@@ -271,7 +266,7 @@ pub(crate) fn fetch_storages_by_template_uuid(
     db: &RedisDb,
     template_uuid: &Uuid,
 ) -> CatlibResult<Vec<Arc<Mutex<dyn StorageManifest>>>> {
-    let data = query_get(db, "storage-*".into())?;
+    let data = query_get(db, "storage-*")?;
 
     let storages: Vec<_> = data
         .iter()
@@ -299,7 +294,7 @@ pub(crate) fn fetch_storages_by_container_uuid(
     db: &RedisDb,
     uuid: &Uuid,
 ) -> CatlibResult<Vec<Arc<Mutex<dyn StorageManifest>>>> {
-    let data = query_get(db, "storage-*".into())?;
+    let data = query_get(db, "storage-*")?;
 
     let storages: Vec<_> = data
         .iter()
@@ -391,15 +386,13 @@ pub(crate) mod test {
     #[rstest]
     fn db_read_with_many_threads(catlib: RedisCatLib) {
         let run_fetch = |i: u32, db: RedisDb| async move {
-            let err = Err(CatlibError::NoRecordsFound);
             println!(
                 "Hello from task {}, tid: {:?}",
                 i,
                 std::thread::current().id()
             );
 
-            let result = db::fetch_templates(&db);
-            assert_eq!(err, result);
+            assert!(db::fetch_templates(&db).is_ok());
         };
 
         let runtime = tokio::runtime::Builder::new_multi_thread()

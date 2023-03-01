@@ -33,6 +33,10 @@ class CargoCfgProviderImpl : public CargoCfgProvider
     {
         return FoundationCloudMode::Dev;
     }
+    RustString get_redis_url() override
+    {
+        return RustString("redis://127.0.0.1:6379/0");
+    }
 };
 
 class LocalSecureStorageImpl : public LocalSecureStorage

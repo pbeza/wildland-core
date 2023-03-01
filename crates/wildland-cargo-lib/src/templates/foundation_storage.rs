@@ -97,11 +97,9 @@ mod tests {
         .try_into()
         .unwrap();
         fst.set_name("name".into());
-        let uuid = fst.uuid();
 
         let expected = serde_json::json!(
             {
-                "uuid": uuid,
                 "backend_type": "FoundationStorage",
                 "name": "name",
                 "template": {
@@ -128,12 +126,10 @@ mod tests {
         .try_into()
         .unwrap();
         fst.set_name("name".into());
-        let uuid = fst.uuid();
 
         let expected = format!(
             r#"
             name: name
-            uuid: {uuid}
             backend_type: FoundationStorage
             template:
                 bucket_uuid: 00000000-0000-0000-0000-000000000001
@@ -161,12 +157,10 @@ mod tests {
         .try_into()
         .unwrap();
         expected_template.set_name("name".into());
-        let uuid = expected_template.uuid();
 
         let yaml_template = format!(
             r#"
             name: name
-            uuid: {uuid}
             backend_type: FoundationStorage
             template:
                 bucket_uuid: 00000000-0000-0000-0000-000000000001

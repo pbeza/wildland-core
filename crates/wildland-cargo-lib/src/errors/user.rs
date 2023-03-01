@@ -70,7 +70,7 @@ impl From<CatlibError> for UserCreationError {
     fn from(catlib_err: CatlibError) -> Self {
         match catlib_err {
             CatlibError::NoRecordsFound
-            | CatlibError::MalformedDatabaseRecord
+            | CatlibError::MalformedDatabaseRecord(_)
             | CatlibError::Generic(_) => UserCreationError::CatlibError(catlib_err.to_string()),
             CatlibError::RecordAlreadyExists => UserCreationError::UserAlreadyExists,
         }

@@ -60,8 +60,10 @@ pub enum StorageTemplateError {
 ///
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct StorageTemplate {
+    /// If uuid is Some(_) then this template has been written to Catalog Backend which gave it an id.
+    #[serde(skip)]
+    uuid: Option<Uuid>,
     name: Option<String>,
-    uuid: Uuid,
     backend_type: String,
     template: serde_json::Value,
 }
@@ -79,11 +81,20 @@ impl StorageTemplate {
     ) -> Result<Self, StorageTemplateError> {
         Ok(Self {
             name: None,
-            uuid: Uuid::new_v4(),
+            uuid: None,
             backend_type: backend_type.to_string(),
             template: serde_json::to_value(template)
                 .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?,
         })
+    }
+
+    pub(crate) fn with_uuid(mut self, uuid: Uuid) -> Self {
+        self.uuid = Some(uuid);
+        self
+    }
+
+    pub fn set_uuid(&mut self, uuid: Uuid) {
+        self.uuid = Some(uuid);
     }
 
     pub fn name(&self) -> Option<String> {
@@ -110,32 +121,8 @@ impl StorageTemplate {
     /// }
     /// ```
     pub fn from_json(content: Vec<u8>) -> Result<StorageTemplate, StorageTemplateError> {
-        let storage_data: serde_json::Value = serde_json::from_slice(content.as_slice())
-            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
-
-        let backend_type = storage_data.get("backend_type").map_or(
-            Err(StorageTemplateError::SerdeErr(
-                "Missing `backend_type` key".into(),
-            )),
-            |b| {
-                if b.is_string() {
-                    Ok(b.as_str().unwrap())
-                } else {
-                    Err(StorageTemplateError::SerdeErr(
-                        "Invalid `backend_type` value".into(),
-                    ))
-                }
-            },
-        )?;
-
-        let template_specific_fields =
-            storage_data
-                .get("template")
-                .ok_or(StorageTemplateError::SerdeErr(
-                    "Missing `template` key".into(),
-                ))?;
-
-        Self::try_new(backend_type, &template_specific_fields)
+        serde_json::from_slice(content.as_slice())
+            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))
     }
 
     /// Deserializes yaml-formatted content as a StorageTemplate.
@@ -147,32 +134,8 @@ impl StorageTemplate {
     ///     ...template specific fields
     /// ```
     pub fn from_yaml(content: Vec<u8>) -> Result<StorageTemplate, StorageTemplateError> {
-        let storage_data: serde_yaml::Value = serde_yaml::from_slice(content.as_slice())
-            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
-
-        let backend_type = storage_data.get("backend_type").map_or(
-            Err(StorageTemplateError::SerdeErr(
-                "Missing `backend_type` key".into(),
-            )),
-            |b| {
-                if b.is_string() {
-                    Ok(b.as_str().unwrap())
-                } else {
-                    Err(StorageTemplateError::SerdeErr(
-                        "Invalid `backend_type` value".into(),
-                    ))
-                }
-            },
-        )?;
-
-        let template_specific_fields =
-            storage_data
-                .get("template")
-                .ok_or(StorageTemplateError::SerdeErr(
-                    "Missing `template` key".into(),
-                ))?;
-
-        Self::try_new(backend_type, &template_specific_fields)
+        serde_yaml::from_slice(content.as_slice())
+            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))
     }
 
     pub fn to_json(&self) -> Result<String, StorageTemplateError> {
@@ -189,12 +152,16 @@ impl StorageTemplate {
         self.backend_type.clone()
     }
 
-    pub fn uuid(&self) -> Uuid {
+    /// If returned Some(_) then this template has been written to Catalog Backend which gave it an id.
+    /// Otherwise it returns None
+    pub fn uuid(&self) -> Option<Uuid> {
         self.uuid
     }
 
-    pub fn uuid_str(&self) -> String {
-        self.uuid.to_string()
+    /// If returned Some(_) then this template has been written to Catalog Backend which gave it an id.
+    /// Otherwise it returns None
+    pub fn uuid_str(&self) -> Option<String> {
+        self.uuid.map(|u| u.to_string())
     }
 
     pub fn render(&self, params: TemplateContext) -> Result<Storage, StorageTemplateError> {
