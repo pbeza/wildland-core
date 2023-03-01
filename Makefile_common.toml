@@ -35,12 +35,6 @@ toolchain     = "nightly"
 [tasks.code-fix]
 run_task = { name = ["clippy-fix", "format"] }
 
-# minio is broken on CI
-[tasks.test-ci]
-args    = ["test", "--", "--skip", "storage_backends::s3::tests"]
-command = "cargo"
-
-
 [tasks.deps-up]
 args      = ["--file", "../../docker-compose.yml", "up", "--force-recreate", "--detach"]
 command   = "docker-compose"

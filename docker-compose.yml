@@ -8,6 +8,7 @@ services:
       - "9001:9001" # web ui
     command: ["server", "/minio-data", "--console-address", ":9001"]
     tmpfs:
+      - /data
       - /minio-data
 
   redis:

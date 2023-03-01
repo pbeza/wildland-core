@@ -1,6 +1,7 @@
 use anyhow::Context;
 use aws_sdk_s3::model::{CompletedPart, CopyPartResult};
 use scopeguard::ScopeGuard;
+use wildland_corex::dfs::interface::DfsFrontendError;
 
 use super::client::S3Client;
 use super::error::S3Error;
@@ -69,4 +70,12 @@ where
     S: scopeguard::Strategy,
 {
     scopeguard::ScopeGuard::into_inner(guard);
+}
+
+pub fn map_conccurent_operation_error(err: S3Error) -> DfsFrontendError {
+    match err {
+        S3Error::NotFound => DfsFrontendError::ConcurrentIssue,
+        S3Error::ETagMistmach => DfsFrontendError::ConcurrentIssue,
+        S3Error::Generic(err) => DfsFrontendError::Generic(format!("{err:?}")),
+    }
 }

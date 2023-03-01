@@ -43,7 +43,6 @@ s3_error_implement_from!(GetObjectError);
 s3_error_implement_from!(CreateMultipartUploadError);
 s3_error_implement_from!(CompleteMultipartUploadError);
 s3_error_implement_from!(UploadPartCopyError);
-s3_error_implement_from!(UploadPartError);
 s3_error_implement_from!(PutObjectError);
 s3_error_implement_from!(DeleteObjectError);
 
