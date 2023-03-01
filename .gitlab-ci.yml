@@ -87,7 +87,7 @@ cargo test:
   services:
     - name: minio/minio:latest
       alias: minio
-      entrypoint: ["minio", "server", "$CI_PROJECT_DIR/minio-data"]
+      entrypoint: ["minio" ,"server", "/data"]
   script:
     - redis-server --daemonize yes
     - cargo make test
