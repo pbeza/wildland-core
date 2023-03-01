@@ -23,6 +23,7 @@ use wildland_corex::catlib_service::entities::{
     ForestManifest,
     StorageManifest,
 };
+use wildland_corex::CatlibContainerFilter;
 
 use super::*;
 use crate::storage::StorageEntity;
@@ -56,10 +57,20 @@ pub(crate) struct ContainerEntity {
 }
 
 impl ContainerEntity {
-    pub fn from_container_data(container_data: ContainerData, db: &RedisDb) -> Self {
-        Self {
-            container_data,
-            db: db.clone(),
+    pub fn from_container_data(container_data: ContainerData, db: RedisDb) -> Self {
+        Self { container_data, db }
+    }
+
+    pub fn check_filter(&self, filter: &CatlibContainerFilter) -> bool {
+        let paths = &self.container_data.paths;
+        match filter {
+            CatlibContainerFilter::HasExactPath(path) => paths.contains(path),
+            CatlibContainerFilter::HasPathStartingWith(path) => {
+                paths.iter().any(|p| p.starts_with(path))
+            }
+            CatlibContainerFilter::Or(f1, f2) => self.check_filter(f1) || self.check_filter(f2),
+            CatlibContainerFilter::And(f1, f2) => self.check_filter(f1) && self.check_filter(f2),
+            CatlibContainerFilter::Not(f) => !self.check_filter(f),
         }
     }
 }
@@ -165,7 +176,7 @@ impl Model for ContainerEntity {
     }
 
     fn sync(&mut self) -> CatlibResult<()> {
-        let container = db::fetch_container_by_uuid(&self.db, &self.uuid())?;
+        let container = db::fetch_container_by_uuid(self.db.clone(), &self.uuid())?;
         let container_lock = container.lock().expect("Poisoned Mutex");
         self.container_data = ContainerData::from(container_lock.serialise().as_str());
         Ok(())
@@ -180,6 +191,7 @@ mod tests {
 
     use rstest::*;
     use wildland_corex::entities::ContainerManifest;
+    use wildland_corex::CatlibContainerFilter;
 
     use super::db::test::catlib;
     use crate::*;
@@ -285,11 +297,12 @@ mod tests {
             .contains(&"/bar/baz".into()));
 
         // Try to find that container in the database
-        let containers = forest
+        let containers: Vec<_> = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/foo/bar".into()], false)
-            .unwrap();
+            .find_containers(Some(CatlibContainerFilter::HasExactPath("/foo/bar".into())))
+            .unwrap()
+            .collect();
         assert_eq!(containers.len(), 1);
 
         // Ensure again that it still has the paths
@@ -308,11 +321,15 @@ mod tests {
 
         // Try to fetch the same (one) container, using two different paths. The result
         // should be only one (not two) containers.
-        let containers = forest
+        let containers: Vec<_> = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/foo/bar".into(), "/bar/baz".into()], false)
-            .unwrap();
+            .find_containers(Some(CatlibContainerFilter::Or(
+                Box::new(CatlibContainerFilter::HasExactPath("/foo/bar".into())),
+                Box::new(CatlibContainerFilter::HasExactPath("/foo/baz".into())),
+            )))
+            .unwrap()
+            .collect();
         assert_eq!(containers.len(), 1);
     }
 
@@ -355,16 +372,18 @@ mod tests {
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/foo/bar".into()], false)
-            .unwrap();
+            .find_containers(Some(CatlibContainerFilter::HasExactPath("/foo/bar".into())))
+            .unwrap()
+            .collect::<Vec<_>>();
         assert_eq!(containers.len(), 1);
 
         // try to find the first and the second containers, using shared path
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/bar/baz".into()], false)
-            .unwrap();
+            .find_containers(Some(CatlibContainerFilter::HasExactPath("/bar/baz".into())))
+            .unwrap()
+            .collect::<Vec<_>>();
         assert_eq!(containers.len(), 2);
 
         // Make sure that they are in fact two different containers
@@ -468,42 +487,57 @@ mod tests {
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/foo".into()], false);
-        assert_eq!(containers.err(), Some(CatlibError::NoRecordsFound));
+            .find_containers(Some(CatlibContainerFilter::HasExactPath("/foo".into())))
+            .unwrap()
+            .collect::<Vec<_>>();
+        assert!(containers.is_empty());
 
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/foo/bar1".into()], true)
-            .unwrap();
+            .find_containers(Some(CatlibContainerFilter::HasPathStartingWith(
+                "/foo/bar1".into(),
+            )))
+            .unwrap()
+            .collect::<Vec<_>>();
         assert_eq!(containers.len(), 1);
 
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/foo".into()], true)
-            .unwrap();
+            .find_containers(Some(CatlibContainerFilter::HasPathStartingWith(
+                "/foo".into(),
+            )))
+            .unwrap()
+            .collect::<Vec<_>>();
         assert_eq!(containers.len(), 2);
 
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/bar".into()], true)
-            .unwrap();
+            .find_containers(Some(CatlibContainerFilter::HasPathStartingWith(
+                "/bar".into(),
+            )))
+            .unwrap()
+            .collect::<Vec<_>>();
         assert_eq!(containers.len(), 2);
 
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/baz".into()], true)
-            .unwrap();
+            .find_containers(Some(CatlibContainerFilter::HasPathStartingWith(
+                "/baz".into(),
+            )))
+            .unwrap()
+            .collect::<Vec<_>>();
         assert_eq!(containers.len(), 1);
 
         let containers = forest
             .lock()
             .unwrap()
-            .find_containers(vec!["/".into()], true)
-            .unwrap();
+            .find_containers(Some(CatlibContainerFilter::HasPathStartingWith("/".into())))
+            .unwrap()
+            .collect::<Vec<_>>();
         assert_eq!(containers.len(), 3);
     }
 }

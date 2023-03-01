@@ -16,6 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
@@ -50,6 +51,17 @@ pub type ContainerPath = std::path::PathBuf;
 pub type ContainerPaths = Vec<ContainerPath>;
 pub type Signers = HashSet<Identity>;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CatlibContainerFilter {
+    HasExactPath(PathBuf),
+    HasPathStartingWith(PathBuf),
+    Or(Box<CatlibContainerFilter>, Box<CatlibContainerFilter>),
+    And(Box<CatlibContainerFilter>, Box<CatlibContainerFilter>),
+    Not(Box<CatlibContainerFilter>),
+}
+
+pub type ContainerManifestIter = Box<dyn Iterator<Item = Arc<Mutex<dyn ContainerManifest>>>>;
+
 /// `ForestManifest` trait is an API providing methods needed to operate on the forest's
 /// state. It should be implemented by Cat-Lib instance and should be
 /// treated as a kind of a proxy layer between Wildland Core and the external
@@ -77,7 +89,10 @@ pub trait ForestManifest: std::fmt::Debug {
 
     /// Return list of Forest Containers
     ///
-    fn containers(&self) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
+    fn find_containers(
+        &self,
+        filters: Option<CatlibContainerFilter>, // Passing filter allows db client to optimize query (filtering by lambda does not)
+    ) -> Result<ContainerManifestIter, CatlibError>;
 
     /// Set Forest arbitrary data
     ///
@@ -114,17 +129,6 @@ pub trait ForestManifest: std::fmt::Debug {
     /// Return bridge that matches the given [`ContainerPath`].
     ///
     fn find_bridge(&self, path: String) -> Result<Arc<Mutex<dyn BridgeManifest>>, CatlibError>;
-
-    /// Retrieve Containers that match given [`ContainerPath`]s.
-    ///
-    /// If `include_subdirs` is `true`, then the [`ContainerPath`]s are treated as Path prefixes
-    /// and not absolute paths.
-    ///
-    fn find_containers(
-        &self,
-        paths: ContainerPaths,
-        include_subdirs: bool,
-    ) -> Result<Vec<Arc<Mutex<dyn ContainerManifest>>>, CatlibError>;
 
     /// Retrieve Forest's metadata
     ///

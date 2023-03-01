@@ -18,6 +18,7 @@
 pub mod cargo_lib;
 pub mod cargo_user;
 pub mod config;
+pub mod container;
 pub mod foundation_storage;
 pub mod user;
 

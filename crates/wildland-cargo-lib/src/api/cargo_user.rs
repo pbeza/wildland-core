@@ -21,6 +21,7 @@ use wildland_corex::catlib_service::CatLibService;
 use wildland_corex::{Container, ContainerManager, ContainerManagerError, Forest, StorageTemplate};
 
 use super::config::FoundationStorageApiConfig;
+use super::container::{CargoContainer, CargoContainerFilter, MountState};
 use super::foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError};
 use crate::errors::storage::GetStorageTemplateError;
 
@@ -86,10 +87,127 @@ All devices:
         )
     }
 
-    /// Returns vector of handles to all containers (mounted or not) found in the user's forest.
-    #[tracing::instrument(level = "debug", skip_all)]
-    pub fn get_containers(&self) -> Result<Vec<Container>, CatlibError> {
-        self.forest.containers()
+    /// Returns vector of handles to containers found in the user's forest.
+    ///
+    /// # Args:
+    /// - `filter`: filter that is passed to catlib, so the query to database could be optimized
+    /// - `mount_state`: specifies whether to include mounted, unmounted or all containers in results.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// # use wildland_cargo_lib::api::CargoConfig;
+    /// # use wildland_cargo_lib::api::container::*;
+    /// # use wildland_cargo_lib::api::cargo_lib::create_cargo_lib;
+    /// # use wildland_lfs::template::LocalFilesystemStorageTemplate;
+    /// # use wildland_corex::StorageTemplate;
+    /// # use wildland_corex::LocalSecureStorage;
+    /// # use std::cell::RefCell;
+    /// # use std::collections::HashMap;
+    /// # use wildland_corex::LssResult;
+    ///
+    /// # let tmpdir = tempfile::tempdir().unwrap().into_path();
+    ///
+    /// # let config_str = r#"{
+    /// #     "log_level": "trace",
+    /// #     "log_use_ansi": false,
+    /// #     "log_file_enabled": true,
+    /// #     "log_file_path": "cargo_lib_log",
+    /// #     "log_file_rotate_directory": ".",
+    /// #     "evs_url": "some_url",
+    /// #     "sc_url": "some_url",
+    /// #     "redis_connection_string": "redis://127.0.0.1/0"
+    /// # }"#;
+    /// # let cfg: CargoConfig = serde_json::from_str(config_str).unwrap();
+    ///
+    /// # fn lss_stub() -> &'static dyn LocalSecureStorage {
+    /// #     #[derive(Default)]
+    /// #     struct LssStub {
+    /// #         storage: RefCell<HashMap<String, String>>,
+    /// #     }
+    ///
+    /// #     impl LocalSecureStorage for LssStub {
+    /// #         fn insert(&self, key: String, value: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.borrow_mut().insert(key, value))
+    /// #         }
+    ///
+    /// #         fn get(&self, key: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.try_borrow().unwrap().get(&key).cloned())
+    /// #         }
+    ///
+    /// #         fn contains_key(&self, key: String) -> LssResult<bool> {
+    /// #             Ok(self.storage.borrow().contains_key(&key))
+    /// #         }
+    ///
+    /// #         fn keys(&self) -> LssResult<Vec<String>> {
+    /// #             Ok(self.storage.borrow().keys().cloned().collect())
+    /// #         }
+    ///
+    /// #         fn keys_starting_with(&self, prefix: String) -> LssResult<Vec<String>> {
+    /// #             Ok(self
+    /// #                 .storage
+    /// #                 .borrow()
+    /// #                 .keys()
+    /// #                 .filter(|key| key.starts_with(&prefix))
+    /// #                 .cloned()
+    /// #                 .collect())
+    /// #         }
+    ///
+    /// #         fn remove(&self, key: String) -> LssResult<Option<String>> {
+    /// #             Ok(self.storage.borrow_mut().remove(&key))
+    /// #         }
+    ///
+    /// #         fn len(&self) -> LssResult<usize> {
+    /// #             Ok(self.storage.borrow().len())
+    /// #         }
+    ///
+    /// #         fn is_empty(&self) -> LssResult<bool> {
+    /// #             Ok(self.storage.borrow().is_empty())
+    /// #         }
+    /// #     }
+
+    /// #     Box::leak(Box::<LssStub>::default())
+    /// # }
+    ///
+    /// # let lss_stub = lss_stub();
+    ///
+    /// # let cargo_lib = create_cargo_lib(lss_stub, cfg);
+    /// # let cargo_lib = cargo_lib.lock().unwrap();
+    /// # let user_api = cargo_lib.user_api();
+    /// # let mnemonic = user_api.generate_mnemonic().unwrap();
+    /// # let user = user_api
+    /// #     .create_user_from_mnemonic(&mnemonic, "device_name".to_string())
+    /// #     .unwrap();
+    ///
+    /// let containers = user
+    ///     .find_containers(
+    ///         Some(CargoContainerFilter::or(
+    ///             CargoContainerFilter::has_exact_path("/some/path".into()),
+    ///             CargoContainerFilter::has_path_starting_with("/some/other/".into()),
+    ///         )),
+    ///         MountState::MountedOrUnmounted,
+    ///     )
+    ///     .unwrap();
+    /// ```
+    pub fn find_containers(
+        &self,
+        filter: Option<CargoContainerFilter>,
+        mount_state: MountState,
+    ) -> Result<Vec<CargoContainer>, CatlibError> {
+        Ok(self
+            .forest
+            .find_containers(filter.map(Into::into))?
+            .filter_map(|corex_container| {
+                let container =
+                    CargoContainer::new(self.container_manager.clone(), corex_container);
+
+                match mount_state {
+                    MountState::Mounted => container.is_mounted().then_some(container),
+                    MountState::Unmounted => (!container.is_mounted()).then_some(container),
+                    MountState::MountedOrUnmounted => Some(container),
+                }
+            })
+            .collect())
     }
 
     /// Creates a new container within user's forest and returns its handle
@@ -197,8 +315,11 @@ All devices:
         name: String,
         template: &StorageTemplate,
         path: String,
-    ) -> Result<Container, CatlibError> {
-        self.forest.create_container(name, template, path.into())
+    ) -> Result<CargoContainer, CatlibError> {
+        Ok(CargoContainer::new(
+            self.container_manager.clone(),
+            self.forest.create_container(name, template, path.into())?,
+        ))
     }
 
     pub fn this_device(&self) -> &str {
@@ -287,8 +408,6 @@ All devices:
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use base64::engine::general_purpose::STANDARD;
     use base64::Engine;
     use mockito::Matcher;
@@ -302,6 +421,7 @@ mod tests {
 
     use super::CargoUser;
     use crate::api::config::FoundationStorageApiConfig;
+    use crate::api::container::{CargoContainerFilter, MountState};
     use crate::templates::foundation_storage::FoundationStorageTemplate;
     use crate::utils::test::catlib_service;
 
@@ -432,9 +552,8 @@ mod tests {
         let (cargo_user, catlib_service, forest, _server) = setup;
 
         // when container is created
-        let container_uuid_str = "00000000-0000-0000-0000-000000000001";
         let storage_template = FoundationStorageTemplate::new(
-            Uuid::from_str(container_uuid_str).unwrap(),
+            Uuid::new_v4(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
             "some url".to_owned(),
@@ -449,7 +568,12 @@ mod tests {
 
         // then it is stored in catlib
         let retrieved_forest = catlib_service.get_forest(&forest.uuid()).unwrap();
-        let containers = retrieved_forest.lock().unwrap().containers().unwrap();
+        let containers = retrieved_forest
+            .lock()
+            .unwrap()
+            .find_containers(None)
+            .unwrap()
+            .collect::<Vec<_>>();
         assert_eq!(containers.len(), 1);
         assert_eq!(
             containers[0].lock().unwrap().name().unwrap(),
@@ -474,9 +598,8 @@ mod tests {
         let (cargo_user, _catlib_service, _forest, _server) = setup;
 
         // when container is created
-        let container_uuid_str = "00000000-0000-0000-0000-000000000001";
         let storage_template = FoundationStorageTemplate::new(
-            Uuid::from_str(container_uuid_str).unwrap(),
+            Uuid::new_v4(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
             "some url".to_owned(),
@@ -490,7 +613,9 @@ mod tests {
             .unwrap();
 
         // then it can be retrieved via CargoUser api
-        let containers = cargo_user.get_containers().unwrap();
+        let containers = cargo_user
+            .find_containers(None, MountState::MountedOrUnmounted)
+            .unwrap();
         assert_eq!(containers.len(), 1);
         assert_eq!(containers[0].name().unwrap(), container_name);
     }
@@ -501,9 +626,8 @@ mod tests {
         let (cargo_user, _catlib_service, _forest, _server) = setup;
 
         // when a container is created
-        let container_uuid_str = "00000000-0000-0000-0000-000000000001";
         let storage_template = FoundationStorageTemplate::new(
-            Uuid::from_str(container_uuid_str).unwrap(),
+            Uuid::new_v4(),
             "cred_id".to_owned(),
             "cred_secret".to_owned(),
             "some url".to_owned(),
@@ -520,10 +644,75 @@ mod tests {
         container.remove().unwrap();
 
         // then it cannot be retrieved via CargoUser api
-        let containers = cargo_user.get_containers();
+        let containers = cargo_user.find_containers(None, MountState::MountedOrUnmounted);
         assert!(matches!(containers, Err(CatlibError::NoRecordsFound)));
 
         // and the container handle received during creation is marked as deleted
         assert!(matches!(container.name(), Err(CatlibError::NoRecordsFound)));
+    }
+
+    #[rstest]
+    fn test_filtering_containers(setup: (CargoUser, CatLibService, Forest, mockito::Server)) {
+        // given setup
+        let (cargo_user, _catlib_service, _forest, _server) = setup;
+
+        // when one container is created and mounted
+        let storage_template = FoundationStorageTemplate::new(
+            Uuid::new_v4(),
+            "cred_id".to_owned(),
+            "cred_secret".to_owned(),
+            "some url".to_owned(),
+        )
+        .try_into()
+        .unwrap();
+        let container_name = "new container".to_string();
+        let path = "/some/path".to_owned();
+        let c1 = cargo_user
+            .create_container(container_name, &storage_template, path)
+            .unwrap();
+        c1.mount().unwrap();
+
+        // and when another container is created but not mounted
+        let container_name = "new container 2".to_string();
+        let path = "/some/other/path".to_owned();
+        let _c2 = cargo_user
+            .create_container(container_name, &storage_template, path)
+            .unwrap();
+
+        // then both containers may be retrieved when mount state is irrelevant
+        let containers = cargo_user
+            .find_containers(
+                Some(CargoContainerFilter::or(
+                    CargoContainerFilter::has_exact_path("/some/path".into()),
+                    CargoContainerFilter::has_path_starting_with("/some/other/".into()),
+                )),
+                MountState::MountedOrUnmounted,
+            )
+            .unwrap();
+        assert_eq!(containers.len(), 2);
+        assert!(containers
+            .iter()
+            .any(|c| c.name().unwrap() == "new container"));
+        assert!(containers
+            .iter()
+            .any(|c| c.name().unwrap() == "new container 2"));
+
+        // and then containers mounted containers can be retrieved
+        let containers = cargo_user
+            .find_containers(None, MountState::Mounted)
+            .unwrap();
+        assert_eq!(containers.len(), 1);
+        assert!(containers
+            .iter()
+            .any(|c| c.name().unwrap() == "new container"));
+
+        // and then containers unmounted containers can be retrieved
+        let containers = cargo_user
+            .find_containers(None, MountState::Unmounted)
+            .unwrap();
+        assert_eq!(containers.len(), 1);
+        assert!(containers
+            .iter()
+            .any(|c| c.name().unwrap() == "new container 2"));
     }
 }
