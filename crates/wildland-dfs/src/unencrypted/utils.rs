@@ -1,29 +1,31 @@
-use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use itertools::Itertools;
-use wildland_corex::dfs::interface::{DfsFrontendError, FileHandle};
+use wildland_corex::dfs::interface::{Cause, DfsFrontendError, FileHandle};
 use wildland_corex::{ResolvedPath, Storage};
 
 use super::node_descriptor::NodeStorages;
 use super::{NodeDescriptor, UnencryptedDfs};
+use crate::events::EventBuilder;
 use crate::storage_backends::models::StorageBackendError;
 use crate::storage_backends::{CloseOnDropDescriptor, StorageBackend};
 
 pub fn filter_existent_nodes<'a: 'b, 'b>(
     nodes: &'a [NodeDescriptor],
     dfs: &'b mut UnencryptedDfs,
+    event_builder: &EventBuilder,
 ) -> Result<impl Iterator<Item = &'a NodeDescriptor>, DfsFrontendError> {
     Ok(nodes
         .iter()
-        .map(move |node| match node {
-            NodeDescriptor::Physical { storages, .. } => {
-                execute_container_operation(dfs, storages, &|backend| {
-                    backend.path_exists(storages.path_within_storage())
-                })
-                .map(|exists| exists.then_some(node))
-            }
+        .map(|node| match node {
+            NodeDescriptor::Physical { storages, .. } => execute_container_operation(
+                dfs,
+                storages,
+                |backend| backend.path_exists(storages.path_within_storage()),
+                event_builder,
+            )
+            .map(|exists| exists.then_some(node)),
             NodeDescriptor::Virtual { .. } => Ok(Some(node)), // virtual nodes are forwarded
         })
         .collect::<Result<Vec<_>, DfsFrontendError>>()?
@@ -31,12 +33,13 @@ pub fn filter_existent_nodes<'a: 'b, 'b>(
         .flatten())
 }
 
-pub fn execute_container_operation<T: Debug>(
+pub fn execute_container_operation<T>(
     dfs_front: &mut UnencryptedDfs,
     node_storages: &NodeStorages,
-    backend_op: &dyn Fn(Rc<dyn StorageBackend>) -> Result<T, StorageBackendError>,
+    backend_op: impl Fn(Rc<dyn StorageBackend>) -> Result<T, StorageBackendError>,
+    event_builder: &EventBuilder,
 ) -> Result<T, DfsFrontendError> {
-    let backends = dfs_front.get_backends(node_storages.storages());
+    let backends = dfs_front.get_backends(node_storages.storages(), event_builder);
 
     let backend_ops = backends.map(|backend| backend_op(backend));
 
@@ -45,6 +48,7 @@ pub fn execute_container_operation<T: Debug>(
         node_storages.storages(),
         backend_ops,
         ExecutionPolicy::SequentiallyToFirstSuccess,
+        event_builder,
     )
 }
 
@@ -88,35 +92,33 @@ fn map_resolved_path_into_node_descriptor(
 pub enum ExecutionPolicy {
     SequentiallyToFirstSuccess,
 }
-pub fn execute_backend_op_with_policy<T: std::fmt::Debug>(
+pub fn execute_backend_op_with_policy<T>(
     storages: &[Storage],
-    ops: impl Iterator<Item = Result<T, StorageBackendError>>,
+    mut ops: impl Iterator<Item = Result<T, StorageBackendError>>,
     policy: ExecutionPolicy,
+    event_builder: &EventBuilder,
 ) -> Result<T, DfsFrontendError> {
     match policy {
-        ExecutionPolicy::SequentiallyToFirstSuccess => {
-            ops.inspect(|result| {
-                if result.is_err() {
-                    // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
-                    tracing::error!(
-                        "Backend returned error for operation: {}",
-                        result.as_ref().unwrap_err()
-                    );
+        ExecutionPolicy::SequentiallyToFirstSuccess => ops
+            .find_map(|v| match v {
+                Ok(v) => Some(v),
+                Err(err) => {
+                    event_builder.send(Cause::UnresponsiveBackend);
+                    tracing::error!("Backend returned error for operation: {err:?}");
+                    None
                 }
             })
-            .find(Result::is_ok)
             .map_or_else(
                 || {
-                    // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
+                    event_builder.send(Cause::AllBackendsUnresponsive);
                     tracing::error!(
                         "None of the backends for storages {:?} works",
                         storages.iter().map(|s| s.backend_type())
                     );
                     Err(DfsFrontendError::StorageNotResponsive)
                 },
-                |r| Ok(r.unwrap()),
-            )
-        }
+                |r| Ok(r),
+            ),
     }
 }
 
@@ -139,13 +141,15 @@ pub fn find_node_matching_requested_path<'a>(
 pub fn exec_on_single_existing_node<T>(
     dfs: &mut UnencryptedDfs,
     nodes: &mut Vec<NodeDescriptor>,
-    operation: &dyn Fn(&mut UnencryptedDfs, &NodeDescriptor) -> Result<T, DfsFrontendError>,
+    operation: impl Fn(&mut UnencryptedDfs, &NodeDescriptor) -> Result<T, DfsFrontendError>,
+    event_builder: &EventBuilder,
 ) -> Result<T, DfsFrontendError> {
     match nodes.as_slice() {
         [] => Err(DfsFrontendError::NoSuchPath),
         [node] => operation(dfs, node),
         _ => {
-            let existent_paths: Vec<_> = filter_existent_nodes(nodes, dfs)?.collect();
+            let existent_paths: Vec<_> =
+                filter_existent_nodes(nodes, dfs, event_builder)?.collect();
 
             match existent_paths.as_slice() {
                 [] => Err(DfsFrontendError::NoSuchPath),
@@ -159,7 +163,7 @@ pub fn exec_on_single_existing_node<T>(
 pub fn exec_on_opened_file<T>(
     dfs: &mut UnencryptedDfs,
     file: &FileHandle,
-    op: &dyn Fn(&mut CloseOnDropDescriptor) -> Result<T, DfsFrontendError>,
+    op: impl Fn(&mut CloseOnDropDescriptor) -> Result<T, DfsFrontendError>,
 ) -> Result<T, DfsFrontendError> {
     if let Some(opened_file) = dfs.opened_files.get_mut(&file.descriptor_uuid) {
         op(opened_file)

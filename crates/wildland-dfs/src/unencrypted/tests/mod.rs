@@ -311,7 +311,6 @@ impl StorageBackend for Mufs {
     }
 }
 
-#[derive(Debug)]
 pub struct MufsOpenedFile {
     inner: File,
 }

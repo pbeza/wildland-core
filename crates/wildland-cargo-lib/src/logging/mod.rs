@@ -22,13 +22,11 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 use crate::api::config::LoggerConfig;
 
-pub(crate) fn init_subscriber(cfg: LoggerConfig) {
+pub(crate) fn init_subscriber(mut cfg: LoggerConfig) {
     if !cfg.use_logger {
         eprintln!("default log subscriber disabled by config!");
         return;
     }
-
-    let mut cfg = cfg;
 
     // check if we are using release or debug build and adjust the level
     cfg.validate_config_level();

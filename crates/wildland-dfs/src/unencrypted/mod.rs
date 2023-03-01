@@ -29,13 +29,17 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use uuid::Uuid;
 use wildland_corex::dfs::interface::{
+    Cause,
     DfsFrontend,
     DfsFrontendError,
+    EventSubscriber,
     FileHandle,
     FsStat,
+    Operation,
     Stat,
     UnixTimestamp,
     WlPermissions,
@@ -52,6 +56,7 @@ use self::utils::{
     filter_existent_nodes,
     get_related_nodes,
 };
+use crate::events::{EventBuilder, EventSystem, NonBlockingEventSystem};
 use crate::storage_backends::models::{
     CloseError,
     OpenResponse,
@@ -88,6 +93,7 @@ pub struct UnencryptedDfs {
     /// reference).
     storage_backends: HashMap<Uuid, Rc<dyn StorageBackend>>,
     path_translator: Box<dyn PathConflictResolver>,
+    event_system: Rc<dyn EventSystem>,
 }
 
 impl UnencryptedDfs {
@@ -101,6 +107,7 @@ impl UnencryptedDfs {
             storage_backend_factories,
             storage_backends: HashMap::new(),
             path_translator: Box::new(UuidInDirTranslator::new()),
+            event_system: Rc::new(NonBlockingEventSystem::new()),
         }
     }
 
@@ -120,36 +127,38 @@ impl UnencryptedDfs {
         &mut self,
         storage: &Storage,
     ) -> Result<Rc<dyn StorageBackend>, Box<dyn std::error::Error>> {
-        let backend = match self.storage_backends.entry(storage.uuid()) {
-            Entry::Occupied(occupied_entry) => occupied_entry.get().clone(),
+        match self.storage_backends.entry(storage.uuid()) {
+            Entry::Occupied(occupied_entry) => Ok(occupied_entry.get().clone()),
             Entry::Vacant(vacant_entry) => {
                 match self.storage_backend_factories.get(storage.backend_type()) {
                     Some(factory) => {
                         let backend = factory.init_backend(storage.clone())?;
-                        vacant_entry.insert(backend).clone()
+                        Ok(vacant_entry.insert(backend).clone())
                     }
-                    None => {
-                        return Err(Box::<dyn std::error::Error>::from(format!(
-                            "Could not find backend factory for {} storage",
-                            storage.backend_type()
-                        )))
-                    }
+                    None => Err(Box::<dyn std::error::Error>::from(format!(
+                        "Could not find backend factory for {} storage",
+                        storage.backend_type()
+                    ))),
                 }
             }
-        };
-
-        Ok(backend)
+        }
     }
 
     /// Matches every given Storage with its StorageBackend and return iterator over such pairs.
     fn get_backends<'a>(
         &'a mut self,
         storages: &'a [Storage],
+        event_builder: &'a EventBuilder,
     ) -> impl Iterator<Item = Rc<dyn StorageBackend>> + '_ {
-        storages.iter().filter_map(|storage| {
-            match self.get_backend(storage) {
+        storages
+            .iter()
+            .filter_map(|storage| match self.get_backend(storage) {
                 Err(e) => {
-                    // TODO WILX-363 send alert to the wildland app bypassing DFS Frontend API
+                    event_builder
+                        .clone()
+                        .backend_type(storage.backend_type().to_owned())
+                        .send(Cause::UnsupportedBackendType);
+
                     tracing::error!(
                         "Unsupported storage backend: {}; Reason: {}",
                         storage.backend_type(),
@@ -158,12 +167,11 @@ impl UnencryptedDfs {
                     None
                 }
                 Ok(backend) => Some(backend),
-            }
-        })
+            })
     }
 
     fn seek(&mut self, file: &FileHandle, seek_from: SeekFrom) -> Result<usize, DfsFrontendError> {
-        exec_on_opened_file(self, file, &|opened_file| opened_file.seek(seek_from))
+        exec_on_opened_file(self, file, |opened_file| opened_file.seek(seek_from))
     }
 }
 
@@ -195,17 +203,22 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn open(&mut self, input_exposed_path: String) -> Result<FileHandle, DfsFrontendError> {
+        let event_builder = EventBuilder::new(self.event_system.clone())
+            .operation(Operation::Open)
+            .operation_path(input_exposed_path.clone());
+
         let open_op = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
-            NodeDescriptor::Physical { storages, .. } => {
-                execute_container_operation(dfs, storages, &|backend| {
-                    backend.open(storages.path_within_storage())
-                })
-                .and_then(|resp| match resp {
-                    OpenResponse::Found(opened_file) => Ok(dfs.insert_opened_file(opened_file)),
-                    OpenResponse::NotAFile => Err(DfsFrontendError::NotAFile),
-                    _ => Err(DfsFrontendError::NoSuchPath),
-                })
-            }
+            NodeDescriptor::Physical { storages, .. } => execute_container_operation(
+                dfs,
+                storages,
+                |backend| backend.open(storages.path_within_storage()),
+                &event_builder,
+            )
+            .and_then(|resp| match resp {
+                OpenResponse::Found(opened_file) => Ok(dfs.insert_opened_file(opened_file)),
+                OpenResponse::NotAFile => Err(DfsFrontendError::NotAFile),
+                _ => Err(DfsFrontendError::NoSuchPath),
+            }),
             NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::NoSuchPath),
         };
 
@@ -216,7 +229,8 @@ impl DfsFrontend for UnencryptedDfs {
             [] => Err(DfsFrontendError::NoSuchPath),
             [node] => open_op(self, node),
             _ => {
-                let existent_paths: Vec<_> = filter_existent_nodes(&nodes, self)?.collect();
+                let existent_paths: Vec<_> =
+                    filter_existent_nodes(&nodes, self, &event_builder)?.collect();
 
                 match existent_paths.as_slice() {
                     [] => Err(DfsFrontendError::NoSuchPath),
@@ -267,11 +281,11 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn read(&mut self, file: &FileHandle, count: usize) -> Result<Vec<u8>, DfsFrontendError> {
-        exec_on_opened_file(self, file, &|opened_file| opened_file.read(count))
+        exec_on_opened_file(self, file, |opened_file| opened_file.read(count))
     }
 
     fn write(&mut self, file: &FileHandle, buf: Vec<u8>) -> Result<usize, DfsFrontendError> {
-        exec_on_opened_file(self, file, &|opened_file| opened_file.write(&buf))
+        exec_on_opened_file(self, file, |opened_file| opened_file.write(&buf))
     }
 
     fn seek_from_start(
@@ -314,6 +328,10 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn rename(&mut self, old_path: String, new_path: String) -> Result<(), DfsFrontendError> {
+        let event_builder = EventBuilder::new(self.event_system.clone())
+            .operation(Operation::Rename)
+            .operation_path(old_path.clone());
+
         let old_path = PathBuf::from_str(&old_path).unwrap();
         let mut nodes = get_related_nodes(self, &old_path)?;
 
@@ -327,12 +345,17 @@ impl DfsFrontend for UnencryptedDfs {
                 if let Some(new_path_within_storage) =
                     new_path.strip_prefix(claimed_container_root_path)
                 {
-                    execute_container_operation(dfs, storages, &|backend| {
-                        backend.rename(
-                            storages.path_within_storage(),
-                            Path::new(new_path_within_storage),
-                        )
-                    })
+                    execute_container_operation(
+                        dfs,
+                        storages,
+                        |backend| {
+                            backend.rename(
+                                storages.path_within_storage(),
+                                Path::new(new_path_within_storage),
+                            )
+                        },
+                        &event_builder,
+                    )
                     .and_then(|response| match response {
                         RenameResponse::Renamed => Ok(()),
                         RenameResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
@@ -350,7 +373,7 @@ impl DfsFrontend for UnencryptedDfs {
             NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::ReadOnlyPath),
         };
 
-        exec_on_single_existing_node(self, &mut nodes, &rename_node)
+        exec_on_single_existing_node(self, &mut nodes, rename_node, &event_builder)
     }
 
     fn set_permissions(
@@ -358,24 +381,31 @@ impl DfsFrontend for UnencryptedDfs {
         input_exposed_path: String,
         permissions: WlPermissions,
     ) -> Result<(), DfsFrontendError> {
+        let event_builder = EventBuilder::new(self.event_system.clone())
+            .operation(Operation::SetPermission)
+            .operation_path(input_exposed_path.clone());
+
         let input_exposed_path = Path::new(&input_exposed_path);
 
         let set_permissions_op = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
-            NodeDescriptor::Physical { storages, .. } => {
-                execute_container_operation(dfs, storages, &|backend| {
+            NodeDescriptor::Physical { storages, .. } => execute_container_operation(
+                dfs,
+                storages,
+                |backend| {
                     backend.set_permissions(storages.path_within_storage(), permissions.clone())
-                })
-                .and_then(|resp| match resp {
-                    SetPermissionsResponse::Set => Ok(()),
-                    SetPermissionsResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
-                })
-            }
+                },
+                &event_builder,
+            )
+            .and_then(|resp| match resp {
+                SetPermissionsResponse::Set => Ok(()),
+                SetPermissionsResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
+            }),
             NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::ReadOnlyPath),
         };
 
         let mut nodes = get_related_nodes(self, input_exposed_path)?;
 
-        exec_on_single_existing_node(self, &mut nodes, &set_permissions_op)
+        exec_on_single_existing_node(self, &mut nodes, set_permissions_op, &event_builder)
     }
 
     fn set_owner(&mut self, _path: String) -> Result<(), DfsFrontendError> {
@@ -385,11 +415,11 @@ impl DfsFrontend for UnencryptedDfs {
     }
 
     fn set_length(&mut self, file: &FileHandle, length: usize) -> Result<(), DfsFrontendError> {
-        exec_on_opened_file(self, file, &|opened_file| opened_file.set_length(length))
+        exec_on_opened_file(self, file, |opened_file| opened_file.set_length(length))
     }
 
     fn sync(&mut self, file: &FileHandle) -> Result<(), DfsFrontendError> {
-        exec_on_opened_file(self, file, &|opened_file| opened_file.sync())
+        exec_on_opened_file(self, file, |opened_file| opened_file.sync())
     }
 
     fn set_times(
@@ -398,13 +428,13 @@ impl DfsFrontend for UnencryptedDfs {
         access_time: Option<UnixTimestamp>,
         modification_time: Option<UnixTimestamp>,
     ) -> Result<(), DfsFrontendError> {
-        exec_on_opened_file(self, file, &|opened_file| {
+        exec_on_opened_file(self, file, |opened_file| {
             opened_file.set_times(access_time.clone(), modification_time.clone())
         })
     }
 
     fn file_metadata(&mut self, file: &FileHandle) -> Result<Stat, DfsFrontendError> {
-        exec_on_opened_file(self, file, &|opened_file| opened_file.metadata())
+        exec_on_opened_file(self, file, |opened_file| opened_file.metadata())
     }
 
     fn sync_all(&mut self) -> Result<(), DfsFrontendError> {
@@ -418,36 +448,45 @@ impl DfsFrontend for UnencryptedDfs {
         file: &FileHandle,
         permissions: WlPermissions,
     ) -> Result<(), DfsFrontendError> {
-        exec_on_opened_file(self, file, &|opened_file| {
+        exec_on_opened_file(self, file, |opened_file| {
             opened_file.set_permissions(permissions.clone())
         })
     }
 
     fn file_stat_fs(&mut self, file: &FileHandle) -> Result<FsStat, DfsFrontendError> {
-        exec_on_opened_file(self, file, &|opened_file| opened_file.stat_fs())
+        exec_on_opened_file(self, file, |opened_file| opened_file.stat_fs())
     }
 
     fn stat_fs(&mut self, input_exposed_path: String) -> Result<FsStat, DfsFrontendError> {
+        let event_builder = EventBuilder::new(self.event_system.clone())
+            .operation(Operation::StatFs)
+            .operation_path(input_exposed_path.clone());
+
         let input_exposed_path = Path::new(&input_exposed_path);
 
         let stat_fs_op = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
-            NodeDescriptor::Physical { storages, .. } => {
-                execute_container_operation(dfs, storages, &|backend| {
-                    backend.stat_fs(storages.path_within_storage())
-                })
-                .and_then(|resp| match resp {
-                    StatFsResponse::Stat(stats) => Ok(stats),
-                    StatFsResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
-                    StatFsResponse::NotSupported(msg) => Err(DfsFrontendError::Generic(format!(
-                        "`stat_fs` not supported by the backend: {msg}"
-                    ))),
-                })
-            }
+            NodeDescriptor::Physical { storages, .. } => execute_container_operation(
+                dfs,
+                storages,
+                |backend| backend.stat_fs(storages.path_within_storage()),
+                &event_builder,
+            )
+            .and_then(|resp| match resp {
+                StatFsResponse::Stat(stats) => Ok(stats),
+                StatFsResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
+                StatFsResponse::NotSupported(msg) => Err(DfsFrontendError::Generic(format!(
+                    "`stat_fs` not supported by the backend: {msg}"
+                ))),
+            }),
             NodeDescriptor::Virtual { .. } => Err(DfsFrontendError::ReadOnlyPath),
         };
 
         let mut nodes = get_related_nodes(self, input_exposed_path)?;
 
-        exec_on_single_existing_node(self, &mut nodes, &stat_fs_op)
+        exec_on_single_existing_node(self, &mut nodes, stat_fs_op, &event_builder)
+    }
+
+    fn get_subscriber(&self) -> Arc<dyn EventSubscriber> {
+        self.event_system.get_subscriber().into()
     }
 }

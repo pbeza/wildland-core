@@ -50,7 +50,6 @@ impl From<std::path::StripPrefixError> for StorageBackendError {
     }
 }
 
-#[derive(Debug)]
 pub enum OpenResponse {
     Found(CloseOnDropDescriptor),
     NotAFile,
@@ -107,7 +106,6 @@ pub enum RenameResponse {
     TargetPathAlreadyExists,
 }
 
-#[derive(Debug)]
 pub enum CreateFileResponse {
     Created(CloseOnDropDescriptor),
     InvalidParent,

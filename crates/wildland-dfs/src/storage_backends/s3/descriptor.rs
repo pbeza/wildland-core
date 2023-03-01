@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::SystemTime;
 
-use derivative::Derivative;
 use wildland_corex::dfs::interface::{
     DfsFrontendError,
     FsStat,
@@ -91,16 +90,12 @@ impl Cursor {
     }
 }
 
-#[derive(Derivative)]
-#[derivative(Debug)]
 pub struct S3Descriptor {
     bucket_name: String,
     object_name: String,
     node_path: PathBuf,
     cursor: Cursor,
     e_tag: String,
-
-    #[derivative(Debug = "ignore")]
     client: Rc<dyn S3Client>,
 }
 

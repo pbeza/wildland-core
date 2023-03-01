@@ -28,7 +28,7 @@ use super::models::{CloseError, SeekFrom};
 /// OpenedFileDescriptor contains state of opened file and definition of how it is stored, therefore
 /// it is backend specific, cause file can be stored in different ways (e.g. partitioned depending
 /// on the backend's type) and e.g. seek operation may be implemented differently.
-pub trait OpenedFileDescriptor: std::fmt::Debug {
+pub trait OpenedFileDescriptor {
     fn close(&self) -> Result<(), CloseError>;
     /// Reads number of bytes specified by the `count` parameter and advances inner cursor of the
     /// opened file.
@@ -73,7 +73,6 @@ pub trait OpenedFileDescriptor: std::fmt::Debug {
 }
 
 /// Wrapper ensuring that close is always called on `OpenedFileDescriptor`
-#[derive(Debug)]
 pub struct CloseOnDropDescriptor {
     inner: Box<dyn OpenedFileDescriptor>,
 }

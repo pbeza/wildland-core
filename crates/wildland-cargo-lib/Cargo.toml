@@ -34,7 +34,7 @@ tracing-attributes   = { version = "0.1" }
 tracing-core         = { version = "0.1" }
 tracing-log          = { version = "0.1", features = ["env_logger"] }
 tracing-subscriber   = { version = "0.3", features = ["json", "env-filter", "fmt", "std", "registry"] }
-url = "2.3.1"
+url                  = { version = "2.3" }
 uuid                 = { version = "1.3", features = ["serde"] }
 wildland-catlib      = { version = "0.40.0", path = "../wildland-catlib" }
 wildland-corex       = { version = "0.40.0", path = "../wildland-corex" }
@@ -56,5 +56,5 @@ pretty_assertions = { version = "1.3" }
 rand              = { version = "0.8" }
 rstest            = { version = "0.16" }
 serde_yaml        = { version = "0.9" }
-tempfile          = { version = "3.3" }
+tempfile          = { version = "3.4" }
 wildland-lfs      = { version = "0.40.0", path = "../wildland-lfs" }

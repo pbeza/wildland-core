@@ -16,6 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod encrypted;
+pub mod events;
 pub mod storage_backends;
 pub mod unencrypted;
 

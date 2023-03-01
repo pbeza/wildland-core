@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -152,6 +154,71 @@ impl WlPermissions {
     pub fn is_readonly(&self) -> bool {
         self.readonly
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
+pub enum Operation {
+    ReadDir,
+    Metadata,
+    Open,
+    Close,
+    CreateDir,
+    RemoveDir,
+    Read,
+    Write,
+    Seek,
+    RemoveFile,
+    CreateFile,
+    Rename,
+    SetPermission,
+    SetOwner,
+    SetLength,
+    Sync,
+    SetTimes,
+    FileMetadata,
+    SyncAll,
+    SetFilePermissions,
+    FileStatFs,
+    StatFs,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
+pub enum Cause {
+    UnsupportedBackendType,
+    UnresponsiveBackend,
+    AllBackendsUnresponsive,
+}
+
+#[derive(Debug, Clone)]
+pub struct Event {
+    pub cause: Cause,
+    pub operation: Option<Operation>,
+    pub operation_path: Option<String>,
+    pub backend_type: Option<String>,
+}
+
+impl Event {
+    pub fn get_cause(&self) -> Cause {
+        self.cause.clone()
+    }
+
+    pub fn get_operation(&self) -> Option<Operation> {
+        self.operation.clone()
+    }
+
+    pub fn get_operation_path(&self) -> Option<String> {
+        self.operation_path.clone()
+    }
+
+    pub fn get_backend_type(&self) -> Option<String> {
+        self.backend_type.clone()
+    }
+}
+
+pub trait EventSubscriber {
+    fn pool_event(&self, millis: u64) -> Option<Event>;
 }
 
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
@@ -394,4 +461,8 @@ pub trait DfsFrontend {
     /// # Errors:
     /// `NoSuchPath` - no such path exists
     fn stat_fs(&mut self, path: String) -> Result<FsStat, DfsFrontendError>;
+
+    /// Returns subscriber that can listen to DFS events.
+    /// Events may be split between different `EventSubscriber`.
+    fn get_subscriber(&self) -> Arc<dyn EventSubscriber>;
 }

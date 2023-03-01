@@ -18,11 +18,12 @@
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use wildland_corex::dfs::interface::{DfsFrontendError, FileHandle};
+use wildland_corex::dfs::interface::{DfsFrontendError, FileHandle, Operation};
 
 use super::node_descriptor::NodeStorages;
 use super::utils::{exec_on_single_existing_node, execute_container_operation, get_related_nodes};
 use super::{NodeDescriptor, UnencryptedDfs};
+use crate::events::EventBuilder;
 use crate::storage_backends::models::{
     CreateDirResponse,
     CreateFileResponse,
@@ -34,10 +35,17 @@ pub fn create_dir(
     dfs: &mut UnencryptedDfs,
     requested_path: String,
 ) -> Result<(), DfsFrontendError> {
+    let event_builder = EventBuilder::new(dfs.event_system.clone())
+        .operation(Operation::CreateDir)
+        .operation_path(requested_path.clone());
+
     let create_dir_in_container = |dfs: &mut UnencryptedDfs, storages: &NodeStorages| {
-        execute_container_operation(dfs, storages, &|backend| {
-            backend.create_dir(storages.path_within_storage())
-        })
+        execute_container_operation(
+            dfs,
+            storages,
+            |backend| backend.create_dir(storages.path_within_storage()),
+            &event_builder,
+        )
         .and_then(|resp| match resp {
             CreateDirResponse::Created => Ok(()),
             CreateDirResponse::InvalidParent => Err(DfsFrontendError::InvalidParent),
@@ -45,17 +53,24 @@ pub fn create_dir(
         })
     };
 
-    generic_create(dfs, requested_path, &create_dir_in_container)
+    generic_create(dfs, requested_path, create_dir_in_container, &event_builder)
 }
 
 pub fn create_file(
     dfs: &mut UnencryptedDfs,
     requested_path: String,
 ) -> Result<FileHandle, DfsFrontendError> {
+    let event_builder = EventBuilder::new(dfs.event_system.clone())
+        .operation(Operation::CreateFile)
+        .operation_path(requested_path.clone());
+
     let create_file_in_container = |dfs: &mut UnencryptedDfs, storages: &NodeStorages| {
-        execute_container_operation(dfs, storages, &|backend| {
-            backend.create_file(storages.path_within_storage())
-        })
+        execute_container_operation(
+            dfs,
+            storages,
+            |backend| backend.create_file(storages.path_within_storage()),
+            &event_builder,
+        )
         .and_then(|resp| match resp {
             CreateFileResponse::Created(opened_file) => Ok(dfs.insert_opened_file(opened_file)),
             CreateFileResponse::InvalidParent => Err(DfsFrontendError::InvalidParent),
@@ -63,13 +78,19 @@ pub fn create_file(
         })
     };
 
-    generic_create(dfs, requested_path, &create_file_in_container)
+    generic_create(
+        dfs,
+        requested_path,
+        create_file_in_container,
+        &event_builder,
+    )
 }
 
 fn generic_create<T>(
     dfs: &mut UnencryptedDfs,
     requested_path: String,
-    container_op: &dyn Fn(&mut UnencryptedDfs, &NodeStorages) -> Result<T, DfsFrontendError>,
+    container_op: impl Fn(&mut UnencryptedDfs, &NodeStorages) -> Result<T, DfsFrontendError>,
+    event_builder: &EventBuilder,
 ) -> Result<T, DfsFrontendError> {
     let create_in_container = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
         NodeDescriptor::Physical { storages, .. } => container_op(dfs, storages),
@@ -90,9 +111,12 @@ fn generic_create<T>(
 
                     match parent {
                         NodeDescriptor::Physical { storages, .. } => {
-                            let exists = execute_container_operation(dfs, &storages, &|backend| {
-                                backend.path_exists(storages.path_within_storage())
-                            });
+                            let exists = execute_container_operation(
+                                dfs,
+                                &storages,
+                                |backend| backend.path_exists(storages.path_within_storage()),
+                                event_builder,
+                            );
                             match exists {
                                 Ok(true) => Some(Ok(node)),
                                 Ok(false) => None,
@@ -117,15 +141,24 @@ pub fn remove_dir(
     dfs: &mut UnencryptedDfs,
     requested_path: String,
 ) -> Result<(), DfsFrontendError> {
+    let event_builder = EventBuilder::new(dfs.event_system.clone())
+        .operation(Operation::RemoveDir)
+        .operation_path(requested_path.clone());
+
     let remove_dir_from_container = |dfs: &mut UnencryptedDfs, storages: &NodeStorages| {
-        execute_container_operation(dfs, storages, &|backend| {
-            let path_within_storage = storages.path_within_storage();
-            if path_within_storage == Path::new("/") {
-                Ok(RemoveDirResponse::RootRemovalNotAllowed)
-            } else {
-                backend.remove_dir(path_within_storage)
-            }
-        })
+        execute_container_operation(
+            dfs,
+            storages,
+            |backend| {
+                let path_within_storage = storages.path_within_storage();
+                if path_within_storage == Path::new("/") {
+                    Ok(RemoveDirResponse::RootRemovalNotAllowed)
+                } else {
+                    backend.remove_dir(path_within_storage)
+                }
+            },
+            &event_builder,
+        )
         .and_then(|resp| match resp {
             RemoveDirResponse::Removed => Ok(()),
             RemoveDirResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
@@ -135,17 +168,29 @@ pub fn remove_dir(
         })
     };
 
-    generic_remove(dfs, requested_path, remove_dir_from_container)
+    generic_remove(
+        dfs,
+        requested_path,
+        remove_dir_from_container,
+        &event_builder,
+    )
 }
 
 pub fn remove_file(
     dfs: &mut UnencryptedDfs,
     requested_path: String,
 ) -> Result<(), DfsFrontendError> {
+    let event_builder = EventBuilder::new(dfs.event_system.clone())
+        .operation(Operation::RemoveFile)
+        .operation_path(requested_path.clone());
+
     let remove_file_from_container = |dfs: &mut UnencryptedDfs, storages: &NodeStorages| {
-        execute_container_operation(dfs, storages, &|backend| {
-            backend.remove_file(storages.path_within_storage())
-        })
+        execute_container_operation(
+            dfs,
+            storages,
+            |backend| backend.remove_file(storages.path_within_storage()),
+            &event_builder,
+        )
         .and_then(|resp| match resp {
             RemoveFileResponse::Removed => Ok(()),
             RemoveFileResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
@@ -153,13 +198,19 @@ pub fn remove_file(
         })
     };
 
-    generic_remove(dfs, requested_path, remove_file_from_container)
+    generic_remove(
+        dfs,
+        requested_path,
+        remove_file_from_container,
+        &event_builder,
+    )
 }
 
 fn generic_remove<T>(
     dfs: &mut UnencryptedDfs,
     requested_path: String,
-    container_op: fn(&mut UnencryptedDfs, &NodeStorages) -> Result<T, DfsFrontendError>,
+    container_op: impl Fn(&mut UnencryptedDfs, &NodeStorages) -> Result<T, DfsFrontendError>,
+    event_builder: &EventBuilder,
 ) -> Result<T, DfsFrontendError> {
     let remove_from_container = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| {
         match node {
@@ -171,5 +222,5 @@ fn generic_remove<T>(
     let requested_path = PathBuf::from_str(&requested_path).unwrap();
     let mut nodes = get_related_nodes(dfs, &requested_path)?;
 
-    exec_on_single_existing_node(dfs, &mut nodes, &remove_from_container)
+    exec_on_single_existing_node(dfs, &mut nodes, remove_from_container, event_builder)
 }

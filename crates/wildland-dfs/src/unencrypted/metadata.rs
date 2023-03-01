@@ -17,26 +17,32 @@
 
 use std::path::Path;
 
-use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Stat, WlPermissions};
+use wildland_corex::dfs::interface::{DfsFrontendError, NodeType, Operation, Stat, WlPermissions};
 
 use super::utils::*;
 use super::{NodeDescriptor, UnencryptedDfs};
+use crate::events::EventBuilder;
 use crate::storage_backends::models::MetadataResponse;
 
 pub fn metadata(
     dfs: &mut UnencryptedDfs,
     input_exposed_path: String,
 ) -> Result<Stat, DfsFrontendError> {
+    let event_builder = EventBuilder::new(dfs.event_system.clone())
+        .operation(Operation::Metadata)
+        .operation_path(input_exposed_path.clone());
+
     let get_metadata = |dfs: &mut UnencryptedDfs, node: &NodeDescriptor| match node {
-        NodeDescriptor::Physical { storages, .. } => {
-            execute_container_operation(dfs, storages, &|backend| {
-                backend.metadata(storages.path_within_storage())
-            })
-            .and_then(|resp| match resp {
-                MetadataResponse::Found(stat) => Ok(stat),
-                MetadataResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
-            })
-        }
+        NodeDescriptor::Physical { storages, .. } => execute_container_operation(
+            dfs,
+            storages,
+            |backend| backend.metadata(storages.path_within_storage()),
+            &event_builder,
+        )
+        .and_then(|resp| match resp {
+            MetadataResponse::Found(stat) => Ok(stat),
+            MetadataResponse::NotFound => Err(DfsFrontendError::NoSuchPath),
+        }),
         NodeDescriptor::Virtual { .. } => Ok(Stat {
             node_type: NodeType::Dir,
             size: 0,
@@ -54,7 +60,8 @@ pub fn metadata(
         [] => Err(DfsFrontendError::NoSuchPath),
         [node] => get_metadata(dfs, node),
         _ => {
-            let existent_paths: Vec<_> = filter_existent_nodes(&nodes, dfs)?.collect();
+            let existent_paths: Vec<_> =
+                filter_existent_nodes(&nodes, dfs, &event_builder)?.collect();
 
             match existent_paths.as_slice() {
                 [] => Err(DfsFrontendError::NoSuchPath),
