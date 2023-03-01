@@ -7,7 +7,6 @@ use aws_sdk_s3::error::{
     ListObjectsV2Error,
     PutObjectError,
     UploadPartCopyError,
-    UploadPartError,
 };
 use aws_smithy_client::SdkError;
 use thiserror::Error;
