@@ -14,7 +14,7 @@ use wildland_corex::dfs::interface::{
 
 use super::client::S3Client;
 use super::file_system::FileSystemNodeRef;
-use super::helpers::{commit_file_system, load_file_system};
+use super::helpers::{commit_file_system, load_file_system, map_conccurent_operation_error};
 use super::models::WriteResp;
 use crate::storage_backends::models::{CloseError, SeekFrom};
 use crate::storage_backends::OpenedFileDescriptor;
@@ -148,7 +148,7 @@ impl OpenedFileDescriptor for S3Descriptor {
                 )),
                 Some(self.e_tag.clone()),
             )
-            .map_err(|_| DfsFrontendError::ConcurrentIssue)?;
+            .map_err(map_conccurent_operation_error)?;
 
         self.cursor.position += resp.len();
         Ok(resp)
@@ -177,7 +177,7 @@ impl OpenedFileDescriptor for S3Descriptor {
                 self.cursor.total_size,
                 Some(self.e_tag.clone()),
             )
-            .map_err(|_| DfsFrontendError::ConcurrentIssue)?;
+            .map_err(map_conccurent_operation_error)?;
 
         let new_position = self.cursor.position + bytes_count;
         let new_total_size = std::cmp::max(new_position, self.cursor.total_size);
