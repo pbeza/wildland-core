@@ -177,7 +177,9 @@ impl CatLib for RedisCatLib {
         match forests.len() {
             0 => Err(CatlibError::NoRecordsFound),
             1 => Ok(forests[0].clone()),
-            _ => Err(CatlibError::MalformedDatabaseRecord),
+            _ => Err(CatlibError::MalformedDatabaseRecord(
+                "More than 1 Forest found in Catalog Backend".into(),
+            )),
         }
     }
 
@@ -214,13 +216,22 @@ impl CatLib for RedisCatLib {
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    fn save_storage_template(&self, template_id: &Uuid, value: String) -> CatlibResult<()> {
-        db::commands::set(&self.db, format!("template-{template_id}"), value)
+    fn save_storage_template(
+        &self,
+        template_id: Option<Uuid>,
+        value: String,
+    ) -> CatlibResult<Uuid> {
+        let template_id = template_id.unwrap_or_else(Uuid::new_v4);
+        db::commands::set(&self.db, format!("template-{template_id}"), value)?;
+        Ok(template_id)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>> {
-        db::fetch_templates(&self.db)
+    fn get_storage_templates_data(&self) -> CatlibResult<Box<dyn Iterator<Item = (Uuid, String)>>> {
+        match db::fetch_templates(&self.db) {
+            Ok(i) => Ok(Box::new(i)),
+            Err(e) => Err(e),
+        }
     }
 
     /// Checks if connection to the backend database is valid

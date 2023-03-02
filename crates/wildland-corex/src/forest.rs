@@ -5,7 +5,15 @@ use uuid::Uuid;
 
 use crate::catlib_service::error::CatlibError;
 use crate::entities::Identity;
-use crate::{BridgeManifest, Container, ContainerPath, ForestManifest, StorageTemplate};
+use crate::{
+    BridgeManifest,
+    Container,
+    ContainerPath,
+    CoreXError,
+    ErrContext,
+    ForestManifest,
+    StorageTemplate,
+};
 
 #[derive(Debug, Clone)]
 pub struct Forest {
@@ -34,6 +42,7 @@ impl Forest {
     /// # use wildland_corex::StorageTemplate;
     /// # use wildland_corex::interface::CatLib;
     /// # use wildland_corex::Forest;
+    /// # use uuid::Uuid;
     ///
     /// let catlib = RedisCatLib::default();
     /// let forest = catlib.create_forest(
@@ -59,7 +68,7 @@ impl Forest {
     ///     )
     ///     .unwrap();
     /// let path = "/some/path".into();
-    /// let container = forest.create_container("container name1".to_owned(), &storage_template, path).unwrap();
+    /// let container = forest.create_container("container name1".to_owned(), Uuid::new_v4(), &storage_template, path).unwrap();
     /// container.add_path("/foo/bar1".into());
     /// container.add_path("/bar/baz1".into());
     /// ```
@@ -67,17 +76,19 @@ impl Forest {
     pub fn create_container(
         &self,
         name: String,
+        template_uuid: Uuid,
         storage_template: &StorageTemplate,
         path: ContainerPath,
-    ) -> Result<Container, CatlibError> {
+    ) -> Result<Container, CoreXError> {
         let container_uuid = Uuid::new_v4();
         let forest_uuid = self.forest_manifest.lock().expect("Poisoned Mutex").uuid();
-        let container_manifest = self
+        let container_manifest_result: Result<_, CoreXError> = self
             .forest_manifest
             .lock()
             .expect("Poisoned Mutex")
-            .create_container(container_uuid, forest_uuid, name, path)?;
-        Container::new(container_manifest, storage_template)
+            .create_container(container_uuid, forest_uuid, name, path)
+            .context("Could not create a container in catlib");
+        Container::new(container_manifest_result?, template_uuid, storage_template)
     }
 
     pub fn containers(&self) -> Result<Vec<Container>, CatlibError> {

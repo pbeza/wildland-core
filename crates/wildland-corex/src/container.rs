@@ -3,7 +3,16 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use crate::catlib_service::error::CatlibError;
-use crate::{ContainerManifest, StorageManifest, StorageTemplate, TemplateContext};
+use crate::{
+    ContainerManifest,
+    CoreXError,
+    ErrContext,
+    Storage,
+    StorageManifest,
+    StorageTemplate,
+    StorageTemplateError,
+    TemplateContext,
+};
 
 #[derive(Clone, Debug)]
 pub struct Container {
@@ -13,19 +22,35 @@ pub struct Container {
 impl Container {
     pub fn new(
         container_manifest: Arc<Mutex<dyn ContainerManifest>>,
+        template_uuid: Uuid,
         storage_template: &StorageTemplate,
-    ) -> Result<Self, CatlibError> {
+    ) -> Result<Self, CoreXError> {
         let mut container = Self {
             container_manifest: container_manifest.clone(),
         };
-        match container.add_storage(storage_template) {
+
+        match container.add_storage(
+            template_uuid,
+            container.render_template(storage_template).map_err(|e| {
+                CoreXError::Generic(format!(
+                    "Template render error while creating a container: {e}"
+                ))
+            })?,
+        ) {
             Ok(_) => Ok(container),
             Err(err) => {
-                container_manifest
+                let result: Result<_, CoreXError> = container_manifest
                     .lock()
                     .expect("Poisoned Mutex")
-                    .remove()?;
-                Err(err)
+                    .remove()
+                    .context(
+                        "Error while reverting added container after unsuccessful storage addition",
+                    );
+                result?;
+                Err(CoreXError::CatlibErr(
+                    "Storage could not be added while creating Container".into(),
+                    err,
+                ))
             }
         }
     }
@@ -47,6 +72,8 @@ impl Container {
     /// # use wildland_corex::entities::Identity;
     /// # use wildland_corex::StorageTemplate;
     /// # use wildland_corex::Forest;
+    /// # use uuid::Uuid;
+    ///
     /// let catlib = RedisCatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
@@ -71,7 +98,7 @@ impl Container {
     ///     )
     ///     .unwrap();
     /// let path = "/some/path".into();
-    /// let container = forest.create_container("container name2".to_owned(), &storage_template, path).unwrap();
+    /// let container = forest.create_container("container name2".to_owned(), Uuid::new_v4(), &storage_template, path).unwrap();
     /// container.add_path("/bar/baz2".into()).unwrap();
     /// ```
     pub fn add_path(&self, path: String) -> Result<bool, CatlibError> {
@@ -94,6 +121,7 @@ impl Container {
     /// # use wildland_corex::entities::Identity;
     /// # use wildland_corex::StorageTemplate;
     /// # use wildland_corex::Forest;
+    /// # use uuid::Uuid;
     /// let catlib = RedisCatLib::default();
     /// let forest = catlib.create_forest(
     ///                  Identity([1; 32]),
@@ -118,7 +146,7 @@ impl Container {
     ///     )
     ///     .unwrap();
     /// let path = "/some/path".into();
-    /// let container = forest.create_container("container name2".to_owned(), &storage_template, path).unwrap();
+    /// let container = forest.create_container("container name2".to_owned(), Uuid::new_v4(), &storage_template, path).unwrap();
     /// container.delete_path("/baz/qux1".into()).unwrap();
     /// ```
     ///
@@ -155,14 +183,33 @@ impl Container {
     ///
     pub fn add_storage(
         &mut self,
-        storage_template: &StorageTemplate,
+        template_uuid: Uuid,
+        storage: Storage,
     ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError> {
+        let serialized_storage = serde_json::to_vec(&storage).map_err(|e| {
+            CatlibError::Generic(format!("Could not serialize storage template: {e}"))
+        })?;
+
+        self.container_manifest
+            .lock()
+            .expect("Poisoned Mutex")
+            .add_storage(template_uuid, serialized_storage)
+    }
+
+    fn render_template(
+        &self,
+        storage_template: &StorageTemplate,
+    ) -> Result<Storage, StorageTemplateError> {
         let (container_name, container_uuid, container_paths) = {
             let mut container_lock = self.container_manifest.lock().expect("Poisoned Mutex");
             (
-                container_lock.name()?,
+                container_lock
+                    .name()
+                    .context("Could not retrieve container's name")?,
                 container_lock.uuid(),
-                container_lock.get_paths()?,
+                container_lock
+                    .get_paths()
+                    .context("Could not retrieve container's paths")?,
             )
         };
         let template_context = TemplateContext {
@@ -171,22 +218,14 @@ impl Container {
                 .container_manifest
                 .lock()
                 .expect("Poisoned Mutex")
-                .owner()?
+                .owner()
+                .context("Could not retrieve container's owner")?
                 .encode(),
             access_mode: crate::StorageAccessMode::ReadWrite,
             container_uuid,
             paths: container_paths,
         };
-        let storage = storage_template
-            .render(template_context)
-            .map_err(|e| CatlibError::Generic(e.to_string()))?;
-        let serialized_storage = serde_json::to_vec(&storage).map_err(|e| {
-            CatlibError::Generic(format!("Could not serialize storage template: {e}"))
-        })?;
-        self.container_manifest
-            .lock()
-            .expect("Poisoned Mutex")
-            .add_storage(storage_template.uuid(), serialized_storage)
+        storage_template.render(template_context)
     }
 
     /// ## Errors
@@ -303,7 +342,12 @@ mod tests {
             ]),
         )
         .unwrap();
-        Container::new(Arc::new(Mutex::new(container_manifest)), &storage_template).unwrap()
+        Container::new(
+            Arc::new(Mutex::new(container_manifest)),
+            Uuid::new_v4(),
+            &storage_template,
+        )
+        .unwrap()
     }
 
     #[test]

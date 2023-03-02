@@ -97,11 +97,10 @@ mod tests {
         .try_into()
         .unwrap();
         fst.set_name("name".into());
-        let uuid = fst.uuid();
 
         let expected = serde_json::json!(
             {
-                "uuid": uuid,
+                "version": "1",
                 "backend_type": "FoundationStorage",
                 "name": "name",
                 "template": {
@@ -128,21 +127,18 @@ mod tests {
         .try_into()
         .unwrap();
         fst.set_name("name".into());
-        let uuid = fst.uuid();
 
-        let expected = format!(
-            r#"
+        let expected = r#"
+            version: '1'
             name: name
-            uuid: {uuid}
             backend_type: FoundationStorage
             template:
                 bucket_uuid: 00000000-0000-0000-0000-000000000001
                 credential_id: cred_id
                 credential_secret: cred_secret
                 sc_url: sc_url
-                container_dir: '{{{{ OWNER }}}}/{{{{ CONTAINER_NAME }}}}'
-        "#
-        );
+                container_dir: '{{ OWNER }}/{{ CONTAINER_NAME }}'
+        "#;
 
         assert_eq!(
             serde_yaml::from_str::<serde_yaml::Value>(&expected).unwrap(),
@@ -161,21 +157,18 @@ mod tests {
         .try_into()
         .unwrap();
         expected_template.set_name("name".into());
-        let uuid = expected_template.uuid();
 
-        let yaml_template = format!(
-            r#"
+        let yaml_template = r#"
+            version: 1
             name: name
-            uuid: {uuid}
             backend_type: FoundationStorage
             template:
                 bucket_uuid: 00000000-0000-0000-0000-000000000001
                 credential_id: cred_id
                 credential_secret: cred_secret
                 sc_url: sc_url
-                container_dir: '{{{{ OWNER }}}}/{{{{ CONTAINER_NAME }}}}'
-        "#
-        );
+                container_dir: '{{ OWNER }}/{{ CONTAINER_NAME }}'
+        "#;
         assert_eq!(
             serde_yaml::to_value(serde_yaml::from_str::<StorageTemplate>(&yaml_template).unwrap())
                 .unwrap(),

@@ -2531,9 +2531,9 @@ dependencies = [
 
 [[package]]
 name = "rusty-bind"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4441542376f04ea921090c60d3a2192f3b1a72e5d5379a3be85ada3ba39aa48a"
+checksum = "134fff3b8baf65d39b248251203f14c121ec874852f1f469097403935a552241"
 dependencies = [
  "quote",
  "syn",
@@ -2541,9 +2541,9 @@ dependencies = [
 
 [[package]]
 name = "rusty-bind-build"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc9d177cc1cfde5ec9417067db2a379f9e46413a0d6bbadefe3deb593b0fd2c3"
+checksum = "29cdbc1967cebf09dd21d79430719c17af41553629cb6baef73a9e711c24dc89"
 dependencies = [
  "anyhow",
  "cfg-expr",
@@ -2553,9 +2553,9 @@ dependencies = [
 
 [[package]]
 name = "rusty-bind-parser"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac7b36f37026ba06e2b547446961dd6194aaae849f9672ad7491264157a66f09"
+checksum = "ba93e795834d09ff678a3a7a3e2ac565be8e44b4310415dab40a9b4fe2080fb0"
 dependencies = [
  "anyhow",
  "cfg-expr",

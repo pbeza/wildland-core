@@ -39,7 +39,6 @@ use crate::api::cargo_user::*;
 use crate::api::config::*;
 use crate::api::foundation_storage::*;
 use crate::api::user::*;
-use crate::errors::storage::*;
 use crate::errors::user::*;
 use crate::errors::ExceptionTrait;
 
@@ -142,10 +141,6 @@ mod ffi_binding {
     }
     enum FoundationCloudMode {
         Dev,
-    }
-    enum GetStorageTemplateError {
-        CatlibError(_),
-        DeserializationError(_),
     }
     enum DfsFrontendError {
         NotAFile,
@@ -275,15 +270,13 @@ mod ffi_binding {
         fn create_container(
             self: &CargoUser,
             name: String,
-            storage_templates: &StorageTemplate,
+            storage_templates: &mut StorageTemplate,
             path: String,
         ) -> Result<Container, CatlibError>;
-        fn get_storage_templates(
-            self: &CargoUser,
-        ) -> Result<Vec<StorageTemplate>, GetStorageTemplateError>;
+        fn get_storage_templates(self: &CargoUser) -> Result<Vec<StorageTemplate>, CatlibError>;
         fn save_storage_template(
             self: &CargoUser,
-            tpl: &StorageTemplate,
+            tpl: &mut StorageTemplate,
         ) -> Result<String, CatlibError>;
         fn mount(
             self: &CargoUser,
@@ -313,10 +306,10 @@ mod ffi_binding {
         fn get_storages(
             self: &Container,
         ) -> Result<Vec<Arc<Mutex<dyn StorageManifest>>>, CatlibError>;
-        fn add_storage(
-            self: &Container,
-            templates: &StorageTemplate,
-        ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>;
+        // fn add_storage(
+        //     self: &Container,
+        //     templates: &mut StorageTemplate,
+        // ) -> Result<Arc<Mutex<dyn StorageManifest>>, CatlibError>; // do it after TODO COR-73
         fn add_path(self: &Container, path: String) -> Result<bool, CatlibError>;
         fn delete_path(self: &Container, path: String) -> Result<bool, CatlibError>;
         fn get_paths(self: &Container) -> Result<Vec<String>, CatlibError>;
@@ -360,7 +353,7 @@ mod ffi_binding {
 
         fn set_name(self: &StorageTemplate, name: String) -> VoidType;
 
-        fn uuid_str(self: &StorageTemplate) -> String;
+        fn uuid_str(self: &StorageTemplate) -> Option<String>;
         fn backend_type(self: &StorageTemplate) -> String;
         fn name(self: &StorageTemplate) -> Option<String>;
 

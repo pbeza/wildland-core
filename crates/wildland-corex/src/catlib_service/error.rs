@@ -7,8 +7,8 @@ pub type CatlibResult<T> = Result<T, CatlibError>;
 pub enum CatlibError {
     #[error("No records found")]
     NoRecordsFound,
-    #[error("Malformed database record")]
-    MalformedDatabaseRecord,
+    #[error("Malformed database record: {0}")]
+    MalformedDatabaseRecord(String),
     #[error("Record already exists")]
     RecordAlreadyExists,
     #[error("Catlib error: {0}")]

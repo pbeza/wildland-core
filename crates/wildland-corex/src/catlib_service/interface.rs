@@ -43,10 +43,15 @@ pub trait CatLib {
     ) -> CatlibResult<Vec<Arc<Mutex<dyn ContainerManifest>>>>;
 
     /// Save StorageTemplate data in CatLib.
-    fn save_storage_template(&self, template_id: &Uuid, value: String) -> CatlibResult<()>;
+    ///
+    /// It creates a new record if `template_id` is None.
+    ///
+    /// Returns uuid of the saved template.
+    fn save_storage_template(&self, template_id: Option<Uuid>, value: String)
+        -> CatlibResult<Uuid>;
 
-    /// Fetche every StorageTemplate data from CatLib.
-    fn get_storage_templates_data(&self) -> CatlibResult<Vec<String>>;
+    /// Fetch every StorageTemplate data from CatLib with its uuid.
+    fn get_storage_templates_data(&self) -> CatlibResult<Box<dyn Iterator<Item = (Uuid, String)>>>;
 
     /// Check if database backend is available
     fn is_db_alive(&self) -> CatlibResult<bool>;
