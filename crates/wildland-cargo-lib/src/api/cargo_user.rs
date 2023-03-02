@@ -18,7 +18,15 @@
 use derivative::Derivative;
 use wildland_corex::catlib_service::error::CatlibError;
 use wildland_corex::catlib_service::CatLibService;
-use wildland_corex::{Container, ContainerManager, ContainerManagerError, Forest, StorageTemplate};
+use wildland_corex::{
+    Container,
+    ContainerManager,
+    ContainerManagerError,
+    CoreXError,
+    ErrContext,
+    Forest,
+    StorageTemplate,
+};
 
 use super::config::FoundationStorageApiConfig;
 use super::foundation_storage::{FoundationStorageApi, FreeTierProcessHandle, FsaError};
@@ -196,10 +204,12 @@ All devices:
         name: String,
         template: &mut StorageTemplate,
         path: String,
-    ) -> Result<Container, CatlibError> {
-        let (template_uuid, saved_template) = self
+    ) -> Result<Container, CoreXError> {
+        let result: Result<_, CoreXError> = self
             .catlib_service
-            .save_storage_template(template.clone())?;
+            .save_storage_template(template.clone())
+            .context("Could not save template in catlib");
+        let (template_uuid, saved_template) = result?;
         // We cannot enforce other languages to give ownership away, so we must set uuid on reference argument
         template.set_uuid(template_uuid);
         self.forest

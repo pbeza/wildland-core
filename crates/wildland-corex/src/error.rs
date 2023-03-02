@@ -15,10 +15,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::fmt::Display;
+
 use thiserror::Error;
 use wildland_crypto::error::CryptoError;
 
+use crate::catlib_service::error::CatlibError;
 use crate::LssError;
+
+pub trait ErrContext<T, E> {
+    fn context(self, ctx: impl Display) -> Result<T, E>;
+    fn format(err: impl Display, ctx: impl Display) -> String {
+        format!("{ctx}: {err}")
+    }
+}
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[repr(C)]
@@ -37,19 +47,29 @@ pub enum CoreXError {
     #[error("Identity read error: {0}")]
     IdentityReadError(String),
     #[error("LSS Error: {0}")]
-    LSSError(String),
+    LSSErr(String, LssError),
+    #[error("Catlib Error: {0}: {1}")]
+    CatlibErr(String, CatlibError),
+    #[error("Crypto Error: {0}: {1}")]
+    CryptoErr(String, CryptoError),
     #[error("CoreX error: {0}")]
     Generic(String),
 }
 
-impl From<CryptoError> for CoreXError {
-    #[tracing::instrument(level = "debug", ret)]
-    fn from(crypto_err: CryptoError) -> Self {
-        match crypto_err {
-            CryptoError::KeyParsingError(_) => todo!(),
-            CryptoError::MessageVerificationError(_) => todo!(),
-            CryptoError::InvalidSignatureBytesError(_) => todo!(),
-            _ => todo!(),
-        }
+impl<T> ErrContext<T, CoreXError> for Result<T, CatlibError> {
+    fn context(self, ctx: impl Display) -> Result<T, CoreXError> {
+        self.map_err(|e| CoreXError::CatlibErr(ctx.to_string(), e))
+    }
+}
+
+impl<T> ErrContext<T, CoreXError> for Result<T, CryptoError> {
+    fn context(self, ctx: impl Display) -> Result<T, CoreXError> {
+        self.map_err(|e| CoreXError::CryptoErr(ctx.to_string(), e))
+    }
+}
+
+impl<T> ErrContext<T, CoreXError> for Result<T, LssError> {
+    fn context(self, ctx: impl Display) -> Result<T, CoreXError> {
+        self.map_err(|e| CoreXError::LSSErr(ctx.to_string(), e))
     }
 }

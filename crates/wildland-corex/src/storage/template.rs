@@ -23,7 +23,8 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use super::StorageAccessMode;
-use crate::{ContainerPath, Storage};
+use crate::catlib_service::error::CatlibError;
+use crate::{ContainerPath, ErrContext, Storage};
 
 pub const CONTAINER_NAME_PARAM: &str = "CONTAINER_NAME";
 pub const OWNER_PARAM: &str = "OWNER";
@@ -50,33 +51,30 @@ pub struct TemplateContext {
 pub enum StorageTemplateError {
     #[error("Ser/deserialization error: {0}")]
     SerdeErr(String),
-    #[error("Template engine error : {0}")]
+    #[error("Template engine error: {0}")]
     TemplateEngineErr(String),
+    #[error("Catlib error: {0}")]
+    CatlibErr(String, CatlibError),
 }
 
-trait ErrContext<T> {
-    type Error: Display;
-    fn context(self, ctx: impl Display) -> Result<T, Self::Error>;
-    fn format(err: impl Display, ctx: impl Display) -> String {
-        format!("{ctx}: {err}")
-    }
-}
-impl<T> ErrContext<T> for Result<T, serde_json::Error> {
-    type Error = StorageTemplateError;
-    fn context(self, ctx: impl Display) -> Result<T, Self::Error> {
+impl<T> ErrContext<T, StorageTemplateError> for Result<T, serde_json::Error> {
+    fn context(self, ctx: impl Display) -> Result<T, StorageTemplateError> {
         self.map_err(|e| StorageTemplateError::SerdeErr(Self::format(e, ctx)))
     }
 }
-impl<T> ErrContext<T> for Result<T, serde_yaml::Error> {
-    type Error = StorageTemplateError;
-    fn context(self, ctx: impl Display) -> Result<T, Self::Error> {
+impl<T> ErrContext<T, StorageTemplateError> for Result<T, serde_yaml::Error> {
+    fn context(self, ctx: impl Display) -> Result<T, StorageTemplateError> {
         self.map_err(|e| StorageTemplateError::SerdeErr(Self::format(e, ctx)))
     }
 }
-impl<T> ErrContext<T> for Result<T, tera::Error> {
-    type Error = StorageTemplateError;
-    fn context(self, ctx: impl Display) -> Result<T, Self::Error> {
+impl<T> ErrContext<T, StorageTemplateError> for Result<T, tera::Error> {
+    fn context(self, ctx: impl Display) -> Result<T, StorageTemplateError> {
         self.map_err(|e| StorageTemplateError::TemplateEngineErr(Self::format(e, ctx)))
+    }
+}
+impl<T> ErrContext<T, StorageTemplateError> for Result<T, CatlibError> {
+    fn context(self, ctx: impl Display) -> Result<T, StorageTemplateError> {
+        self.map_err(|e| StorageTemplateError::CatlibErr(ctx.to_string(), e))
     }
 }
 
