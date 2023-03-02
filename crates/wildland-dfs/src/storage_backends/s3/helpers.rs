@@ -59,9 +59,11 @@ pub fn commit_file_system(
             FILE_SYSTEM_FILE,
             bucket_name,
             serde_json::to_vec(&file_system)
-                .map_err(|err| StorageBackendError::Generic(err.into()))?,
+                .context("Filesystem metadata serialization error")
+                .map_err(StorageBackendError::Generic)?,
         )
-        .map_err(|err| StorageBackendError::Generic(err.into()))
+        .context("Could not save filesystem metadata")
+        .map_err(StorageBackendError::Generic)
 }
 
 pub fn defuse<T, F, S>(guard: ScopeGuard<T, F, S>)
