@@ -504,12 +504,12 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
         ) -> Result<FsStat, DfsFrontendError>;
-        fn get_subscriber(self: &Arc<Mutex<dyn DfsFrontend>>) -> Arc<dyn EventSubscriber>;
+        fn get_subscriber(self: &Arc<Mutex<dyn DfsFrontend>>) -> Arc<Mutex<dyn EventSubscriber>>;
 
         //
         // EventSubscriber
         //
-        fn pool_event(self: &dyn EventSubscriber, millis: u64) -> Option<Event>;
+        fn pool_event(self: &Arc<Mutex<dyn EventSubscriber>>, millis: u64) -> Option<Event>;
 
         //
         // Event

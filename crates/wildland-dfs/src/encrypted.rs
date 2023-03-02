@@ -16,7 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use wildland_corex::dfs::interface::{
     DfsFrontend,
@@ -171,7 +171,7 @@ impl DfsFrontend for EncryptedDfs {
         self.inner.stat_fs(path)
     }
 
-    fn get_subscriber(&self) -> Arc<dyn EventSubscriber> {
+    fn get_subscriber(&self) -> Arc<Mutex<dyn EventSubscriber>> {
         self.inner.get_subscriber()
     }
 }

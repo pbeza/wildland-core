@@ -29,7 +29,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use uuid::Uuid;
 use wildland_corex::dfs::interface::{
@@ -56,7 +56,7 @@ use self::utils::{
     filter_existent_nodes,
     get_related_nodes,
 };
-use crate::events::{EventBuilder, EventSystem, NonBlockingEventSystem};
+use crate::events::{EventBuilder, NonBlockingEventSystem};
 use crate::storage_backends::models::{
     CloseError,
     OpenResponse,
@@ -93,7 +93,7 @@ pub struct UnencryptedDfs {
     /// reference).
     storage_backends: HashMap<Uuid, Rc<dyn StorageBackend>>,
     path_translator: Box<dyn PathConflictResolver>,
-    event_system: Rc<dyn EventSystem>,
+    event_system: Rc<NonBlockingEventSystem>,
 }
 
 impl UnencryptedDfs {
@@ -486,7 +486,7 @@ impl DfsFrontend for UnencryptedDfs {
         exec_on_single_existing_node(self, &mut nodes, stat_fs_op, &event_builder)
     }
 
-    fn get_subscriber(&self) -> Arc<dyn EventSubscriber> {
-        self.event_system.get_subscriber().into()
+    fn get_subscriber(&self) -> Arc<Mutex<dyn EventSubscriber>> {
+        Arc::new(Mutex::new(self.event_system.get_subscriber()))
     }
 }

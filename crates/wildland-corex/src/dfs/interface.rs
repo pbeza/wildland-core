@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -464,5 +464,5 @@ pub trait DfsFrontend {
 
     /// Returns subscriber that can listen to DFS events.
     /// Events may be split between different `EventSubscriber`.
-    fn get_subscriber(&self) -> Arc<dyn EventSubscriber>;
+    fn get_subscriber(&self) -> Arc<Mutex<dyn EventSubscriber>>;
 }
