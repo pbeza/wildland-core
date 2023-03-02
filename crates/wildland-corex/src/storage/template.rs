@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use serde::{Deserialize, Serialize};
 use tera::{Context, Tera};
@@ -54,12 +54,45 @@ pub enum StorageTemplateError {
     TemplateEngineErr(String),
 }
 
+trait ErrContext<T> {
+    type Error: Display;
+    fn context(self, ctx: impl Display) -> Result<T, Self::Error>;
+    fn format(err: impl Display, ctx: impl Display) -> String {
+        format!("{ctx}: {err}")
+    }
+}
+impl<T> ErrContext<T> for Result<T, serde_json::Error> {
+    type Error = StorageTemplateError;
+    fn context(self, ctx: impl Display) -> Result<T, Self::Error> {
+        self.map_err(|e| StorageTemplateError::SerdeErr(Self::format(e, ctx)))
+    }
+}
+impl<T> ErrContext<T> for Result<T, serde_yaml::Error> {
+    type Error = StorageTemplateError;
+    fn context(self, ctx: impl Display) -> Result<T, Self::Error> {
+        self.map_err(|e| StorageTemplateError::SerdeErr(Self::format(e, ctx)))
+    }
+}
+impl<T> ErrContext<T> for Result<T, tera::Error> {
+    type Error = StorageTemplateError;
+    fn context(self, ctx: impl Display) -> Result<T, Self::Error> {
+        self.map_err(|e| StorageTemplateError::TemplateEngineErr(Self::format(e, ctx)))
+    }
+}
+
 /// Storage Templates provide some general information about storage location. Their only purpose is to be
 /// filled with the container's parameters during container creation and to generate Storage Manifest
 /// (in opposition to a template it points to the storage location assigned to the particular container).
 ///
 #[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct StorageTemplate {
+#[serde(tag = "version")]
+pub enum StorageTemplate {
+    #[serde(rename = "1")]
+    V1(StorageTemplateV1),
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct StorageTemplateV1 {
     /// If uuid is Some(_) then this template has been written to Catalog Backend which gave it an id.
     #[serde(skip)]
     uuid: Option<Uuid>,
@@ -79,30 +112,42 @@ impl StorageTemplate {
         backend_type: impl ToString,
         template: &impl Serialize,
     ) -> Result<Self, StorageTemplateError> {
-        Ok(Self {
+        Ok(Self::V1(StorageTemplateV1 {
             name: None,
             uuid: None,
             backend_type: backend_type.to_string(),
             template: serde_json::to_value(template)
-                .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?,
-        })
+                .context("Error while deserializing 'template' property")?,
+        }))
     }
 
     pub(crate) fn with_uuid(mut self, uuid: Uuid) -> Self {
-        self.uuid = Some(uuid);
-        self
+        match &mut self {
+            StorageTemplate::V1(template) => {
+                template.uuid = Some(uuid);
+                self
+            }
+        }
     }
 
     pub fn set_uuid(&mut self, uuid: Uuid) {
-        self.uuid = Some(uuid);
+        match self {
+            StorageTemplate::V1(template) => {
+                template.uuid = Some(uuid);
+            }
+        }
     }
 
     pub fn name(&self) -> Option<String> {
-        self.name.clone()
+        match &self {
+            StorageTemplate::V1(template) => template.name.clone(),
+        }
     }
 
     pub fn set_name(&mut self, name: String) {
-        self.name = Some(name);
+        match self {
+            StorageTemplate::V1(template) => template.name = Some(name),
+        }
     }
 
     pub fn stringify(&self) -> String {
@@ -122,7 +167,7 @@ impl StorageTemplate {
     /// ```
     pub fn from_json(content: Vec<u8>) -> Result<StorageTemplate, StorageTemplateError> {
         serde_json::from_slice(content.as_slice())
-            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))
+            .context("Error while deserializing StorageTemplate from json")
     }
 
     /// Deserializes yaml-formatted content as a StorageTemplate.
@@ -135,52 +180,57 @@ impl StorageTemplate {
     /// ```
     pub fn from_yaml(content: Vec<u8>) -> Result<StorageTemplate, StorageTemplateError> {
         serde_yaml::from_slice(content.as_slice())
-            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))
+            .context("Error while deserializing StorageTemplate from yaml")
     }
 
     pub fn to_json(&self) -> Result<String, StorageTemplateError> {
-        serde_json::to_string(&self.template)
-            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))
+        serde_json::to_string(&self).context("Error while converting template to json")
     }
 
     pub fn to_yaml(&self) -> Result<String, StorageTemplateError> {
-        serde_yaml::to_string(&self.template)
-            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))
+        serde_yaml::to_string(&self).context("Error while converting template to yaml")
     }
 
     pub fn backend_type(&self) -> String {
-        self.backend_type.clone()
+        match &self {
+            StorageTemplate::V1(template) => template.backend_type.clone(),
+        }
+    }
+
+    /// Returns backend specific data under the `template` property
+    pub fn template(&self) -> &serde_json::Value {
+        match self {
+            StorageTemplate::V1(tv1) => &tv1.template,
+        }
     }
 
     /// If returned Some(_) then this template has been written to Catalog Backend which gave it an id.
     /// Otherwise it returns None
     pub fn uuid(&self) -> Option<Uuid> {
-        self.uuid
+        match &self {
+            StorageTemplate::V1(template) => template.uuid,
+        }
     }
 
     /// If returned Some(_) then this template has been written to Catalog Backend which gave it an id.
     /// Otherwise it returns None
     pub fn uuid_str(&self) -> Option<String> {
-        self.uuid.map(|u| u.to_string())
+        self.uuid().map(|u| u.to_string())
     }
 
     pub fn render(&self, params: TemplateContext) -> Result<Storage, StorageTemplateError> {
-        let template_str = serde_json::to_string(&self.template)
-            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
+        let template_str = serde_json::to_string(&self.template())
+            .context("Error deserializing template while rendering")?;
         let filled_template = Tera::one_off(
             &template_str,
             &Context::from_serialize(params)
-                .map_err(|e| StorageTemplateError::TemplateEngineErr(e.to_string()))?,
+                .context("Error while deserializing template params")?,
             true,
         )
-        .map_err(|e| StorageTemplateError::TemplateEngineErr(e.to_string()))?;
+        .context("Error while filling template with params")?;
         let storage_data: serde_json::Value = serde_json::from_str(&filled_template)
-            .map_err(|e| StorageTemplateError::SerdeErr(e.to_string()))?;
-        Ok(Storage::new(
-            self.name.clone(),
-            self.backend_type.clone(),
-            storage_data,
-        ))
+            .context("Deserialize Storage Error while rendering template")?;
+        Ok(Storage::new(self.name(), self.backend_type(), storage_data))
     }
 }
 
@@ -192,11 +242,12 @@ mod tests {
     use pretty_assertions::assert_eq;
     use uuid::Uuid;
 
-    use crate::{StorageTemplate, TemplateContext};
+    use crate::{StorageTemplate, StorageTemplateV1, TemplateContext};
 
     #[test]
     fn parse_generic_json_template() {
         let json_str = serde_json::json!({
+            "version": "1",
             "template": {
                 "access":
                     [
@@ -234,6 +285,7 @@ mod tests {
     #[test]
     fn parse_generic_yaml_template() {
         let yaml_content = "
+            version: '1'
             template:
                 access:
                     - user1: '*'
@@ -304,5 +356,51 @@ uuid = "00000000-0000-0000-0000-000000001111"
             toml::Value::try_from(&rendered_storage).unwrap(),
             toml::Value::from_str(&expected_storage_toml).unwrap()
         );
+    }
+
+    #[test]
+    fn test_to_json() {
+        let template = StorageTemplate::V1(StorageTemplateV1 {
+            uuid: Some(Uuid::from_u128(1)),
+            name: Some("name".into()),
+            backend_type: "backend type".into(),
+            template: serde_json::to_value(HashMap::from([("a", "b")])).unwrap(),
+        });
+
+        let json = serde_json::to_value(&template).unwrap();
+        let expected = serde_json::json!({
+            "version": "1",
+            "name": "name",
+            "backend_type": "backend type",
+            "template": {
+                "a": "b"
+            }
+        });
+
+        assert_eq!(json, expected);
+    }
+
+    #[test]
+    fn test_to_yaml() {
+        let template = StorageTemplate::V1(StorageTemplateV1 {
+            uuid: Some(Uuid::from_u128(1)),
+            name: Some("name".into()),
+            backend_type: "backend type".into(),
+            template: serde_json::to_value(HashMap::from([("a", "b")])).unwrap(),
+        });
+
+        let yaml = serde_yaml::to_value(&template).unwrap();
+        let expected: serde_yaml::Value = serde_yaml::from_str(
+            r#"
+            version: '1'
+            name: name
+            backend_type: 'backend type'
+            template:
+                a: b
+        "#,
+        )
+        .unwrap();
+
+        assert_eq!(yaml, expected);
     }
 }

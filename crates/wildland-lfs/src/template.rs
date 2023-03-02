@@ -64,6 +64,7 @@ mod tests {
             .unwrap();
 
         let expected_json_form = json!({
+            "version": "1",
             "backend_type": "LocalFilesystem",
             "name": null,
             "template": {
@@ -72,6 +73,6 @@ mod tests {
             }
         });
 
-        assert_eq!(expected_json_form, serde_json::to_value(&template).unwrap());
+        assert_eq!(expected_json_form, serde_json::to_value(template).unwrap());
     }
 }

@@ -403,6 +403,7 @@ mod tests {
         let template = &catlib_service.get_storage_templates().unwrap()[0];
         let expected_template_json = json!(
             {
+                "version": "1",
                 "backend_type":"FoundationStorage",
                 "name": null,
                 "template":

@@ -23,8 +23,15 @@ pub use wildland_corex::dfs::interface::*;
 use wildland_corex::entities::Identity;
 use wildland_corex::{BridgeManifest, Signers, StorageManifest};
 pub use wildland_corex::{
-    Container, ContainerManagerError, CoreXError, CryptoError, ForestRetrievalError,
-    LocalSecureStorage, LssError, StorageTemplate, StorageTemplateError,
+    Container,
+    ContainerManagerError,
+    CoreXError,
+    CryptoError,
+    ForestRetrievalError,
+    LocalSecureStorage,
+    LssError,
+    StorageTemplate,
+    StorageTemplateError,
 };
 
 use crate::api::cargo_lib::*;
@@ -62,7 +69,9 @@ mod wrapper {
 }
 
 use self::wrapper::{
-    read_write_wl_permissions, readonly_wl_permissions, storage_template_from_json,
+    read_write_wl_permissions,
+    readonly_wl_permissions,
+    storage_template_from_json,
     storage_template_from_yaml,
 };
 
