@@ -172,6 +172,37 @@ mod ffi_binding {
         Other,
     }
 
+    enum Operation {
+        ReadDir,
+        Metadata,
+        Open,
+        Close,
+        CreateDir,
+        RemoveDir,
+        Read,
+        Write,
+        Seek,
+        RemoveFile,
+        CreateFile,
+        Rename,
+        SetPermission,
+        SetOwner,
+        SetLength,
+        Sync,
+        SetTimes,
+        FileMetadata,
+        SyncAll,
+        SetFilePermissions,
+        FileStatFs,
+        StatFs,
+    }
+
+    enum Cause {
+        UnsupportedBackendType,
+        UnresponsiveBackend,
+        AllBackendsUnresponsive,
+    }
+
     extern "Traits" {
 
         // # traits required for logging configuration
@@ -473,6 +504,20 @@ mod ffi_binding {
             self: &Arc<Mutex<dyn DfsFrontend>>,
             path: String,
         ) -> Result<FsStat, DfsFrontendError>;
+        fn get_receiver(self: &Arc<Mutex<dyn DfsFrontend>>) -> Arc<Mutex<dyn EventReceiver>>;
+
+        //
+        // EventReceiver
+        //
+        fn recv(self: &Arc<Mutex<dyn EventReceiver>>) -> Option<Event>;
+
+        //
+        // Event
+        //
+        fn get_cause(self: &Event) -> Cause;
+        fn get_operation(self: &Event) -> Option<Operation>;
+        fn get_operation_path(self: &Event) -> Option<String>;
+        fn get_backend_type(self: &Event) -> Option<String>;
 
         //
         // FileHandle

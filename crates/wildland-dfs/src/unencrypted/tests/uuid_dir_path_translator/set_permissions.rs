@@ -25,7 +25,7 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError, WlPermissions};
 use wildland_corex::{MockPathResolver, ResolvedPath};
 
-use crate::unencrypted::tests::{dfs_with_fs, new_mufs_storage};
+use crate::unencrypted::tests::{dfs_with_mu_fs, new_mufs_storage};
 
 #[rstest]
 fn test_set_permissions_of_nonexistent_path() {
@@ -38,7 +38,7 @@ fn test_set_permissions_of_nonexistent_path() {
         .returning(move |_path| Ok(HashSet::new()));
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let stat = dfs.metadata("/a/file".to_string()).unwrap_err();
     assert_eq!(stat, DfsFrontendError::NoSuchPath)
@@ -65,7 +65,7 @@ fn test_set_permissions_of_file_in_container_root() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
 
@@ -106,7 +106,7 @@ fn test_set_permissions_of_dir_in_container_root() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
 
@@ -141,7 +141,7 @@ fn test_set_permissions_of_virtual_dir() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs
         .set_permissions("/virtual_dir".to_string(), WlPermissions::read_write())
@@ -181,7 +181,7 @@ fn test_set_permissions_of_conflicting_paths() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_dir("/storage1/b").unwrap();
@@ -220,7 +220,7 @@ fn test_virtual_path_colliding_with_file() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_file("/storage1/b").unwrap();

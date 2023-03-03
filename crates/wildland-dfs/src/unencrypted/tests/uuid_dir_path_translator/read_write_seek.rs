@@ -25,7 +25,7 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::DfsFrontend;
 use wildland_corex::{MockPathResolver, ResolvedPath};
 
-use crate::unencrypted::tests::{dfs_with_fs, new_mufs_storage};
+use crate::unencrypted::tests::{dfs_with_mu_fs, new_mufs_storage};
 
 #[rstest]
 fn test_read_empty_file() {
@@ -48,7 +48,7 @@ fn test_read_empty_file() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
 
@@ -78,7 +78,7 @@ fn test_write_and_seek_from_start_and_read() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
 

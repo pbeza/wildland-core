@@ -26,7 +26,7 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError};
 use wildland_corex::{MockPathResolver, ResolvedPath};
 
-use crate::unencrypted::tests::{dfs_with_fs, new_mufs_storage};
+use crate::unencrypted::tests::{dfs_with_mu_fs, new_mufs_storage};
 
 #[rstest]
 fn test_listing_files_from_nonexistent_directory() {
@@ -48,7 +48,7 @@ fn test_listing_files_from_nonexistent_directory() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.read_dir("/dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::NoSuchPath);
@@ -74,7 +74,7 @@ fn test_listing_files_from_root_of_one_container() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     let files = dfs
         .read_dir("/a/b/".to_string())
@@ -111,7 +111,7 @@ fn test_listing_files_from_nested_dir_of_one_container() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir/").unwrap();
     fs.create_file("/dir/nested_file_1").unwrap();
@@ -150,7 +150,7 @@ fn test_listing_dirs_from_one_container() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     let files = dfs
         .read_dir("/".to_string())
@@ -201,7 +201,7 @@ fn test_listing_files_and_dirs_from_two_containers() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_dir("/storage1/dir/").unwrap();
@@ -258,7 +258,7 @@ fn test_getting_one_file_from_container_with_multiple_storages() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_dir("/storage1/a").unwrap();
@@ -308,7 +308,7 @@ fn test_more_than_one_file_claim_the_same_full_path() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_dir("/storage1/b").unwrap();
@@ -363,7 +363,7 @@ fn test_listing_virtual_node() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage_c1/").unwrap();
     fs.create_file("/storage_c1/file_1").unwrap();
@@ -426,7 +426,7 @@ fn test_file_colliding_with_virtual_node() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_file("/storage1/b").unwrap();
@@ -496,7 +496,7 @@ fn test_dir_colliding_with_virtual_node() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_dir("/storage1/b").unwrap();
@@ -542,7 +542,7 @@ fn test_read_dir_on_file() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_file("/storage1/a").unwrap();
@@ -577,7 +577,7 @@ fn test_read_dir_on_virtual_node_only() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let files = dfs
         .read_dir("/a/".to_string())

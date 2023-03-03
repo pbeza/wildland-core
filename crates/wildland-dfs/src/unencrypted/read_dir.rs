@@ -20,25 +20,35 @@ use std::str::FromStr;
 
 use itertools::Itertools;
 use uuid::Uuid;
-use wildland_corex::dfs::interface::DfsFrontendError;
+use wildland_corex::dfs::interface::{DfsFrontendError, Operation};
 use wildland_corex::{ResolvedPath, Storage};
 
 use super::node_descriptor::{NodeDescriptor, NodeStorages};
 use super::utils::{execute_backend_op_with_policy, ExecutionPolicy};
 use super::UnencryptedDfs;
+use crate::events::EventBuilder;
 use crate::storage_backends::models::ReadDirResponse;
 
 pub fn read_dir(
     dfs_front: &mut UnencryptedDfs,
     requested_path: String,
 ) -> Result<Vec<String>, DfsFrontendError> {
+    let event_builder = EventBuilder::new(dfs_front.event_system.clone())
+        .operation(Operation::ReadDir)
+        .operation_path(requested_path.clone());
+
     let requested_path = PathBuf::from_str(&requested_path).unwrap();
-    let resolved_paths = dfs_front.path_resolver.resolve(requested_path.as_ref())?;
+    let resolved_paths = dfs_front.path_resolver.resolve(&requested_path)?;
 
     let nodes = resolved_paths
         .into_iter()
         .map(|resolved_path| {
-            map_resolved_path_into_node_descriptors(dfs_front, &requested_path, resolved_path)
+            map_resolved_path_into_node_descriptors(
+                dfs_front,
+                &requested_path,
+                resolved_path,
+                &event_builder,
+            )
         })
         .collect_vec();
 
@@ -49,10 +59,17 @@ pub fn read_dir(
         return Err(DfsFrontendError::NoSuchPath);
     };
 
+    if nodes
+        .iter()
+        .all(|result| matches!(result, Err(DfsFrontendError::StorageNotResponsive)))
+    {
+        return Err(DfsFrontendError::StorageNotResponsive);
+    };
+
     let nodes = nodes
         .into_iter()
-        .filter_map(|result| if let Ok(r) = result { Some(r) } else { None })
-        .flat_map(|v| v.into_iter())
+        .filter_map(Result::ok)
+        .flatten()
         .collect_vec();
 
     Ok(dfs_front
@@ -84,6 +101,7 @@ fn map_resolved_path_into_node_descriptors(
     dfs_front: &mut UnencryptedDfs,
     requested_path: &Path,
     resolved_path: ResolvedPath,
+    event_builder: &EventBuilder,
 ) -> Result<Vec<NodeDescriptor>, DfsFrontendError> {
     match resolved_path {
         ResolvedPath::VirtualPath(virtual_path) => Ok(vec![map_virtual_path_to_node_descriptor(
@@ -100,6 +118,7 @@ fn map_resolved_path_into_node_descriptors(
             storages_id,
             storages,
             path_within_storage,
+            event_builder,
         ),
     }
 }
@@ -127,40 +146,35 @@ fn map_physical_path_to_node_descriptors(
     storages_id: Uuid,
     node_storages: Vec<Storage>,
     path_within_storage: PathBuf,
+    event_builder: &EventBuilder,
 ) -> Result<Vec<NodeDescriptor>, DfsFrontendError> {
-    let backends = dfs_front.get_backends(&node_storages);
+    let backends = dfs_front.get_backends(&node_storages, event_builder);
 
     let operations_on_backends = backends.map(|backend| {
-        let node_storages = node_storages.clone();
-        {
-            backend
-                .read_dir(&path_within_storage)
-                .map(|response| match response {
-                    ReadDirResponse::Entries(resulting_paths) => Ok(resulting_paths
-                        .into_iter()
-                        .map({
-                            let node_storages = node_storages.clone();
-                            move |entry_path| NodeDescriptor::Physical {
-                                storages: NodeStorages::new(
-                                    node_storages.clone(),
-                                    entry_path.clone(),
-                                    storages_id,
-                                ),
-                                absolute_path: requested_path.join(entry_path.file_name().unwrap()),
-                            }
-                        })
-                        .collect_vec()),
-                    ReadDirResponse::NotADirectory => Ok(vec![NodeDescriptor::Physical {
+        backend
+            .read_dir(&path_within_storage)
+            .map(|response| match response {
+                ReadDirResponse::Entries(resulting_paths) => Ok(resulting_paths
+                    .into_iter()
+                    .map(|entry_path| NodeDescriptor::Physical {
                         storages: NodeStorages::new(
                             node_storages.clone(),
-                            path_within_storage.clone(),
+                            entry_path.clone(),
                             storages_id,
                         ),
-                        absolute_path: PathBuf::from(requested_path),
-                    }]),
-                    ReadDirResponse::NoSuchPath => Err(DfsFrontendError::NoSuchPath),
-                })
-        }
+                        absolute_path: requested_path.join(entry_path.file_name().unwrap()),
+                    })
+                    .collect_vec()),
+                ReadDirResponse::NotADirectory => Ok(vec![NodeDescriptor::Physical {
+                    storages: NodeStorages::new(
+                        node_storages.clone(),
+                        path_within_storage.clone(),
+                        storages_id,
+                    ),
+                    absolute_path: PathBuf::from(requested_path),
+                }]),
+                ReadDirResponse::NoSuchPath => Err(DfsFrontendError::NoSuchPath),
+            })
     });
 
     execute_backend_op_with_policy(
@@ -169,6 +183,7 @@ fn map_physical_path_to_node_descriptors(
         // TODO WILX-362 getting first should be a temporary policy, maybe we should ping backends to check if any of them
         // is responsive and use the one that answered as the first one or ask all of them at once and return the first answer.
         ExecutionPolicy::SequentiallyToFirstSuccess,
+        event_builder,
     )?
 }
 

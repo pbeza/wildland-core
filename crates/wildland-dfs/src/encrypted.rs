@@ -16,10 +16,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use wildland_corex::dfs::interface::{
     DfsFrontend,
     DfsFrontendError,
+    EventReceiver,
     FileHandle,
     FsStat,
     Stat,
@@ -167,5 +169,9 @@ impl DfsFrontend for EncryptedDfs {
 
     fn stat_fs(&mut self, path: String) -> Result<FsStat, DfsFrontendError> {
         self.inner.stat_fs(path)
+    }
+
+    fn get_receiver(&self) -> Arc<Mutex<dyn EventReceiver>> {
+        self.inner.get_receiver()
     }
 }

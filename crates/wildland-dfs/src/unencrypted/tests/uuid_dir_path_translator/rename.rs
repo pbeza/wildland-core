@@ -25,7 +25,7 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError};
 use wildland_corex::{MockPathResolver, ResolvedPath};
 
-use crate::unencrypted::tests::{dfs_with_fs, new_mufs_storage};
+use crate::unencrypted::tests::{dfs_with_mu_fs, new_mufs_storage};
 
 #[rstest]
 fn test_rename_of_nonexistent_path() {
@@ -38,7 +38,7 @@ fn test_rename_of_nonexistent_path() {
         .returning(move |_path| Ok(HashSet::new()));
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.rename("/a/file".to_string(), "".into()).unwrap_err();
     assert_eq!(err, DfsFrontendError::NoSuchPath)
@@ -59,7 +59,7 @@ fn test_rename_of_virtual() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.rename("/a/b".to_string(), "/a/c".into()).unwrap_err();
     assert_eq!(err, DfsFrontendError::ReadOnlyPath)
@@ -83,7 +83,7 @@ fn test_successful_rename_of_file() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
 
@@ -110,7 +110,7 @@ fn test_rename_of_file_when_target_file_exists() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
     fs.create_file("/new_file").unwrap();
@@ -139,7 +139,7 @@ fn test_successful_rename_of_dir() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
 
@@ -167,7 +167,7 @@ fn test_target_path_with_no_parent() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
 
@@ -195,7 +195,7 @@ fn test_target_path_is_subdir_of_old() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
 
@@ -223,7 +223,7 @@ fn test_target_path_is_dir_but_source_is_not() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
     fs.create_dir("/dir").unwrap();
@@ -252,7 +252,7 @@ fn test_target_path_is_file_but_source_is_not() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
     fs.create_dir("/dir").unwrap();
@@ -281,7 +281,7 @@ fn test_rename_directory_with_empty_dir_as_target() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
     fs.create_file("/dir/file").unwrap();
@@ -311,7 +311,7 @@ fn test_rename_directory_with_non_empty_dir_as_target() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
     fs.create_file("/dir/file").unwrap();
@@ -342,7 +342,7 @@ fn test_rename_between_containers() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
 
@@ -384,7 +384,7 @@ fn test_rename_conflicting_files() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1").unwrap();
     fs.create_dir("/storage1/b").unwrap();

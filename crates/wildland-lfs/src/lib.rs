@@ -23,7 +23,6 @@ use std::os::unix::prelude::{MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use anyhow::anyhow;
 use filetime::{set_file_atime, set_file_mtime, FileTime};
 use template::LocalFilesystemStorageTemplate;
 use wildland_dfs::storage_backends::models::{
@@ -65,6 +64,13 @@ fn strip_root(path: &Path) -> &Path {
     }
 }
 
+fn map_to_storage_backend_error(err: impl Into<anyhow::Error>) -> StorageBackendError {
+    StorageBackendError::Generic {
+        backend_type: "LocalFilesystem".into(),
+        inner: err.into(),
+    }
+}
+
 impl StorageBackend for LocalFilesystemStorage {
     fn read_dir(&self, path: &Path) -> Result<ReadDirResponse, StorageBackendError> {
         let relative_path = strip_root(path);
@@ -79,9 +85,16 @@ impl StorageBackend for LocalFilesystemStorage {
             Ok(ReadDirResponse::NotADirectory)
         } else {
             Ok(ReadDirResponse::Entries(
-                fs::read_dir(path)?
+                fs::read_dir(path)
+                    .map_err(map_to_storage_backend_error)?
                     .map(|entry_result| {
-                        Ok(Path::new("/").join(entry_result?.path().strip_prefix(&self.base_dir)?))
+                        Ok(Path::new("/").join(
+                            entry_result
+                                .map_err(map_to_storage_backend_error)?
+                                .path()
+                                .strip_prefix(&self.base_dir)
+                                .map_err(map_to_storage_backend_error)?,
+                        ))
                     })
                     .collect::<Result<_, StorageBackendError>>()?,
             ))
@@ -97,7 +110,9 @@ impl StorageBackend for LocalFilesystemStorage {
         }
 
         Ok(MetadataResponse::Found(
-            fs::metadata(path).map(map_metadata_to_stat)?,
+            fs::metadata(path)
+                .map(map_metadata_to_stat)
+                .map_err(map_to_storage_backend_error)?,
         ))
     }
 
@@ -107,13 +122,18 @@ impl StorageBackend for LocalFilesystemStorage {
 
         if !path.exists() {
             Ok(OpenResponse::NotFound)
-        } else if !path.metadata()?.is_file() {
+        } else if !path
+            .metadata()
+            .map_err(map_to_storage_backend_error)?
+            .is_file()
+        {
             Ok(OpenResponse::NotAFile)
         } else {
             let file = OpenOptions::new()
                 .read(true)
                 .write(true)
-                .open(path.as_path())?;
+                .open(path.as_path())
+                .map_err(map_to_storage_backend_error)?;
 
             let opened_file = StdFsOpenedFile::new(file, path);
 
@@ -130,7 +150,7 @@ impl StorageBackend for LocalFilesystemStorage {
             Err(e) => match e.kind() {
                 std::io::ErrorKind::NotFound => Ok(CreateDirResponse::InvalidParent),
                 std::io::ErrorKind::AlreadyExists => Ok(CreateDirResponse::PathAlreadyExists),
-                _ => Err(StorageBackendError::Generic(e.into())),
+                _ => Err(map_to_storage_backend_error(e)),
             },
         }
     }
@@ -153,7 +173,9 @@ impl StorageBackend for LocalFilesystemStorage {
                 return Ok(RemoveDirResponse::DirNotEmpty);
             }
 
-            Ok(std::fs::remove_dir(&path).map(|_| RemoveDirResponse::Removed)?)
+            Ok(std::fs::remove_dir(&path)
+                .map(|_| RemoveDirResponse::Removed)
+                .map_err(map_to_storage_backend_error)?)
         } else {
             Ok(RemoveDirResponse::NotFound)
         }
@@ -180,7 +202,7 @@ impl StorageBackend for LocalFilesystemStorage {
                 Ok(_) => Ok(RemoveFileResponse::Removed),
                 Err(e) => match e.kind() {
                     std::io::ErrorKind::NotFound => Ok(RemoveFileResponse::NotFound),
-                    _ => Err(StorageBackendError::Generic(e.into())),
+                    _ => Err(map_to_storage_backend_error(e)),
                 },
             }
         } else {
@@ -203,7 +225,8 @@ impl StorageBackend for LocalFilesystemStorage {
                     .create(true)
                     .truncate(true)
                     .read(true)
-                    .open(path.as_path())?;
+                    .open(path.as_path())
+                    .map_err(map_to_storage_backend_error)?;
                 Ok(CreateFileResponse::created(StdFsOpenedFile::new(
                     opened_file,
                     path,
@@ -211,7 +234,7 @@ impl StorageBackend for LocalFilesystemStorage {
             }
             Err(e) => match e.kind() {
                 std::io::ErrorKind::NotFound => Ok(CreateFileResponse::InvalidParent),
-                _ => Err(StorageBackendError::Generic(e.into())),
+                _ => Err(map_to_storage_backend_error(e)),
             },
         }
     }
@@ -237,7 +260,7 @@ impl StorageBackend for LocalFilesystemStorage {
                         Ok(_) => Ok(RenameResponse::Renamed),
                         Err(e) => match e.kind() {
                             std::io::ErrorKind::NotFound => Ok(RenameResponse::NotFound),
-                            _ => Err(StorageBackendError::Generic(e.into())),
+                            _ => Err(map_to_storage_backend_error(e)),
                         },
                     },
                 }
@@ -265,7 +288,7 @@ impl StorageBackend for LocalFilesystemStorage {
             Ok(_) => Ok(SetPermissionsResponse::Set),
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => Ok(SetPermissionsResponse::NotFound),
-                _ => Err(e.into()),
+                _ => Err(map_to_storage_backend_error(e)),
             },
         }
     }
@@ -276,8 +299,7 @@ impl StorageBackend for LocalFilesystemStorage {
 }
 
 fn stat_fs(path: &Path) -> Result<FsStat, StorageBackendError> {
-    let statfs = rustix::fs::statfs(path)
-        .map_err(|e| StorageBackendError::Generic(anyhow!("LFS `stat_fs` error: {e}")))?;
+    let statfs = rustix::fs::statfs(path).map_err(map_to_storage_backend_error)?;
     Ok(FsStat {
         block_size: statfs.f_bsize as u64,
         io_size: None,
