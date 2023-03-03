@@ -9,4 +9,7 @@ mod helpers;
 mod models;
 mod storage_template;
 
+#[cfg(test)]
+mod tests;
+
 pub use factory::S3BackendFactory;

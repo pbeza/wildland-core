@@ -2,6 +2,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::time::SystemTime;
 
+use anyhow::Context;
 use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp, WlPermissions};
 
 use super::client::S3Client;
@@ -213,7 +214,8 @@ impl StorageBackend for S3Backend {
         let new_file = self
             .client
             .create_new_empty(&self.bucket_name)
-            .map_err(|err| StorageBackendError::Generic(err.into()))?;
+            .context("Couldn't create new empty file")
+            .map_err(StorageBackendError::Generic)?;
 
         parent_dir.children.push(
             File {

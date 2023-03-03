@@ -1,6 +1,7 @@
 use std::ops::RangeInclusive;
 use std::rc::Rc;
 
+use anyhow::Context;
 use aws_sdk_s3::model::{CompletedMultipartUpload, CompletedPart};
 use aws_sdk_s3::output::{
     CompleteMultipartUploadOutput,
@@ -236,17 +237,21 @@ impl S3Client for WildlandS3Client {
                 checksum_sha1,
                 checksum_sha256,
                 ..
-            } = self.rt.block_on(async {
-                self.client
-                    .upload_part()
-                    .body(chunk.to_vec().into())
-                    .bucket(bucket_name)
-                    .key(&new_object_name)
-                    .part_number(part_number)
-                    .set_upload_id(upload_id.clone())
-                    .send()
-                    .await
-            })?;
+            } = self
+                .rt
+                .block_on(async {
+                    self.client
+                        .upload_part()
+                        .body(chunk.to_vec().into())
+                        .bucket(bucket_name)
+                        .key(&new_object_name)
+                        .part_number(part_number)
+                        .set_upload_id(upload_id.clone())
+                        .send()
+                        .await
+                })
+                .context("Upload part failed")?;
+
             completed_parts.push(
                 CompletedPart::builder()
                     .set_e_tag(e_tag)

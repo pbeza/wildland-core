@@ -99,7 +99,7 @@ pub enum RemoveFileResponse {
     NotAFile,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RenameResponse {
     Renamed,
     NotFound,
@@ -120,7 +120,7 @@ impl CreateFileResponse {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum SetPermissionsResponse {
     Set,
     NotFound,
