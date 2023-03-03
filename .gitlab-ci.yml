@@ -6,6 +6,7 @@ variables:
   CACHE_COMPRESSION_LEVEL: "fastest"
   FF_USE_FASTZIP: "true"
   GIT_STRATEGY: "clone"
+  CI_DEBUG_SERVICES: "true"
 
 stages:
   - Build
@@ -81,6 +82,12 @@ cargo test:
   only:
     - master
     - merge_requests
+  variables:
+    MINIO_URL: http://minio:9000
+  services:
+    - name: minio/minio:latest
+      alias: minio
+      entrypoint: ["minio" ,"server", "/data"]
   script:
     - redis-server --daemonize yes
     - cargo make test

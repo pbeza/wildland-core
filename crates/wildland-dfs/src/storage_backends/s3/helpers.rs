@@ -1,6 +1,7 @@
 use anyhow::Context;
 use aws_sdk_s3::model::{CompletedPart, CopyPartResult};
 use scopeguard::ScopeGuard;
+use wildland_corex::dfs::interface::DfsFrontendError;
 
 use super::client::S3Client;
 use super::error::S3Error;
@@ -58,9 +59,11 @@ pub fn commit_file_system(
             FILE_SYSTEM_FILE,
             bucket_name,
             serde_json::to_vec(&file_system)
-                .map_err(|err| StorageBackendError::Generic(err.into()))?,
+                .context("Filesystem metadata serialization error")
+                .map_err(StorageBackendError::Generic)?,
         )
-        .map_err(|err| StorageBackendError::Generic(err.into()))
+        .context("Could not save filesystem metadata")
+        .map_err(StorageBackendError::Generic)
 }
 
 pub fn defuse<T, F, S>(guard: ScopeGuard<T, F, S>)
@@ -69,4 +72,12 @@ where
     S: scopeguard::Strategy,
 {
     scopeguard::ScopeGuard::into_inner(guard);
+}
+
+pub fn map_conccurent_operation_error(err: S3Error) -> DfsFrontendError {
+    match err {
+        S3Error::NotFound => DfsFrontendError::ConcurrentIssue,
+        S3Error::ETagMistmach => DfsFrontendError::ConcurrentIssue,
+        S3Error::Generic(err) => DfsFrontendError::Generic(format!("{err:?}")),
+    }
 }
