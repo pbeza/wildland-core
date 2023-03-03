@@ -21,7 +21,7 @@ use std::sync::{Arc, Mutex};
 use wildland_corex::dfs::interface::{
     DfsFrontend,
     DfsFrontendError,
-    EventSubscriber,
+    EventReceiver,
     FileHandle,
     FsStat,
     Stat,
@@ -171,7 +171,7 @@ impl DfsFrontend for EncryptedDfs {
         self.inner.stat_fs(path)
     }
 
-    fn get_subscriber(&self) -> Arc<Mutex<dyn EventSubscriber>> {
-        self.inner.get_subscriber()
+    fn get_receiver(&self) -> Arc<Mutex<dyn EventReceiver>> {
+        self.inner.get_receiver()
     }
 }

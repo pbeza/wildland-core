@@ -191,7 +191,7 @@ pub enum Cause {
     AllBackendsUnresponsive,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Event {
     pub cause: Cause,
     pub operation: Option<Operation>,
@@ -217,8 +217,8 @@ impl Event {
     }
 }
 
-pub trait EventSubscriber {
-    fn pool_event(&self, millis: u64) -> Option<Event>;
+pub trait EventReceiver {
+    fn recv(&mut self) -> Option<Event>;
 }
 
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
@@ -462,7 +462,7 @@ pub trait DfsFrontend {
     /// `NoSuchPath` - no such path exists
     fn stat_fs(&mut self, path: String) -> Result<FsStat, DfsFrontendError>;
 
-    /// Returns subscriber that can listen to DFS events.
-    /// Events may be split between different `EventSubscriber`.
-    fn get_subscriber(&self) -> Arc<Mutex<dyn EventSubscriber>>;
+    /// Returns receiver that can listen to DFS events.
+    /// Events may be split between different `EventReceiver`.
+    fn get_receiver(&self) -> Arc<Mutex<dyn EventReceiver>>;
 }

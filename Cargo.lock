@@ -2398,10 +2398,23 @@ dependencies = [
  "cc",
  "libc",
  "once_cell",
- "spin",
+ "spin 0.5.2",
  "untrusted",
  "web-sys",
  "winapi",
+]
+
+[[package]]
+name = "ring-channel"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fbe5a2ba0d498a349229e868f511ab442ed125001dca06a88cf0d84fd876929"
+dependencies = [
+ "crossbeam-utils",
+ "derivative",
+ "futures",
+ "slotmap",
+ "spin 0.9.5",
 ]
 
 [[package]]
@@ -2809,6 +2822,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "slotmap"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1e08e261d0e8f5c43123b7adf3e4ca1690d655377ac93a03b2c9d3e98de1342"
+dependencies = [
+ "version_check",
+]
+
+[[package]]
 name = "slug"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2847,6 +2869,12 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "spin"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dccf47db1b41fa1573ed27ccf5e08e3ca771cb994f776668c5ebda893b248fc"
 
 [[package]]
 name = "stable_deref_trait"
@@ -3746,13 +3774,13 @@ dependencies = [
  "aws-smithy-client",
  "aws-smithy-http",
  "aws-types",
- "crossbeam-channel",
  "derivative",
  "http",
  "http-body",
  "itertools",
  "mockall",
  "pretty_assertions",
+ "ring-channel",
  "rsfs",
  "rstest",
  "scopeguard",

@@ -36,7 +36,7 @@ use wildland_corex::dfs::interface::{
     Cause,
     DfsFrontend,
     DfsFrontendError,
-    EventSubscriber,
+    EventReceiver,
     FileHandle,
     FsStat,
     Operation,
@@ -93,7 +93,7 @@ pub struct UnencryptedDfs {
     /// reference).
     storage_backends: HashMap<Uuid, Rc<dyn StorageBackend>>,
     path_translator: Box<dyn PathConflictResolver>,
-    event_system: Rc<NonBlockingEventSystem>,
+    event_system: Box<NonBlockingEventSystem>,
 }
 
 impl UnencryptedDfs {
@@ -107,7 +107,7 @@ impl UnencryptedDfs {
             storage_backend_factories,
             storage_backends: HashMap::new(),
             path_translator: Box::new(UuidInDirTranslator::new()),
-            event_system: Rc::new(NonBlockingEventSystem::new()),
+            event_system: Box::new(NonBlockingEventSystem::new()),
         }
     }
 
@@ -156,7 +156,7 @@ impl UnencryptedDfs {
                 Err(e) => {
                     event_builder
                         .clone()
-                        .backend_type(storage.backend_type().to_owned())
+                        .backend_type(storage.backend_type())
                         .send(Cause::UnsupportedBackendType);
 
                     tracing::error!(
@@ -486,7 +486,7 @@ impl DfsFrontend for UnencryptedDfs {
         exec_on_single_existing_node(self, &mut nodes, stat_fs_op, &event_builder)
     }
 
-    fn get_subscriber(&self) -> Arc<Mutex<dyn EventSubscriber>> {
-        Arc::new(Mutex::new(self.event_system.get_subscriber()))
+    fn get_receiver(&self) -> Arc<Mutex<dyn EventReceiver>> {
+        Arc::new(Mutex::new(self.event_system.get_receiver()))
     }
 }

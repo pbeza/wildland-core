@@ -25,7 +25,7 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError};
 use wildland_corex::{MockPathResolver, ResolvedPath};
 
-use crate::unencrypted::tests::{dfs_with_fs, new_mufs_storage};
+use crate::unencrypted::tests::{dfs_with_mu_fs, new_mufs_storage};
 
 #[rstest]
 fn test_create_dir_in_path_without_containers() {
@@ -38,7 +38,7 @@ fn test_create_dir_in_path_without_containers() {
         .returning(move |_path| Ok(HashSet::new()));
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.create_dir("/dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::InvalidParent);
@@ -65,7 +65,7 @@ fn test_create_dir_in_path_without_parent() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.create_dir("/a/dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::InvalidParent);
@@ -92,7 +92,7 @@ fn test_create_dir_in_root_succeeds() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     dfs.create_dir("/dir".to_string()).unwrap();
 }
@@ -112,7 +112,7 @@ fn test_create_dir_conflicting_with_virtual_node() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.create_dir("/virtual_dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::PathAlreadyExists);
@@ -150,7 +150,7 @@ fn test_create_dir_when_path_resolver_returned_many_possible_paths() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1").unwrap();
     fs.create_dir("/storage2").unwrap();
@@ -191,7 +191,7 @@ fn test_create_dir_in_ambiguous_path_should_fail() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1").unwrap();
     fs.create_dir("/storage1/b").unwrap();
@@ -222,7 +222,7 @@ fn test_remove_dir_that_does_not_exist() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.remove_dir("/dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::NoSuchPath);
@@ -249,7 +249,7 @@ fn test_remove_dir_called_on_file_path() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
 
@@ -278,7 +278,7 @@ fn test_remove_non_empty_dir() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
     fs.create_file("/dir/file").unwrap();
@@ -308,7 +308,7 @@ fn test_remove_empty_dir() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
 
@@ -340,7 +340,7 @@ fn test_remove_root_from_container() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.remove_dir("/virtual_dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::ReadOnlyPath);
@@ -363,7 +363,7 @@ fn test_remove_virtual_dir() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.remove_dir("/virtual_dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::ReadOnlyPath);
@@ -401,7 +401,7 @@ fn test_remove_dir_in_conflicting_path() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1").unwrap();
     fs.create_dir("/storage1/b/").unwrap();

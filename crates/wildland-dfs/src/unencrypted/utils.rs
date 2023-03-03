@@ -28,7 +28,7 @@ pub fn filter_existent_nodes<'a: 'b, 'b>(
             .map(|exists| exists.then_some(node)),
             NodeDescriptor::Virtual { .. } => Ok(Some(node)), // virtual nodes are forwarded
         })
-        .collect::<Result<Vec<_>, DfsFrontendError>>()?
+        .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .flatten())
 }
@@ -92,6 +92,7 @@ fn map_resolved_path_into_node_descriptor(
 pub enum ExecutionPolicy {
     SequentiallyToFirstSuccess,
 }
+
 pub fn execute_backend_op_with_policy<T>(
     storages: &[Storage],
     mut ops: impl Iterator<Item = Result<T, StorageBackendError>>,
@@ -103,14 +104,17 @@ pub fn execute_backend_op_with_policy<T>(
             .find_map(|v| match v {
                 Ok(v) => Some(v),
                 Err(err) => {
-                    event_builder.send(Cause::UnresponsiveBackend);
+                    event_builder
+                        .clone()
+                        .backend_type(err.backend_type())
+                        .send(Cause::UnresponsiveBackend);
                     tracing::error!("Backend returned error for operation: {err:?}");
                     None
                 }
             })
             .map_or_else(
                 || {
-                    event_builder.send(Cause::AllBackendsUnresponsive);
+                    event_builder.clone().send(Cause::AllBackendsUnresponsive);
                     tracing::error!(
                         "None of the backends for storages {:?} works",
                         storages.iter().map(|s| s.backend_type())

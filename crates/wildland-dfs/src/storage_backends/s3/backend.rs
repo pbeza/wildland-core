@@ -7,7 +7,7 @@ use wildland_corex::dfs::interface::{NodeType, Stat, UnixTimestamp, WlPermission
 use super::client::S3Client;
 use super::descriptor::S3Descriptor;
 use super::file_system::{Directory, FileSystemNodeRef};
-use super::helpers::{commit_file_system, load_file_system};
+use super::helpers::{commit_file_system, load_file_system, map_to_storage_backend_error};
 use crate::storage_backends::models::{
     CreateDirResponse,
     CreateFileResponse,
@@ -213,7 +213,7 @@ impl StorageBackend for S3Backend {
         let new_file = self
             .client
             .create_new_empty(&self.bucket_name)
-            .map_err(|err| StorageBackendError::Generic(err.into()))?;
+            .map_err(map_to_storage_backend_error)?;
 
         parent_dir.children.push(
             File {

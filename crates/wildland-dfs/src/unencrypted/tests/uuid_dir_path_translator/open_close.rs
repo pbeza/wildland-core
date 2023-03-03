@@ -26,7 +26,7 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError};
 use wildland_corex::{MockPathResolver, ResolvedPath};
 
-use crate::unencrypted::tests::{dfs_with_fs, new_mufs_storage};
+use crate::unencrypted::tests::{dfs_with_mu_fs, new_mufs_storage};
 
 #[rstest]
 fn test_open_of_nonexistent_path() {
@@ -39,7 +39,7 @@ fn test_open_of_nonexistent_path() {
         .returning(move |_path| Ok(HashSet::new()));
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let stat = dfs.open("/a/file".to_string()).unwrap_err();
     assert_eq!(stat, DfsFrontendError::NoSuchPath)
@@ -66,7 +66,7 @@ fn test_open_of_file_in_container_root() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
 
@@ -94,7 +94,7 @@ fn test_open_the_same_file_twice() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
 
@@ -123,7 +123,7 @@ fn test_open_and_close_file() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
 
@@ -152,7 +152,7 @@ fn test_open_and_close_the_same_file_twice() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
 
@@ -196,7 +196,7 @@ fn test_open_and_close_conflicting_files() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1/").unwrap();
     fs.create_dir("/storage1/b").unwrap();

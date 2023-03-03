@@ -25,7 +25,7 @@ use uuid::Uuid;
 use wildland_corex::dfs::interface::{DfsFrontend, DfsFrontendError};
 use wildland_corex::{MockPathResolver, ResolvedPath};
 
-use crate::unencrypted::tests::{dfs_with_fs, new_mufs_storage};
+use crate::unencrypted::tests::{dfs_with_mu_fs, new_mufs_storage};
 
 #[rstest]
 fn test_create_file_in_path_without_containers() {
@@ -38,7 +38,7 @@ fn test_create_file_in_path_without_containers() {
         .returning(move |_path| Ok(HashSet::new()));
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.create_file("/file".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::InvalidParent);
@@ -65,7 +65,7 @@ fn test_create_file_in_path_without_parent() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.create_file("/a/file".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::InvalidParent);
@@ -92,7 +92,7 @@ fn test_create_file_in_root_succeeds() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     dfs.create_file("/file".to_string()).unwrap();
 }
@@ -112,7 +112,7 @@ fn test_create_file_conflicting_with_virtual_node() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let err = dfs.create_file("/virtual_dir".to_string()).unwrap_err();
     assert_eq!(err, DfsFrontendError::PathAlreadyExists);
@@ -150,7 +150,7 @@ fn test_create_file_when_path_resolver_returned_many_possible_paths() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1").unwrap();
     fs.create_dir("/storage2").unwrap();
@@ -191,7 +191,7 @@ fn test_create_file_in_ambiguous_path_should_fail() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/storage1").unwrap();
     fs.create_dir("/storage1/b").unwrap();
@@ -212,7 +212,7 @@ fn test_remove_nonexistent_file() {
         .returning(move |_path| Ok(HashSet::new()));
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let stat = dfs.remove_file("/a/file".to_string()).unwrap_err();
     assert_eq!(stat, DfsFrontendError::NoSuchPath)
@@ -236,7 +236,7 @@ fn test_remove_nonexistent_file_when_path_resolver_returned_some_path() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let stat = dfs.remove_file("/a/file".to_string()).unwrap_err();
     assert_eq!(stat, DfsFrontendError::NoSuchPath)
@@ -257,7 +257,7 @@ fn test_remove_file_called_on_virtual_path() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, _fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, _fs) = dfs_with_mu_fs(path_resolver);
 
     let stat = dfs.remove_file("/virtual_dir".to_string()).unwrap_err();
     assert_eq!(stat, DfsFrontendError::ReadOnlyPath)
@@ -281,7 +281,7 @@ fn test_remove_file_called_on_directory_path() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_dir("/dir").unwrap();
 
@@ -307,7 +307,7 @@ fn test_remove_file_should_succeed() {
         });
 
     let path_resolver = Box::new(path_resolver);
-    let (mut dfs, fs) = dfs_with_fs(path_resolver);
+    let (mut dfs, fs) = dfs_with_mu_fs(path_resolver);
 
     fs.create_file("/file").unwrap();
 

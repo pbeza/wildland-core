@@ -39,10 +39,10 @@ pub fn load_file_system(
     match client.read_object(FILE_SYSTEM_FILE, bucket_name, None, None) {
         Ok(body) => serde_json::from_slice(&body)
             .context("Filesystem metadata deserialization error")
-            .map_err(StorageBackendError::Generic),
+            .map_err(map_to_storage_backend_error),
         Err(S3Error::NotFound) => Ok(Default::default()),
         Err(err @ (S3Error::ETagMistmach | S3Error::Generic(_))) => {
-            Err(StorageBackendError::Generic(err.into()))
+            Err(map_to_storage_backend_error(err))
         }
     }
 }
@@ -57,10 +57,9 @@ pub fn commit_file_system(
         .save_object(
             FILE_SYSTEM_FILE,
             bucket_name,
-            serde_json::to_vec(&file_system)
-                .map_err(|err| StorageBackendError::Generic(err.into()))?,
+            serde_json::to_vec(&file_system).map_err(map_to_storage_backend_error)?,
         )
-        .map_err(|err| StorageBackendError::Generic(err.into()))
+        .map_err(map_to_storage_backend_error)
 }
 
 pub fn defuse<T, F, S>(guard: ScopeGuard<T, F, S>)
@@ -69,4 +68,11 @@ where
     S: scopeguard::Strategy,
 {
     scopeguard::ScopeGuard::into_inner(guard);
+}
+
+pub fn map_to_storage_backend_error(err: impl Into<anyhow::Error>) -> StorageBackendError {
+    StorageBackendError::Generic {
+        backend_type: "S3".into(),
+        inner: err.into(),
+    }
 }

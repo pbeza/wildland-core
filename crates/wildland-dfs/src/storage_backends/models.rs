@@ -34,19 +34,18 @@ pub enum CloseError {
 
 #[derive(thiserror::Error, Debug)]
 pub enum StorageBackendError {
-    #[error(transparent)]
-    Generic(#[from] anyhow::Error),
+    #[error("Error in backend {backend_type}. cause: {inner:?}")]
+    Generic {
+        backend_type: String,
+        inner: anyhow::Error,
+    },
 }
 
-impl From<std::io::Error> for StorageBackendError {
-    fn from(e: std::io::Error) -> Self {
-        Self::Generic(e.into())
-    }
-}
-
-impl From<std::path::StripPrefixError> for StorageBackendError {
-    fn from(e: std::path::StripPrefixError) -> Self {
-        Self::Generic(e.into())
+impl StorageBackendError {
+    pub fn backend_type(&self) -> &str {
+        match self {
+            Self::Generic { backend_type, .. } => &backend_type,
+        }
     }
 }
 

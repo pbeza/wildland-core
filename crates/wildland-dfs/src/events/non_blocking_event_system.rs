@@ -1,18 +1,19 @@
-use std::time::Duration;
+use std::num::NonZeroUsize;
 
-use crossbeam_channel::{unbounded, Receiver, Sender};
-use wildland_corex::dfs::interface::{Event, EventSubscriber};
+use ring_channel::{ring_channel, RingReceiver, RingSender};
+use wildland_corex::dfs::interface::{Event, EventReceiver};
 
 use super::events_system::EventSystem;
 
+#[derive(Clone)]
 pub struct NonBlockingEventSystem {
-    tx: Sender<Event>,
-    rx: Receiver<Event>,
+    tx: RingSender<Event>,
+    rx: RingReceiver<Event>,
 }
 
 impl Default for NonBlockingEventSystem {
     fn default() -> Self {
-        let (tx, rx) = unbounded();
+        let (tx, rx) = ring_channel(NonZeroUsize::new(100).unwrap());
         Self { tx, rx }
     }
 }
@@ -22,7 +23,7 @@ impl NonBlockingEventSystem {
         Default::default()
     }
 
-    pub fn get_subscriber(&self) -> NonBlockingEventSubscriber {
+    pub fn get_receiver(&self) -> NonBlockingEventSubscriber {
         NonBlockingEventSubscriber {
             rx: self.rx.clone(),
         }
@@ -30,18 +31,21 @@ impl NonBlockingEventSystem {
 }
 
 impl EventSystem for NonBlockingEventSystem {
-    fn send_event(&self, event: Event) {
-        let _ = self.tx.try_send(event);
+    fn send_event(&mut self, event: Event) {
+        let _ = self.tx.send(event);
+    }
+
+    fn clone_box(&self) -> Box<dyn EventSystem> {
+        Box::new(self.clone())
     }
 }
 
 pub struct NonBlockingEventSubscriber {
-    rx: Receiver<Event>,
+    rx: RingReceiver<Event>,
 }
 
-impl EventSubscriber for NonBlockingEventSubscriber {
-    fn pool_event(&self, millis: u64) -> Option<Event> {
-        let timeout = Duration::from_millis(millis);
-        self.rx.recv_timeout(timeout).ok()
+impl EventReceiver for NonBlockingEventSubscriber {
+    fn recv(&mut self) -> Option<Event> {
+        self.rx.recv().ok()
     }
 }

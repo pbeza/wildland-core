@@ -38,7 +38,7 @@ pub fn read_dir(
         .operation_path(requested_path.clone());
 
     let requested_path = PathBuf::from_str(&requested_path).unwrap();
-    let resolved_paths = dfs_front.path_resolver.resolve(requested_path.as_ref())?;
+    let resolved_paths = dfs_front.path_resolver.resolve(&requested_path)?;
 
     let nodes = resolved_paths
         .into_iter()
@@ -57,6 +57,13 @@ pub fn read_dir(
         .all(|result| matches!(result, Err(DfsFrontendError::NoSuchPath)))
     {
         return Err(DfsFrontendError::NoSuchPath);
+    };
+
+    if nodes
+        .iter()
+        .all(|result| matches!(result, Err(DfsFrontendError::StorageNotResponsive)))
+    {
+        return Err(DfsFrontendError::StorageNotResponsive);
     };
 
     let nodes = nodes
@@ -144,36 +151,30 @@ fn map_physical_path_to_node_descriptors(
     let backends = dfs_front.get_backends(&node_storages, event_builder);
 
     let operations_on_backends = backends.map(|backend| {
-        let node_storages = node_storages.clone();
-        {
-            backend
-                .read_dir(&path_within_storage)
-                .map(|response| match response {
-                    ReadDirResponse::Entries(resulting_paths) => Ok(resulting_paths
-                        .into_iter()
-                        .map({
-                            let node_storages = node_storages.clone();
-                            move |entry_path| NodeDescriptor::Physical {
-                                storages: NodeStorages::new(
-                                    node_storages.clone(),
-                                    entry_path.clone(),
-                                    storages_id,
-                                ),
-                                absolute_path: requested_path.join(entry_path.file_name().unwrap()),
-                            }
-                        })
-                        .collect_vec()),
-                    ReadDirResponse::NotADirectory => Ok(vec![NodeDescriptor::Physical {
+        backend
+            .read_dir(&path_within_storage)
+            .map(|response| match response {
+                ReadDirResponse::Entries(resulting_paths) => Ok(resulting_paths
+                    .into_iter()
+                    .map(|entry_path| NodeDescriptor::Physical {
                         storages: NodeStorages::new(
                             node_storages.clone(),
-                            path_within_storage.clone(),
+                            entry_path.clone(),
                             storages_id,
                         ),
-                        absolute_path: PathBuf::from(requested_path),
-                    }]),
-                    ReadDirResponse::NoSuchPath => Err(DfsFrontendError::NoSuchPath),
-                })
-        }
+                        absolute_path: requested_path.join(entry_path.file_name().unwrap()),
+                    })
+                    .collect_vec()),
+                ReadDirResponse::NotADirectory => Ok(vec![NodeDescriptor::Physical {
+                    storages: NodeStorages::new(
+                        node_storages.clone(),
+                        path_within_storage.clone(),
+                        storages_id,
+                    ),
+                    absolute_path: PathBuf::from(requested_path),
+                }]),
+                ReadDirResponse::NoSuchPath => Err(DfsFrontendError::NoSuchPath),
+            })
     });
 
     execute_backend_op_with_policy(
