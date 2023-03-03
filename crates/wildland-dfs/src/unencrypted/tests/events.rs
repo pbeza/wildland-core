@@ -24,14 +24,13 @@ fn assert_events_eq(receiver: Arc<Mutex<dyn EventReceiver>>, mut expected_events
         let index = expected_events
             .iter()
             .position(|expected| expected == &event);
-        assert!(index.is_some(), "Unexpected event: {:?}", event);
+        assert!(index.is_some(), "Unexpected event: {event:?}");
         expected_events.remove(index.unwrap());
     }
 
     assert!(
         expected_events.is_empty(),
-        "Events not matched: {:?}",
-        expected_events
+        "Events not matched: {expected_events:?}"
     );
 }
 
