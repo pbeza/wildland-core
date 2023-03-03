@@ -15,19 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod storage;
-pub mod user;
-pub mod config;
-use std::fmt::Display;
+use thiserror::Error;
 
-pub use user::*;
-
-pub trait ExceptionTrait {
-    fn reason(&self) -> String;
-}
-
-impl<T: Display> ExceptionTrait for T {
-    fn reason(&self) -> String {
-        self.to_string()
-    }
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[repr(C)]
+pub enum UserConfigDatabaseError {
+    #[error("Error while connecting to database: {0}")]
+    Generic(String),
+    #[error("No record found: {0}")]
+    NoRecordsFound(String)
 }

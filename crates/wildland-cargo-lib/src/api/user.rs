@@ -166,16 +166,19 @@ mod tests {
     use crate::api::config::FoundationStorageApiConfig;
     use crate::errors::UserRetrievalError;
     use crate::user::UserService;
-    use crate::utils::test::{catlib_service, lss_stub};
+    use crate::user_config::UserMultideviceConfig;
+    use crate::utils::test::{catlib_service, user_config, lss_stub};
 
     #[rstest]
     fn create_mnemonic_from_string_with_valid_words_should_succeed(
         catlib_service: CatLibService,
+        user_config: UserMultideviceConfig,
         lss_stub: &'static dyn LocalSecureStorage,
     ) {
         let api = UserApi::new(UserService::new(
             LssService::new(lss_stub),
             catlib_service,
+            user_config,
             FoundationStorageApiConfig::default(),
             ContainerManager::default(),
         ));
@@ -187,11 +190,13 @@ mod tests {
     #[rstest]
     fn create_mnemonic_from_string_with_invalid_words_should_return_err(
         catlib_service: CatLibService,
+        user_config: UserMultideviceConfig,
         lss_stub: &'static dyn LocalSecureStorage,
     ) {
         let api = UserApi::new(UserService::new(
             LssService::new(lss_stub),
             catlib_service,
+            user_config,
             FoundationStorageApiConfig::default(),
             ContainerManager::default(),
         ));
@@ -204,11 +209,13 @@ mod tests {
     #[rstest]
     fn create_mnemonic_from_vec_with_valid_words_should_succeed(
         catlib_service: CatLibService,
+        user_config: UserMultideviceConfig,
         lss_stub: &'static dyn LocalSecureStorage,
     ) {
         let api = UserApi::new(UserService::new(
             LssService::new(lss_stub),
             catlib_service,
+            user_config,
             FoundationStorageApiConfig::default(),
             ContainerManager::default(),
         ));
@@ -222,11 +229,13 @@ mod tests {
     #[rstest]
     fn create_mnemonic_from_vec_with_invalid_words_should_return_err(
         catlib_service: CatLibService,
+        user_config: UserMultideviceConfig,
         lss_stub: &'static dyn LocalSecureStorage,
     ) {
         let api = UserApi::new(UserService::new(
             LssService::new(lss_stub),
             catlib_service,
+            user_config,
             FoundationStorageApiConfig::default(),
             ContainerManager::default(),
         ));
@@ -241,12 +250,14 @@ mod tests {
     #[rstest]
     fn get_user_should_return_none_if_it_does_not_exist(
         catlib_service: CatLibService,
+        user_config: UserMultideviceConfig,
         lss_stub: &'static dyn LocalSecureStorage,
     ) {
         let lss_service = LssService::new(lss_stub);
         let user_service = UserService::new(
             lss_service,
             catlib_service,
+            user_config,
             FoundationStorageApiConfig::default(),
             ContainerManager::default(),
         );
@@ -262,12 +273,14 @@ mod tests {
     #[rstest]
     fn create_user_should_return_user_structure(
         catlib_service: CatLibService,
+        user_config: UserMultideviceConfig,
         lss_stub: &'static dyn LocalSecureStorage,
     ) {
         let lss_service = LssService::new(lss_stub);
         let user_service = UserService::new(
             lss_service,
             catlib_service,
+            user_config,
             FoundationStorageApiConfig::default(),
             ContainerManager::default(),
         );
@@ -286,12 +299,14 @@ mod tests {
     #[rstest]
     fn get_user_should_return_some_if_it_was_created(
         catlib_service: CatLibService,
+        user_config: UserMultideviceConfig,
         lss_stub: &'static dyn LocalSecureStorage,
     ) {
         let lss_service = LssService::new(lss_stub);
         let user_service = UserService::new(
             lss_service,
             catlib_service,
+            user_config,
             FoundationStorageApiConfig::default(),
             ContainerManager::default(),
         );

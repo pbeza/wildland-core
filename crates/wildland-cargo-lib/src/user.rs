@@ -31,6 +31,7 @@ use wildland_corex::{
 use crate::api::cargo_user::CargoUser;
 use crate::api::config::FoundationStorageApiConfig;
 use crate::errors::{UserCreationError, UserRetrievalError};
+use crate::user_config::UserMultideviceConfig;
 
 pub fn generate_random_mnemonic() -> Result<MnemonicPhrase, CryptoError> {
     wildland_corex::generate_random_mnemonic()
@@ -47,6 +48,7 @@ pub enum CreateUserInput {
 pub(crate) struct UserService {
     lss_service: LssService,
     catlib_service: CatLibService,
+    user_config: UserMultideviceConfig,
     fsa_config: FoundationStorageApiConfig,
     container_manager: ContainerManager,
 }
@@ -55,12 +57,14 @@ impl UserService {
     pub(crate) fn new(
         lss_service: LssService,
         catlib_service: CatLibService,
+        user_config: UserMultideviceConfig,
         fsa_config: FoundationStorageApiConfig,
         container_manager: ContainerManager,
     ) -> Self {
         Self {
             lss_service,
             catlib_service,
+            user_config,
             fsa_config,
             container_manager,
         }

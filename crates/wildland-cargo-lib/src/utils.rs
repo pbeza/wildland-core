@@ -10,6 +10,8 @@ pub(crate) mod test {
     use wildland_corex::catlib_service::CatLibService;
     use wildland_corex::{LocalSecureStorage, LssResult};
 
+    use crate::user_config::UserMultideviceConfig;
+
     #[fixture]
     pub(crate) fn catlib_service() -> CatLibService {
         let uuid = uuid::Builder::from_random_bytes(rand::random::<Bytes>()).into_uuid();
@@ -17,6 +19,14 @@ pub(crate) mod test {
             std::env::var("CARGO_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/0".into());
         let catlib = Rc::new(CatLib::new(redis_url, uuid.to_string()));
         CatLibService::new(catlib)
+    }
+
+    #[fixture]
+    pub(crate) fn user_config() -> UserMultideviceConfig {
+        let uuid = uuid::Builder::from_random_bytes(rand::random::<Bytes>()).into_uuid();
+        let redis_url =
+            std::env::var("CARGO_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/0".into());
+        UserMultideviceConfig::new(redis_url, uuid.to_string()).unwrap()
     }
 
     #[fixture]

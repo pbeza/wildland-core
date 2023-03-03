@@ -38,3 +38,4 @@ mod templates;
 mod tests;
 mod user;
 mod utils;
+mod user_config;

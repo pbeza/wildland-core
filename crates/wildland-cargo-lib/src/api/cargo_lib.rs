@@ -35,6 +35,7 @@ use crate::api::config::{CargoConfig, FoundationStorageApiConfig};
 use crate::api::user::UserApi;
 use crate::logging;
 use crate::user::UserService;
+use crate::user_config::UserMultideviceConfig;
 
 static INIT: Once = Once::new();
 type SharedCargoLib = Arc<Mutex<CargoLib>>;
@@ -83,6 +84,7 @@ impl CargoLib {
             user_api: UserApi::new(UserService::new(
                 lss_service,
                 CatLibService::new(Rc::new(CatLib::default())),
+                UserMultideviceConfig::default(),
                 fsa_config,
                 container_manager.clone(),
             )),
