@@ -44,7 +44,7 @@ pub enum StorageBackendError {
 impl StorageBackendError {
     pub fn backend_type(&self) -> &str {
         match self {
-            Self::Generic { backend_type, .. } => &backend_type,
+            Self::Generic { backend_type, .. } => backend_type,
         }
     }
 }

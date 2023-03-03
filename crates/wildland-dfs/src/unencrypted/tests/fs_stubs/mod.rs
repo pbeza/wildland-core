@@ -34,8 +34,7 @@ pub fn dfs_with_unresponsive_and_mu_fs(path_resolver: Box<MockPathResolver>) -> 
     let mut backend_factories: HashMap<String, Box<dyn StorageBackendFactory>> = HashMap::new();
     backend_factories.insert("UnresponsiveFs".to_string(), Box::new(factory));
 
-    let fs = Rc::new(FS::new());
-    let factory = MufsFactory::new(fs.clone());
+    let factory = MufsFactory::new(Rc::default());
     backend_factories.insert("MUFS".to_string(), Box::new(factory));
 
     UnencryptedDfs::new(path_resolver, backend_factories)
